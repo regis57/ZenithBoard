@@ -109,52 +109,124 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(server.public_config(cfg)["radius_presets"], [1, 2, 5, 10, 15, 30, 50])
 
 
-class PhotoThrottleTests(unittest.TestCase):
-    """Planespotters refuses bursts with 403, so lookups must be spaced out and failures must be retried."""
+class ThrottledLookupTests(unittest.TestCase):
+    """Planespotters refuses bursts with 403, so slow lookups are spaced out and failures are retried."""
 
-    def setUp(self):
-        self.real_api, self.real_gap, self.real_retry = server._photo_api, server.PHOTO_GAP_S, server.PHOTO_RETRY_S
-        server._photo_cache.clear()
-        server.PHOTO_GAP_S, server.PHOTO_RETRY_S = 0.2, 0.4
+    def make(self, found_ttl=None):
         self.calls = []
 
-        def fake(hex_code):
-            self.calls.append((hex_code, time.monotonic()))
-            if hex_code == "ref403":
+        def fake(key):
+            self.calls.append((key, time.monotonic()))
+            if key == "ref403":
                 return None, False                      # refused / no answer
-            if hex_code == "nopic":
-                return None, True                       # reached, but no photo published
+            if key == "nopic":
+                return None, True                       # reached, but nothing published
             return {"url": "http://x/p.jpg", "photographer": "P", "link": "l"}, True
 
-        server._photo_api = fake
-
-    def tearDown(self):
-        server._photo_api, server.PHOTO_GAP_S, server.PHOTO_RETRY_S = self.real_api, self.real_gap, self.real_retry
-        server._photo_cache.clear()
+        return server.ThrottledLookup(fake, gap=0.2, retry=0.4, miss_retry=1000, found_ttl=found_ttl)
 
     def test_requests_are_spaced_and_failures_retried(self):
+        lk = self.make()
         for h in ("a1", "a2", "a3", "ref403", "nopic"):
-            server.lookup_photo(h)
+            lk.get(h)
         time.sleep(1.8)
-        self.assertEqual(len(self.calls), 5, "every aircraft must be asked for exactly once")
+        self.assertEqual(len(self.calls), 5, "every key must be asked for exactly once")
         gaps = [self.calls[i + 1][1] - self.calls[i][1] for i in range(len(self.calls) - 1)]
-        self.assertTrue(all(g >= server.PHOTO_GAP_S * 0.9 for g in gaps), "requests were sent too fast: %s" % gaps)
+        self.assertTrue(all(g >= 0.18 for g in gaps), "requests were sent too fast: %s" % gaps)
 
-        self.assertIsNotNone(server.lookup_photo("a1"))
-        self.assertIsNone(server._photo_cache["ref403"]["meta"], "a refused lookup must not become a photo")
-        self.assertIsNotNone(server._photo_cache["ref403"]["retry_at"], "a refused lookup must stay retryable")
-        self.assertIsNone(server._photo_cache["nopic"]["meta"])
+        self.assertIsNotNone(lk.get("a1"))
+        self.assertIsNone(lk.cache["ref403"]["value"], "a refused lookup must not become a value")
+        self.assertIsNotNone(lk.cache["ref403"]["retry_at"], "a refused lookup must stay retryable")
+        self.assertIsNone(lk.cache["nopic"]["value"])
 
         n = len(self.calls)
         for _ in range(5):
-            server.lookup_photo("a1")
-            server.lookup_photo("nopic")
+            lk.get("a1")
+            lk.get("nopic")
         time.sleep(0.5)
-        self.assertEqual(len(self.calls), n, "a settled aircraft must not be asked for again")
+        self.assertEqual(len(self.calls), n, "a settled key must not be asked for again")
 
-        server.lookup_photo("ref403")                    # past PHOTO_RETRY_S by now
+        lk.get("ref403")                                 # past `retry` by now
         time.sleep(0.6)
         self.assertGreater(len(self.calls), n, "a refused lookup must be retried later")
+
+    def test_found_values_expire_when_a_ttl_is_set(self):
+        lk = self.make(found_ttl=0.3)
+        lk.get("x1")
+        time.sleep(0.4)
+        self.assertIsNotNone(lk.get("x1"), "the old value is still served while it is refreshed")
+        time.sleep(0.5)
+        self.assertEqual(len([c for c in self.calls if c[0] == "x1"]), 2, "a stale value must be looked up again")
+
+    def test_a_crashing_fetch_does_not_kill_the_worker(self):
+        seen = []
+
+        def fetch(key):
+            seen.append(key)
+            if key == "boom":
+                raise RuntimeError("bad answer")
+            return "ok", True
+
+        lk = server.ThrottledLookup(fetch, gap=0.0, retry=5, miss_retry=5)
+        lk.get("boom")
+        lk.get("fine")
+        time.sleep(0.4)
+        self.assertEqual(seen, ["boom", "fine"])
+        self.assertEqual(lk.peek("fine"), "ok")
+
+
+ADSBDB_SAMPLE = {"response": {"flightroute": {
+    "callsign": "DLH4YK",
+    "origin": {"country_iso_name": "DE", "iata_code": "MUC", "icao_code": "EDDM", "municipality": "Munich", "name": "Munich Airport"},
+    "destination": {"country_iso_name": "BG", "iata_code": "SOF", "icao_code": "LBSF", "municipality": "Sofia", "name": "Sofia Airport"}}}}
+
+
+class RouteTests(unittest.TestCase):
+    def test_parse_real_adsbdb_answer(self):
+        r = server.parse_route(ADSBDB_SAMPLE)
+        self.assertEqual(r["from"], {"iata": "MUC", "icao": "EDDM", "name": "Munich Airport", "city": "Munich", "country": "DE"})
+        self.assertEqual(r["to"]["iata"], "SOF")
+
+    def test_parse_unknown_or_broken_answers(self):
+        self.assertIsNone(server.parse_route({"response": "unknown callsign"}))
+        self.assertIsNone(server.parse_route({"response": {"flightroute": {}}}))
+        self.assertIsNone(server.parse_route("garbage"))
+        self.assertIsNone(server.parse_route(None))
+        half = server.parse_route({"response": {"flightroute": {"origin": {"municipality": "Metz"}}}})
+        self.assertEqual(half["from"]["city"], "Metz")
+        self.assertIsNone(half["to"])
+
+    def test_only_airline_callsigns_are_looked_up(self):
+        asked = []
+        real = server._routes
+        server._routes = type("Fake", (), {"get": staticmethod(lambda k: asked.append(k) or {"from": None, "to": None})})()
+        try:
+            for cs in ("DLH4YK", "RYR8WL", "EZY45RF", "ZZA210", "dlh4yk ", "DEZPA", "N123AB", "D-EZPA", "", None, "SAMU34"):
+                server.lookup_route(cs)
+        finally:
+            server._routes = real
+        self.assertEqual(asked, ["DLH4YK", "RYR8WL", "EZY45RF", "ZZA210", "DLH4YK"])   # SAMU34: four letters, not an airline callsign
+
+    def test_build_planes_uses_demo_route_then_lookup(self):
+        data = {"aircraft": [
+            {"hex": "dd0001", "flight": "ZZA210", "lat": 49.25, "lon": 6.22, "seen_pos": 0, "demo_route": {"from": {"city": "A"}, "to": {"city": "B"}}},
+            {"hex": "3c6444", "flight": "DLH4YK", "lat": 49.26, "lon": 6.22, "seen_pos": 0},
+            {"hex": "aaaaaa", "flight": "", "lat": 49.27, "lon": 6.22, "seen_pos": 0}]}
+        asked = []
+        planes, _ = server.build_planes(data, 49.246, 6.223, 10, {}, None, True, None, lambda cs: asked.append(cs) or {"from": {"city": "MUNICH"}, "to": None})
+        by = {p["hex"]: p for p in planes}
+        self.assertEqual(by["dd0001"]["route"]["to"]["city"], "B", "a demo route wins")
+        self.assertEqual(by["3c6444"]["route"]["from"]["city"], "MUNICH")
+        self.assertEqual(asked, ["DLH4YK", ""])
+        planes, _ = server.build_planes(data, 49.246, 6.223, 10, {}, None, True, None, None)
+        self.assertIsNone({p["hex"]: p for p in planes}["3c6444"]["route"], "no lookup configured -> no route")
+
+    def test_demo_has_routes_for_some_aircraft_only(self):
+        data = json.load(open(os.path.join(os.path.dirname(__file__), "..", "flightinfo", "demo", "aircraft.json"), encoding="utf-8"))
+        planes, _ = server.build_planes(data, 49.246, 6.223, 10, {}, None, True, None, None)
+        with_route = [p["hex"] for p in planes if p["route"]]
+        self.assertGreaterEqual(len(with_route), 5)
+        self.assertLess(len(with_route), len(planes), "some demo aircraft must show the no-route state")
 
 
 if __name__ == "__main__":

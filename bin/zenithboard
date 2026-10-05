@@ -27,6 +27,7 @@ ZenithBoard $ZB_VERSION - ADSB Flight Info
   zenithboard cycle SECONDS             seconds each aircraft stays on the wall
   zenithboard photos on|off             aircraft photos on the wall (needs internet on the Pi)
   zenithboard photos test [HEX]         check that this Pi can fetch photos from Planespotters
+  zenithboard routes on|off             show where each flight comes from / goes to (looked up by callsign, needs internet)
   zenithboard data update               refresh the aircraft model list now (names for the silhouettes)
   zenithboard data auto on|off          monthly automatic refresh of that list (default: on)
   zenithboard data status               when it was last refreshed
@@ -67,6 +68,7 @@ cmd_status() {
   if is_flightinfo; then
     echo "Wall:     http://$(local_ip):$(cfg_get PORT 8080)/"
     echo "Aircraft photos (Planespotters): $( [ "$(cfg_get SHOW_PHOTOS 1)" = 1 ] && echo "ON" || echo "OFF (turn on: sudo zenithboard photos on)" )"
+    echo "Flight routes (adsbdb.com):      $( [ "$(cfg_get SHOW_ROUTES 1)" = 1 ] && echo "ON" || echo "OFF (turn on: sudo zenithboard routes on)" )"
     data_refresh_status
   fi
   if is_adsbx; then
@@ -138,6 +140,13 @@ case "${1:-}" in
       off) root_or_die; cfg_set SHOW_PHOTOS 0; restart_flightinfo; echo "Aircraft photos are OFF: the animated sky scene is shown instead." ;;
       test) python3 "$ZB_HOME/tools/photo_check.py" "${3:-}" ;;
       *) die "Usage: zenithboard photos on|off|test [HEX]" ;;
+    esac ;;
+  routes)
+    root_or_die
+    case "${2:-}" in
+      on)  cfg_set SHOW_ROUTES 1; restart_flightinfo; echo "Flight routes are ON (origin and destination, looked up by callsign). The wall reloads by itself." ;;
+      off) cfg_set SHOW_ROUTES 0; restart_flightinfo; echo "Flight routes are OFF: no callsign is sent to the internet." ;;
+      *) die "Usage: zenithboard routes on|off" ;;
     esac ;;
   mlat-guard) root_or_die; zb_mlat_guard ;;
   update) root_or_die; zb_update "${2:-}" ;;

@@ -21,11 +21,12 @@ import re
 import sys
 import threading
 import time
+import urllib.error
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.2.2"
+VERSION = "0.3.0"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -51,6 +52,7 @@ DEFAULTS = {
     "RADIUS": "10",             # in km (metric) or miles (imperial)
     "CYCLE_SECONDS": "6",
     "SHOW_PHOTOS": "1",
+    "SHOW_ROUTES": "1",         # where the flight comes from / goes to (looked up by callsign on adsbdb.com)
     "PORT": "8080",
     "AIRCRAFT_JSON": "",        # optional explicit path override
     "DEMO": "0",                # 1 = fictional demo airlines and mock photos
@@ -218,7 +220,7 @@ def describe_type(ac, types=None):
 
 
 # --------------------------------------------------------------------------- planes
-def build_planes(data, lat, lon, radius_km, airlines=None, photo_lookup=None, demo=False, types=None):
+def build_planes(data, lat, lon, radius_km, airlines=None, photo_lookup=None, demo=False, types=None, route_lookup=None):
     """Return (planes_in_radius_sorted_by_distance, total_with_position)."""
     airlines = airlines or {}
     planes, total = [], 0
@@ -242,6 +244,10 @@ def build_planes(data, lat, lon, radius_km, airlines=None, photo_lookup=None, de
             found = photo_lookup(ac.get("hex"))
             if found:
                 photo, credit, link = "/api/photo/%s" % ac.get("hex"), found.get("photographer"), found.get("link")
+        if demo and ac.get("demo_route"):
+            route = ac["demo_route"]
+        else:
+            route = route_lookup(flight) if route_lookup is not None else None
         kind = describe_type(ac, types)
         planes.append({
             "hex": ac.get("hex", ""),
@@ -264,24 +270,91 @@ def build_planes(data, lat, lon, radius_km, airlines=None, photo_lookup=None, de
             "photo": photo,
             "photo_credit": credit,
             "photo_link": link,
+            "route": route,
         })
     planes.sort(key=lambda p: p["distance_km"])
     return planes, total
 
 
+# --------------------------------------------------------------------------- slow lookups (photos, routes)
+class ThrottledLookup(object):
+    """Non-blocking cache in front of a slow, rate-limited web service.
+
+    get(key) answers at once from the cache and queues a request when the key is unknown or stale. One worker
+    thread makes at most one request every `gap` seconds, which is what services such as Planespotters need
+    (they answer 403 to bursts). fetch(key) returns (value, ok):
+      ok True,  value       -> found:        kept for `found_ttl` seconds (None = until restart)
+      ok True,  value None  -> not found:    asked again after `miss_retry`
+      ok False              -> no answer (403, timeout, no internet): asked again after `retry`, and never
+                               stored as "not found".
+    """
+
+    def __init__(self, fetch, gap, retry, miss_retry, found_ttl=None, max_queue=60, max_entries=1000):
+        self.fetch, self.gap, self.retry, self.miss_retry, self.found_ttl = fetch, gap, retry, miss_retry, found_ttl
+        self.max_entries = max_entries
+        self.cache = {}                     # key -> {"value", "retry_at" (monotonic, None = settled), "queued"}
+        self.lock = threading.Lock()
+        self.queue = queue.Queue(maxsize=max_queue)
+        self.worker = None
+
+    def peek(self, key):
+        with self.lock:
+            e = self.cache.get(key)
+            return e["value"] if e else None
+
+    def get(self, key):
+        if not key:
+            return None
+        now = time.monotonic()
+        with self.lock:
+            e = self.cache.get(key)
+            if e and (e["queued"] or e["retry_at"] is None or now < e["retry_at"]):
+                return e["value"]
+            value = e["value"] if e else None
+            self.cache[key] = {"value": value, "retry_at": now + self.retry, "queued": True}
+            if self.worker is None:
+                self.worker = threading.Thread(target=self._loop, daemon=True)
+                self.worker.start()
+        try:
+            self.queue.put_nowait(key)
+        except queue.Full:                  # a very busy sky: asked for again next time
+            with self.lock:
+                if key in self.cache:
+                    self.cache[key]["queued"] = False
+        return value
+
+    def _loop(self):
+        last = 0.0
+        while True:
+            key = self.queue.get()
+            wait = self.gap - (time.monotonic() - last)
+            if wait > 0:
+                time.sleep(wait)
+            try:
+                value, ok = self.fetch(key)
+            except Exception:               # never let a bad answer kill the worker
+                value, ok = None, False
+            last = time.monotonic()
+            now = last
+            if ok and value is not None:
+                retry_at = None if self.found_ttl is None else now + self.found_ttl
+            elif ok:
+                retry_at = now + self.miss_retry
+            else:
+                value, retry_at = None, now + self.retry
+            with self.lock:
+                if len(self.cache) > self.max_entries:
+                    self.cache.clear()
+                self.cache[key] = {"value": value, "retry_at": retry_at, "queued": False}
+
+
 # --------------------------------------------------------------------------- photos (Planespotters, optional, proxied so the tablet needs no internet)
-# Planespotters answers 403 when it is asked too quickly, so every lookup goes through ONE worker thread that
-# makes at most one request every PHOTO_GAP_S. A lookup that failed (403, timeout, no internet) is retried
-# later instead of being remembered as "this aircraft has no photo".
-_photo_cache = {}     # hex -> {"meta": {...}|None, "retry_at": float|None}   retry_at None = settled
 _photo_bytes = {}     # hex -> (content_type, bytes)
 _photo_lock = threading.Lock()
-_photo_queue = queue.Queue(maxsize=60)
-_photo_worker = None
 MAX_PHOTO_CACHE = 200
-PHOTO_GAP_S = 2.0           # minimum delay between two Planespotters requests
-PHOTO_RETRY_S = 600         # try again 10 min after a refused or failed lookup
-PHOTO_NOPHOTO_RETRY_S = 86400   # an aircraft with no photo today may have one tomorrow
+PHOTO_GAP_S = 2.0                   # Planespotters answers 403 to bursts: at most one request every 2 s
+PHOTO_RETRY_S = 600                 # refused / failed: try again after 10 min
+PHOTO_NOPHOTO_RETRY_S = 86400       # no photo published today: look again tomorrow
 
 
 def _photo_api(hex_code):
@@ -302,55 +375,19 @@ def _photo_api(hex_code):
     return {"url": url, "photographer": p.get("photographer"), "link": p.get("link")}, True
 
 
-def _photo_loop():
-    last = 0.0
-    while True:
-        hex_code = _photo_queue.get()
-        wait = PHOTO_GAP_S - (time.monotonic() - last)
-        if wait > 0:
-            time.sleep(wait)
-        meta, ok = _photo_api(hex_code)
-        last = time.monotonic()
-        if ok:
-            retry_at = None if meta else time.monotonic() + PHOTO_NOPHOTO_RETRY_S
-        else:
-            meta, retry_at = None, time.monotonic() + PHOTO_RETRY_S
-        with _photo_lock:
-            if len(_photo_cache) > MAX_PHOTO_CACHE * 5:
-                _photo_cache.clear()
-            _photo_cache[hex_code] = {"meta": meta, "retry_at": retry_at, "queued": False}
+_photos = ThrottledLookup(lambda k: _photo_api(k), PHOTO_GAP_S, PHOTO_RETRY_S, PHOTO_NOPHOTO_RETRY_S)
 
 
 def lookup_photo(hex_code):
-    """Non-blocking: the metadata we already have, and a queued request when it is missing or stale."""
-    global _photo_worker
-    if not hex_code:
-        return None
-    now = time.monotonic()
-    with _photo_lock:
-        e = _photo_cache.get(hex_code)
-        if e and (e["retry_at"] is None or now < e["retry_at"] or e["queued"]):
-            return e["meta"]
-        meta = e["meta"] if e else None
-        _photo_cache[hex_code] = {"meta": meta, "retry_at": now + PHOTO_RETRY_S, "queued": True}
-        if _photo_worker is None:
-            _photo_worker = threading.Thread(target=_photo_loop, daemon=True)
-            _photo_worker.start()
-    try:
-        _photo_queue.put_nowait(hex_code)
-    except queue.Full:      # a very busy sky: this aircraft is simply asked for again next time
-        with _photo_lock:
-            if hex_code in _photo_cache:
-                _photo_cache[hex_code]["queued"] = False
-    return meta
+    """Non-blocking: the photo metadata we already have; a request is queued when it is missing."""
+    return _photos.get(hex_code)
 
 
 def fetch_photo_bytes(hex_code):
     with _photo_lock:
         if hex_code in _photo_bytes:
             return _photo_bytes[hex_code]
-        e = _photo_cache.get(hex_code)
-        meta = e["meta"] if e else None
+    meta = _photos.peek(hex_code)
     if not meta:
         return None
     try:
@@ -365,6 +402,58 @@ def fetch_photo_bytes(hex_code):
             _photo_bytes.clear()
         _photo_bytes[hex_code] = (ctype, body)
     return ctype, body
+
+
+# --------------------------------------------------------------------------- routes (adsbdb.com, optional)
+# ADS-B itself never carries the origin or destination, so the route is looked up from the callsign on the free
+# community database adsbdb.com. It is only an indication: a callsign can be reused for another route, and
+# some flights are missing.
+ROUTE_GAP_S = 1.5                   # at most one request every 1.5 s
+ROUTE_RETRY_S = 600                 # no answer (error, timeout, no internet): try again after 10 min
+ROUTE_MISS_RETRY_S = 6 * 3600       # callsign not in the database
+ROUTE_TTL_S = 12 * 3600             # a known route is looked up again after 12 h (callsigns get reused)
+CALLSIGN_RE = re.compile(r"^[A-Z]{3}[0-9][0-9A-Z]{0,3}$")      # airline callsigns like DLH4YK; skips registrations and GA
+
+
+def _airport(a):
+    if not isinstance(a, dict):
+        return None
+    out = {"iata": str(a.get("iata_code") or ""), "icao": str(a.get("icao_code") or ""),
+           "name": str(a.get("name") or ""), "city": str(a.get("municipality") or ""),
+           "country": str(a.get("country_iso_name") or "")}
+    return out if (out["name"] or out["city"] or out["iata"] or out["icao"]) else None
+
+
+def parse_route(data):
+    """adsbdb answer -> {"from": {...}, "to": {...}} or None."""
+    resp = data.get("response") if isinstance(data, dict) else None
+    fr = resp.get("flightroute") if isinstance(resp, dict) else None
+    if not isinstance(fr, dict):
+        return None
+    origin, dest = _airport(fr.get("origin")), _airport(fr.get("destination"))
+    return {"from": origin, "to": dest} if (origin or dest) else None
+
+
+def _route_api(callsign):
+    """-> (route|None, ok). ok is False when we could not get an answer."""
+    url = "https://api.adsbdb.com/v0/callsign/%s" % callsign
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "ZenithBoard/%s (+https://github.com/regis57/ZenithBoard)" % VERSION})
+        with urllib.request.urlopen(req, timeout=6) as resp:
+            return parse_route(json.load(resp)), True
+    except urllib.error.HTTPError as exc:
+        return None, exc.code == 404            # 404 = unknown callsign (a real answer); anything else = try later
+    except Exception:
+        return None, False
+
+
+_routes = ThrottledLookup(lambda k: _route_api(k), ROUTE_GAP_S, ROUTE_RETRY_S, ROUTE_MISS_RETRY_S, found_ttl=ROUTE_TTL_S)
+
+
+def lookup_route(callsign):
+    """Non-blocking: the route we already know for this callsign; a request is queued when it is missing."""
+    cs = (callsign or "").strip().upper()
+    return _routes.get(cs) if CALLSIGN_RE.match(cs) else None
 
 
 # --------------------------------------------------------------------------- HTTP
@@ -434,12 +523,13 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, {"error": "no_data", "path": path, "server_id": SERVER_ID,
                                     "planes": [], "total": 0})
         demo = cfg_bool(cfg, "DEMO")
-        # DEMO_REAL_PHOTOS lets the demo ask Planespotters for its handful of real aircraft, so photos can be
-        # checked on a Pi that has no antenna yet. The invented aircraft keep their mock pictures.
-        real_photos = not demo or cfg_bool(cfg, "DEMO_REAL_PHOTOS")
-        lookup = lookup_photo if cfg_bool(cfg, "SHOW_PHOTOS") and real_photos else None
+        # DEMO_REAL_PHOTOS lets the demo ask Planespotters and adsbdb about its handful of real aircraft, so photos
+        # and routes can be checked on a Pi that has no antenna yet. The invented aircraft keep their mock data.
+        real_lookups = not demo or cfg_bool(cfg, "DEMO_REAL_PHOTOS")
+        lookup = lookup_photo if cfg_bool(cfg, "SHOW_PHOTOS") and real_lookups else None
+        route_lookup = lookup_route if cfg_bool(cfg, "SHOW_ROUTES") and real_lookups else None
         planes, total = build_planes(data, cfg_float(cfg, "LAT", 0), cfg_float(cfg, "LON", 0), radius_km,
-                                     load_airlines(cfg), lookup, demo, load_types(cfg))
+                                     load_airlines(cfg), lookup, demo, load_types(cfg), route_lookup)
         return self._send(200, {"planes": planes, "total": total, "radius_km": radius_km,
                                 "server_id": SERVER_ID, "updated": time.time()})
 

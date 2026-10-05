@@ -51,7 +51,6 @@
       }
     }
   }
-  function textRight(g, s, y, scale) { s = String(s); text(g, s, GW - (s.length * 6 - 1) * scale, y, scale); }
   function textCenter(g, s, y, scale) { s = String(s); text(g, s, Math.round((GW - (s.length * 6 - 1) * scale) / 2), y, scale); }
   function silhouette(g, name, area) {              // theme-coloured aircraft shape (top view)
     var s = 32, m = Shapes.rasterize(name, s, s), ox = area.x + Math.floor((area.w - s) / 2), oy = area.y + Math.floor((area.h - s) / 2);
@@ -59,7 +58,6 @@
   }
 
   function clock() { var d = new Date(); return ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2); }
-  function radiusText() { return Fmt.radiusLabel(radius(), units()); }
 
   // ------------------------------------------------------------------ photo corner (real photo, or animated scene)
   function geom() {                                  // dot-grid geometry in CSS pixels (same maths as draw())
@@ -109,13 +107,13 @@
       textCenter(g, clock(), 54, 2);
       return { g: g, sig: "empty" + total + clock() + radius() + u, plane: null };
     }
-    var L = Fmt.planeLines(p, u, planes.indexOf(p), planes.length, radiusText(), COLS);
+    var L = Fmt.planeLines(p, u, planes.indexOf(p), planes.length, COLS);
     text(g, L.callsign, 0, 0, 2);
     text(g, L.airline, 0, 16, 1); text(g, L.type, 0, 25, 1);
-    text(g, L.alt, 0, 34, 1); text(g, L.spd, 0, 43, 1); text(g, L.hdg, 0, 52, 1); text(g, L.vs, 0, 61, 1);
-    text(g, L.footerLeft, 0, 72, 1); textRight(g, L.footerRight, 72, 1);
+    text(g, L.alt, 0, 34, 1); text(g, L.spd, 0, 43, 1); text(g, L.from, 0, 52, 1); text(g, L.to, 0, 61, 1);       // where the flight comes from / goes to (blank when unknown)
+    text(g, L.footer, 0, 72, 1);
     silhouette(g, p.shape || "generic", SIL_BOX);
-    return { g: g, sig: "p" + p.hex + L.callsign + L.footerLeft + L.alt + L.spd + L.hdg + L.vs + (p.photo || ""), plane: p };
+    return { g: g, sig: "p" + p.hex + L.callsign + L.footer + L.alt + L.spd + L.from + L.to + (p.photo || ""), plane: p };
   }
 
   // ------------------------------------------------------------------ rendering

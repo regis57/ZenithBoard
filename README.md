@@ -5,7 +5,7 @@
 ZenithBoard turns a Raspberry Pi (4 or newer recommended) and a cheap USB radio dongle into:
 
 1. **An ADS-B receiver** that feeds **ADSB Exchange** (mandatory base layer) and, if you want, **FlightAware**, **Flightradar24** and **Plane Finder** — with **one single MLAT client**, because several at once overload a Raspberry Pi.
-2. **FlightInfo**, a responsive **dot-matrix wall** for any tablet or screen with a browser. It automatically cycles through every aircraft inside the radius you choose (1, 2, 5, 10, 15, 30 or 50 km / miles) — callsign, type, altitude, speed, heading, climb/descent, distance and direction — and refreshes itself.
+2. **FlightInfo**, a responsive **dot-matrix wall** for any tablet or screen with a browser. It automatically cycles through every aircraft inside the radius you choose (1, 2, 5, 10, 15, 30 or 50 km / miles) — callsign, type, altitude, speed, where the flight comes from and goes to, distance and direction — and refreshes itself.
 3. **ACARS** *(optional)*: aircraft text messages collected with a second dongle and shown in **Grafana**, filtered, and automatically rolled and cleaned every 7 days.
 
 Everything is installed from one menu, and you can come back at any time to add or remove parts.
@@ -74,16 +74,13 @@ The first run asks, once:
 * **Antenna position** — latitude, longitude, altitude (needed by the decoder, MLAT and the wall's distance calculation). Tip: right-click your house in Google Maps to copy the coordinates.
 * **Default radius** — how close a plane must be to appear on the wall.
 
+<p align="center"><img src="docs/images/install-1-welcome.png" alt="The welcome screen lists the three first questions" width="520"></p>
+<p align="center"><img src="docs/images/install-2-units.png" alt="Choosing metric or imperial units" width="520"></p>
+
 ### 5. Use the menu
-```
- 1  ADSB        decoder + share to ADSB Exchange, FlightAware, FR24 ...
- 2  FlightInfo  dot-matrix wall for an old tablet
- 3  ACARS       optional ACARS messages in Grafana (2nd dongle)
- 4  Settings    units, radius, antenna position
- 5  Status      what is running
- 6  Update      upgrade ZenithBoard, decoder, feeders, ACARS
- 7  Uninstall everything
-```
+After the questions, the installer shows its main menu. You can come back to it at any time with `sudo ./install.sh` (or `sudo zenithboard menu`) to add or remove things.
+
+<p align="center"><img src="docs/images/install-3-menu.png" alt="The ZenithBoard main menu: ADSB, FlightInfo, ACARS, Settings, Status, Update, Uninstall" width="640"></p>
 
 **1 · ADSB** — pick the decoder (**readsb** is recommended; **dump1090-fa** is supported as an alternative; both feed the same local port so every feeder works with either). Then tick where to share. *ADSB Exchange is always on.* The ADSB Exchange script will ask for a station name and your position, and prints a link to see your feed. FlightAware prints a claim link; Plane Finder finishes setup on a small web page. Unticking an installed feeder removes it after a confirmation.
 
@@ -133,16 +130,16 @@ All settings live in one readable file: `/etc/zenithboard/config.env`.
 | ZZA210                               |   aircraft    |
 | ZENITH AIR                           |   silhouette  |
 | A320 F-ZZAA                          |   (dots)      |
-| ALT  35000 FT                        +---------------+
-| SPD  450 KT                          |  REAL PHOTO   |
-| HDG  270° W                          |  of the plane |
-| V/S  ↑1200 FPM                       |  - or, with   |
+| ALT  10670 M                         +---------------+
+| SPD  833 KMH                         |  REAL PHOTO   |
+| LUXEMBOURG                           |  of the plane |
+| →PARIS                               |  - or, with   |
 |                                      |  no photo, an |
-| 6/7 3.6MI NNE            R 10 MI     |  animated sky |
+| 6/7 3.6KM NNE                        |  animated sky |
 +--------------------------------------+---------------+
 ```
 
-* **Left (dots):** callsign, airline name, aircraft type and registration, altitude, speed, heading, climb/descent, then *position in the cycle*, distance and the direction **from you** (`NNE`), and your radius. `HDG` is where the plane is heading.
+* **Left (dots):** callsign, airline name, aircraft type and registration, altitude and speed. Then **where the flight comes from** and, after an arrow, **where it is going**: the airport's name when it fits, otherwise its city (`LUXEMBOURG`, `→PARIS`). See [Flight routes](#flight-routes). The last line gives the *position in the cycle*, the distance and the direction **from you** (`NNE`).
 * **Top right (dots):** a **silhouette that matches the real aircraft design**: an A380 is drawn as a four-engine airliner, a Cessna as a single-engine propeller plane, an F-16 as a fighter. See [Aircraft silhouettes](#aircraft-silhouettes).
 * **Bottom right (a real picture, not dots):** the **photo of that exact aircraft** from [Planespotters](https://www.planespotters.net/), with the photographer's name and a link to the photo page. When there is no photo (or no internet) it shows an **animated sky** with a **side view of the matching aircraft model**, labelled with the model name. The sky follows your clock as one continuous day: the sun rises along its arc and sets, the colours slide from dawn through midday to dusk, the clouds are lit from the side the sun is on, thin cirrus drifts overhead, and at night the stars twinkle under a crescent moon. Propellers and rotors turn.
 * Aircraft are shown nearest first, one at a time, for a few seconds each, with a wipe transition. With nothing in range the wall shows a clock and how many aircraft your antenna sees.
@@ -188,6 +185,15 @@ To show full model names and to recognise newly registered type codes, ZenithBoa
 * Refresh now: `sudo zenithboard data update`. Check: `zenithboard data status`.
 * A failed download (no internet, broken file) changes nothing: the previous list stays in use, and the wall works without the list at all.
 
+## Flight routes
+
+ADS-B only carries the aircraft's identity, position, altitude and speed: **it never says where the flight comes from or goes to.** ZenithBoard therefore looks the route up from the callsign (for example `DLH4YK`) on [adsbdb.com](https://www.adsbdb.com/), a free community database, and shows the airport's name when it fits in the 14 characters of the text column, otherwise the city. Accents are removed because the dot font has none (`ZÜRICH` → `ZURICH`).
+
+* **No route is shown** for aircraft whose callsign is not an airline callsign (private planes, helicopters, military) or that are not in the database: the two rows stay empty.
+* **It is an indication, not a guarantee.** A callsign can be reused for another route, and the database is maintained by volunteers.
+* **Privacy:** only the callsign of an aircraft in your radius is sent to adsbdb.com, never your position. Requests are spaced out (one every 1.5 s) and answers are kept for 12 hours. Turn it off if you prefer nothing to leave the Pi: `sudo zenithboard routes off` (or menu *4 Settings → Flight origin/destination*).
+* Needs internet on the Pi; the wall works without it.
+
 ## Photos
 
 Photos come from the [Planespotters.net photo API](https://www.planespotters.net/photo/api), looked up by the aircraft's hex address. They belong to their photographers: the wall shows each photo unmodified, with the photographer's name and a link to the page on Planespotters, and keeps nothing on disk (a small memory cache only). The Pi fetches the photos, so **the tablet does not need internet**. Please read Planespotters' API terms for your own use.
@@ -199,12 +205,12 @@ Photos come from the [Planespotters.net photo API](https://www.planespotters.net
 * `zenithboard status` shows whether photos are on.
 
 ### Try it without any hardware
-The demo uses invented airlines and an example of everything: an airliner, a business jet, an A380, a 747, a turboprop, a Cessna, a helicopter, an F-16, a C-130, plus mock "photos" (cartoon illustrations of the right aircraft model, marked *DEMO*). Some demo aircraft have a mock photo and some deliberately do not, so you can see both the photo and the animated-sky states. Run it from the ZenithBoard folder on any computer or Pi with Python 3:
+The demo uses invented airlines and an example of everything: an airliner, a business jet, an A380, a 747, a turboprop, a Cessna, a helicopter, an F-16, a C-130, plus mock "photos" (cartoon illustrations of the right aircraft model, marked *DEMO*) and invented routes. Some demo aircraft have a mock photo or a route and some deliberately do not, so you can see every state: photo or animated sky, route or empty rows. Run it from the ZenithBoard folder on any computer or Pi with Python 3:
 
 ```bash
 ./bin/zenithboard-demo                  # metric, amber
 ./bin/zenithboard-demo imperial green   # units, then colour
-REAL_PHOTOS=1 ./bin/zenithboard-demo    # also fetch the real photos of the demo's two real airliners
+REAL_PHOTOS=1 ./bin/zenithboard-demo    # also fetch the real photos and routes of the demo's two real airliners
 ```
 
 Then open **`http://<the-pi-address>:8081/`** (or `http://localhost:8081/` on the same computer).
@@ -297,6 +303,7 @@ sudo /opt/zenithboard/install.sh --uninstall-all      # remove everything
 * FlightAware and Flightradar24 store your antenna position on their websites: after `zenithboard location`, update it there too (the command tells you where).
 * ACARS legality differs per country — check your local rules before collecting ACARS messages.
 * Photos come from Planespotters and need internet on the Pi. The live photo lookup has not yet been checked against the real service on a Raspberry Pi; the demo and the tests exercise the same code with stand-ins. Run `zenithboard photos test` on your own Pi to confirm it works there.
+* Routes come from adsbdb.com by callsign. The answer format is checked against the real service and covered by tests, but the live lookup has not yet been run on a Raspberry Pi: `REAL_PHOTOS=1 ./bin/zenithboard-demo` shows the real route of the demo's two airliners.
 * The airline name list is built in (about 90 major airlines); other airlines show the callsign only.
 
 ## Contributing & tests

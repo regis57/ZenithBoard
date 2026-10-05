@@ -15,7 +15,23 @@
    "r": "F-ZZAA",
    "t": "A320",
    "baro_rate": 1200,
-   "demo_photo": "/demo/photos/zza210.svg"
+   "demo_photo": "/demo/photos/zza210.svg",
+   "demo_route": {
+    "from": {
+     "iata": "LUX",
+     "icao": "ELLX",
+     "name": "Luxembourg-Findel International Airport",
+     "city": "Luxembourg",
+     "country": "LU"
+    },
+    "to": {
+     "iata": "CDG",
+     "icao": "LFPG",
+     "name": "Charles de Gaulle International Airport",
+     "city": "Paris",
+     "country": "FR"
+    }
+   }
   },
   {
    "hex": "dd0002",
@@ -30,7 +46,23 @@
    "r": "D-ZZBK",
    "t": "C25C",
    "baro_rate": 0,
-   "demo_photo": "/demo/photos/zzb88k.svg"
+   "demo_photo": "/demo/photos/zzb88k.svg",
+   "demo_route": {
+    "from": {
+     "iata": "ZRH",
+     "icao": "LSZH",
+     "name": "Zürich Airport",
+     "city": "Zurich",
+     "country": "CH"
+    },
+    "to": {
+     "iata": "NCE",
+     "icao": "LFMN",
+     "name": "Nice-Côte d'Azur Airport",
+     "city": "Nice",
+     "country": "FR"
+    }
+   }
   },
   {
    "hex": "dd0003",
@@ -45,7 +77,23 @@
    "r": "G-ZZCA",
    "t": "A388",
    "baro_rate": -1800,
-   "demo_photo": "/demo/photos/zzc404.svg"
+   "demo_photo": "/demo/photos/zzc404.svg",
+   "demo_route": {
+    "from": {
+     "iata": "DXB",
+     "icao": "OMDB",
+     "name": "Dubai International Airport",
+     "city": "Dubai",
+     "country": "AE"
+    },
+    "to": {
+     "iata": "LHR",
+     "icao": "EGLL",
+     "name": "London Heathrow Airport",
+     "city": "London",
+     "country": "GB"
+    }
+   }
   },
   {
    "hex": "dd0004",
@@ -60,7 +108,23 @@
    "r": "F-ZZAT",
    "t": "AT72",
    "baro_rate": 600,
-   "demo_photo": "/demo/photos/zza77t.svg"
+   "demo_photo": "/demo/photos/zza77t.svg",
+   "demo_route": {
+    "from": {
+     "iata": "ETZ",
+     "icao": "LFJL",
+     "name": "Metz-Nancy-Lorraine Airport",
+     "city": "Metz",
+     "country": "FR"
+    },
+    "to": {
+     "iata": "LYS",
+     "icao": "LFLL",
+     "name": "Lyon Saint-Exupéry Airport",
+     "city": "Lyon",
+     "country": "FR"
+    }
+   }
   },
   {
    "hex": "4ca7b3",
@@ -145,7 +209,23 @@
    "category": "A5",
    "r": "F-ZZCB",
    "t": "B748",
-   "baro_rate": -900
+   "baro_rate": -900,
+   "demo_route": {
+    "from": {
+     "iata": "FRA",
+     "icao": "EDDF",
+     "name": "Frankfurt am Main Airport",
+     "city": "Frankfurt am Main",
+     "country": "DE"
+    },
+    "to": {
+     "iata": "JFK",
+     "icao": "KJFK",
+     "name": "John F Kennedy International Airport",
+     "city": "New York",
+     "country": "US"
+    }
+   }
   },
   {
    "hex": "dd0013",
@@ -173,7 +253,23 @@
    "lon": 6.723,
    "seen_pos": 3,
    "t": "A320",
-   "category": "A3"
+   "category": "A3",
+   "demo_route": {
+    "from": {
+     "iata": "AMS",
+     "icao": "EHAM",
+     "name": "Amsterdam Airport Schiphol",
+     "city": "Amsterdam",
+     "country": "NL"
+    },
+    "to": {
+     "iata": "BER",
+     "icao": "EDDB",
+     "name": "Berlin Brandenburg Airport",
+     "city": "Berlin",
+     "country": "DE"
+    }
+   }
   },
   {
    "hex": "aaaaaa",

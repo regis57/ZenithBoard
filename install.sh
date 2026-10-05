@@ -79,8 +79,8 @@ settings_color() {
 settings_menu() {
   local c
   while true; do
-    c=$(wt_menu "Settings (applied immediately)\n\nUnits: $(cfg_get UNITS)   Radius: $(cfg_get RADIUS)   Position: $(cfg_get LAT), $(cfg_get LON)\nSeconds per aircraft: $(cfg_get CYCLE_SECONDS)   Photos: $(cfg_get SHOW_PHOTOS)   Colour: $(cfg_get THEME amber)\nMonthly aircraft-data refresh: $( [ "$(cfg_get AUTO_DATA_REFRESH 1)" = 1 ] && echo ON || echo OFF )" \
-      units "Units: metric / imperial" color "Colour: amber / green / red / white" radius "Detection radius" location "Antenna position (updates it everywhere)" cycle "Seconds per aircraft" photos "Aircraft photos on/off" data "Monthly aircraft-data refresh on/off" back "Back") || return 0
+    c=$(wt_menu "Settings (applied immediately)\n\nUnits: $(cfg_get UNITS)   Radius: $(cfg_get RADIUS)   Position: $(cfg_get LAT), $(cfg_get LON)\nSeconds per aircraft: $(cfg_get CYCLE_SECONDS)   Photos: $(cfg_get SHOW_PHOTOS)   Routes: $(cfg_get SHOW_ROUTES 1)   Colour: $(cfg_get THEME amber)\nMonthly aircraft-data refresh: $( [ "$(cfg_get AUTO_DATA_REFRESH 1)" = 1 ] && echo ON || echo OFF )" \
+      units "Units: metric / imperial" color "Colour: amber / green / red / white" radius "Detection radius" location "Antenna position (updates it everywhere)" cycle "Seconds per aircraft" photos "Aircraft photos on/off" routes "Flight origin/destination on/off" data "Monthly aircraft-data refresh on/off" back "Back") || return 0
     case "$c" in
       units) settings_units && restart_flightinfo ;;
       color) settings_color && restart_flightinfo ;;
@@ -93,6 +93,7 @@ settings_menu() {
         fi ;;
       cycle) local s; s=$(wt_input "Seconds each aircraft stays on the wall (2-60)." "$(cfg_get CYCLE_SECONDS 6)") && is_number "$s" && cfg_set CYCLE_SECONDS "$s" && restart_flightinfo ;;
       photos) if wt_yesno "Show aircraft photos (Planespotters) on the wall? Needs internet on the Pi." 8; then cfg_set SHOW_PHOTOS 1; else cfg_set SHOW_PHOTOS 0; fi ;;
+      routes) if wt_yesno "Show where each flight comes from and goes to?\n\nThe callsign (for example DLH4YK) is looked up on the free adsbdb.com database. Needs internet on the Pi." 11; then cfg_set SHOW_ROUTES 1; else cfg_set SHOW_ROUTES 0; fi ;;
       data)
         if wt_yesno "Refresh the aircraft model list automatically once a month?\n\n(Downloads a free list of aircraft names from GitHub. Needs internet on the Pi; the wall works without it.)" 12; then cfg_set AUTO_DATA_REFRESH 1; else cfg_set AUTO_DATA_REFRESH 0; fi
         data_refresh_apply ;;
