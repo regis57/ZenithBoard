@@ -13,8 +13,8 @@ READSB_INSTALL_URL="https://github.com/wiedehopf/adsb-scripts/raw/master/readsb-
 READSB_UNINSTALL_URL="https://github.com/wiedehopf/adsb-scripts/raw/master/readsb-uninstall.sh"
 
 # ADSB Exchange feeder (installs adsbexchange-feed + the ONE mlat client)
-ADSBX_FEED_URL="https://www.adsbexchange.com/feed.sh"
-ADSBX_UPDATE_URL="https://www.adsbexchange.com/feed-update/"
+ADSBX_FEED_URL="https://adsbexchange.com/feed.sh"
+ADSBX_UPDATE_URL="https://adsbexchange.com/feed-update.sh"
 ADSBX_UNINSTALL="/usr/local/share/adsbexchange/uninstall.sh"
 
 # Flightradar24

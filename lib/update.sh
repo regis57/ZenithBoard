@@ -3,12 +3,29 @@
 # Updating: ZenithBoard itself (git pull) and every component installed through it.
 # Safe to run any time and as often as you like; your settings in /etc/zenithboard are never touched.
 
+# Bring the download folder in line with GitHub. A normal update is a fast-forward; if the history was rewritten
+# upstream (e.g. the author re-signed the commits) the folder is simply reset to GitHub's version, as long as you
+# have not edited any tracked file in it.
+zb_sync_source() {  # zb_sync_source DIR
+  local dir="$1" branch
+  local -a g=(git -c "safe.directory=$dir" -C "$dir")
+  branch=$("${g[@]}" rev-parse --abbrev-ref HEAD 2>/dev/null) || return 1
+  "${g[@]}" fetch -q origin "$branch" || { warn "Could not reach GitHub."; return 1; }
+  "${g[@]}" merge --ff-only -q "origin/$branch" >/dev/null 2>&1 && return 0
+  if [ -n "$("${g[@]}" status --porcelain --untracked-files=no)" ]; then
+    warn "You changed files in $dir, so it was not updated. Undo with: git -C $dir checkout . (then update again)"
+    return 1
+  fi
+  log "GitHub's history was rewritten (for example commits were re-signed): resynchronising $dir"
+  "${g[@]}" reset -q --hard "origin/$branch"
+}
+
 zb_update() {  # zb_update [--no-pull]
-  local src=""
+  local src="" old="$ZB_VERSION"
   [ -f "$ZB_HOME/.source" ] && src=$(cat "$ZB_HOME/.source")
   if [ "${1:-}" != "--no-pull" ] && [ -n "$src" ] && [ -d "$src/.git" ]; then
-    log "Updating ZenithBoard from GitHub ($src)"
-    git -c safe.directory="$src" -C "$src" pull --ff-only || warn "git pull failed (local changes?). Continuing with the files you have."
+    log "Updating ZenithBoard from GitHub ($src), current version $old"
+    zb_sync_source "$src" || warn "The ZenithBoard code was NOT updated: staying on version $old."
     bash "$src/install.sh" --deploy                      # copy the new files to /opt/zenithboard
   elif [ "${1:-}" != "--no-pull" ]; then
     warn "Original download folder not found: skipping the ZenithBoard code update (git clone it again to get the newest version)."
