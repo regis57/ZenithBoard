@@ -185,12 +185,53 @@ adsb_menu() {
   read -rp "Press Enter to return to the menu..." _
 }
 
-apply_location_to_decoder() {
-  local lat="$1" lon="$2"
-  if is_readsb && command -v readsb-set-location >/dev/null; then readsb-set-location "$lat" "$lon"; systemctl restart readsb
-  elif is_dump1090; then
+# ------------------------------------------------------------------ position: update it EVERYWHERE it is stored
+# Prints one line per place. "manual" lines are things only the provider's website can change.
+_loc_line() { printf '  %-26s %s\n' "$1" "$2"; }
+
+zb_apply_location() {  # zb_apply_location LAT LON [ALT_M]
+  local lat="$1" lon="$2" alt="${3:-$(cfg_get ALT_M 0)}"
+  log "Applying position $lat, $lon, ${alt} m everywhere"
+  cfg_set LAT "$lat"; cfg_set LON "$lon"; cfg_set ALT_M "$alt"
+  _loc_line "ZenithBoard wall" "updated"; restart_flightinfo
+
+  if is_readsb && command -v readsb-set-location >/dev/null; then
+    readsb-set-location "$lat" "$lon" >/dev/null 2>&1 && systemctl restart readsb && _loc_line "readsb" "updated"
+  fi
+  if is_dump1090; then
     local f=/etc/default/dump1090-fa
     sed -i -E 's/ ?--lat [^" ]+//; s/ ?--lon [^" ]+//' "$f"
-    sed -i -E "s|^(DECODER_OPTIONS=\")|\1--lat $lat --lon $lon |" "$f"; systemctl restart dump1090-fa
+    sed -i -E "s|^(DECODER_OPTIONS=\")|\1--lat $lat --lon $lon |" "$f"
+    systemctl restart dump1090-fa && _loc_line "dump1090-fa" "updated"
+  fi
+  if is_adsbx; then
+    local f=/etc/default/adsbexchange
+    if [ -f "$f" ] && grep -q '^LATITUDE=' "$f"; then
+      ini_set "$f" LATITUDE "$lat"; ini_set "$f" LONGITUDE "$lon"; ini_set "$f" ALTITUDE "${alt}m"
+      systemctl restart adsbexchange-feed adsbexchange-mlat 2>/dev/null
+      _loc_line "ADSB Exchange (+MLAT)" "updated"
+    else
+      _loc_line "ADSB Exchange (+MLAT)" "MANUAL: /etc/default/adsbexchange not found; re-run the ADSB Exchange setup"
+    fi
+  fi
+  if is_piaware; then
+    _loc_line "FlightAware" "MANUAL: set it on https://flightaware.com/adsb/stats (My ADS-B -> your site)"
+  fi
+  if is_fr24; then
+    _loc_line "Flightradar24" "MANUAL: edit your receiver on https://www.flightradar24.com (My data sharing)"
+  fi
+  if is_planefinder; then
+    local f=/etc/pfclient-config.json
+    if [ -f "$f" ] && command -v python3 >/dev/null && python3 - "$f" "$lat" "$lon" <<'PY'
+import json, sys
+f, lat, lon = sys.argv[1], float(sys.argv[2]), float(sys.argv[3])
+d = json.load(open(f))
+if "latitude" not in d:
+    sys.exit(1)
+d["latitude"], d["longitude"] = lat, lon
+json.dump(d, open(f, "w"), indent=2)
+PY
+    then systemctl restart pfclient; _loc_line "Plane Finder" "updated"
+    else _loc_line "Plane Finder" "MANUAL: open http://$(local_ip):30053 and change the position"; fi
   fi
 }

@@ -68,7 +68,8 @@ The first run asks, once:
  3  ACARS       optional ACARS messages in Grafana (2nd dongle)
  4  Settings    units, radius, antenna position
  5  Status      what is running
- 6  Uninstall everything
+ 6  Update      upgrade ZenithBoard, decoder, feeders, ACARS
+ 7  Uninstall everything
 ```
 
 **1 · ADSB** — pick the decoder (**readsb** is recommended; **dump1090-fa** is supported as an alternative; both feed the same local port so every feeder works with either). Then tick where to share. *ADSB Exchange is always on.* The ADSB Exchange script will ask for a station name and your position, and prints a link to see your feed. FlightAware prints a claim link; Plane Finder finishes setup on a small web page. Unticking an installed feeder removes it after a confirmation.
@@ -94,11 +95,19 @@ Three ways, pick the one that suits you.
 
 | Where | How |
 |---|---|
-| **Command line** (affects every screen) | `sudo zenithboard units imperial` · `sudo zenithboard units metric` · `sudo zenithboard radius 5` · `sudo zenithboard location 49.246 6.223 210` · `sudo zenithboard cycle 8` |
+| **Command line** (affects every screen) | `sudo zenithboard units imperial` · `sudo zenithboard units metric` · `sudo zenithboard radius 5` · `sudo zenithboard cycle 8` |
 | **Menu** | `sudo zenithboard menu` → *4 Settings* |
 | **On the tablet** (that tablet only) | Tap the faint gear in the top-right corner: units, radius, seconds per plane, colour (amber / green / red / white). Or use a link: `http://<pi>:8080/?units=imperial&radius=5&theme=green` |
 
 Radius presets are **1, 2, 5, 10, 15, 30, 50** — read as kilometres in metric mode and miles in imperial mode. Changes apply immediately, no restart or reinstall.
+
+### Moving the antenna (position)
+
+```bash
+sudo zenithboard location 49.246 6.223 210      # latitude, longitude, altitude in metres
+```
+
+(or menu *4 Settings → Antenna position*). The position is updated **everywhere ZenithBoard can reach**: the wall, readsb / dump1090-fa, ADSB Exchange (including its MLAT) and Plane Finder. A summary then lists anything only the provider's website can change (FlightAware and Flightradar24 hold your position in your online account) with the page to open.
 
 All settings live in one readable file: `/etc/zenithboard/config.env`.
 
@@ -152,8 +161,15 @@ readsb (or dump1090-fa) --- aircraft.json ---> FlightInfo server ---> tablet (do
 
 ## Updating and uninstalling
 
+**One command updates everything** (ZenithBoard itself from GitHub, readsb / dump1090-fa, ADSB Exchange, FlightAware, Flightradar24, Plane Finder, acarsdec, Grafana). Your settings are kept:
+
 ```bash
-cd ZenithBoard && git pull && sudo ./install.sh      # choose "Update / reinstall" for FlightInfo or ACARS
+sudo zenithboard update
+```
+
+The same is available in the menu (*6 Update*). Run it whenever a provider releases a new version, or once a month. If a provider changes a download link, edit it in [`lib/versions.sh`](lib/versions.sh) and run the update again.
+
+```bash
 sudo zenithboard menu                                 # add or remove any component at any time
 sudo /opt/zenithboard/install.sh --uninstall-all      # remove everything
 ```
@@ -177,7 +193,7 @@ sudo /opt/zenithboard/install.sh --uninstall-all      # remove everything
 
 * **Not yet validated on a real Raspberry Pi** — third-party installers (readsb, ADSB Exchange, Flightradar24, Plane Finder, `acarsdec`) change over time. Version pins and URLs are all in [`lib/versions.sh`](lib/versions.sh).
 * The Plane Finder package URL for 64-bit systems must be checked against their site.
-* ADSB Exchange, FlightAware and Flightradar24 keep their own copy of your position: if you move the antenna, update it there too.
+* FlightAware and Flightradar24 store your antenna position on their websites: after `zenithboard location`, update it there too (the command tells you where).
 * ACARS legality differs per country — check your local rules before collecting ACARS messages.
 * Photos on the wall are optional (`sudo zenithboard photos on`), need internet and come from Planespotters.
 

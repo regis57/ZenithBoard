@@ -14,6 +14,7 @@ deploy_files() {
     install -d -m 755 "$ZB_HOME"
     rm -rf "${ZB_HOME:?}/flightinfo" "${ZB_HOME:?}/acars" "${ZB_HOME:?}/lib" "${ZB_HOME:?}/bin" "${ZB_HOME:?}/systemd"
     cp -r "$src/flightinfo" "$src/acars" "$src/lib" "$src/bin" "$src/systemd" "$src/install.sh" "$src/LICENSE" "$ZB_HOME/"
+    printf '%s\n' "$src" > "$ZB_HOME/.source"      # where to `git pull` from when updating
   fi
   chmod +x "$ZB_HOME/install.sh" "$ZB_HOME"/bin/*
   ln -sf "$ZB_HOME/bin/zenithboard" /usr/local/bin/zenithboard

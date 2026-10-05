@@ -12,8 +12,9 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$ROOT/lib/adsb.sh"
 . "$ROOT/lib/flightinfo.sh"
 . "$ROOT/lib/acars.sh"
+. "$ROOT/lib/update.sh"
 
-usage() { echo "Usage: sudo ./install.sh [--uninstall-all] [--version]"; }
+usage() { echo "Usage: sudo ./install.sh [--deploy] [--uninstall-all] [--version]      (to upgrade: sudo zenithboard update)"; }
 
 preflight() {
   need_root "$@"
@@ -59,15 +60,15 @@ settings_menu() {
   local c
   while true; do
     c=$(wt_menu "Settings (applied immediately)\n\nUnits: $(cfg_get UNITS)   Radius: $(cfg_get RADIUS)   Position: $(cfg_get LAT), $(cfg_get LON)\nSeconds per aircraft: $(cfg_get CYCLE_SECONDS)   Photos: $(cfg_get SHOW_PHOTOS)" \
-      units "Units: metric / imperial" radius "Detection radius" location "Antenna position" cycle "Seconds per aircraft" photos "Aircraft photos on/off" back "Back") || return 0
+      units "Units: metric / imperial" radius "Detection radius" location "Antenna position (updates it everywhere)" cycle "Seconds per aircraft" photos "Aircraft photos on/off" back "Back") || return 0
     case "$c" in
       units) settings_units && restart_flightinfo ;;
       radius) change_radius ;;
       location)
         if settings_location; then
-          apply_location_to_decoder "$(cfg_get LAT)" "$(cfg_get LON)" 2>/dev/null || true
-          restart_flightinfo
-          wt_msg "Position saved for the decoder and the wall.\n\nADSB Exchange / FlightAware / Flightradar24 keep their own copy: update it there if you moved the antenna permanently." 12
+          clear; zb_apply_location "$(cfg_get LAT)" "$(cfg_get LON)" "$(cfg_get ALT_M 0)"
+          echo; echo "Lines marked MANUAL can only be changed on the provider's website."
+          read -rp "Press Enter to continue..." _
         fi ;;
       cycle) local s; s=$(wt_input "Seconds each aircraft stays on the wall (2-60)." "$(cfg_get CYCLE_SECONDS 6)") && is_number "$s" && cfg_set CYCLE_SECONDS "$s" && restart_flightinfo ;;
       photos) if wt_yesno "Show aircraft photos (Planespotters) on the wall? Needs internet on the Pi." 8; then cfg_set SHOW_PHOTOS 1; else cfg_set SHOW_PHOTOS 0; fi ;;
@@ -102,7 +103,8 @@ main_menu() {
       3 "ACARS       - optional ACARS messages in Grafana (2nd dongle)" \
       4 "Settings    - units, radius, antenna position" \
       5 "Status      - what is running" \
-      6 "Uninstall everything" \
+      6 "Update      - upgrade ZenithBoard, decoder, feeders, ACARS" \
+      7 "Uninstall everything" \
       0 "Exit") || exit 0
     case "$c" in
       1) adsb_menu ;;
@@ -110,7 +112,8 @@ main_menu() {
       3) acars_menu ;;
       4) settings_menu ;;
       5) clear; "$ROOT/bin/zenithboard" status; read -rp "Press Enter..." _ ;;
-      6) uninstall_all ;;
+      6) clear; "$ZB_HOME/bin/zenithboard" update; read -rp "Press Enter..." _ ;;
+      7) uninstall_all ;;
       *) exit 0 ;;
     esac
   done
@@ -119,6 +122,7 @@ main_menu() {
 case "${1:-}" in
   -h|--help) usage; exit 0 ;;
   --version) echo "ZenithBoard $ZB_VERSION"; exit 0 ;;
+  --deploy) need_root "$@"; mkdir -p "$ZB_ETC"; touch "$ZB_CONFIG"; cfg_defaults; deploy_files; exit 0 ;;
   --uninstall-all) preflight "$@"; uninstall_all; exit 0 ;;
   "") ;;
   *) usage; exit 1 ;;

@@ -7,6 +7,12 @@ HERE="$(dirname "$(readlink -f "$0")")"
 . "$HERE/../lib/common.sh"
 # shellcheck source=lib/adsb.sh
 . "$HERE/../lib/adsb.sh"
+# shellcheck source=lib/flightinfo.sh
+. "$HERE/../lib/flightinfo.sh"
+# shellcheck source=lib/acars.sh
+. "$HERE/../lib/acars.sh"
+# shellcheck source=lib/update.sh
+. "$HERE/../lib/update.sh"
 
 usage() {
   cat <<USAGE
@@ -16,9 +22,10 @@ ZenithBoard $ZB_VERSION - ADSB Flight Info
   zenithboard config                    show the current settings
   zenithboard units metric|imperial     km, km/h, m   |   mi, knots, ft
   zenithboard radius 1|2|5|10|15|30|50  wall detection radius (in your unit: km or miles)
-  zenithboard location LAT LON [ALT_M]  move the antenna position (decoder + wall)
+  zenithboard location LAT LON [ALT_M]  set the antenna position EVERYWHERE it is stored
   zenithboard cycle SECONDS             seconds each aircraft stays on the wall
   zenithboard photos on|off             aircraft photos on the wall (needs internet)
+  zenithboard update                    upgrade ZenithBoard + decoder + feeders + ACARS + Grafana
   zenithboard mlat-guard                re-enforce a single MLAT client
   zenithboard logs [flightinfo|acars|decoder]
   zenithboard menu                      open the installer menu (add / remove components)
@@ -69,14 +76,14 @@ case "${1:-}" in
     cfg_set RADIUS "$2"; restart_flightinfo; echo "Radius: $2 $( [ "$(cfg_get UNITS)" = imperial ] && echo mi || echo km )" ;;
   location)
     root_or_die; valid_lat "${2:-x}" && valid_lon "${3:-x}" || die "Usage: zenithboard location LAT LON [ALT_M]   e.g. 49.246 6.223 210"
-    cfg_set LAT "$2"; cfg_set LON "$3"; [ -n "${4:-}" ] && cfg_set ALT_M "$4"
-    apply_location_to_decoder "$2" "$3"; restart_flightinfo
-    warn "ADSB Exchange, FlightAware and Flightradar24 keep their own copy of the position: update it in each service if you moved the antenna for good." ;;
+    zb_apply_location "$2" "$3" "${4:-}" ;;
   cycle)
     root_or_die; is_number "${2:-x}" || die "Usage: zenithboard cycle SECONDS"; cfg_set CYCLE_SECONDS "$2"; restart_flightinfo ;;
   photos)
     root_or_die; case "${2:-}" in on) cfg_set SHOW_PHOTOS 1 ;; off) cfg_set SHOW_PHOTOS 0 ;; *) die "Usage: zenithboard photos on|off" ;; esac ;;
   mlat-guard) root_or_die; zb_mlat_guard ;;
+  update) root_or_die; zb_update "${2:-}" ;;
+  update-components) root_or_die; zb_update_components ;;
   logs)
     case "${2:-flightinfo}" in
       flightinfo) journalctl -u zenithboard-flightinfo -n 100 --no-pager ;;
