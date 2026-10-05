@@ -1,0 +1,12 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Starts acarsdec with the settings from /etc/zenithboard/config.env and sends JSON to the local ingester.
+# shellcheck disable=SC1090
+. "${ZENITHBOARD_CONFIG:-/etc/zenithboard/config.env}"
+DEV="${ACARS_SDR:-0}"
+FREQS="${ACARS_FREQS:-131.525 131.725 131.825}"
+PORT="${ACARS_UDP_PORT:-5555}"
+# acarsdec 4.x uses -j for UDP JSON output, 3.x used -N : detect which one this build knows.
+if acarsdec --help 2>&1 | grep -qE '(^|[[:space:]])-j[[:space:]]'; then NET=(-j "127.0.0.1:$PORT"); else NET=(-N "127.0.0.1:$PORT"); fi
+# shellcheck disable=SC2086  # FREQS is a deliberate word list
+exec acarsdec -o 0 "${NET[@]}" -r "$DEV" $FREQS

@@ -1,0 +1,91 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# zenithboard - day-to-day control: units, radius, location, status.
+set -u
+HERE="$(dirname "$(readlink -f "$0")")"
+# shellcheck source=lib/common.sh
+. "$HERE/../lib/common.sh"
+# shellcheck source=lib/adsb.sh
+. "$HERE/../lib/adsb.sh"
+
+usage() {
+  cat <<USAGE
+ZenithBoard $ZB_VERSION - ADSB Flight Info
+
+  zenithboard status                    what is installed / running, MLAT check
+  zenithboard config                    show the current settings
+  zenithboard units metric|imperial     km, km/h, m   |   mi, knots, ft
+  zenithboard radius 1|2|5|10|15|30|50  wall detection radius (in your unit: km or miles)
+  zenithboard location LAT LON [ALT_M]  move the antenna position (decoder + wall)
+  zenithboard cycle SECONDS             seconds each aircraft stays on the wall
+  zenithboard photos on|off             aircraft photos on the wall (needs internet)
+  zenithboard mlat-guard                re-enforce a single MLAT client
+  zenithboard logs [flightinfo|acars|decoder]
+  zenithboard menu                      open the installer menu (add / remove components)
+USAGE
+}
+
+root_or_die() { [ "$(id -u)" -eq 0 ] || die "This command changes settings: run it with sudo."; }
+
+show_state() { # show_state "Label" check_fn service
+  local st="not installed"
+  if "$2"; then if unit_active "$3"; then st="${C_G}running${C_0}"; else st="${C_R}installed, NOT running${C_0}"; fi; fi
+  printf '  %-26s %s\n' "$1" "$st"
+}
+
+cmd_status() {
+  local dec; dec=$(installed_decoder)
+  echo "${C_B}ZenithBoard $ZB_VERSION${C_0}   units: $(cfg_get UNITS metric)   position: $(cfg_get LAT ?) , $(cfg_get LON ?)"
+  echo "Decoder / feeders:"
+  if [ -n "$dec" ]; then show_state "Decoder ($dec)" true "$dec"; else echo "  Decoder                    not installed"; fi
+  show_state "ADSB Exchange" is_adsbx adsbexchange-feed
+  show_state "FlightAware (piaware)" is_piaware piaware
+  show_state "Flightradar24" is_fr24 fr24feed
+  show_state "Plane Finder" is_planefinder pfclient
+  echo "Displays:"
+  show_state "FlightInfo wall" is_flightinfo zenithboard-flightinfo
+  show_state "ACARS decoder" is_acars zenithboard-acarsdec
+  show_state "ACARS ingester" is_acars zenithboard-acars-ingest
+  show_state "Grafana" is_grafana grafana-server
+  local n; n=$(mlat_count)
+  if [ "${n:-0}" -le 1 ]; then echo "MLAT clients running: ${n:-0}  ${C_G}(OK: max 1)${C_0}"; else echo "MLAT clients running: $n  ${C_R}(too many! run: sudo zenithboard mlat-guard)${C_0}"; fi
+  local j; j=$(decoder_json)
+  if [ -f "$j" ]; then echo "Aircraft in decoder right now: $(grep -o '"hex"' "$j" | wc -l)"; fi
+  is_flightinfo && echo "Wall:     http://$(local_ip):$(cfg_get PORT 8080)/"
+  is_acars && echo "ACARS:    http://$(local_ip):3000/"
+}
+
+cmd_config() { echo "# $ZB_CONFIG"; cat "$ZB_CONFIG" 2>/dev/null || echo "(no configuration yet - run: sudo ./install.sh)"; }
+
+case "${1:-}" in
+  status) cmd_status ;;
+  config|"show") cmd_config ;;
+  units)
+    root_or_die; valid_units "${2:-}" || die "Usage: zenithboard units metric|imperial"
+    cfg_set UNITS "$2"; restart_flightinfo
+    echo "Units are now $2. Radius ($(cfg_get RADIUS)) is read as $( [ "$2" = imperial ] && echo miles || echo km ). Tablets with their own on-screen override: tap the gear on the wall." ;;
+  radius)
+    root_or_die; valid_radius "${2:-}" || die "Radius must be one of: $RADIUS_PRESETS"
+    cfg_set RADIUS "$2"; restart_flightinfo; echo "Radius: $2 $( [ "$(cfg_get UNITS)" = imperial ] && echo mi || echo km )" ;;
+  location)
+    root_or_die; valid_lat "${2:-x}" && valid_lon "${3:-x}" || die "Usage: zenithboard location LAT LON [ALT_M]   e.g. 49.246 6.223 210"
+    cfg_set LAT "$2"; cfg_set LON "$3"; [ -n "${4:-}" ] && cfg_set ALT_M "$4"
+    apply_location_to_decoder "$2" "$3"; restart_flightinfo
+    warn "ADSB Exchange, FlightAware and Flightradar24 keep their own copy of the position: update it in each service if you moved the antenna for good." ;;
+  cycle)
+    root_or_die; is_number "${2:-x}" || die "Usage: zenithboard cycle SECONDS"; cfg_set CYCLE_SECONDS "$2"; restart_flightinfo ;;
+  photos)
+    root_or_die; case "${2:-}" in on) cfg_set SHOW_PHOTOS 1 ;; off) cfg_set SHOW_PHOTOS 0 ;; *) die "Usage: zenithboard photos on|off" ;; esac ;;
+  mlat-guard) root_or_die; zb_mlat_guard ;;
+  logs)
+    case "${2:-flightinfo}" in
+      flightinfo) journalctl -u zenithboard-flightinfo -n 100 --no-pager ;;
+      acars) journalctl -u zenithboard-acarsdec -u zenithboard-acars-ingest -n 100 --no-pager ;;
+      decoder) journalctl -u "$(cfg_get DECODER readsb)" -n 100 --no-pager ;;
+      *) die "Usage: zenithboard logs [flightinfo|acars|decoder]" ;;
+    esac ;;
+  menu) root_or_die; exec "$HERE/../install.sh" ;;
+  version|--version) echo "ZenithBoard $ZB_VERSION" ;;
+  help|-h|--help|"") usage ;;
+  *) usage; exit 1 ;;
+esac

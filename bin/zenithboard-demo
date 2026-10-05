@@ -1,0 +1,17 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Try the dot-matrix wall on any computer WITHOUT an antenna, using fake aircraft.
+#   ./bin/zenithboard-demo [imperial]      then open http://localhost:8080/
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+CFG="$(mktemp)"
+cat > "$CFG" <<CFGEOF
+UNITS=${1:-metric}
+LAT=49.246
+LON=6.223
+RADIUS=10
+CYCLE_SECONDS=4
+PORT=${PORT:-8080}
+AIRCRAFT_JSON=$HERE/tests/sample_aircraft.json
+CFGEOF
+echo "Demo wall on http://localhost:${PORT:-8080}/  (Ctrl-C to stop)"
+ZENITHBOARD_CONFIG="$CFG" exec python3 "$HERE/flightinfo/server.py"

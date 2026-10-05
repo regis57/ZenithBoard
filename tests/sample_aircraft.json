@@ -1,0 +1,68 @@
+{
+ "now": 0,
+ "messages": 1,
+ "aircraft": [
+  {
+   "hex": "3944ed",
+   "flight": "AFR1234 ",
+   "r": "F-GKXA",
+   "t": "A320",
+   "alt_baro": 35000,
+   "gs": 450,
+   "track": 270,
+   "baro_rate": 1200,
+   "lat": 49.296,
+   "lon": 6.253,
+   "seen_pos": 0.4
+  },
+  {
+   "hex": "4ca7b3",
+   "flight": "RYR8WL  ",
+   "r": "EI-DWK",
+   "t": "B738",
+   "alt_baro": 8200,
+   "gs": 240,
+   "track": 95,
+   "baro_rate": -1800,
+   "lat": 49.226,
+   "lon": 6.293,
+   "seen_pos": 1.2
+  },
+  {
+   "hex": "3c6444",
+   "flight": "DLH4YK  ",
+   "r": "D-AIUA",
+   "t": "A320",
+   "alt_baro": "ground",
+   "gs": 12,
+   "track": 180,
+   "lat": 49.256,
+   "lon": 6.213,
+   "seen_pos": 2
+  },
+  {
+   "hex": "406abc",
+   "flight": "EZY45RF ",
+   "alt_baro": 38000,
+   "gs": 470,
+   "track": 310,
+   "baro_rate": 0,
+   "lat": 49.646,
+   "lon": 6.723,
+   "seen_pos": 3
+  },
+  {
+   "hex": "aaaaaa",
+   "alt_baro": 30000,
+   "seen": 3
+  },
+  {
+   "hex": "bbbbbb",
+   "flight": "STALE   ",
+   "alt_baro": 30000,
+   "lat": 49.246,
+   "lon": 6.223,
+   "seen_pos": 120
+  }
+ ]
+}

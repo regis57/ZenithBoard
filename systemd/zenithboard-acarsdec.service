@@ -1,0 +1,17 @@
+[Unit]
+Description=ZenithBoard acarsdec (ACARS decoder on its own SDR dongle)
+After=network.target zenithboard-acars-ingest.service
+Wants=zenithboard-acars-ingest.service
+
+[Service]
+User=zenithboard
+Group=zenithboard
+SupplementaryGroups=plugdev
+Environment=ZENITHBOARD_CONFIG=/etc/zenithboard/config.env
+ExecStart=/opt/zenithboard/bin/run-acarsdec
+Restart=always
+RestartSec=5
+Nice=5
+
+[Install]
+WantedBy=multi-user.target

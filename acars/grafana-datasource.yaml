@@ -1,0 +1,10 @@
+apiVersion: 1
+datasources:
+  - name: ZenithBoard ACARS
+    uid: zenithboard-acars
+    type: frser-sqlite-datasource
+    access: proxy
+    isDefault: true
+    editable: false
+    jsonData:
+      path: /var/lib/zenithboard/acars.db

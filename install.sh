@@ -1,148 +1,130 @@
 #!/bin/bash
-if [ "$EUID" -ne 0 ]; then
-  echo "Please run this script as root (sudo ./install.sh)"
-  exit
-fi
+# SPDX-License-Identifier: GPL-3.0-or-later
+# ZenithBoard installer / uninstaller menu.
+#   1 ADSB        decoder (readsb or dump1090-fa) + feeders, ADSB Exchange mandatory, single MLAT
+#   2 FlightInfo  dot-matrix wall for an old tablet
+#   3 ACARS       optional ACARS -> Grafana (needs a 2nd SDR dongle)
+# Re-run it any time: it detects what is installed and lets you add or remove components.
+set -u
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=lib/common.sh
+. "$ROOT/lib/common.sh"
+. "$ROOT/lib/adsb.sh"
+. "$ROOT/lib/flightinfo.sh"
+. "$ROOT/lib/acars.sh"
 
-# Detect current state to pre-fill the checklist and allow easy additions/removals
-systemctl is-active --quiet dump1090-fa && S_DUMP="ON" || S_DUMP="OFF"
-systemctl is-active --quiet flightinfo && S_INFO="ON" || S_INFO="OFF"
-systemctl is-active --quiet fr24feed && S_FR24="ON" || S_FR24="OFF"
-systemctl is-active --quiet piaware && S_FA="ON" || S_FA="OFF"
-systemctl is-active --quiet adsbexchange-feed && S_ADSBX="ON" || S_ADSBX="OFF"
-systemctl is-active --quiet pfclient && S_PF="ON" || S_PF="OFF"
-systemctl is-active --quiet grafana-server && S_ACARS="ON" || S_ACARS="OFF"
+usage() { echo "Usage: sudo ./install.sh [--uninstall-all] [--version]"; }
 
-LAT=$(whiptail --inputbox "Enter your Latitude" 8 39 "49.246" --title "GPS Configuration" 3>&1 1>&2 2>&3)
-LON=$(whiptail --inputbox "Enter your Longitude" 8 39 "6.223" --title "GPS Configuration" 3>&1 1>&2 2>&3)
+preflight() {
+  need_root "$@"
+  command -v apt-get >/dev/null || die "This installer needs Raspberry Pi OS / Debian (apt)."
+  case "$(arch)" in arm64|armhf) ;; *) warn "Architecture $(arch) is not a Raspberry Pi; continuing anyway." ;; esac
+  if ! command -v whiptail >/dev/null || ! command -v curl >/dev/null; then
+    log "Installing whiptail and curl"; apt-get update -qq && apt_install whiptail curl ca-certificates
+  fi
+  mkdir -p "$ZB_ETC"; touch "$ZB_CONFIG"; cfg_defaults
+}
 
-CHOICES=$(whiptail --title "ADSB FlightInfo - Component Manager" --checklist \
-"Select components to install. Unchecking a previously installed component will REMOVE or DISABLE it.\nNOTE: ACARS requires a 2nd SDR dongle (131 MHz)." 20 78 8 \
-"DUMP1090" "Base ADS-B Decoder (Required)" $S_DUMP \
-"FLIGHTINFO" "Dot Matrix Web Dashboard" $S_INFO \
-"ACARS" "ACARS Decoding + Grafana" $S_ACARS \
-"FR24" "FlightRadar24 Feeder" $S_FR24 \
-"FLIGHTAWARE" "FlightAware Feeder (PiAware)" $S_FA \
-"ADSBX" "ADSB Exchange Feeder" $S_ADSBX \
-"PLANEFINDER" "PlaneFinder Feeder" $S_PF 3>&1 1>&2 2>&3)
+first_run_wizard() {
+  grep -q '^LAT=.' "$ZB_CONFIG" && grep -q '^LON=.' "$ZB_CONFIG" && return 0
+  wt_msg "Welcome to ZenithBoard - ADSB Flight Info.\n\nA few questions first:\n  1. Units (metric or imperial)\n  2. Where your antenna is\n  3. The default detection radius\n\nYou can change all of them later:  sudo zenithboard config   (or Settings in this menu)." 16 || exit 0
+  settings_units || exit 0
+  settings_location || exit 0
+  local r; r=$(pick_radius) && cfg_set RADIUS "$r"
+}
 
-if [ $? -ne 0 ]; then
-    echo "Installation cancelled."
-    exit 0
-fi
+settings_units() {
+  local cur u m i; cur=$(cfg_get UNITS metric); m=OFF; i=OFF; [ "$cur" = imperial ] && i=ON || m=ON
+  u=$(wt_radio "Units for the wall and the radius.\n\nmetric   : distance km, speed km/h, altitude m, climb m/s\nimperial : distance miles, speed knots, altitude ft, climb ft/min" \
+      metric "Metric (km, km/h, m)" "$m" imperial "Imperial (miles, knots, feet)" "$i") || return 1
+  cfg_set UNITS "$u"
+}
 
-apt-get update
+settings_location() {
+  local lat lon alt
+  while true; do
+    lat=$(wt_input "Antenna LATITUDE in decimal degrees (e.g. 49.246, south is negative)." "$(cfg_get LAT)") || return 1
+    valid_lat "$lat" && break; wt_msg "Not a valid latitude (-90..90)." 8
+  done
+  while true; do
+    lon=$(wt_input "Antenna LONGITUDE in decimal degrees (e.g. 6.223, west is negative)." "$(cfg_get LON)") || return 1
+    valid_lon "$lon" && break; wt_msg "Not a valid longitude (-180..180)." 8
+  done
+  alt=$(wt_input "Antenna altitude above sea level in METRES (approximate is fine)." "$(cfg_get ALT_M 0)") || return 1
+  is_number "$alt" || alt=0
+  cfg_set LAT "$lat"; cfg_set LON "$lon"; cfg_set ALT_M "$alt"
+}
 
-# DUMP1090
-if [[ $CHOICES == *"DUMP1090"* ]]; then
-    echo "=== Installing/Updating dump1090-fa ==="
-    wget -q https://flightaware.com/adsb/piaware/files/packages/pool/piaware/p/piaware-support/piaware-repository_9.0.1_all.deb
-    dpkg -i piaware-repository_9.0.1_all.deb
-    apt-get update
-    apt-get install -y dump1090-fa
-    sed -i "s/RECEIVER_OPTIONS=\".*\"/RECEIVER_OPTIONS=\"--lat $LAT --lon $LON \"/" /etc/default/dump1090-fa
-    systemctl enable --now dump1090-fa
-    systemctl restart dump1090-fa
-else
-    echo "=== Removing dump1090-fa ==="
-    apt-get purge -y dump1090-fa
-fi
+settings_menu() {
+  local c
+  while true; do
+    c=$(wt_menu "Settings (applied immediately)\n\nUnits: $(cfg_get UNITS)   Radius: $(cfg_get RADIUS)   Position: $(cfg_get LAT), $(cfg_get LON)\nSeconds per aircraft: $(cfg_get CYCLE_SECONDS)   Photos: $(cfg_get SHOW_PHOTOS)" \
+      units "Units: metric / imperial" radius "Detection radius" location "Antenna position" cycle "Seconds per aircraft" photos "Aircraft photos on/off" back "Back") || return 0
+    case "$c" in
+      units) settings_units && restart_flightinfo ;;
+      radius) change_radius ;;
+      location)
+        if settings_location; then
+          apply_location_to_decoder "$(cfg_get LAT)" "$(cfg_get LON)" 2>/dev/null || true
+          restart_flightinfo
+          wt_msg "Position saved for the decoder and the wall.\n\nADSB Exchange / FlightAware / Flightradar24 keep their own copy: update it there if you moved the antenna permanently." 12
+        fi ;;
+      cycle) local s; s=$(wt_input "Seconds each aircraft stays on the wall (2-60)." "$(cfg_get CYCLE_SECONDS 6)") && is_number "$s" && cfg_set CYCLE_SECONDS "$s" && restart_flightinfo ;;
+      photos) if wt_yesno "Show aircraft photos (Planespotters) on the wall? Needs internet on the Pi." 8; then cfg_set SHOW_PHOTOS 1; else cfg_set SHOW_PHOTOS 0; fi ;;
+      *) return 0 ;;
+    esac
+  done
+}
 
-# FLIGHTINFO
-if [[ $CHOICES == *"FLIGHTINFO"* ]]; then
-    echo "=== Installing/Updating FlightInfo ==="
-    apt-get install -y python3-pip python3-venv
-    systemctl stop flightinfo 2>/dev/null
-    rm -rf /opt/flightinfo
-    cp -r $(pwd)/flightinfo /opt/flightinfo
-    cd /opt/flightinfo
-    python3 -m venv venv
-    ./venv/bin/pip install -r requirements.txt
-    
-    cat << 'EOF' > /etc/systemd/system/flightinfo.service
-[Unit]
-Description=FlightInfo API & Web Server
-After=network.target dump1090-fa.service
+uninstall_all() {
+  wt_yesno "UNINSTALL EVERYTHING?\n\nThis removes FlightInfo, ACARS, all feeders and the decoder installed through this menu." 12 || return 0
+  clear
+  is_acars && remove_acars
+  is_flightinfo && remove_flightinfo
+  is_planefinder && remove_planefinder
+  is_fr24 && remove_fr24
+  is_piaware && remove_piaware
+  is_adsbx && remove_adsbx
+  [ -n "$(installed_decoder)" ] && remove_decoder
+  if wt_yesno "Also delete your ZenithBoard settings ($ZB_ETC) and program files ($ZB_HOME)?" 8; then
+    rm -rf "$ZB_ETC" "$ZB_HOME" /usr/local/bin/zenithboard
+    id "$ZB_USER" >/dev/null 2>&1 && userdel "$ZB_USER" 2>/dev/null
+  fi
+  log "Everything removed."; exit 0
+}
 
-[Service]
-User=root
-WorkingDirectory=/opt/flightinfo
-Environment="PATH=/opt/flightinfo/venv/bin"
-ExecStart=/opt/flightinfo/venv/bin/uvicorn backend:app --host 0.0.0.0 --port 8080
-Restart=always
+main_menu() {
+  local c
+  while true; do
+    c=$(wt_menu "ZenithBoard $ZB_VERSION   (units: $(cfg_get UNITS), radius: $(cfg_get RADIUS))\n\nPick a step. You can come back any time to add or remove things." \
+      1 "ADSB        - decoder + share to ADSB Exchange, FlightAware, FR24..." \
+      2 "FlightInfo  - dot-matrix wall for an old tablet" \
+      3 "ACARS       - optional ACARS messages in Grafana (2nd dongle)" \
+      4 "Settings    - units, radius, antenna position" \
+      5 "Status      - what is running" \
+      6 "Uninstall everything" \
+      0 "Exit") || exit 0
+    case "$c" in
+      1) adsb_menu ;;
+      2) flightinfo_menu ;;
+      3) acars_menu ;;
+      4) settings_menu ;;
+      5) clear; "$ROOT/bin/zenithboard" status; read -rp "Press Enter..." _ ;;
+      6) uninstall_all ;;
+      *) exit 0 ;;
+    esac
+  done
+}
 
-[Install]
-WantedBy=multi-user.target
-EOF
-    
-    sed -i "s/LAT_DEFAULT = 49.0/LAT_DEFAULT = $LAT/" /opt/flightinfo/backend.py
-    sed -i "s/LON_DEFAULT = 6.0/LON_DEFAULT = $LON/" /opt/flightinfo/backend.py
-    
-    systemctl daemon-reload
-    systemctl enable --now flightinfo
-else
-    echo "=== Removing FlightInfo ==="
-    systemctl disable --now flightinfo 2>/dev/null
-    rm -rf /opt/flightinfo
-    rm -f /etc/systemd/system/flightinfo.service
-    systemctl daemon-reload
-fi
-
-# FR24
-if [[ $CHOICES == *"FR24"* ]]; then 
-    echo "=== Installing FR24 ==="
-    bash -c "$(wget -O - https://repo-feed.flightradar24.com/install_fr24_rpi.sh)"
-else
-    echo "=== Disabling FR24 ==="
-    systemctl disable --now fr24feed 2>/dev/null
-    apt-get remove -y fr24feed 2>/dev/null
-fi
-
-# FLIGHTAWARE
-if [[ $CHOICES == *"FLIGHTAWARE"* ]]; then 
-    echo "=== Installing FlightAware ==="
-    apt-get install -y piaware
-    piaware-config allow-auto-updates yes
-    systemctl enable --now piaware
-else
-    echo "=== Disabling FlightAware ==="
-    systemctl disable --now piaware 2>/dev/null
-    apt-get remove -y piaware 2>/dev/null
-fi
-
-# ADSBX
-if [[ $CHOICES == *"ADSBX"* ]]; then 
-    echo "=== Installing ADSB Exchange ==="
-    curl -L -o /tmp/axsetup.sh https://adsbexchange.com/feed.sh
-    sudo bash /tmp/axsetup.sh
-else
-    echo "=== Disabling ADSB Exchange ==="
-    systemctl disable --now adsbexchange-feed 2>/dev/null
-fi
-
-# PLANEFINDER
-if [[ $CHOICES == *"PLANEFINDER"* ]]; then 
-    echo "=== Installing PlaneFinder ==="
-    wget -q http://client.planefinder.net/pfclient_5.0.162_armhf.deb
-    dpkg -i pfclient_5.0.162_armhf.deb
-    systemctl enable --now pfclient
-else
-    echo "=== Disabling PlaneFinder ==="
-    systemctl disable --now pfclient 2>/dev/null
-    apt-get remove -y pfclient 2>/dev/null
-fi
-
-# ACARS
-if [[ $CHOICES == *"ACARS"* ]]; then 
-    echo "=== Installing ACARS Stack ==="
-    apt-get install -y acarsdec influxdb grafana
-    systemctl enable --now influxdb grafana-server
-else
-    echo "=== Disabling ACARS Stack ==="
-    systemctl disable --now acarsdec influxdb grafana-server 2>/dev/null
-fi
-
-echo "=== INSTALLATION COMPLETE ==="
-if [[ $CHOICES == *"FLIGHTINFO"* ]]; then
-    echo "Access FlightInfo at http://$(hostname -I | awk '{print $1}'):8080"
-fi
+case "${1:-}" in
+  -h|--help) usage; exit 0 ;;
+  --version) echo "ZenithBoard $ZB_VERSION"; exit 0 ;;
+  --uninstall-all) preflight "$@"; uninstall_all; exit 0 ;;
+  "") ;;
+  *) usage; exit 1 ;;
+esac
+preflight "$@"
+# the CLI needs the files in place even if only menu 1 is used
+deploy_files
+first_run_wizard
+main_menu

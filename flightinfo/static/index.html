@@ -1,11 +1,35 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>FlightInfo</title><link rel="stylesheet" href="/static/style.css"><link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet"></head>
-<body><div class="controls">Radius: <input type="number" id="radiusInput" value="30"> km</div>
-<div class="matrix-board"><div id="no-flights" class="hidden">NO FLIGHTS IN RADIUS</div><div id="flight-data">
-<div class="header-row"><span id="flight-callsign" class="highlight">------</span><span id="flight-hex" class="dim">------</span></div>
-<div class="details-grid">
-<div class="detail-item"><div class="label">SPEED (KM/H)</div><div class="value" id="flight-speed">---</div></div>
-<div class="detail-item"><div class="label">ALTITUDE (FT)</div><div class="value" id="flight-alt">---</div></div>
-<div class="detail-item"><div class="label">HEADING</div><div class="value" id="flight-track">---&deg;</div></div>
-<div class="detail-item"><div class="label">V-SPEED</div><div class="value" id="flight-vspeed">---</div></div>
-</div></div><div class="photo-container"><img id="flight-photo" src="" style="display:none;"></div></div>
-<script src="/static/app.js"></script></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#000000">
+  <title>ZenithBoard</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body data-theme="amber">
+  <canvas id="wall"></canvas>
+  <img id="photo" alt="" hidden>
+
+  <button id="gear" aria-label="Settings" title="Settings">&#9881;</button>
+  <div id="settings" hidden>
+    <h2>ZenithBoard</h2>
+    <label>Units
+      <select id="s-units"><option value="metric">Metric (km, km/h, m)</option><option value="imperial">Imperial (mi, kt, ft)</option></select>
+    </label>
+    <label>Radius <select id="s-radius"></select></label>
+    <label>Seconds per aircraft <input id="s-cycle" type="number" min="2" max="60" step="1"></label>
+    <label>Colour
+      <select id="s-theme"><option value="amber">Amber</option><option value="green">Green</option><option value="red">Red</option><option value="white">White</option></select>
+    </label>
+    <div class="row"><button id="s-full">Full screen</button><button id="s-reset">Reset</button><button id="s-close">Close</button></div>
+    <p class="hint">These settings are stored on this tablet only. Defaults for all screens: <code>zenithboard config</code>.</p>
+  </div>
+
+  <script src="/static/font5x7.js"></script>
+  <script src="/static/format.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>

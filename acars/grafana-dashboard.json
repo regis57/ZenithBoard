@@ -1,0 +1,232 @@
+{
+ "uid": "zenithboard-acars",
+ "title": "ACARS (last 7 days)",
+ "tags": [
+  "zenithboard",
+  "acars"
+ ],
+ "timezone": "browser",
+ "schemaVersion": 39,
+ "version": 1,
+ "refresh": "1m",
+ "time": {
+  "from": "now-7d",
+  "to": "now"
+ },
+ "panels": [
+  {
+   "id": 1,
+   "type": "stat",
+   "title": "Messages (24 h)",
+   "datasource": {
+    "type": "frser-sqlite-datasource",
+    "uid": "zenithboard-acars"
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 6,
+    "x": 0,
+    "y": 0
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "queryText": "SELECT COUNT(*) AS messages FROM messages WHERE ts >= strftime('%s','now','-1 day')",
+     "rawQueryText": "SELECT COUNT(*) AS messages FROM messages WHERE ts >= strftime('%s','now','-1 day')",
+     "queryType": "table",
+     "datasource": {
+      "type": "frser-sqlite-datasource",
+      "uid": "zenithboard-acars"
+     }
+    }
+   ],
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    }
+   }
+  },
+  {
+   "id": 2,
+   "type": "stat",
+   "title": "Aircraft (24 h)",
+   "datasource": {
+    "type": "frser-sqlite-datasource",
+    "uid": "zenithboard-acars"
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 6,
+    "x": 6,
+    "y": 0
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "queryText": "SELECT COUNT(DISTINCT tail) AS aircraft FROM messages WHERE tail <> '' AND ts >= strftime('%s','now','-1 day')",
+     "rawQueryText": "SELECT COUNT(DISTINCT tail) AS aircraft FROM messages WHERE tail <> '' AND ts >= strftime('%s','now','-1 day')",
+     "queryType": "table",
+     "datasource": {
+      "type": "frser-sqlite-datasource",
+      "uid": "zenithboard-acars"
+     }
+    }
+   ],
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    }
+   }
+  },
+  {
+   "id": 3,
+   "type": "stat",
+   "title": "Messages stored",
+   "datasource": {
+    "type": "frser-sqlite-datasource",
+    "uid": "zenithboard-acars"
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 6,
+    "x": 12,
+    "y": 0
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "queryText": "SELECT COUNT(*) AS stored FROM messages",
+     "rawQueryText": "SELECT COUNT(*) AS stored FROM messages",
+     "queryType": "table",
+     "datasource": {
+      "type": "frser-sqlite-datasource",
+      "uid": "zenithboard-acars"
+     }
+    }
+   ],
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    }
+   }
+  },
+  {
+   "id": 4,
+   "type": "stat",
+   "title": "Oldest message",
+   "datasource": {
+    "type": "frser-sqlite-datasource",
+    "uid": "zenithboard-acars"
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 6,
+    "x": 18,
+    "y": 0
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "queryText": "SELECT datetime(MIN(ts),'unixepoch','localtime') AS oldest FROM messages",
+     "rawQueryText": "SELECT datetime(MIN(ts),'unixepoch','localtime') AS oldest FROM messages",
+     "queryType": "table",
+     "datasource": {
+      "type": "frser-sqlite-datasource",
+      "uid": "zenithboard-acars"
+     }
+    }
+   ],
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    }
+   }
+  },
+  {
+   "id": 5,
+   "type": "timeseries",
+   "title": "Messages per hour",
+   "datasource": {
+    "type": "frser-sqlite-datasource",
+    "uid": "zenithboard-acars"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 24,
+    "x": 0,
+    "y": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "queryText": "SELECT (ts/3600)*3600 AS time, COUNT(*) AS messages FROM messages WHERE ts >= strftime('%s','now','-7 day') GROUP BY 1 ORDER BY 1",
+     "rawQueryText": "SELECT (ts/3600)*3600 AS time, COUNT(*) AS messages FROM messages WHERE ts >= strftime('%s','now','-7 day') GROUP BY 1 ORDER BY 1",
+     "queryType": "time series",
+     "datasource": {
+      "type": "frser-sqlite-datasource",
+      "uid": "zenithboard-acars"
+     },
+     "timeColumns": [
+      "time"
+     ]
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "drawStyle": "bars",
+      "fillOpacity": 60
+     }
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 6,
+   "type": "table",
+   "title": "Latest messages",
+   "datasource": {
+    "type": "frser-sqlite-datasource",
+    "uid": "zenithboard-acars"
+   },
+   "gridPos": {
+    "h": 14,
+    "w": 24,
+    "x": 0,
+    "y": 12
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "queryText": "SELECT datetime(ts,'unixepoch','localtime') AS time, flight, tail, label, freq, text FROM messages ORDER BY ts DESC LIMIT 300",
+     "rawQueryText": "SELECT datetime(ts,'unixepoch','localtime') AS time, flight, tail, label, freq, text FROM messages ORDER BY ts DESC LIMIT 300",
+     "queryType": "table",
+     "datasource": {
+      "type": "frser-sqlite-datasource",
+      "uid": "zenithboard-acars"
+     }
+    }
+   ],
+   "options": {
+    "showHeader": true,
+    "cellHeight": "sm"
+   }
+  }
+ ]
+}
