@@ -7,6 +7,15 @@
 # upstream (e.g. the author re-signed the commits) the folder is simply reset to GitHub's version, as long as you
 # have not edited any tracked file in it.
 zb_sync_source() {  # zb_sync_source DIR
+  local dir="$1" owner rc=0
+  owner=$(stat -c '%u:%g' "$dir" 2>/dev/null)
+  _zb_sync_source "$dir" || rc=$?
+  # git ran as root: give the folder back to its owner, otherwise the owner's own `git fetch` fails with "Permission denied"
+  [ -z "$owner" ] || chown -R "$owner" "$dir" 2>/dev/null || true
+  return "$rc"
+}
+
+_zb_sync_source() {
   local dir="$1" branch
   local -a g=(git -c "safe.directory=$dir" -C "$dir")
   branch=$("${g[@]}" rev-parse --abbrev-ref HEAD 2>/dev/null) || return 1
