@@ -4,6 +4,8 @@
 #   ./bin/zenithboard-demo [metric|imperial] [amber|green|red|white]
 # It listens on port 8081 by default so it never collides with the real wall (port 8080).
 # Use another port with:  PORT=8082 ./bin/zenithboard-demo
+# Check the real Planespotters photos without an antenna (needs internet; only the demo's few real aircraft
+# have one, the invented ones keep their mock pictures):  REAL_PHOTOS=1 ./bin/zenithboard-demo
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PORT="${PORT:-8081}"
 CFG="$(mktemp)"
@@ -22,9 +24,11 @@ CYCLE_SECONDS=4
 PORT=$PORT
 DEMO=1
 SHOW_PHOTOS=1
+DEMO_REAL_PHOTOS=${REAL_PHOTOS:-0}
 USER_DATA_DIR=/nonexistent
 AIRCRAFT_JSON=$HERE/flightinfo/demo/aircraft.json
 CFGEOF
 IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
 echo "Demo wall:  http://${IP:-localhost}:$PORT/   (Ctrl-C to stop)"
+[ "${REAL_PHOTOS:-0}" = 1 ] && echo "Real Planespotters photos: ON for the demo's real aircraft (RYR8WL, DLH4YK)"
 ZENITHBOARD_CONFIG="$CFG" python3 "$HERE/flightinfo/server.py"

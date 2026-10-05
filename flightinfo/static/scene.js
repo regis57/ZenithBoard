@@ -304,32 +304,96 @@
   }
 
   // ------------------------------------------------------------------ animated sky scene
-  function skyFor(hour) {
-    if (hour >= 21 || hour < 5) return { top: "#050a1c", bottom: "#17284d", night: true, sun: null };
-    if (hour >= 19 || hour < 7) return { top: "#2c3d73", bottom: "#f2a35e", night: false, sun: "#ffd9a0" };
-    return { top: "#3b86dc", bottom: "#c4e6ff", night: false, sun: "#fff6cf" };
+  // One continuous day rather than three fixed looks: the colours, the sun and the moon are interpolated from
+  // the clock, so the light really moves from dawn to noon to dusk. Everything is plain canvas on a small
+  // corner box, so an old tablet keeps up.
+  function rgb(c) {                                 // accepts "#rrggbb" and the "rgb(r,g,b)" that mixHex returns
+    if (c.charAt(0) !== "#") { var m = c.match(/-?\d+/g); return [+m[0], +m[1], +m[2]]; }
+    var n = parseInt(c.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
   }
+  function lerp(a, b, k) { return a + (b - a) * k; }
+  function mixHex(a, b, k) {
+    var x = rgb(a), y = rgb(b);
+    return "rgb(" + Math.round(lerp(x[0], y[0], k)) + "," + Math.round(lerp(x[1], y[1], k)) + "," + Math.round(lerp(x[2], y[2], k)) + ")";
+  }
+  function rgba(c, a) { var x = rgb(c); return "rgba(" + x[0] + "," + x[1] + "," + x[2] + "," + a + ")"; }
+  function clamp01(v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
+
+  // hour -> sky gradient (top / middle / bottom) and how dark it is (1 = full night)
+  var SKY_KEYS = [
+    { h: 0.0, top: "#050a1c", mid: "#0b1733", bot: "#17284d", dark: 1 },
+    { h: 4.8, top: "#08122c", mid: "#1b2b55", bot: "#46406d", dark: 1 },
+    { h: 6.2, top: "#2c3d73", mid: "#9c6f8e", bot: "#f2a35e", dark: 0.35 },
+    { h: 7.5, top: "#3e79c9", mid: "#86b9e8", bot: "#e8f1ff", dark: 0 },
+    { h: 13.0, top: "#2f7ad8", mid: "#6fb0ee", bot: "#c4e6ff", dark: 0 },
+    { h: 18.5, top: "#3a74c6", mid: "#8fb3dd", bot: "#f3dcb4", dark: 0 },
+    { h: 20.2, top: "#2b3a70", mid: "#8a5f82", bot: "#f09a55", dark: 0.35 },
+    { h: 21.8, top: "#070e24", mid: "#121d3e", bot: "#243457", dark: 1 },
+    { h: 24.0, top: "#050a1c", mid: "#0b1733", bot: "#17284d", dark: 1 }
+  ];
+  var SUNRISE = 6.0, SUNSET = 20.5;
+
+  // Where a body sits on its arc: 0 = rising at the left, 1 = setting at the right.
+  function arcPos(k) { return { x: 0.12 + 0.76 * k, y: 0.82 - Math.sin(Math.PI * clamp01(k)) * 0.66 }; }
+
+  function skyFor(hour, minute) {
+    var t = ((hour || 0) + (minute || 0) / 60) % 24; if (t < 0) t += 24;
+    var i = 0; while (i < SKY_KEYS.length - 2 && SKY_KEYS[i + 1].h <= t) i++;
+    var a = SKY_KEYS[i], b = SKY_KEYS[i + 1], k = (t - a.h) / (b.h - a.h);
+    var dark = lerp(a.dark, b.dark, k);
+    var sunK = (t - SUNRISE) / (SUNSET - SUNRISE), sunUp = sunK >= 0 && sunK <= 1;
+    // the moon takes the other half of the clock, from sunset round to sunrise
+    var moonK = t > SUNSET ? (t - SUNSET) / (24 - SUNSET + SUNRISE) : (t + 24 - SUNSET) / (24 - SUNSET + SUNRISE);
+    var low = sunUp ? Math.min(sunK, 1 - sunK) / 0.18 : 1;                 // 0 right at the horizon, 1 high up
+    var warm = mixHex("#ff9a4d", "#fff6cf", clamp01(low));
+    var body = sunUp ? arcPos(sunK) : arcPos(moonK);
+    return {
+      top: mixHex(a.top, b.top, k), mid: mixHex(a.mid, b.mid, k), bottom: mixHex(a.bot, b.bot, k),
+      dark: dark, night: dark > 0.5, sunUp: sunUp,
+      sun: sunUp ? warm : null,                                            // kept for callers that only want the warm tint
+      light: sunUp ? warm : "#cdd8f0",                                      // colour that lights the clouds
+      bodyX: body.x, bodyY: body.y, bodyLow: sunUp ? clamp01(low) : 1,
+      hour: t
+    };
+  }
+
   function makeClouds(seed) {
     var r = seed || 7, out = [];
     function rnd() { r = (r * 1664525 + 1013904223) >>> 0; return r / 4294967296; }
-    var layers = [{ n: 4, size: 0.13, y0: 0.08, y1: 0.38, speed: 0.012, a: 0.55, front: false },
-                  { n: 3, size: 0.2, y0: 0.14, y1: 0.55, speed: 0.026, a: 0.78, front: false },
-                  { n: 2, size: 0.3, y0: 0.8, y1: 1.0, speed: 0.06, a: 0.88, front: true }];
+    var layers = [{ n: 4, size: 0.085, y0: 0.10, y1: 0.40, speed: 0.012, a: 0.40, front: false },
+                  { n: 3, size: 0.13, y0: 0.18, y1: 0.58, speed: 0.026, a: 0.58, front: false },
+                  { n: 2, size: 0.21, y0: 0.88, y1: 1.08, speed: 0.06, a: 0.72, front: true }];
     layers.forEach(function (L) {
       for (var i = 0; i < L.n; i++) out.push({ x: rnd() * 1.4 - 0.2, y: L.y0 + rnd() * (L.y1 - L.y0), size: L.size * (0.8 + rnd() * 0.5), speed: L.speed, a: L.a, front: L.front });
     });
     return out;
   }
-  function drawCloud(ctx, cx, cy, s, a, night) {
-    ctx.fillStyle = night ? "rgba(120,135,185," + (a * 0.32) + ")" : "rgba(255,255,255," + a + ")";
-    [[-1.1, 0.18, 0.55], [-0.5, -0.12, 0.75], [0.25, -0.24, 0.85], [0.95, -0.02, 0.66], [1.45, 0.2, 0.46], [0.2, 0.2, 0.7], [-0.4, 0.28, 0.5]].forEach(function (c) {
-      ctx.beginPath(); ctx.arc(cx + c[0] * s, cy + c[1] * s, c[2] * s, 0, 6.2832); ctx.fill();
+  // High, thin cirrus: barely moving streaks that give the daytime sky some depth.
+  function makeCirrus(seed) {
+    var r = seed || 3, out = [];
+    function rnd() { r = (r * 1664525 + 1013904223) >>> 0; return r / 4294967296; }
+    for (var i = 0; i < 5; i++) out.push({ x: rnd() * 1.4 - 0.2, y: 0.05 + rnd() * 0.3, w: 0.18 + rnd() * 0.22, speed: 0.004 + rnd() * 0.004, a: 0.2 + rnd() * 0.18 });
+    return out;
+  }
+
+  var PUFFS = [[-1.1, 0.18, 0.55], [-0.5, -0.12, 0.75], [0.25, -0.24, 0.85], [0.95, -0.02, 0.66], [1.45, 0.2, 0.46], [0.2, 0.2, 0.7], [-0.4, 0.28, 0.5]];
+  // A cloud is drawn twice: the shaded body, then the puffs facing the sun in the light of the moment.
+  function drawCloud(ctx, cx, cy, s, a, sky) {
+    var shade = sky.night ? rgba("#49567d", a * 0.42) : mixHex("#dbe4f0", "#a7b6ce", sky.dark);
+    var lit = sky.night ? rgba("#7f8db4", a * 0.45) : rgba(sky.light, Math.min(0.95, a + 0.15));
+    var dir = sky.bodyX < 0.5 ? -1 : 1;
+    ctx.fillStyle = sky.night ? shade : rgba(shade, a);
+    PUFFS.forEach(function (c) { ctx.beginPath(); ctx.arc(cx + c[0] * s, cy + c[1] * s, c[2] * s, 0, 6.2832); ctx.fill(); });
+    ctx.fillStyle = lit;
+    PUFFS.forEach(function (c, i) {
+      if (i % 2) return;                                                   // only the upper, sunlit puffs
+      ctx.beginPath(); ctx.arc(cx + (c[0] + dir * 0.12) * s, cy + (c[1] - 0.14) * s, c[2] * s * 0.82, 0, 6.2832); ctx.fill();
     });
   }
 
   function Scene(canvas) {
     this.canvas = canvas; this.ctx = canvas.getContext("2d");
-    this.clouds = makeClouds(11); this.stars = null;
+    this.clouds = makeClouds(11); this.cirrus = makeCirrus(23); this.stars = null;
     this.ops = null; this.pal = null; this.label = ""; this.raf = 0; this.last = 0; this.t0 = 0;
   }
   Scene.prototype.setPlane = function (plane) {
@@ -348,26 +412,65 @@
   Scene.prototype.render = function (now) {
     var c = this.canvas, ctx = this.ctx, W = c.width, H = c.height, t = (now - this.t0) / 1000;
     if (!W || !H) return;
-    var sky = skyFor(new Date().getHours());
-    var g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, sky.top); g.addColorStop(1, sky.bottom);
+    var now_ = new Date(), sky = skyFor(now_.getHours(), now_.getMinutes()), self = this;
+    var g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, sky.top); g.addColorStop(0.55, sky.mid); g.addColorStop(1, sky.bottom);
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-    if (sky.night) {
-      if (!this.stars) { var r = 5, st = []; for (var i = 0; i < 40; i++) { r = (r * 1664525 + 1013904223) >>> 0; var a = r / 4294967296; r = (r * 1664525 + 1013904223) >>> 0; st.push([a, (r / 4294967296) * 0.7]); } this.stars = st; }
-      ctx.fillStyle = "rgba(255,255,255,.8)";
-      this.stars.forEach(function (s) { ctx.fillRect(s[0] * W, s[1] * H, Math.max(1, W / 300), Math.max(1, W / 300)); });
-    } else if (sky.sun) {
-      var rg = ctx.createRadialGradient(W * 0.82, H * 0.2, 0, W * 0.82, H * 0.2, H * 0.35);
-      rg.addColorStop(0, sky.sun); rg.addColorStop(1, "rgba(255,255,255,0)"); ctx.fillStyle = rg; ctx.fillRect(0, 0, W, H);
+
+    // stars fade in and out around dusk and dawn instead of snapping on
+    var starA = clamp01((sky.dark - 0.2) / 0.55) * 0.85;
+    if (starA > 0.02) {
+      if (!this.stars) { var r = 5, st = []; for (var i = 0; i < 40; i++) { r = (r * 1664525 + 1013904223) >>> 0; var a = r / 4294967296; r = (r * 1664525 + 1013904223) >>> 0; st.push([a, (r / 4294967296) * 0.7, (r % 97) / 97]); } this.stars = st; }
+      var px = Math.max(1, W / 300);
+      this.stars.forEach(function (s) {
+        var tw = 0.55 + 0.45 * Math.sin(t * 1.6 + s[2] * 6.2832);          // slow twinkle
+        ctx.fillStyle = "rgba(255,255,255," + (starA * tw) + ")";
+        ctx.fillRect(s[0] * W, s[1] * H, px, px);
+      });
     }
-    var self = this;
+
+    // the sun (or the moon) on its arc, with a glow that breathes
+    var bx = sky.bodyX * W, by = sky.bodyY * H, rad = H * (sky.sunUp ? 0.085 : 0.07);
+    var glowR = H * (sky.sunUp ? 0.40 - 0.08 * sky.bodyLow : 0.24) * (1 + 0.04 * Math.sin(t * 0.7));
+    var glow = ctx.createRadialGradient(bx, by, 0, bx, by, glowR);
+    var gc = sky.sunUp ? sky.light : "#dfe7ff";
+    glow.addColorStop(0, rgba(gc, sky.sunUp ? 0.5 : 0.34));
+    glow.addColorStop(0.3, rgba(gc, sky.sunUp ? 0.16 : 0.1));
+    glow.addColorStop(1, rgba(gc, 0));
+    ctx.fillStyle = glow; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = sky.sunUp ? rgba(sky.light, 0.98) : "rgba(238,243,255,.92)";
+    ctx.beginPath(); ctx.arc(bx, by, rad, 0, 6.2832); ctx.fill();
+    if (!sky.sunUp) {                                                      // a bite out of the disc makes it a moon
+      ctx.fillStyle = sky.top;
+      ctx.beginPath(); ctx.arc(bx + rad * 0.45, by - rad * 0.3, rad * 0.88, 0, 6.2832); ctx.fill();
+    }
+
+    // high cirrus, almost still
+    this.cirrus.forEach(function (ci) {
+      var span = 1.7, x = ((((ci.x - t * ci.speed) % span) + span) % span - 0.3) * W, y = ci.y * H, w2 = ci.w * W;
+      ctx.fillStyle = rgba(sky.night ? "#6a79a6" : sky.light, ci.a * (sky.night ? 0.5 : 0.75));
+      for (var j = 0; j < 3; j++) {
+        ctx.beginPath();
+        ctx.ellipse(x + j * w2 * 0.33, y + j * H * 0.018, w2 * (0.5 - j * 0.1), H * 0.012, -0.08, 0, 6.2832);
+        ctx.fill();
+      }
+    });
+
     function clouds(front) {
       self.clouds.forEach(function (cl) {
         if (cl.front !== front) return;
         var span = 1.6, x = (((cl.x - t * cl.speed) % span) + span) % span - 0.3;     // drifting left, wrapping around
-        drawCloud(ctx, x * W, cl.y * H, cl.size * H, cl.a, sky.night);
+        drawCloud(ctx, x * W, cl.y * H, cl.size * H, cl.a, sky);
       });
     }
     clouds(false);
+
+    // warm haze sitting on the horizon, strongest when the sun is low
+    var hz = ctx.createLinearGradient(0, H * 0.55, 0, H);
+    hz.addColorStop(0, rgba(sky.bottom, 0));
+    hz.addColorStop(1, rgba(sky.sunUp ? sky.light : sky.bottom, sky.sunUp ? 0.16 + 0.26 * (1 - sky.bodyLow) : 0.1));
+    ctx.fillStyle = hz; ctx.fillRect(0, H * 0.55, W, H * 0.45);
+
     if (this.ops) {
       var w = Math.min(W * 0.92, H * 0.62 * 2.5 * (this.zoom || 1)), bob = Math.sin(t * 1.3) * H * 0.012, tilt = Math.sin(t * 0.8) * 0.012;
       ctx.save(); ctx.translate(W / 2, H * 0.44 + bob); ctx.rotate(tilt);

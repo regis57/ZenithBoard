@@ -4,7 +4,9 @@
 
 ensure_zb_user() {
   id "$ZB_USER" >/dev/null 2>&1 || useradd --system --home-dir "$ZB_DATA" --shell /usr/sbin/nologin "$ZB_USER"
-  install -d -o "$ZB_USER" -g "$ZB_USER" -m 2750 "$ZB_DATA"
+  # 2751: anyone may walk through to data/ (so `zenithboard status` works without sudo) but only the service
+  # may list the folder, which keeps the ACARS database out of sight.
+  install -d -o "$ZB_USER" -g "$ZB_USER" -m 2751 "$ZB_DATA"
   # the downloaded aircraft-type list is read by the wall server (user zenithboard): world-readable, root-writable
   install -d -m 755 "$ZB_DATA/data"
 }
