@@ -161,6 +161,8 @@ adsb_menu() {
     if [[ "$feeders" == *" $f "* ]]; then $checker || plan+="- Install $f\n"
     else $checker && plan+="- REMOVE $f\n"; fi
   done
+  local n_extra=0; for f in FLIGHTAWARE FR24 PLANEFINDER; do [[ "$feeders" == *" $f "* ]] && n_extra=$((n_extra+1)); done
+  if is_low_mem && [ "$n_extra" -gt 2 ]; then plan+="\nNOTE: $(mem_total_mb) MB RAM is low for $n_extra extra feeders: consider fewer.\n"; fi
   [ -z "$plan" ] && plan="Nothing to change. (Feeders and MLAT policy will simply be re-checked.)\n"
   wt_yesno "Planned changes:\n\n$plan\nContinue?" 18 || return 0
 

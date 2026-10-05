@@ -131,4 +131,12 @@ pick_radius() {  # prints the chosen preset on stdout
 
 restart_flightinfo() { unit_exists zenithboard-flightinfo && systemctl restart zenithboard-flightinfo || true; }
 
+# ------------------------------------------------------------------ hardware: memory and Pi model
+LOW_MEM_MB=1500          # boards below this (a "1 GB" Pi reports ~900 MB) are treated as low-memory
+mem_total_mb() { awk '/^MemTotal:/ {printf "%d", $2/1024}' "${ZB_MEMINFO:-/proc/meminfo}"; }
+mem_avail_mb() { awk '/^MemAvailable:/ {printf "%d", $2/1024}' "${ZB_MEMINFO:-/proc/meminfo}"; }
+is_low_mem()   { [ "$(mem_total_mb)" -lt "$LOW_MEM_MB" ]; }
+pi_model()     { tr -d '\0' < "${ZB_PI_MODEL_FILE:-/proc/device-tree/model}" 2>/dev/null; }
+is_old_pi()    { pi_model | grep -qE 'Raspberry Pi (Zero|[0-3]|Model)'; }   # Zero, 1, 2, 3 (any variant)
+
 local_ip() { hostname -I 2>/dev/null | awk '{print $1}'; }

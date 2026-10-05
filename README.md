@@ -2,7 +2,7 @@
 
 **See the planes flying right above your house, on an old tablet, in glowing dot-matrix lights — and share the same antenna with the big flight-tracking networks.**
 
-ZenithBoard turns a Raspberry Pi 4 (or newer) and a cheap USB radio dongle into:
+ZenithBoard turns a Raspberry Pi (4 or newer recommended) and a cheap USB radio dongle into:
 
 1. **An ADS-B receiver** that feeds **ADSB Exchange** (mandatory base layer) and, if you want, **FlightAware**, **Flightradar24** and **Plane Finder** — with **one single MLAT client**, because several at once overload a Raspberry Pi.
 2. **FlightInfo**, a responsive **dot-matrix wall** for any tablet or screen with a browser. It automatically cycles through every aircraft inside the radius you choose (1, 2, 5, 10, 15, 30 or 50 km / miles) — callsign, type, altitude, speed, heading, climb/descent, distance and direction — and refreshes itself.
@@ -20,12 +20,25 @@ Inspired by [jprochazka/adsb-receiver](https://github.com/jprochazka/adsb-receiv
 
 | Item | Notes |
 |---|---|
-| Raspberry Pi **4 or newer** | 2 GB RAM is enough. Raspberry Pi OS **Lite**, 64-bit (Bookworm or newer). |
+| Raspberry Pi **4 or newer** | 2 GB+ recommended (1 GB is enough without ACARS). Raspberry Pi OS **Lite** (Bookworm or newer). See [Which Raspberry Pi?](#which-raspberry-pi) |
 | Micro-SD card 16 GB+ | |
 | **RTL-SDR dongle** + **1090 MHz antenna** | A dongle with a built-in 1090 filter (e.g. "ADS-B" or "FlightAware Pro Stick") gives the best range. |
 | *(optional)* a **second** RTL-SDR dongle + 131 MHz antenna | Only for ACARS. The ADS-B dongle cannot do both. See [docs/HARDWARE.md](docs/HARDWARE.md). |
 | An old tablet or any screen | Anything with a modern browser on your home Wi-Fi. |
 | Accounts | A free [ADSB Exchange](https://www.adsbexchange.com/myip/) key is asked during setup. FlightAware / Flightradar24 / Plane Finder accounts only if you choose them. |
+
+### Which Raspberry Pi?
+
+Estimates, not yet measured on real boards.
+
+| Board | ADS-B + feeders + wall | + ACARS & Grafana |
+|---|---|---|
+| **Pi 5 / Pi 4, 2 GB or more** | Comfortable | Comfortable (Pi 4 with 2 GB: fine) |
+| **Pi 4, 1 GB** | Good (about 400–550 MB used). Keep to one or two extra feeders. | Not recommended: about 900 MB more needed |
+| **Pi 3B / 3B+ (1 GB)** | Works. Prefer Ethernet and a good power supply. | Not recommended (Grafana is slow, `acarsdec` takes long to build) |
+| Pi Zero 2 W / Pi 2 | ADS-B and the wall only, no extra feeders | No |
+
+The installer detects the board and its memory, warns you once, and marks ACARS as *not recommended* in the menu on low-memory or older boards (you can still continue). `zenithboard status` shows the free memory.
 
 ---
 

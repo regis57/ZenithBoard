@@ -6,8 +6,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: shellcheck
-        run: shellcheck -x -S warning install.sh bin/zenithboard bin/run-acarsdec bin/zenithboard-demo lib/*.sh
+        run: shellcheck -x -S warning install.sh bin/zenithboard bin/run-acarsdec bin/zenithboard-demo lib/*.sh tests/*.sh
       - name: Python tests
         run: python3 -m unittest discover -s tests -v
+      - name: Hardware detection tests
+        run: bash tests/test_hardware.sh
       - name: JavaScript tests
         run: node tests/test_format.js

@@ -43,6 +43,7 @@ show_state() { # show_state "Label" check_fn service
 cmd_status() {
   local dec; dec=$(installed_decoder)
   echo "${C_B}ZenithBoard $ZB_VERSION${C_0}   units: $(cfg_get UNITS metric)   position: $(cfg_get LAT ?) , $(cfg_get LON ?)"
+  echo "Hardware: $(pi_model || true)  RAM: $(mem_avail_mb) / $(mem_total_mb) MB free$(is_low_mem && echo '  (low-memory board: skip ACARS/Grafana)')"
   echo "Decoder / feeders:"
   if [ -n "$dec" ]; then show_state "Decoder ($dec)" true "$dec"; else echo "  Decoder                    not installed"; fi
   show_state "ADSB Exchange" is_adsbx adsbexchange-feed

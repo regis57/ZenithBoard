@@ -24,6 +24,19 @@ preflight() {
     log "Installing whiptail and curl"; apt-get update -qq && apt_install whiptail curl ca-certificates
   fi
   mkdir -p "$ZB_ETC"; touch "$ZB_CONFIG"; cfg_defaults
+  hardware_notice
+}
+
+hardware_notice() {
+  local msg=""
+  if is_old_pi; then
+    msg+="This looks like an older Raspberry Pi ($(pi_model)).\nADS-B + the FlightInfo wall run fine on it. Use Ethernet if you can, and a good power supply.\nACARS + Grafana are NOT recommended on it.\n\n"
+  fi
+  if is_low_mem; then
+    msg+="Memory: only $(mem_total_mb) MB.\nRecommended here: ADS-B + FlightInfo + at most one or two extra feeders.\nACARS + Grafana need about 900 MB more: use a Pi with 2 GB or more.\n"
+  fi
+  [ -n "$msg" ] && [ "$(cfg_get HW_NOTICE_SEEN)" != 1 ] && { wt_msg "$msg" 16; cfg_set HW_NOTICE_SEEN 1; }
+  return 0
 }
 
 first_run_wizard() {
@@ -94,13 +107,15 @@ uninstall_all() {
   log "Everything removed."; exit 0
 }
 
+weak_hw_tag() { if is_low_mem || is_old_pi; then echo "  [NOT recommended on this Pi]"; fi; }
+
 main_menu() {
   local c
   while true; do
     c=$(wt_menu "ZenithBoard $ZB_VERSION   (units: $(cfg_get UNITS), radius: $(cfg_get RADIUS))\n\nPick a step. You can come back any time to add or remove things." \
       1 "ADSB        - decoder + share to ADSB Exchange, FlightAware, FR24..." \
       2 "FlightInfo  - dot-matrix wall for an old tablet" \
-      3 "ACARS       - optional ACARS messages in Grafana (2nd dongle)" \
+      3 "ACARS       - optional ACARS messages in Grafana (2nd dongle)$(weak_hw_tag)" \
       4 "Settings    - units, radius, antenna position" \
       5 "Status      - what is running" \
       6 "Update      - upgrade ZenithBoard, decoder, feeders, ACARS" \

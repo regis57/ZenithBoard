@@ -76,6 +76,9 @@ remove_acars() {
 
 acars_menu() {
   local choice
+  if ! is_acars && { is_low_mem || is_old_pi; }; then
+    wt_yesno "ACARS + Grafana need roughly 900 MB of RAM on top of ADS-B.\n\nThis board: $(pi_model)\nMemory: $(mem_total_mb) MB total.\n\nIt may run slowly or crash. A Pi 4 with 2 GB or more is recommended.\n\nContinue anyway?" 16 || return 0
+  fi
   while true; do
     if is_acars; then
       choice=$(wt_menu "ACARS is INSTALLED.\nDashboard: http://$(local_ip):3000/\nDongle: '$(cfg_get ACARS_SDR)'  Frequencies: $(cfg_get ACARS_FREQS)\nRetention: $(cfg_get ACARS_RETENTION_DAYS) days" \

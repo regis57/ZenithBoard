@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+- Detects low-memory (< 1.5 GB) and older Pi boards: one-time notice, ACARS marked "not recommended", warning for many feeders, memory in `zenithboard status`.
+- README: "Which Raspberry Pi?" table.
+
 ## 0.1.0
 - Licence changed to GPL-3.0-or-later.
 - New installer menu: 1 ADSB, 2 FlightInfo, 3 ACARS, plus Settings / Status / Uninstall.
