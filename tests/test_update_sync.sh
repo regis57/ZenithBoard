@@ -32,4 +32,13 @@ echo mine > "$T/pi/f"
 zb_sync_source "$T/pi" >/dev/null 2>&1; rc=$?
 check "local edit kept" "$(cat "$T/pi/f")" mine
 check "reports failure" "$rc" 1
+# 4. git runs as root during an update: the folder must stay owned by its user (needs root; skipped otherwise)
+if [ "$(id -u)" -eq 0 ]; then
+  ( cd "$T/work" && echo v5 > f && G commit -qam five && G push -q -f origin main )
+  git -C "$T/pi" checkout -q . && chown -R 1234:1234 "$T/pi"
+  zb_sync_source "$T/pi" >/dev/null 2>&1
+  check "folder ownership kept" "$(stat -c '%u:%g' "$T/pi" "$T/pi/.git/FETCH_HEAD" "$T/pi/f" | sort -u)" "1234:1234"
+else
+  echo "skip ownership test (not root)"
+fi
 exit $fail
