@@ -194,6 +194,7 @@ Photos come from the [Planespotters.net photo API](https://www.planespotters.net
 
 * Turn photos off or on: `sudo zenithboard photos off` / `on` (or menu *4 Settings → Aircraft photos*). With photos off, the animated sky scene is shown for every aircraft.
 * Not every aircraft has a photo; those show the animated scene.
+* Planespotters limits how fast it can be asked and answers `403 Forbidden` to bursts, so the wall queues its lookups and makes **at most one request every 2 seconds**. With a busy sky the first aircraft of a cycle may show the animated scene and get its photo on the next pass. A refused lookup is retried ten minutes later, never remembered as "no photo".
 * Check that your Pi can really reach the service, without waiting for an aircraft: `zenithboard photos test`. It asks Planespotters about a few well-photographed airliners and downloads one image. Add a hex address to test one aircraft: `zenithboard photos test 3c6444`.
 * `zenithboard status` shows whether photos are on.
 

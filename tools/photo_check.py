@@ -10,15 +10,17 @@ without waiting for an aircraft to fly over. Nothing is stored; the wall fetches
 """
 import json
 import sys
+import time
 import urllib.request
 
 API = "https://api.planespotters.net/pub/photos/hex/%s"
 SAMPLES = ["3c6444", "4ca7b3", "406abc"]        # real, commonly photographed aircraft
 TIMEOUT = 8
+GAP_S = 2.5          # Planespotters refuses (403) requests that come too fast - the wall spaces them out too
 
 
 def get(url, limit):
-    req = urllib.request.Request(url, headers={"User-Agent": "ZenithBoard-photo-check"})
+    req = urllib.request.Request(url, headers={"User-Agent": "ZenithBoard-photo-check (+https://github.com/regis57/ZenithBoard)"})
     with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:   # nosec - fixed https API and the image it points to
         return resp.headers.get("Content-Type", ""), resp.read(limit)
 
@@ -29,7 +31,10 @@ def check(hex_code):
         _, raw = get(API % hex_code, 200_000)
         photos = json.loads(raw.decode("utf-8")).get("photos") or []
     except Exception as exc:
-        print("  %s: cannot reach Planespotters (%s)" % (hex_code, exc))
+        if "403" in str(exc):
+            print("  %s: refused (403) - asked too fast. The wall spaces its requests out, so this is harmless." % hex_code)
+        else:
+            print("  %s: cannot reach Planespotters (%s)" % (hex_code, exc))
         return False
     if not photos:
         print("  %s: no photo published for this aircraft (the wall shows the animated sky instead)" % hex_code)
@@ -50,8 +55,12 @@ def check(hex_code):
 
 def main(argv):
     codes = [argv[0]] if argv and argv[0] else SAMPLES
-    print("Asking Planespotters for %d aircraft..." % len(codes))
-    results = [check(c) for c in codes]
+    print("Asking Planespotters for %d aircraft (one every %.1f s)..." % (len(codes), GAP_S))
+    results = []
+    for i, code in enumerate(codes):
+        if i:
+            time.sleep(GAP_S)
+        results.append(check(code))
     if any(r is True for r in results):
         print("Photos work on this Pi. Aircraft without a published photo still show the animated sky scene.")
         return 0

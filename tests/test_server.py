@@ -3,6 +3,7 @@
 import json
 import os
 import sys
+import time
 import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "flightinfo"))
@@ -106,6 +107,54 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(server.public_config(cfg)["units"], "metric")
         self.assertEqual(server.public_config(dict(cfg, THEME="purple"))["theme"], "amber")   # amber is the default
         self.assertEqual(server.public_config(cfg)["radius_presets"], [1, 2, 5, 10, 15, 30, 50])
+
+
+class PhotoThrottleTests(unittest.TestCase):
+    """Planespotters refuses bursts with 403, so lookups must be spaced out and failures must be retried."""
+
+    def setUp(self):
+        self.real_api, self.real_gap, self.real_retry = server._photo_api, server.PHOTO_GAP_S, server.PHOTO_RETRY_S
+        server._photo_cache.clear()
+        server.PHOTO_GAP_S, server.PHOTO_RETRY_S = 0.2, 0.4
+        self.calls = []
+
+        def fake(hex_code):
+            self.calls.append((hex_code, time.monotonic()))
+            if hex_code == "ref403":
+                return None, False                      # refused / no answer
+            if hex_code == "nopic":
+                return None, True                       # reached, but no photo published
+            return {"url": "http://x/p.jpg", "photographer": "P", "link": "l"}, True
+
+        server._photo_api = fake
+
+    def tearDown(self):
+        server._photo_api, server.PHOTO_GAP_S, server.PHOTO_RETRY_S = self.real_api, self.real_gap, self.real_retry
+        server._photo_cache.clear()
+
+    def test_requests_are_spaced_and_failures_retried(self):
+        for h in ("a1", "a2", "a3", "ref403", "nopic"):
+            server.lookup_photo(h)
+        time.sleep(1.8)
+        self.assertEqual(len(self.calls), 5, "every aircraft must be asked for exactly once")
+        gaps = [self.calls[i + 1][1] - self.calls[i][1] for i in range(len(self.calls) - 1)]
+        self.assertTrue(all(g >= server.PHOTO_GAP_S * 0.9 for g in gaps), "requests were sent too fast: %s" % gaps)
+
+        self.assertIsNotNone(server.lookup_photo("a1"))
+        self.assertIsNone(server._photo_cache["ref403"]["meta"], "a refused lookup must not become a photo")
+        self.assertIsNotNone(server._photo_cache["ref403"]["retry_at"], "a refused lookup must stay retryable")
+        self.assertIsNone(server._photo_cache["nopic"]["meta"])
+
+        n = len(self.calls)
+        for _ in range(5):
+            server.lookup_photo("a1")
+            server.lookup_photo("nopic")
+        time.sleep(0.5)
+        self.assertEqual(len(self.calls), n, "a settled aircraft must not be asked for again")
+
+        server.lookup_photo("ref403")                    # past PHOTO_RETRY_S by now
+        time.sleep(0.6)
+        self.assertGreater(len(self.calls), n, "a refused lookup must be retried later")
 
 
 if __name__ == "__main__":

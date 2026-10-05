@@ -16,6 +16,7 @@ import json
 import math
 import mimetypes
 import os
+import queue
 import re
 import sys
 import threading
@@ -24,7 +25,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.2.1"
+VERSION = "0.2.2"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -269,49 +270,87 @@ def build_planes(data, lat, lon, radius_km, airlines=None, photo_lookup=None, de
 
 
 # --------------------------------------------------------------------------- photos (Planespotters, optional, proxied so the tablet needs no internet)
-_photo_cache = {}     # hex -> {"url":..., "photographer":...} | None
+# Planespotters answers 403 when it is asked too quickly, so every lookup goes through ONE worker thread that
+# makes at most one request every PHOTO_GAP_S. A lookup that failed (403, timeout, no internet) is retried
+# later instead of being remembered as "this aircraft has no photo".
+_photo_cache = {}     # hex -> {"meta": {...}|None, "retry_at": float|None}   retry_at None = settled
 _photo_bytes = {}     # hex -> (content_type, bytes)
 _photo_lock = threading.Lock()
+_photo_queue = queue.Queue(maxsize=60)
+_photo_worker = None
 MAX_PHOTO_CACHE = 200
+PHOTO_GAP_S = 2.0           # minimum delay between two Planespotters requests
+PHOTO_RETRY_S = 600         # try again 10 min after a refused or failed lookup
+PHOTO_NOPHOTO_RETRY_S = 86400   # an aircraft with no photo today may have one tomorrow
 
 
-def _fetch_photo_meta(hex_code):
+def _photo_api(hex_code):
+    """-> (meta|None, ok). ok is False when we could not get an answer (403, timeout, no internet)."""
     url = "https://api.planespotters.net/pub/photos/hex/%s" % hex_code
-    meta = None
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "ZenithBoard/%s" % VERSION})
-        with urllib.request.urlopen(req, timeout=4) as resp:
+        req = urllib.request.Request(url, headers={"User-Agent": "ZenithBoard/%s (+https://github.com/regis57/ZenithBoard)" % VERSION})
+        with urllib.request.urlopen(req, timeout=6) as resp:
             photos = json.load(resp).get("photos") or []
-            if photos:
-                p = photos[0]
-                meta = {"url": p.get("thumbnail_large", {}).get("src"), "photographer": p.get("photographer"), "link": p.get("link")}
-                if not meta["url"]:
-                    meta = None
-    except Exception:  # network is optional: never break the wall because of photos
-        pass
-    with _photo_lock:
-        if len(_photo_cache) > MAX_PHOTO_CACHE * 5:
-            _photo_cache.clear()
-        _photo_cache[hex_code] = meta
+    except Exception:       # network is optional: never break the wall because of photos
+        return None, False
+    if not photos:
+        return None, True
+    p = photos[0]
+    url = (p.get("thumbnail_large") or {}).get("src")
+    if not url:
+        return None, True
+    return {"url": url, "photographer": p.get("photographer"), "link": p.get("link")}, True
+
+
+def _photo_loop():
+    last = 0.0
+    while True:
+        hex_code = _photo_queue.get()
+        wait = PHOTO_GAP_S - (time.monotonic() - last)
+        if wait > 0:
+            time.sleep(wait)
+        meta, ok = _photo_api(hex_code)
+        last = time.monotonic()
+        if ok:
+            retry_at = None if meta else time.monotonic() + PHOTO_NOPHOTO_RETRY_S
+        else:
+            meta, retry_at = None, time.monotonic() + PHOTO_RETRY_S
+        with _photo_lock:
+            if len(_photo_cache) > MAX_PHOTO_CACHE * 5:
+                _photo_cache.clear()
+            _photo_cache[hex_code] = {"meta": meta, "retry_at": retry_at, "queued": False}
 
 
 def lookup_photo(hex_code):
-    """Non-blocking: cached metadata, or None while a background fetch runs."""
+    """Non-blocking: the metadata we already have, and a queued request when it is missing or stale."""
+    global _photo_worker
     if not hex_code:
         return None
+    now = time.monotonic()
     with _photo_lock:
-        if hex_code in _photo_cache:
-            return _photo_cache[hex_code]
-        _photo_cache[hex_code] = None  # mark as in-flight
-    threading.Thread(target=_fetch_photo_meta, args=(hex_code,), daemon=True).start()
-    return None
+        e = _photo_cache.get(hex_code)
+        if e and (e["retry_at"] is None or now < e["retry_at"] or e["queued"]):
+            return e["meta"]
+        meta = e["meta"] if e else None
+        _photo_cache[hex_code] = {"meta": meta, "retry_at": now + PHOTO_RETRY_S, "queued": True}
+        if _photo_worker is None:
+            _photo_worker = threading.Thread(target=_photo_loop, daemon=True)
+            _photo_worker.start()
+    try:
+        _photo_queue.put_nowait(hex_code)
+    except queue.Full:      # a very busy sky: this aircraft is simply asked for again next time
+        with _photo_lock:
+            if hex_code in _photo_cache:
+                _photo_cache[hex_code]["queued"] = False
+    return meta
 
 
 def fetch_photo_bytes(hex_code):
     with _photo_lock:
         if hex_code in _photo_bytes:
             return _photo_bytes[hex_code]
-        meta = _photo_cache.get(hex_code)
+        e = _photo_cache.get(hex_code)
+        meta = e["meta"] if e else None
     if not meta:
         return None
     try:
