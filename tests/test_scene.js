@@ -40,6 +40,26 @@ assert.notStrictEqual(K.palette(false, "ZZA").tail, K.palette(false, "ZZB").tail
 // SVG export (demo photos)
 const svg = K.svgOps(K.profileOps("narrow"), K.palette(false, "ZZA"));
 assert.ok(svg.includes("<path") && !svg.includes("undefined"));
+
+// sky: a continuous day, never a broken colour, and the sun/moon stays inside the box
 assert.strictEqual(K.skyFor(14).night, false);
 assert.strictEqual(K.skyFor(23).night, true);
+assert.strictEqual(K.skyFor(13).sunUp, true, "the sun is up at midday");
+assert.strictEqual(K.skyFor(2).sunUp, false, "the sun is down at 2am");
+let noon = null, dusk = null;
+for (let h = 0; h < 24; h += 0.25) {
+  const s = K.skyFor(Math.floor(h), (h % 1) * 60);
+  for (const k of ["top", "mid", "bottom", "light"]) {
+    assert.ok(/^(#|rgb\()/.test(s[k]), "bad colour " + k + " at " + h + ": " + s[k]);
+    assert.ok(!/NaN/.test(s[k]), "NaN colour " + k + " at " + h);
+  }
+  assert.ok(s.bodyX >= 0 && s.bodyX <= 1 && s.bodyY >= 0 && s.bodyY <= 1, "sun/moon outside the box at " + h);
+  assert.ok(s.dark >= 0 && s.dark <= 1, "dark out of range at " + h);
+  if (h === 13) noon = s;
+  if (h === 20) dusk = s;
+}
+assert.strictEqual(noon.dark, 0, "midday is not dark");
+assert.notStrictEqual(noon.top, dusk.top, "the sky must change between midday and dusk");
+assert.ok(K.skyFor(8).bodyX < K.skyFor(18).bodyX, "the sun must travel across the sky");
+assert.ok(K.skyFor(13).bodyY < K.skyFor(7).bodyY, "the sun must be higher at midday than at 7am");
 console.log("scene tests OK");

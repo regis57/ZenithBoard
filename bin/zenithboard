@@ -26,6 +26,7 @@ ZenithBoard $ZB_VERSION - ADSB Flight Info
   zenithboard color amber|green|red|white   dot colour of every wall (amber is the default)
   zenithboard cycle SECONDS             seconds each aircraft stays on the wall
   zenithboard photos on|off             aircraft photos on the wall (needs internet on the Pi)
+  zenithboard photos test [HEX]         check that this Pi can fetch photos from Planespotters
   zenithboard data update               refresh the aircraft model list now (names for the silhouettes)
   zenithboard data auto on|off          monthly automatic refresh of that list (default: on)
   zenithboard data status               when it was last refreshed
@@ -63,13 +64,26 @@ cmd_status() {
   if [ "${n:-0}" -le 1 ]; then echo "MLAT clients running: ${n:-0}  ${C_G}(OK: max 1)${C_0}"; else echo "MLAT clients running: $n  ${C_R}(too many! run: sudo zenithboard mlat-guard)${C_0}"; fi
   local j; j=$(decoder_json)
   if [ -f "$j" ]; then echo "Aircraft in decoder right now: $(grep -o '"hex"' "$j" | wc -l)"; fi
-  is_flightinfo && echo "Wall:     http://$(local_ip):$(cfg_get PORT 8080)/"
-  is_flightinfo && data_refresh_status
+  if is_flightinfo; then
+    echo "Wall:     http://$(local_ip):$(cfg_get PORT 8080)/"
+    echo "Aircraft photos (Planespotters): $( [ "$(cfg_get SHOW_PHOTOS 1)" = 1 ] && echo "ON" || echo "OFF (turn on: sudo zenithboard photos on)" )"
+    data_refresh_status
+  fi
   if is_adsbx; then
-    echo "ADSB Exchange map (local): http://$(local_ip)/adsbx/   (port 80, no clash with the wall on $(cfg_get PORT 8080))"
+    local m; m=$(local_map_path)
+    echo "Local map: http://$(local_ip)$m   (port 80, no clash with the wall on $(cfg_get PORT 8080))"
     echo "ADSB Exchange feed status: https://www.adsbexchange.com/myip/"
   fi
   is_acars && echo "ACARS:    http://$(local_ip):3000/"
+}
+
+# The map served on port 80 comes from readsb (tar1090) or from the optional ADSB Exchange web interface,
+# so look for the one that is actually installed instead of guessing.
+local_map_path() {
+  local d
+  for d in /usr/local/share/tar1090/html /usr/share/tar1090/html; do [ -d "$d" ] && { echo "/tar1090/"; return; }; done
+  for d in /usr/local/share/adsbexchange/html /usr/share/adsbexchange/html; do [ -d "$d" ] && { echo "/adsbx/"; return; }; done
+  echo "/tar1090/  (or /adsbx/ if you installed the ADSB Exchange web interface)"
 }
 
 data_refresh_status() {
@@ -77,6 +91,8 @@ data_refresh_status() {
   echo "Monthly aircraft data refresh: $( [ "$(cfg_get AUTO_DATA_REFRESH 1)" = 1 ] && echo ON || echo OFF )"
   if [ -f "$f" ]; then
     python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); print("Aircraft list: %s types, downloaded %s" % (d.get("count"), d.get("updated")))' "$f" 2>/dev/null || echo "Aircraft list: present but unreadable (run: sudo zenithboard data update)"
+  elif [ ! -x "$ZB_DATA" ]; then
+    echo "Aircraft list: cannot be checked by $(id -un) (older install: run 'sudo zenithboard update' once to fix the folder permissions)"
   else
     echo "Aircraft list: not downloaded (built-in list in use; run: sudo zenithboard data update)"
   fi
@@ -117,7 +133,12 @@ case "${1:-}" in
   cycle)
     root_or_die; is_number "${2:-x}" || die "Usage: zenithboard cycle SECONDS"; cfg_set CYCLE_SECONDS "$2"; restart_flightinfo ;;
   photos)
-    root_or_die; case "${2:-}" in on) cfg_set SHOW_PHOTOS 1 ;; off) cfg_set SHOW_PHOTOS 0 ;; *) die "Usage: zenithboard photos on|off" ;; esac ;;
+    case "${2:-}" in
+      on)  root_or_die; cfg_set SHOW_PHOTOS 1; restart_flightinfo; echo "Aircraft photos are ON. The wall reloads by itself within a few seconds." ;;
+      off) root_or_die; cfg_set SHOW_PHOTOS 0; restart_flightinfo; echo "Aircraft photos are OFF: the animated sky scene is shown instead." ;;
+      test) python3 "$ZB_HOME/tools/photo_check.py" "${3:-}" ;;
+      *) die "Usage: zenithboard photos on|off|test [HEX]" ;;
+    esac ;;
   mlat-guard) root_or_die; zb_mlat_guard ;;
   update) root_or_die; zb_update "${2:-}" ;;
   update-components) root_or_die; zb_update_components ;;

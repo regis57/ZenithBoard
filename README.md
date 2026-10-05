@@ -144,7 +144,7 @@ All settings live in one readable file: `/etc/zenithboard/config.env`.
 
 * **Left (dots):** callsign, airline name, aircraft type and registration, altitude, speed, heading, climb/descent, then *position in the cycle*, distance and the direction **from you** (`NNE`), and your radius. `HDG` is where the plane is heading.
 * **Top right (dots):** a **silhouette that matches the real aircraft design**: an A380 is drawn as a four-engine airliner, a Cessna as a single-engine propeller plane, an F-16 as a fighter. See [Aircraft silhouettes](#aircraft-silhouettes).
-* **Bottom right (a real picture, not dots):** the **photo of that exact aircraft** from [Planespotters](https://www.planespotters.net/), with the photographer's name and a link to the photo page. When there is no photo (or no internet) it shows an **animated sky** with drifting clouds and a **side view of the matching aircraft model** (propellers and rotors turn, the sky follows the time of day), labelled with the model name.
+* **Bottom right (a real picture, not dots):** the **photo of that exact aircraft** from [Planespotters](https://www.planespotters.net/), with the photographer's name and a link to the photo page. When there is no photo (or no internet) it shows an **animated sky** with a **side view of the matching aircraft model**, labelled with the model name. The sky follows your clock as one continuous day: the sun rises along its arc and sets, the colours slide from dawn through midday to dusk, the clouds are lit from the side the sun is on, thin cirrus drifts overhead, and at night the stars twinkle under a crescent moon. Propellers and rotors turn.
 * Aircraft are shown nearest first, one at a time, for a few seconds each, with a wipe transition. With nothing in range the wall shows a clock and how many aircraft your antenna sees.
 
 ## Colours
@@ -194,6 +194,8 @@ Photos come from the [Planespotters.net photo API](https://www.planespotters.net
 
 * Turn photos off or on: `sudo zenithboard photos off` / `on` (or menu *4 Settings → Aircraft photos*). With photos off, the animated sky scene is shown for every aircraft.
 * Not every aircraft has a photo; those show the animated scene.
+* Check that your Pi can really reach the service, without waiting for an aircraft: `zenithboard photos test`. It asks Planespotters about a few well-photographed airliners and downloads one image. Add a hex address to test one aircraft: `zenithboard photos test 3c6444`.
+* `zenithboard status` shows whether photos are on.
 
 ### Try it without any hardware
 The demo uses invented airlines and an example of everything: an airliner, a business jet, an A380, a 747, a turboprop, a Cessna, a helicopter, an F-16, a C-130, plus mock "photos" (cartoon illustrations of the right aircraft model, marked *DEMO*). Some demo aircraft have a mock photo and some deliberately do not, so you can see both the photo and the animated-sky states. Run it from the ZenithBoard folder on any computer or Pi with Python 3:
@@ -201,6 +203,7 @@ The demo uses invented airlines and an example of everything: an airliner, a bus
 ```bash
 ./bin/zenithboard-demo                  # metric, amber
 ./bin/zenithboard-demo imperial green   # units, then colour
+REAL_PHOTOS=1 ./bin/zenithboard-demo    # also fetch the real photos of the demo's two real airliners
 ```
 
 Then open **`http://<the-pi-address>:8081/`** (or `http://localhost:8081/` on the same computer).
@@ -215,7 +218,7 @@ Then open **`http://<the-pi-address>:8081/`** (or `http://localhost:8081/` on th
 |---|---|---|
 | `http://<pi>:8080/` | **ZenithBoard wall** | Change with `sudo zenithboard config-set PORT 8090` |
 | `http://<pi>:8081/` | ZenithBoard **demo** | Only while `zenithboard-demo` runs |
-| `http://<pi>/adsbx/` | **ADSB Exchange map of your own receiver** | Served on **port 80**, so it never clashes with 8080. Some installs use `http://<pi>/tar1090/`. |
+| `http://<pi>/tar1090/` | **Map of your own receiver** | Served on **port 80**, so it never clashes with 8080. Installed with readsb. If you also ran the ADSB Exchange web interface installer, that one is at `http://<pi>/adsbx/`. `zenithboard status` prints whichever you have. |
 | <https://www.adsbexchange.com/myip/> | ADSB Exchange feed status | Open it from the same network as the Pi: it tells you whether your feed is received |
 | `http://<pi>:3000/` | Grafana (ACARS) | Only if ACARS is installed |
 | `http://<pi>:30053/` | Plane Finder setup page | Only if Plane Finder is installed |
@@ -292,7 +295,7 @@ sudo /opt/zenithboard/install.sh --uninstall-all      # remove everything
 * The Plane Finder package URL for 64-bit systems must be checked against their site.
 * FlightAware and Flightradar24 store your antenna position on their websites: after `zenithboard location`, update it there too (the command tells you where).
 * ACARS legality differs per country — check your local rules before collecting ACARS messages.
-* Photos come from Planespotters and need internet on the Pi. The live photo lookup has not yet been checked against the real service on a Raspberry Pi; the demo and the tests exercise the same code with stand-ins.
+* Photos come from Planespotters and need internet on the Pi. The live photo lookup has not yet been checked against the real service on a Raspberry Pi; the demo and the tests exercise the same code with stand-ins. Run `zenithboard photos test` on your own Pi to confirm it works there.
 * The airline name list is built in (about 90 major airlines); other airlines show the callsign only.
 
 ## Contributing & tests

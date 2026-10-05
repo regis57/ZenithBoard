@@ -24,7 +24,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.2.0"
+VERSION = "0.2.1"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -395,7 +395,10 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, {"error": "no_data", "path": path, "server_id": SERVER_ID,
                                     "planes": [], "total": 0})
         demo = cfg_bool(cfg, "DEMO")
-        lookup = lookup_photo if cfg_bool(cfg, "SHOW_PHOTOS") and not demo else None
+        # DEMO_REAL_PHOTOS lets the demo ask Planespotters for its handful of real aircraft, so photos can be
+        # checked on a Pi that has no antenna yet. The invented aircraft keep their mock pictures.
+        real_photos = not demo or cfg_bool(cfg, "DEMO_REAL_PHOTOS")
+        lookup = lookup_photo if cfg_bool(cfg, "SHOW_PHOTOS") and real_photos else None
         planes, total = build_planes(data, cfg_float(cfg, "LAT", 0), cfg_float(cfg, "LON", 0), radius_km,
                                      load_airlines(cfg), lookup, demo, load_types(cfg))
         return self._send(200, {"planes": planes, "total": total, "radius_km": radius_km,

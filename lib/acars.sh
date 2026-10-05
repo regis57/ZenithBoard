@@ -46,8 +46,7 @@ set_grafana_anonymous() {  # set_grafana_anonymous yes|no
 install_acars() {
   log "Installing the ACARS stack"
   ensure_zb_user; deploy_files
-  build_acarsdec || return 1
-  install -d -o "$ZB_USER" -g "$ZB_USER" -m 2750 "$ZB_DATA"
+  build_acarsdec || return 1                          # ensure_zb_user already made $ZB_DATA with the right mode
   usermod -aG plugdev "$ZB_USER" 2>/dev/null || true
   install -m 644 "$ZB_HOME"/systemd/zenithboard-acars-ingest.service "$ZB_HOME"/systemd/zenithboard-acarsdec.service /etc/systemd/system/
   systemctl daemon-reload
