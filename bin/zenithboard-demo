@@ -1,17 +1,31 @@
 #!/bin/bash
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Try the dot-matrix wall on any computer WITHOUT an antenna, using fake aircraft.
-#   ./bin/zenithboard-demo [imperial]      then open http://localhost:8080/
+# Try the dot-matrix wall WITHOUT an antenna, using fake aircraft, fictional airlines/logos and mock photos.
+#   ./bin/zenithboard-demo [metric|imperial] [amber|green|red|white]
+# It listens on port 8081 by default so it never collides with the real wall (port 8080).
+# Use another port with:  PORT=8082 ./bin/zenithboard-demo
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PORT="${PORT:-8081}"
 CFG="$(mktemp)"
+trap 'rm -f "$CFG"' EXIT
+if (command -v ss >/dev/null && ss -ltn 2>/dev/null | grep -q ":$PORT "); then
+  echo "Port $PORT is already in use (is the real wall or another demo running?). Try:  PORT=8082 $0" >&2
+  exit 1
+fi
 cat > "$CFG" <<CFGEOF
 UNITS=${1:-metric}
+THEME=${2:-amber}
 LAT=49.246
 LON=6.223
 RADIUS=10
 CYCLE_SECONDS=4
-PORT=${PORT:-8080}
-AIRCRAFT_JSON=$HERE/tests/sample_aircraft.json
+PORT=$PORT
+DEMO=1
+SHOW_PHOTOS=1
+SHOW_LOGOS=1
+USER_DATA_DIR=/nonexistent
+AIRCRAFT_JSON=$HERE/flightinfo/demo/aircraft.json
 CFGEOF
-echo "Demo wall on http://localhost:${PORT:-8080}/  (Ctrl-C to stop)"
-ZENITHBOARD_CONFIG="$CFG" exec python3 "$HERE/flightinfo/server.py"
+IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
+echo "Demo wall:  http://${IP:-localhost}:$PORT/   (Ctrl-C to stop)"
+ZENITHBOARD_CONFIG="$CFG" python3 "$HERE/flightinfo/server.py"

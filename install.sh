@@ -69,13 +69,21 @@ settings_location() {
   cfg_set LAT "$lat"; cfg_set LON "$lon"; cfg_set ALT_M "$alt"
 }
 
+settings_color() {
+  local cur c a g r w; cur=$(cfg_get THEME amber); a=OFF; g=OFF; r=OFF; w=OFF
+  case "$cur" in green) g=ON ;; red) r=ON ;; white) w=ON ;; *) a=ON ;; esac
+  c=$(wt_radio "Dot colour of the wall (amber is the default)." amber "Amber" "$a" green "Green" "$g" red "Red" "$r" white "White" "$w") || return 1
+  cfg_set THEME "$c"
+}
+
 settings_menu() {
   local c
   while true; do
-    c=$(wt_menu "Settings (applied immediately)\n\nUnits: $(cfg_get UNITS)   Radius: $(cfg_get RADIUS)   Position: $(cfg_get LAT), $(cfg_get LON)\nSeconds per aircraft: $(cfg_get CYCLE_SECONDS)   Photos: $(cfg_get SHOW_PHOTOS)" \
-      units "Units: metric / imperial" radius "Detection radius" location "Antenna position (updates it everywhere)" cycle "Seconds per aircraft" photos "Aircraft photos on/off" back "Back") || return 0
+    c=$(wt_menu "Settings (applied immediately)\n\nUnits: $(cfg_get UNITS)   Radius: $(cfg_get RADIUS)   Position: $(cfg_get LAT), $(cfg_get LON)\nSeconds per aircraft: $(cfg_get CYCLE_SECONDS)   Photos: $(cfg_get SHOW_PHOTOS)   Colour: $(cfg_get THEME amber)" \
+      units "Units: metric / imperial" color "Colour: amber / green / red / white" radius "Detection radius" location "Antenna position (updates it everywhere)" cycle "Seconds per aircraft" photos "Aircraft photos on/off" back "Back") || return 0
     case "$c" in
       units) settings_units && restart_flightinfo ;;
+      color) settings_color && restart_flightinfo ;;
       radius) change_radius ;;
       location)
         if settings_location; then

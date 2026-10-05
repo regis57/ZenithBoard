@@ -49,9 +49,12 @@ cfg_defaults() {  # write any missing keys with defaults (never overwrites)
     [ -n "$(grep -E "^$k=" "$ZB_CONFIG" 2>/dev/null)" ] || cfg_set "$k" "$v"
   done <<'DEF'
 UNITS=metric
+THEME=amber
 RADIUS=10
 CYCLE_SECONDS=6
-SHOW_PHOTOS=0
+SHOW_PHOTOS=1
+SHOW_LOGOS=1
+LOGO_URL_TEMPLATE=
 PORT=8080
 DECODER=readsb
 ADSB_SDR=
@@ -70,6 +73,7 @@ is_number() { [[ "$1" =~ ^-?[0-9]+([.][0-9]+)?$ ]]; }
 valid_lat() { is_number "$1" && awk -v v="$1" 'BEGIN{exit !(v>=-90 && v<=90)}'; }
 valid_lon() { is_number "$1" && awk -v v="$1" 'BEGIN{exit !(v>=-180 && v<=180)}'; }
 valid_radius() { local r; for r in $RADIUS_PRESETS; do [ "$r" = "$1" ] && return 0; done; return 1; }
+valid_theme() { case "$1" in amber|green|red|white) return 0 ;; *) return 1 ;; esac; }
 valid_units() { [ "$1" = metric ] || [ "$1" = imperial ]; }
 
 # ------------------------------------------------------------------ system state

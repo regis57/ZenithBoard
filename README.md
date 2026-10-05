@@ -129,24 +129,77 @@ All settings live in one readable file: `/etc/zenithboard/config.env`.
 ## What the wall shows
 
 ```
-DLH4YK                  1.3KM
-                          NNW
-A320  D-AIUA
-ALT  GROUND
-SPD  22 KMH
-HDG  180° S
-V/S  = M/S
-1/3             R 10 KM
++--------------------------------------+---------------+
+| ZZA210                               |   AIRLINE     |
+| ZENITH AIR                           |   LOGO  or    |
+| A320 F-ZZAA                          |   aircraft    |
+| ALT  35000 FT                        |   silhouette  |
+| SPD  450 KT                          |               |
+| HDG  270° W                          +---------------+
+| V/S  ↑1200 FPM                       |  photo of the |
+|                                      |  plane (LED   |
+| 6/7 3.6MI NNE            R 10 MI     |  look)        |
++--------------------------------------+---------------+
 ```
 
-Aircraft are shown nearest first, one at a time, each for a few seconds, with a wipe transition. Position (`NNW`) is where the plane is *from you*; `HDG` is where it is heading. When nothing is in range the wall shows a clock and how many aircraft your antenna currently sees. Type and registration appear when your decoder knows them (readsb with its aircraft database does).
+* **Left:** callsign, airline name, aircraft type and registration, altitude, speed, heading, climb/descent, then *position in the cycle*, distance and the direction **from you** (`NNE`), and your radius. `HDG` is where the plane is heading.
+* **Top right:** the airline's **logo** in colour dots when you have one in your library, otherwise a **silhouette of the right kind of aircraft** (airliner, widebody, turboprop, business jet, light plane, helicopter). See [Airline logos](#airline-logos-and-photos).
+* **Bottom right:** a **photo of the aircraft** (from [Planespotters](https://www.planespotters.net/), credited at the bottom of the screen) shown through an LED-style mask, when one exists. The photos are fetched by the Pi, so the tablet does not need internet.
+* Aircraft are shown nearest first, one at a time, for a few seconds each, with a wipe transition. With nothing in range the wall shows a clock and how many aircraft your antenna sees.
 
-**Try it without any hardware** (on any computer with Python 3):
+## Colours
+
+The dots are **amber by default**. Pick amber, green, red or white:
+
+| Where | How |
+|---|---|
+| **Every screen** | `sudo zenithboard color green` (back to the default: `sudo zenithboard color amber`) |
+| **Menu** | `sudo zenithboard menu` → *4 Settings → Colour* |
+| **One tablet only** | Tap the faint gear in the top-right corner → *Colour*. Or open `http://<pi>:8080/?theme=red`. The gear's **Reset** returns that tablet to the Pi's colour. |
+
+## Airline logos and photos
+
+**No real airline logos are bundled with ZenithBoard** — they are trademarks, and the right to display them is yours to judge. Instead you get a small logo library you control:
 
 ```bash
-./bin/zenithboard-demo          # or: ./bin/zenithboard-demo imperial
-# then open http://localhost:8080/
+sudo zenithboard logo add AFR ~/Downloads/airline-logo.png    # convert YOUR image to dot-matrix and store it
+sudo zenithboard logo list
+sudo zenithboard logo remove AFR
+sudo zenithboard data update                                  # download the full airline-name list (OpenFlights data)
 ```
+
+Every logo image (PNG with transparency is best; JPG on a plain background works too) is converted to at most 12 colours on a 36×32 dot grid and stored in `/var/lib/zenithboard/logos/`. They survive updates. Add, replace or remove one at any time; the wall picks it up within a minute. Airlines without a logo get the aircraft silhouette. More in [docs/LOGOS.md](docs/LOGOS.md), including how to fetch logos automatically from a source of your choice (e.g. a logo service such as [Airhex](https://airhex.com/airline-logos/), which needs its own account and terms).
+
+How an aircraft is matched to an airline: the first three letters of the callsign (`AFR1234` → `AFR` → Air France). The built-in list covers about 90 major airlines; `zenithboard data update` loads the full list.
+
+Photos can be switched off with `sudo zenithboard photos off`, and logos with `sudo zenithboard config-set SHOW_LOGOS 0`.
+
+### Try it without any hardware
+The demo uses invented airlines (with original logos), a helicopter, a turboprop, a business jet and mock illustrations instead of photos. Run it from the ZenithBoard folder on any computer or Pi with Python 3:
+
+```bash
+./bin/zenithboard-demo                  # metric, amber
+./bin/zenithboard-demo imperial green   # units, then colour
+```
+
+Then open **`http://<the-pi-address>:8081/`** (or `http://localhost:8081/` on the same computer).
+
+> **Do not run the demo on port 8080.** The real wall already uses 8080 once FlightInfo is installed, and a second program on the same port fails with `Address already in use`. The demo therefore defaults to **8081**. If 8081 is also taken: `PORT=8082 ./bin/zenithboard-demo`.
+
+---
+
+## Network ports (what answers where)
+
+| Address | What | Notes |
+|---|---|---|
+| `http://<pi>:8080/` | **ZenithBoard wall** | Change with `sudo zenithboard config-set PORT 8090` |
+| `http://<pi>:8081/` | ZenithBoard **demo** | Only while `zenithboard-demo` runs |
+| `http://<pi>/adsbx/` | **ADSB Exchange map of your own receiver** | Served on **port 80**, so it never clashes with 8080. Some installs use `http://<pi>/tar1090/`. |
+| <https://www.adsbexchange.com/myip/> | ADSB Exchange feed status | Open it from the same network as the Pi: it tells you whether your feed is received |
+| `http://<pi>:3000/` | Grafana (ACARS) | Only if ACARS is installed |
+| `http://<pi>:30053/` | Plane Finder setup page | Only if Plane Finder is installed |
+
+`zenithboard status` prints the ones that apply to your Pi.
 
 ---
 
@@ -208,7 +261,7 @@ sudo /opt/zenithboard/install.sh --uninstall-all      # remove everything
 * The Plane Finder package URL for 64-bit systems must be checked against their site.
 * FlightAware and Flightradar24 store your antenna position on their websites: after `zenithboard location`, update it there too (the command tells you where).
 * ACARS legality differs per country — check your local rules before collecting ACARS messages.
-* Photos on the wall are optional (`sudo zenithboard photos on`), need internet and come from Planespotters.
+* Photos come from Planespotters and need internet on the Pi. Logos and the airline list are optional extras you add yourself.
 
 ## Contributing & tests
 

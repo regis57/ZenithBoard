@@ -7,7 +7,7 @@ body[data-theme="green"] { --dot: #39ff6a; }
 body[data-theme="red"]   { --dot: #ff3b30; }
 body[data-theme="white"] { --dot: #e8e8e8; }
 #wall { position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100dvh; display: block; }
-#photo { position: fixed; right: 2vmin; bottom: 2vmin; max-height: 24vh; max-width: 36vw; border-radius: 6px; opacity: .92; }
+#credit { position: fixed; right: 8px; bottom: 4px; font-size: 10px; letter-spacing: .08em; color: var(--dot); opacity: .45; pointer-events: none; }
 #gear { position: fixed; top: 6px; right: 6px; width: 44px; height: 44px; font-size: 24px; color: var(--dot);
         background: transparent; border: 0; opacity: .12; cursor: pointer; }
 #gear:hover, #gear:focus { opacity: .8; }

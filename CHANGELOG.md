@@ -1,6 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.2.0
+- New wall layout (16:10): airline logo or aircraft-class silhouette top-right, LED-style Planespotters photo bottom-right, airline name line, distance/direction footer.
+- Colour setting: `zenithboard color amber|green|red|white` (amber default), menu entry, per-tablet override.
+- Logo library: `zenithboard logo add|fetch|remove|list`, `zenithboard data update` (airline names). No real airline logos are bundled.
+- Photos are fetched by the Pi (proxy) and enabled by default for new installs; demo uses fictional airlines/logos and mock illustrations.
+- Demo runs on port 8081 so it cannot clash with the real wall; README documents the ports and the ADSB Exchange local map.
 - Detects low-memory (< 1.5 GB) and older Pi boards: one-time notice, ACARS marked "not recommended", warning for many feeders, memory in `zenithboard status`.
 - README: "Which Raspberry Pi?" table.
 

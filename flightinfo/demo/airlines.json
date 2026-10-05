@@ -1,0 +1,14 @@
+{
+ "ZZA": {
+  "iata": "ZA",
+  "name": "Zenith Air"
+ },
+ "ZZB": {
+  "iata": "ZB",
+  "name": "Nimbus Jet"
+ },
+ "ZZC": {
+  "iata": "ZC",
+  "name": "Aurora Air"
+ }
+}

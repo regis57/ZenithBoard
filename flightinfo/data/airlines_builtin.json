@@ -1,0 +1,374 @@
+{
+"AAL": {
+"iata": "AA",
+"name": "American"
+},
+"AAR": {
+"iata": "OZ",
+"name": "Asiana"
+},
+"ACA": {
+"iata": "AC",
+"name": "Air Canada"
+},
+"AEE": {
+"iata": "A3",
+"name": "Aegean"
+},
+"AFL": {
+"iata": "SU",
+"name": "Aeroflot"
+},
+"AFR": {
+"iata": "AF",
+"name": "Air France"
+},
+"AIC": {
+"iata": "AI",
+"name": "Air India"
+},
+"AMX": {
+"iata": "AM",
+"name": "Aeromexico"
+},
+"ANA": {
+"iata": "NH",
+"name": "All Nippon"
+},
+"ANZ": {
+"iata": "NZ",
+"name": "Air New Zealand"
+},
+"ARG": {
+"iata": "AR",
+"name": "Aerolineas Argentinas"
+},
+"ASA": {
+"iata": "AS",
+"name": "Alaska"
+},
+"AUA": {
+"iata": "OS",
+"name": "Austrian"
+},
+"AVA": {
+"iata": "AV",
+"name": "Avianca"
+},
+"AZU": {
+"iata": "AD",
+"name": "Azul"
+},
+"BAW": {
+"iata": "BA",
+"name": "British Airways"
+},
+"BCS": {
+"iata": "QY",
+"name": "European Air Transport"
+},
+"BEL": {
+"iata": "SN",
+"name": "Brussels Airlines"
+},
+"BTI": {
+"iata": "BT",
+"name": "Air Baltic"
+},
+"CCA": {
+"iata": "CA",
+"name": "Air China"
+},
+"CES": {
+"iata": "MU",
+"name": "China Eastern"
+},
+"CFG": {
+"iata": "DE",
+"name": "Condor"
+},
+"CLX": {
+"iata": "CV",
+"name": "Cargolux"
+},
+"CPA": {
+"iata": "CX",
+"name": "Cathay Pacific"
+},
+"CSN": {
+"iata": "CZ",
+"name": "China Southern"
+},
+"CTN": {
+"iata": "OU",
+"name": "Croatia Airlines"
+},
+"DAH": {
+"iata": "AH",
+"name": "Air Algerie"
+},
+"DAL": {
+"iata": "DL",
+"name": "Delta"
+},
+"DHL": {
+"iata": "D0",
+"name": "DHL Aviation"
+},
+"DLH": {
+"iata": "LH",
+"name": "Lufthansa"
+},
+"EIN": {
+"iata": "EI",
+"name": "Aer Lingus"
+},
+"EJA": {
+"iata": "1I",
+"name": "NetJets"
+},
+"EJU": {
+"iata": "EC",
+"name": "easyJet Europe"
+},
+"ETD": {
+"iata": "EY",
+"name": "Etihad"
+},
+"ETH": {
+"iata": "ET",
+"name": "Ethiopian"
+},
+"EWG": {
+"iata": "EW",
+"name": "Eurowings"
+},
+"EXS": {
+"iata": "LS",
+"name": "Jet2"
+},
+"EZS": {
+"iata": "DS",
+"name": "easyJet Switzerland"
+},
+"EZY": {
+"iata": "U2",
+"name": "easyJet"
+},
+"FDX": {
+"iata": "FX",
+"name": "FedEx"
+},
+"FFT": {
+"iata": "F9",
+"name": "Frontier"
+},
+"FIN": {
+"iata": "AY",
+"name": "Finnair"
+},
+"GIA": {
+"iata": "GA",
+"name": "Garuda"
+},
+"GLO": {
+"iata": "G3",
+"name": "Gol"
+},
+"GTI": {
+"iata": "5Y",
+"name": "Atlas Air"
+},
+"HAL": {
+"iata": "HA",
+"name": "Hawaiian"
+},
+"HOP": {
+"iata": "A5",
+"name": "Air France Hop"
+},
+"IBE": {
+"iata": "IB",
+"name": "Iberia"
+},
+"ICE": {
+"iata": "FI",
+"name": "Icelandair"
+},
+"IGO": {
+"iata": "6E",
+"name": "IndiGo"
+},
+"ITY": {
+"iata": "AZ",
+"name": "ITA Airways"
+},
+"JAL": {
+"iata": "JL",
+"name": "Japan Airlines"
+},
+"JBU": {
+"iata": "B6",
+"name": "JetBlue"
+},
+"KAL": {
+"iata": "KE",
+"name": "Korean Air"
+},
+"KLM": {
+"iata": "KL",
+"name": "KLM"
+},
+"KQA": {
+"iata": "KQ",
+"name": "Kenya Airways"
+},
+"LAN": {
+"iata": "LA",
+"name": "LATAM"
+},
+"LGL": {
+"iata": "LG",
+"name": "Luxair"
+},
+"LOT": {
+"iata": "LO",
+"name": "LOT Polish"
+},
+"MAS": {
+"iata": "MH",
+"name": "Malaysia Airlines"
+},
+"MSR": {
+"iata": "MS",
+"name": "EgyptAir"
+},
+"NAX": {
+"iata": "DY",
+"name": "Norwegian"
+},
+"NJE": {
+"iata": "EU",
+"name": "NetJets Europe"
+},
+"NKS": {
+"iata": "NK",
+"name": "Spirit"
+},
+"PAL": {
+"iata": "PR",
+"name": "Philippine Airlines"
+},
+"PGT": {
+"iata": "PC",
+"name": "Pegasus"
+},
+"QFA": {
+"iata": "QF",
+"name": "Qantas"
+},
+"QTR": {
+"iata": "QR",
+"name": "Qatar Airways"
+},
+"RAM": {
+"iata": "AT",
+"name": "Royal Air Maroc"
+},
+"ROT": {
+"iata": "RO",
+"name": "Tarom"
+},
+"RYR": {
+"iata": "FR",
+"name": "Ryanair"
+},
+"SAA": {
+"iata": "SA",
+"name": "South African"
+},
+"SAS": {
+"iata": "SK",
+"name": "Scandinavian"
+},
+"SIA": {
+"iata": "SQ",
+"name": "Singapore Airlines"
+},
+"SWA": {
+"iata": "WN",
+"name": "Southwest"
+},
+"SWR": {
+"iata": "LX",
+"name": "Swiss"
+},
+"SXS": {
+"iata": "XQ",
+"name": "SunExpress"
+},
+"TAM": {
+"iata": "JJ",
+"name": "LATAM Brasil"
+},
+"TAP": {
+"iata": "TP",
+"name": "TAP Air Portugal"
+},
+"TAR": {
+"iata": "TU",
+"name": "Tunisair"
+},
+"THA": {
+"iata": "TG",
+"name": "Thai Airways"
+},
+"THY": {
+"iata": "TK",
+"name": "Turkish Airlines"
+},
+"TOM": {
+"iata": "BY",
+"name": "TUI Airways"
+},
+"TRA": {
+"iata": "HV",
+"name": "Transavia"
+},
+"TVF": {
+"iata": "TO",
+"name": "Transavia France"
+},
+"UAE": {
+"iata": "EK",
+"name": "Emirates"
+},
+"UAL": {
+"iata": "UA",
+"name": "United"
+},
+"UPS": {
+"iata": "5X",
+"name": "UPS"
+},
+"VIR": {
+"iata": "VS",
+"name": "Virgin Atlantic"
+},
+"VLG": {
+"iata": "VY",
+"name": "Vueling"
+},
+"VOZ": {
+"iata": "VA",
+"name": "Virgin Australia"
+},
+"WJA": {
+"iata": "WS",
+"name": "WestJet"
+},
+"WZZ": {
+"iata": "W6",
+"name": "Wizz Air"
+}
+}

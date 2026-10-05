@@ -28,32 +28,33 @@
     return o;
   }
 
-  // Returns the text rows shown for one aircraft. W = characters per row.
+  // Returns the text rows shown for one aircraft. W = characters per text row (the right-hand column holds logo + photo).
   function planeLines(p, units, index, total, radiusLabel, W) {
-    W = W || 20;
+    W = W || 14;
     var c = convert(p, units), imp = units === "imperial";
-    var callsign = (p.flight || p.hex || "UNKNOWN").toUpperCase().slice(0, 8);
+    var callsign = (p.flight || p.hex || "UNKNOWN").toUpperCase().slice(0, 7);
     var distTxt = (c.dist < 10 ? c.dist.toFixed(1) : String(Math.round(c.dist))) + c.distUnit;
     var type = [p.type, p.registration].filter(Boolean).join(" ").toUpperCase();
     var alt = p.on_ground ? "GROUND" : (c.alt == null ? "---" : String(Math.round(imp ? c.alt : c.alt / 10) * (imp ? 1 : 10)) + " " + c.altUnit);
     var spd = c.speed == null ? "---" : Math.round(c.speed) + " " + c.speedUnit;
-    var hdg = p.track == null ? "---" : Math.round(p.track) + "° " + compass(p.track);
+    var hdg = p.track == null ? "---" : Math.round(p.track) + "\u00b0 " + compass(p.track);
     var vs = "---";
     if (c.vs != null) {
       var mag = imp ? Math.round(Math.abs(c.vs)) : Math.abs(c.vs).toFixed(1);
-      var arrow = Math.abs(c.vs) < (imp ? 100 : 0.5) ? "=" : (c.vs > 0 ? "↑" : "↓");
+      var arrow = Math.abs(c.vs) < (imp ? 100 : 0.5) ? "=" : (c.vs > 0 ? "\u2191" : "\u2193");
       vs = arrow + (arrow === "=" ? "" : mag) + " " + c.vsUnit;
     }
+    function fit(s) { return String(s).slice(0, W); }
     return {
       callsign: callsign,
-      dist: distTxt,
-      dir: compass(p.bearing),
-      type: pad(type || "TYPE UNKNOWN", W).trim(),
-      alt: "ALT  " + alt,
-      spd: "SPD  " + spd,
-      hdg: "HDG  " + hdg,
-      vs: "V/S  " + vs,
-      footer: spread((index + 1) + "/" + total, radiusLabel, W)
+      airline: fit((p.airline || "").toUpperCase()),
+      type: fit(type || ""),
+      alt: fit("ALT  " + alt),
+      spd: fit("SPD  " + spd),
+      hdg: fit("HDG  " + hdg),
+      vs: fit("V/S  " + vs),
+      footerLeft: fit((index + 1) + "/" + total + " " + distTxt + " " + compass(p.bearing)),
+      footerRight: radiusLabel
     };
   }
 

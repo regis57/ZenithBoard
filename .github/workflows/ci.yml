@@ -8,8 +8,12 @@ jobs:
       - name: shellcheck
         run: shellcheck -x -S warning install.sh bin/zenithboard bin/run-acarsdec bin/zenithboard-demo lib/*.sh tests/*.sh
       - name: Python tests
-        run: python3 -m unittest discover -s tests -v
+        run: |
+          sudo apt-get install -y python3-pil
+          python3 -m unittest discover -s tests -v
       - name: Hardware detection tests
         run: bash tests/test_hardware.sh
       - name: JavaScript tests
-        run: node tests/test_format.js
+        run: |
+          node tests/test_format.js
+          node tests/test_shapes.js

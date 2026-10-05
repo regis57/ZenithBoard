@@ -23,8 +23,13 @@ ZenithBoard $ZB_VERSION - ADSB Flight Info
   zenithboard units metric|imperial     km, km/h, m   |   mi, knots, ft
   zenithboard radius 1|2|5|10|15|30|50  wall detection radius (in your unit: km or miles)
   zenithboard location LAT LON [ALT_M]  set the antenna position EVERYWHERE it is stored
+  zenithboard color amber|green|red|white   dot colour of every wall (amber is the default)
   zenithboard cycle SECONDS             seconds each aircraft stays on the wall
-  zenithboard photos on|off             aircraft photos on the wall (needs internet)
+  zenithboard photos on|off             aircraft photos on the wall (needs internet on the Pi)
+  zenithboard logo add ICAO image       airline logo from YOUR image file, e.g.: zenithboard logo add AFR ~/af.png
+  zenithboard logo fetch ICAO           download + convert from LOGO_URL_TEMPLATE
+  zenithboard logo remove ICAO | list   manage the logo library (/var/lib/zenithboard/logos)
+  zenithboard data update               download the full airline-name list (OpenFlights)
   zenithboard update                    upgrade ZenithBoard + decoder + feeders + ACARS + Grafana
   zenithboard mlat-guard                re-enforce a single MLAT client
   zenithboard logs [flightinfo|acars|decoder]
@@ -60,6 +65,10 @@ cmd_status() {
   local j; j=$(decoder_json)
   if [ -f "$j" ]; then echo "Aircraft in decoder right now: $(grep -o '"hex"' "$j" | wc -l)"; fi
   is_flightinfo && echo "Wall:     http://$(local_ip):$(cfg_get PORT 8080)/"
+  if is_adsbx; then
+    echo "ADSB Exchange map (local): http://$(local_ip)/adsbx/   (port 80, no clash with the wall on $(cfg_get PORT 8080))"
+    echo "ADSB Exchange feed status: https://www.adsbexchange.com/myip/"
+  fi
   is_acars && echo "ACARS:    http://$(local_ip):3000/"
 }
 
@@ -78,6 +87,19 @@ case "${1:-}" in
   location)
     root_or_die; valid_lat "${2:-x}" && valid_lon "${3:-x}" || die "Usage: zenithboard location LAT LON [ALT_M]   e.g. 49.246 6.223 210"
     zb_apply_location "$2" "$3" "${4:-}" ;;
+  color|colour)
+    root_or_die; valid_theme "${2:-}" || die "Usage: zenithboard color amber|green|red|white"
+    cfg_set THEME "$2"; restart_flightinfo
+    echo "Wall colour is now $2 (tablets that picked their own colour with the gear keep it: use the gear's Reset)." ;;
+  logo)
+    root_or_die; shift
+    python3 -c 'import PIL' 2>/dev/null || { log "Installing Pillow (image library)"; apt_install python3-pil; }
+    ensure_zb_user; ZENITHBOARD_CONFIG="$ZB_CONFIG" python3 "$HERE/../tools/logo_tool.py" "$@" ;;
+  data)
+    root_or_die; [ "${2:-}" = update ] || die "Usage: zenithboard data update"
+    ensure_zb_user; python3 "$HERE/../tools/update_airlines.py" --out "$ZB_DATA/data/airlines.json" && restart_flightinfo ;;
+  config-set)
+    root_or_die; [ -n "${2:-}" ] || die "Usage: zenithboard config-set KEY VALUE"; cfg_set "$2" "${3:-}"; restart_flightinfo ;;
   cycle)
     root_or_die; is_number "${2:-x}" || die "Usage: zenithboard cycle SECONDS"; cfg_set CYCLE_SECONDS "$2"; restart_flightinfo ;;
   photos)
