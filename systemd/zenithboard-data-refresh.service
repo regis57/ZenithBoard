@@ -1,0 +1,10 @@
+[Unit]
+Description=ZenithBoard aircraft-type data refresh (monthly)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+Nice=10
+ExecStartPre=/usr/bin/install -d -m 755 /var/lib/zenithboard/data
+ExecStart=/usr/bin/python3 /opt/zenithboard/tools/update_types.py --out /var/lib/zenithboard/data/types.json --quiet

@@ -5,7 +5,7 @@
 Tiny, dependency-free (Python standard library only) web server that:
   * reads the decoder's aircraft.json (readsb or dump1090-fa),
   * keeps the aircraft that are inside the configured radius around the antenna,
-  * adds airline name, aircraft silhouette class, optional logo and photo,
+  * adds airline name, model-matched silhouette class and (optionally) a Planespotters photo,
   * serves the dot-matrix wall (static/) and a small JSON API.
 
 Configuration is read from /etc/zenithboard/config.env on every request (cached
@@ -30,6 +30,10 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 DEMO_DIR = os.path.join(BASE_DIR, "demo")
 DATA_DIR = os.path.join(BASE_DIR, "data")
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
+import aircraft  # noqa: E402  (silhouette class per aircraft type)
+
 SERVER_ID = str(int(time.time()))  # changes on restart -> browsers reload themselves
 
 KM_PER_MI = 1.609344
@@ -46,11 +50,10 @@ DEFAULTS = {
     "RADIUS": "10",             # in km (metric) or miles (imperial)
     "CYCLE_SECONDS": "6",
     "SHOW_PHOTOS": "1",
-    "SHOW_LOGOS": "1",
     "PORT": "8080",
     "AIRCRAFT_JSON": "",        # optional explicit path override
-    "DEMO": "0",                # 1 = fictional demo airlines, logos and photos
-    "USER_DATA_DIR": "/var/lib/zenithboard",   # logos/ and data/ added by the user live here
+    "DEMO": "0",                # 1 = fictional demo airlines and mock photos
+    "USER_DATA_DIR": "/var/lib/zenithboard",   # data/types.json (monthly refresh) lives here
 }
 
 _cfg_cache = {"mtime": None, "data": dict(DEFAULTS)}
@@ -149,15 +152,14 @@ def _read_json(path):
 
 
 def airline_sources(cfg):
-    user = cfg.get("USER_DATA_DIR", DEFAULTS["USER_DATA_DIR"])
-    files = [os.path.join(user, "data", "airlines.json"), os.path.join(DATA_DIR, "airlines_builtin.json")]   # later files win
+    files = [os.path.join(DATA_DIR, "airlines_builtin.json")]
     if cfg_bool(cfg, "DEMO"):
         files.append(os.path.join(DEMO_DIR, "airlines.json"))
     return files
 
 
 def load_airlines(cfg):
-    """Merge downloaded full list < curated built-in list < demo list. Cached by file mtimes."""
+    """Merge curated built-in list < demo list. Cached by file mtimes."""
     files = airline_sources(cfg)
     key = tuple((f, os.path.getmtime(f) if os.path.exists(f) else 0) for f in files)
     if _airlines["key"] != key:
@@ -179,40 +181,43 @@ def airline_for(callsign, airlines):
     return (icao, info) if info else (icao, None)
 
 
-TURBOPROP_TYPES = {"AT43", "AT45", "AT72", "AT73", "AT75", "AT76", "DH8A", "DH8B", "DH8C", "DH8D", "SF34", "SB20",
-                   "JS31", "JS32", "JS41", "B190", "BE20", "BE99", "C208", "PC12", "PC24x", "E120", "F50", "F27",
-                   "D328", "SH36", "SW4", "C441", "TBM7", "TBM8", "TBM9", "P180", "AN24", "AN26", "L410", "DHC6"}
-BIZJET_TYPES = {"C25A", "C25B", "C25C", "C25M", "C510", "C525", "C550", "C560", "C56X", "C680", "C68A", "C700", "C750",
-                "CL30", "CL35", "CL60", "GL5T", "GL6T", "GLEX", "GLF2", "GLF3", "GLF4", "GLF5", "GLF6", "FA50",
-                "FA7X", "FA8X", "F900", "F2TH", "LJ35", "LJ45", "LJ60", "E50P", "E55P", "H25B", "HDJT", "PRM1", "SF50"}
-WIDEBODY_TYPES = {"A332", "A333", "A338", "A339", "A342", "A343", "A345", "A346", "A359", "A35K", "A388", "A306", "A310",
-                  "B742", "B743", "B744", "B748", "B762", "B763", "B764", "B772", "B773", "B77L", "B77W", "B778", "B779",
-                  "B788", "B789", "B78X", "MD11", "IL96", "A124", "A225"}
+_types = {"key": None, "data": {}, "updated": None}
 
 
-def shape_for(ac):
-    """Silhouette class: heli | light | turboprop | bizjet | wide | narrow."""
-    t = (ac.get("t") or "").upper()
-    cat = (ac.get("category") or "").upper()
-    if cat == "A7" or t in {"EC35", "EC45", "EC30", "EC20", "H135", "H145", "H160", "H125", "A109", "A139", "A169",
-                            "AS50", "AS55", "AS65", "B06", "B407", "B412", "B429", "R22", "R44", "R66", "S76", "S92",
-                            "H60", "NH90", "EC55", "EC75", "AS32", "AS3B", "MI8", "KA32"}:
-        return "heli"
-    if t in TURBOPROP_TYPES:
-        return "turboprop"
-    if t in BIZJET_TYPES:
-        return "bizjet"
-    if t in WIDEBODY_TYPES or cat == "A5":
-        return "wide"
-    if cat == "A1":
-        return "light"
-    if cat == "A2" and t not in {"A318", "A319", "A320", "A321", "B737", "B738", "B739", "B38M", "E190", "E170"}:
-        return "bizjet"
-    return "narrow"
+def types_file(cfg):
+    return os.path.join(cfg.get("USER_DATA_DIR", DEFAULTS["USER_DATA_DIR"]), "data", "types.json")
+
+
+def load_types(cfg):
+    """Optional downloaded type list ({"types": {"A320": [long name, "L2J", "M"], ...}}), cached by mtime."""
+    path = types_file(cfg)
+    try:
+        key = (path, os.path.getmtime(path))
+    except OSError:
+        key = (path, 0)
+    if _types["key"] != key:
+        raw = _read_json(path) if key[1] else {}
+        data = raw.get("types") if isinstance(raw.get("types"), dict) else {}
+        _types.update(key=key, data=data, updated=raw.get("updated"))
+    return _types["data"]
+
+
+def describe_type(ac, types=None):
+    """Silhouette class + variant, military flag and a model name for one aircraft.json entry."""
+    code = (ac.get("t") or "").upper()
+    entry = (types or {}).get(code)
+    long_name, desc, wtc = (entry + [None, None, None])[:3] if isinstance(entry, list) else (None, None, None)
+    shape, variant = aircraft.classify(code, ac.get("category"), long_name, desc, wtc)
+    return {
+        "shape": shape,
+        "variant": variant,
+        "military": aircraft.is_military(shape, ac.get("dbFlags")),
+        "type_name": aircraft.type_name(code, {code: long_name} if long_name else None),
+    }
 
 
 # --------------------------------------------------------------------------- planes
-def build_planes(data, lat, lon, radius_km, airlines=None, photo_lookup=None, demo=False):
+def build_planes(data, lat, lon, radius_km, airlines=None, photo_lookup=None, demo=False, types=None):
     """Return (planes_in_radius_sorted_by_distance, total_with_position)."""
     airlines = airlines or {}
     planes, total = [], 0
@@ -229,21 +234,25 @@ def build_planes(data, lat, lon, radius_km, airlines=None, photo_lookup=None, de
         on_ground = alt == "ground"
         flight = (ac.get("flight") or "").strip()
         icao, info = airline_for(flight, airlines)
-        photo, credit = None, None
+        photo, credit, link = None, None, None
         if demo and ac.get("demo_photo"):
             photo, credit = ac["demo_photo"], "DEMO ILLUSTRATION"
         elif photo_lookup is not None:
             found = photo_lookup(ac.get("hex"))
             if found:
-                photo, credit = "/api/photo/%s" % ac.get("hex"), found.get("photographer")
+                photo, credit, link = "/api/photo/%s" % ac.get("hex"), found.get("photographer"), found.get("link")
+        kind = describe_type(ac, types)
         planes.append({
             "hex": ac.get("hex", ""),
             "flight": flight,
             "registration": ac.get("r"),
             "type": ac.get("t"),
-            "shape": shape_for(ac),
+            "type_name": kind["type_name"],
+            "shape": kind["shape"],
+            "variant": kind["variant"],
+            "military": kind["military"],
             "airline_icao": icao if info else None,
-            "airline": info.get("name") if info else None,
+            "airline": info.get("name") if info else ("MILITARY" if kind["military"] else None),
             "alt_ft": 0 if on_ground else alt,
             "on_ground": on_ground,
             "gs_kt": ac.get("gs"),
@@ -253,33 +262,10 @@ def build_planes(data, lat, lon, radius_km, airlines=None, photo_lookup=None, de
             "bearing": round(bearing_deg(lat, lon, ac["lat"], ac["lon"])),
             "photo": photo,
             "photo_credit": credit,
+            "photo_link": link,
         })
     planes.sort(key=lambda p: p["distance_km"])
     return planes, total
-
-
-# --------------------------------------------------------------------------- logos (dot-matrix bitmaps, never bundled for real airlines)
-_ICAO_RE = re.compile(r"^[A-Z0-9]{2,4}$")
-
-
-def logo_dirs(cfg):
-    user = cfg.get("USER_DATA_DIR", DEFAULTS["USER_DATA_DIR"])
-    dirs = [os.path.join(user, "logos")]
-    if cfg_bool(cfg, "DEMO"):
-        dirs.append(os.path.join(DEMO_DIR, "logos"))
-    return dirs
-
-
-def find_logo(icao, cfg):
-    if not _ICAO_RE.match(icao or ""):
-        return None
-    for d in logo_dirs(cfg):
-        path = os.path.join(d, icao + ".json")
-        if os.path.isfile(path):
-            data = _read_json(path)
-            if {"w", "h", "palette", "rows"} <= set(data):
-                return data
-    return None
 
 
 # --------------------------------------------------------------------------- photos (Planespotters, optional, proxied so the tablet needs no internet)
@@ -298,7 +284,7 @@ def _fetch_photo_meta(hex_code):
             photos = json.load(resp).get("photos") or []
             if photos:
                 p = photos[0]
-                meta = {"url": p.get("thumbnail_large", {}).get("src"), "photographer": p.get("photographer")}
+                meta = {"url": p.get("thumbnail_large", {}).get("src"), "photographer": p.get("photographer"), "link": p.get("link")}
                 if not meta["url"]:
                     meta = None
     except Exception:  # network is optional: never break the wall because of photos
@@ -357,7 +343,6 @@ def public_config(cfg):
         "radius_presets": RADIUS_PRESETS,
         "cycle_seconds": max(2, cfg_float(cfg, "CYCLE_SECONDS", 6)),
         "show_photos": cfg_bool(cfg, "SHOW_PHOTOS"),
-        "show_logos": cfg_bool(cfg, "SHOW_LOGOS"),
         "demo": cfg_bool(cfg, "DEMO"),
     }
 
@@ -388,9 +373,6 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, {"ok": True, "version": VERSION})
         if path == "/api/planes":
             return self._planes(cfg, parse_qs(url.query))
-        if path.startswith("/api/logo/"):
-            logo = find_logo(path[len("/api/logo/"):].upper(), cfg) if cfg_bool(cfg, "SHOW_LOGOS") else None
-            return self._send(200, logo or {}, cache="max-age=60")      # {} = no logo (not a 404: keeps browser consoles clean)
         if path.startswith("/api/photo/"):
             got = fetch_photo_bytes(path[len("/api/photo/"):].lower()) if cfg_bool(cfg, "SHOW_PHOTOS") else None
             return self._send(200, got[1], got[0], cache="max-age=3600") if got else self._send(404, b"", "text/plain")
@@ -415,7 +397,7 @@ class Handler(BaseHTTPRequestHandler):
         demo = cfg_bool(cfg, "DEMO")
         lookup = lookup_photo if cfg_bool(cfg, "SHOW_PHOTOS") and not demo else None
         planes, total = build_planes(data, cfg_float(cfg, "LAT", 0), cfg_float(cfg, "LON", 0), radius_km,
-                                     load_airlines(cfg), lookup, demo)
+                                     load_airlines(cfg), lookup, demo, load_types(cfg))
         return self._send(200, {"planes": planes, "total": total, "radius_km": radius_km,
                                 "server_id": SERVER_ID, "updated": time.time()})
 

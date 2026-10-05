@@ -3,7 +3,6 @@
 import json
 import os
 import sys
-import tempfile
 import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "flightinfo"))
@@ -30,15 +29,16 @@ class ServerTests(unittest.TestCase):
     def test_build_planes(self):
         data = self._demo()
         planes, total = server.build_planes(data, LAT, LON, 10)
-        self.assertEqual(total, 8)                      # no-position and stale aircraft ignored
-        self.assertEqual(len(planes), 7)                # the EZY45RF at ~57 km is outside 10 km
-        self.assertEqual(planes[0]["hex"], "3c6444")    # nearest first (aircraft on the ground)
-        self.assertTrue(planes[0]["on_ground"])
-        self.assertEqual(planes[0]["alt_ft"], 0)
+        self.assertEqual(total, 12)                     # no-position and stale aircraft ignored
+        self.assertEqual(len(planes), 11)               # the EZY45RF at ~57 km is outside 10 km
+        self.assertEqual(planes[0]["hex"], "dd0013")    # nearest first
         near, _ = server.build_planes(data, LAT, LON, 2)
-        self.assertEqual([p["hex"] for p in near], ["3c6444", "3e1a2b"])
+        self.assertEqual([p["hex"] for p in near], ["dd0013", "3c6444", "dd0010", "3e1a2b"])
+        ground = [p for p in near if p["hex"] == "3c6444"][0]
+        self.assertTrue(ground["on_ground"])
+        self.assertEqual(ground["alt_ft"], 0)
         far, _ = server.build_planes(data, LAT, LON, 100)
-        self.assertEqual(len(far), 8)
+        self.assertEqual(len(far), 12)
 
     def _demo(self):
         with open(os.path.join(HERE, "..", "flightinfo", "demo", "aircraft.json")) as fh:
@@ -52,40 +52,54 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(server.airline_for("N123AB", air), (None, None))      # registration used as callsign
         self.assertEqual(server.airline_for("", air), (None, None))
 
-    def test_shapes(self):
-        self.assertEqual(server.shape_for({"t": "EC35", "category": "A7"}), "heli")
-        self.assertEqual(server.shape_for({"category": "A7"}), "heli")
-        self.assertEqual(server.shape_for({"t": "AT72", "category": "A3"}), "turboprop")
-        self.assertEqual(server.shape_for({"t": "A388", "category": "A5"}), "wide")
-        self.assertEqual(server.shape_for({"t": "C25C", "category": "A2"}), "bizjet")
-        self.assertEqual(server.shape_for({"t": "C172", "category": "A1"}), "light")
-        self.assertEqual(server.shape_for({"t": "A320", "category": "A3"}), "narrow")
-        self.assertEqual(server.shape_for({}), "narrow")
+    def test_describe_type(self):
+        k = server.describe_type({"t": "EC35", "category": "A7"})
+        self.assertEqual((k["shape"], k["military"], k["type_name"]), ("heli", False, "Airbus H135"))
+        self.assertEqual(server.describe_type({"category": "A7"})["shape"], "heli")
+        self.assertEqual(server.describe_type({"t": "B748"})["variant"], "hump")
+        self.assertTrue(server.describe_type({"t": "F16"})["military"])
+        self.assertTrue(server.describe_type({"t": "A332", "dbFlags": 1})["military"])      # e.g. an A330 tanker
+        self.assertFalse(server.describe_type({"t": "A332", "dbFlags": 0})["military"])
+        self.assertEqual(server.describe_type({})["shape"], "narrow")
 
-    def test_demo_planes_have_airline_photo_and_shape(self):
+    def test_demo_planes(self):
         air = server.load_airlines(dict(server.DEFAULTS, DEMO="1", USER_DATA_DIR="/nonexistent"))
         planes, _ = server.build_planes(self._demo(), LAT, LON, 10, air, None, demo=True)
         by = {p["hex"]: p for p in planes}
         self.assertEqual(by["dd0001"]["airline"], "Zenith Air")
-        self.assertEqual(by["dd0001"]["airline_icao"], "ZZA")
         self.assertTrue(by["dd0001"]["photo"].startswith("/demo/photos/"))
+        self.assertEqual(by["dd0001"]["type_name"], "Airbus A320")
         self.assertEqual(by["3e1a2b"]["shape"], "heli")
         self.assertIsNone(by["3e1a2b"]["airline"])
+        self.assertEqual((by["dd0003"]["shape"], by["dd0003"]["variant"]), ("quad", "deck"))
+        self.assertEqual((by["dd0012"]["shape"], by["dd0012"]["variant"]), ("quad", "hump"))
+        self.assertEqual(by["dd0010"]["shape"], "fighter")
+        self.assertTrue(by["dd0010"]["military"])
+        self.assertEqual(by["dd0010"]["airline"], "MILITARY")
+        self.assertEqual(by["dd0011"]["shape"], "airlifter")
+        self.assertIsNone(by["dd0010"]["photo"])                                  # no photo -> the wall shows its animated scene
+        self.assertIsNone(by["4ca7b3"]["photo"])
+        for p in planes:                                                          # every demo photo file exists
+            if p["photo"]:
+                self.assertTrue(os.path.isfile(os.path.join(HERE, "..", "flightinfo", p["photo"].replace("/demo/", "demo/"))), p["photo"])
 
-    def test_logo_lookup_and_curated_names_win(self):
-        cfg = dict(server.DEFAULTS, DEMO="1", USER_DATA_DIR="/nonexistent")
-        logo = server.find_logo("ZZA", cfg)
-        self.assertTrue(logo and {"w", "h", "palette", "rows"} <= set(logo))
-        self.assertIsNone(server.find_logo("RYR", cfg))
-        self.assertIsNone(server.find_logo("../x", cfg))                         # no path tricks
-        self.assertIsNone(server.find_logo("ZZA", dict(cfg, DEMO="0")))          # demo logos only in demo mode
-        with tempfile.TemporaryDirectory() as d:                                  # downloaded list must not override curated names
-            os.makedirs(os.path.join(d, "data"))
-            with open(os.path.join(d, "data", "airlines.json"), "w") as fh:
-                json.dump({"SWR": {"name": "Swissair", "iata": "SR"}, "QQQ": {"name": "Test Air", "iata": "QQ"}}, fh)
-            air = server.load_airlines(dict(server.DEFAULTS, USER_DATA_DIR=d))
-            self.assertEqual(air["SWR"]["name"], "Swiss")
-            self.assertEqual(air["QQQ"]["name"], "Test Air")
+    def test_photo_credit_and_link(self):
+        lookup = lambda h: {"url": "u", "photographer": "Jane Doe", "link": "https://www.planespotters.net/photo/1"} if h == "dd0001" else None  # noqa: E731
+        planes, _ = server.build_planes(self._demo(), LAT, LON, 10, {}, lookup, demo=False)
+        by = {p["hex"]: p for p in planes}
+        self.assertEqual(by["dd0001"]["photo"], "/api/photo/dd0001")
+        self.assertEqual(by["dd0001"]["photo_credit"], "Jane Doe")
+        self.assertEqual(by["dd0001"]["photo_link"], "https://www.planespotters.net/photo/1")
+        self.assertIsNone(by["dd0002"]["photo"])
+
+    def test_no_logo_api(self):
+        self.assertFalse(hasattr(server, "find_logo"))
+        self.assertNotIn("show_logos", server.public_config(dict(server.DEFAULTS)))
+        self.assertNotIn("SHOW_LOGOS", server.DEFAULTS)
+
+    def test_curated_airline_names(self):
+        air = server.load_airlines(dict(server.DEFAULTS))
+        self.assertEqual(air["SWR"]["name"], "Swiss")
 
     def test_public_config_defaults(self):
         cfg = dict(server.DEFAULTS, UNITS="bogus")

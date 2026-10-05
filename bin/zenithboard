@@ -26,10 +26,9 @@ ZenithBoard $ZB_VERSION - ADSB Flight Info
   zenithboard color amber|green|red|white   dot colour of every wall (amber is the default)
   zenithboard cycle SECONDS             seconds each aircraft stays on the wall
   zenithboard photos on|off             aircraft photos on the wall (needs internet on the Pi)
-  zenithboard logo add ICAO image       airline logo from YOUR image file, e.g.: zenithboard logo add AFR ~/af.png
-  zenithboard logo fetch ICAO           download + convert from LOGO_URL_TEMPLATE
-  zenithboard logo remove ICAO | list   manage the logo library (/var/lib/zenithboard/logos)
-  zenithboard data update               download the full airline-name list (OpenFlights)
+  zenithboard data update               refresh the aircraft model list now (names for the silhouettes)
+  zenithboard data auto on|off          monthly automatic refresh of that list (default: on)
+  zenithboard data status               when it was last refreshed
   zenithboard update                    upgrade ZenithBoard + decoder + feeders + ACARS + Grafana
   zenithboard mlat-guard                re-enforce a single MLAT client
   zenithboard logs [flightinfo|acars|decoder]
@@ -65,11 +64,22 @@ cmd_status() {
   local j; j=$(decoder_json)
   if [ -f "$j" ]; then echo "Aircraft in decoder right now: $(grep -o '"hex"' "$j" | wc -l)"; fi
   is_flightinfo && echo "Wall:     http://$(local_ip):$(cfg_get PORT 8080)/"
+  is_flightinfo && data_refresh_status
   if is_adsbx; then
     echo "ADSB Exchange map (local): http://$(local_ip)/adsbx/   (port 80, no clash with the wall on $(cfg_get PORT 8080))"
     echo "ADSB Exchange feed status: https://www.adsbexchange.com/myip/"
   fi
   is_acars && echo "ACARS:    http://$(local_ip):3000/"
+}
+
+data_refresh_status() {
+  local f="$ZB_DATA/data/types.json"
+  echo "Monthly aircraft data refresh: $( [ "$(cfg_get AUTO_DATA_REFRESH 1)" = 1 ] && echo ON || echo OFF )"
+  if [ -f "$f" ]; then
+    python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); print("Aircraft list: %s types, downloaded %s" % (d.get("count"), d.get("updated")))' "$f" 2>/dev/null || echo "Aircraft list: present but unreadable (run: sudo zenithboard data update)"
+  else
+    echo "Aircraft list: not downloaded (built-in list in use; run: sudo zenithboard data update)"
+  fi
 }
 
 cmd_config() { echo "# $ZB_CONFIG"; cat "$ZB_CONFIG" 2>/dev/null || echo "(no configuration yet - run: sudo ./install.sh)"; }
@@ -91,13 +101,17 @@ case "${1:-}" in
     root_or_die; valid_theme "${2:-}" || die "Usage: zenithboard color amber|green|red|white"
     cfg_set THEME "$2"; restart_flightinfo
     echo "Wall colour is now $2 (tablets that picked their own colour with the gear keep it: use the gear's Reset)." ;;
-  logo)
-    root_or_die; shift
-    python3 -c 'import PIL' 2>/dev/null || { log "Installing Pillow (image library)"; apt_install python3-pil; }
-    ensure_zb_user; ZENITHBOARD_CONFIG="$ZB_CONFIG" python3 "$HERE/../tools/logo_tool.py" "$@" ;;
   data)
-    root_or_die; [ "${2:-}" = update ] || die "Usage: zenithboard data update"
-    ensure_zb_user; python3 "$HERE/../tools/update_airlines.py" --out "$ZB_DATA/data/airlines.json" && restart_flightinfo ;;
+    case "${2:-status}" in
+      update) root_or_die; ensure_zb_user; data_refresh_now ;;
+      auto)
+        root_or_die
+        case "${3:-}" in on) cfg_set AUTO_DATA_REFRESH 1 ;; off) cfg_set AUTO_DATA_REFRESH 0 ;; *) die "Usage: zenithboard data auto on|off" ;; esac
+        data_refresh_apply
+        echo "Monthly aircraft data refresh: $( [ "$(cfg_get AUTO_DATA_REFRESH 1)" = 1 ] && echo ON || echo OFF )" ;;
+      status) data_refresh_status ;;
+      *) die "Usage: zenithboard data update | auto on|off | status" ;;
+    esac ;;
   config-set)
     root_or_die; [ -n "${2:-}" ] || die "Usage: zenithboard config-set KEY VALUE"; cfg_set "$2" "${3:-}"; restart_flightinfo ;;
   cycle)

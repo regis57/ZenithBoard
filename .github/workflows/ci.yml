@@ -9,7 +9,6 @@ jobs:
         run: shellcheck -x -S warning install.sh bin/zenithboard bin/run-acarsdec bin/zenithboard-demo lib/*.sh tests/*.sh
       - name: Python tests
         run: |
-          sudo apt-get install -y python3-pil
           python3 -m unittest discover -s tests -v
       - name: Hardware detection tests
         run: bash tests/test_hardware.sh
@@ -17,3 +16,4 @@ jobs:
         run: |
           node tests/test_format.js
           node tests/test_shapes.js
+          node tests/test_scene.js

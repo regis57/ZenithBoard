@@ -5,8 +5,23 @@
 ensure_zb_user() {
   id "$ZB_USER" >/dev/null 2>&1 || useradd --system --home-dir "$ZB_DATA" --shell /usr/sbin/nologin "$ZB_USER"
   install -d -o "$ZB_USER" -g "$ZB_USER" -m 2750 "$ZB_DATA"
-  # logos and the airline list are read by the wall server (user zenithboard): world-readable, root-writable
-  install -d -m 755 "$ZB_DATA/logos" "$ZB_DATA/data"
+  # the downloaded aircraft-type list is read by the wall server (user zenithboard): world-readable, root-writable
+  install -d -m 755 "$ZB_DATA/data"
+}
+
+# Monthly aircraft-type data refresh (model names for the silhouettes). The timer follows AUTO_DATA_REFRESH.
+data_refresh_apply() {
+  if [ "$(cfg_get AUTO_DATA_REFRESH 1)" = 1 ]; then
+    install -m 644 "$ZB_HOME/systemd/zenithboard-data-refresh.service" "$ZB_HOME/systemd/zenithboard-data-refresh.timer" /etc/systemd/system/
+    systemctl daemon-reload; systemctl enable --now zenithboard-data-refresh.timer >/dev/null 2>&1 || warn "could not enable the monthly refresh timer"
+  else
+    systemctl disable --now zenithboard-data-refresh.timer >/dev/null 2>&1 || true
+  fi
+}
+
+data_refresh_now() {
+  install -d -m 755 "$ZB_DATA/data"
+  python3 "$ZB_HOME/tools/update_types.py" --out "$ZB_DATA/data/types.json"
 }
 
 # Copy the project (this clone) to /opt/zenithboard so the services do not depend on where it was cloned.
@@ -29,13 +44,17 @@ install_flightinfo() {
   install -m 644 "$ZB_HOME/systemd/zenithboard-flightinfo.service" /etc/systemd/system/
   systemctl daemon-reload
   systemctl enable zenithboard-flightinfo; systemctl restart zenithboard-flightinfo
+  data_refresh_apply
+  [ -f "$ZB_DATA/data/types.json" ] || [ "$(cfg_get AUTO_DATA_REFRESH 1)" != 1 ] || data_refresh_now || warn "Aircraft model list not downloaded (no internet?). The wall works without it; retry: sudo zenithboard data update"
   echo "    Open on your tablet:  http://$(local_ip):$(cfg_get PORT 8080)/"
 }
 
 remove_flightinfo() {
   log "Removing FlightInfo"
   systemctl disable --now zenithboard-flightinfo 2>/dev/null || true
-  rm -f /etc/systemd/system/zenithboard-flightinfo.service; systemctl daemon-reload
+  systemctl disable --now zenithboard-data-refresh.timer 2>/dev/null || true
+  rm -f /etc/systemd/system/zenithboard-flightinfo.service /etc/systemd/system/zenithboard-data-refresh.service /etc/systemd/system/zenithboard-data-refresh.timer
+  systemctl daemon-reload
 }
 
 flightinfo_menu() {

@@ -130,21 +130,21 @@ All settings live in one readable file: `/etc/zenithboard/config.env`.
 
 ```
 +--------------------------------------+---------------+
-| ZZA210                               |   AIRLINE     |
-| ZENITH AIR                           |   LOGO  or    |
-| A320 F-ZZAA                          |   aircraft    |
-| ALT  35000 FT                        |   silhouette  |
-| SPD  450 KT                          |               |
-| HDG  270° W                          +---------------+
-| V/S  ↑1200 FPM                       |  photo of the |
-|                                      |  plane (LED   |
-| 6/7 3.6MI NNE            R 10 MI     |  look)        |
+| ZZA210                               |   aircraft    |
+| ZENITH AIR                           |   silhouette  |
+| A320 F-ZZAA                          |   (dots)      |
+| ALT  35000 FT                        +---------------+
+| SPD  450 KT                          |  REAL PHOTO   |
+| HDG  270° W                          |  of the plane |
+| V/S  ↑1200 FPM                       |  - or, with   |
+|                                      |  no photo, an |
+| 6/7 3.6MI NNE            R 10 MI     |  animated sky |
 +--------------------------------------+---------------+
 ```
 
-* **Left:** callsign, airline name, aircraft type and registration, altitude, speed, heading, climb/descent, then *position in the cycle*, distance and the direction **from you** (`NNE`), and your radius. `HDG` is where the plane is heading.
-* **Top right:** the airline's **logo** in colour dots when you have one in your library, otherwise a **silhouette of the right kind of aircraft** (airliner, widebody, turboprop, business jet, light plane, helicopter). See [Airline logos](#airline-logos-and-photos).
-* **Bottom right:** a **photo of the aircraft** (from [Planespotters](https://www.planespotters.net/), credited at the bottom of the screen) shown through an LED-style mask, when one exists. The photos are fetched by the Pi, so the tablet does not need internet.
+* **Left (dots):** callsign, airline name, aircraft type and registration, altitude, speed, heading, climb/descent, then *position in the cycle*, distance and the direction **from you** (`NNE`), and your radius. `HDG` is where the plane is heading.
+* **Top right (dots):** a **silhouette that matches the real aircraft design**: an A380 is drawn as a four-engine airliner, a Cessna as a single-engine propeller plane, an F-16 as a fighter. See [Aircraft silhouettes](#aircraft-silhouettes).
+* **Bottom right (a real picture, not dots):** the **photo of that exact aircraft** from [Planespotters](https://www.planespotters.net/), with the photographer's name and a link to the photo page. When there is no photo (or no internet) it shows an **animated sky** with drifting clouds and a **side view of the matching aircraft model** (propellers and rotors turn, the sky follows the time of day), labelled with the model name.
 * Aircraft are shown nearest first, one at a time, for a few seconds each, with a wipe transition. With nothing in range the wall shows a clock and how many aircraft your antenna sees.
 
 ## Colours
@@ -157,25 +157,46 @@ The dots are **amber by default**. Pick amber, green, red or white:
 | **Menu** | `sudo zenithboard menu` → *4 Settings → Colour* |
 | **One tablet only** | Tap the faint gear in the top-right corner → *Colour*. Or open `http://<pi>:8080/?theme=red`. The gear's **Reset** returns that tablet to the Pi's colour. |
 
-## Airline logos and photos
+## Aircraft silhouettes
 
-**No real airline logos are bundled with ZenithBoard** — they are trademarks, and the right to display them is yours to judge. Instead you get a small logo library you control:
+ZenithBoard has **no airline logos** (they are trademarks). It draws the **shape of the aircraft** instead, from original geometric drawings. There are 15 kinds, and some have variants:
 
-```bash
-sudo zenithboard logo add AFR ~/Downloads/airline-logo.png    # convert YOUR image to dot-matrix and store it
-sudo zenithboard logo list
-sudo zenithboard logo remove AFR
-sudo zenithboard data update                                  # download the full airline-name list (OpenFlights data)
-```
+| Silhouette | Examples |
+|---|---|
+| Single-aisle airliner | A320 family, 737, 757, A220, E-Jets, C919 |
+| Wide-body twin | 777, 787, A330, A350, 767 (three-engine DC-10 / MD-11 and the Beluga have their own variants) |
+| Four-engine airliner | 747 (with its hump), A380 (double deck), A340, 707, DC-8, BAe 146 |
+| Rear-engined T-tail jet | CRJ, ERJ-145, MD-80, DC-9, 727, Fokker 100, Tu-154 |
+| Turboprop | ATR 42/72, Dash 8, Saab 340, Do 328, King Air |
+| Business jet | Citation, Learjet, Gulfstream, Falcon, Phenom, HondaJet |
+| Light aircraft / twin piston | Cessna 172, Cirrus, Piper, Pilatus PC-12, TBM / Seneca, Baron |
+| Helicopter | Single rotor, Chinook (two rotors), V-22 (tilt-rotor), gyrocopters |
+| Fighter / delta-wing | F-16, F-15, F-18, F-35, MiG, Su-27 / Eurofighter, Rafale, Mirage, Gripen |
+| Military transport / bomber | C-130, C-17, A400M, Il-76, An-124 / B-52, B-1, Tu-95 |
+| Glider, balloon | |
 
-Every logo image (PNG with transparency is best; JPG on a plain background works too) is converted to at most 12 colours on a 36×32 dot grid and stored in `/var/lib/zenithboard/logos/`. They survive updates. Add, replace or remove one at any time; the wall picks it up within a minute. Airlines without a logo get the aircraft silhouette. More in [docs/LOGOS.md](docs/LOGOS.md), including how to fetch logos automatically from a source of your choice (e.g. a logo service such as [Airhex](https://airhex.com/airline-logos/), which needs its own account and terms).
+Military aircraft are drawn in grey and labelled `MILITARY` when they have no airline.
 
-How an aircraft is matched to an airline: the first three letters of the callsign (`AFR1234` → `AFR` → Air France). The built-in list covers about 90 major airlines; `zenithboard data update` loads the full list.
+**How the type is found:** every aircraft broadcasts its ICAO type code (`A388`, `C172`, `F16`...). ZenithBoard has a built-in table of those codes covering airliners, business and light aircraft, helicopters and military types. For a code it does not know, it uses the aircraft's ADS-B category, and, if you have the data refresh below, the engine description from the downloaded list.
 
-Photos can be switched off with `sudo zenithboard photos off`, and logos with `sudo zenithboard config-set SHOW_LOGOS 0`.
+### Aircraft model list: monthly refresh (optional)
+
+To show full model names and to recognise newly registered type codes, ZenithBoard can download a free list of about 2,800 aircraft types from the [tar1090-db](https://github.com/wiedehopf/tar1090-db) project (itself derived from the Mictronics aircraft database). The list is downloaded **to your Pi only** and is never part of this repository.
+
+* **On by default** when FlightInfo is installed: downloaded once at install, then refreshed **once a month** (it also catches up after the Pi was switched off).
+* Turn it off or on: **`sudo zenithboard data auto off`** / **`on`**, or the menu *4 Settings → Monthly aircraft-data refresh*.
+* Refresh now: `sudo zenithboard data update`. Check: `zenithboard data status`.
+* A failed download (no internet, broken file) changes nothing: the previous list stays in use, and the wall works without the list at all.
+
+## Photos
+
+Photos come from the [Planespotters.net photo API](https://www.planespotters.net/photo/api), looked up by the aircraft's hex address. They belong to their photographers: the wall shows each photo unmodified, with the photographer's name and a link to the page on Planespotters, and keeps nothing on disk (a small memory cache only). The Pi fetches the photos, so **the tablet does not need internet**. Please read Planespotters' API terms for your own use.
+
+* Turn photos off or on: `sudo zenithboard photos off` / `on` (or menu *4 Settings → Aircraft photos*). With photos off, the animated sky scene is shown for every aircraft.
+* Not every aircraft has a photo; those show the animated scene.
 
 ### Try it without any hardware
-The demo uses invented airlines (with original logos), a helicopter, a turboprop, a business jet and mock illustrations instead of photos. Run it from the ZenithBoard folder on any computer or Pi with Python 3:
+The demo uses invented airlines and an example of everything: an airliner, a business jet, an A380, a 747, a turboprop, a Cessna, a helicopter, an F-16, a C-130, plus mock "photos" (cartoon illustrations of the right aircraft model, marked *DEMO*). Some demo aircraft have a mock photo and some deliberately do not, so you can see both the photo and the animated-sky states. Run it from the ZenithBoard folder on any computer or Pi with Python 3:
 
 ```bash
 ./bin/zenithboard-demo                  # metric, amber
@@ -261,13 +282,17 @@ sudo /opt/zenithboard/install.sh --uninstall-all      # remove everything
 * The Plane Finder package URL for 64-bit systems must be checked against their site.
 * FlightAware and Flightradar24 store your antenna position on their websites: after `zenithboard location`, update it there too (the command tells you where).
 * ACARS legality differs per country — check your local rules before collecting ACARS messages.
-* Photos come from Planespotters and need internet on the Pi. Logos and the airline list are optional extras you add yourself.
+* Photos come from Planespotters and need internet on the Pi. The live photo lookup has not yet been checked against the real service on a Raspberry Pi; the demo and the tests exercise the same code with stand-ins.
+* The airline name list is built in (about 90 major airlines); other airlines show the callsign only.
 
 ## Contributing & tests
 
 ```bash
 python3 -m unittest discover -s tests -v     # server + ACARS
 node tests/test_format.js                    # wall formatting / units
+node tests/test_shapes.js                    # silhouettes seen from above
+node tests/test_scene.js                     # side views / animated scene
+node tools/make_demo_photos.js               # rebuild the demo's mock photos
 shellcheck -x install.sh bin/* lib/*.sh      # installer
 ```
 

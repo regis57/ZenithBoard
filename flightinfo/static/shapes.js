@@ -1,28 +1,59 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Original generic aircraft silhouettes (drawn from simple geometry, nose to the right) and the
-// dot-matrix logo decoder. No airline artwork is bundled: logos come from the user's own library.
+// Original generic aircraft silhouettes seen from above (nose to the right), drawn from simple geometry on a
+// 32x32 canvas and rasterised to dots. One per class from flightinfo/aircraft.py. No brand artwork is used.
 (function (root) {
   function E(cx, cy, rx, ry) { return { t: "e", cx: cx, cy: cy, rx: rx, ry: ry }; }
   function P(pts) { return { t: "p", pts: pts }; }
   function M(pts) { return pts.map(function (p) { return [p[0], 32 - p[1]]; }); }   // mirror top <-> bottom
   function PM(pts) { return [P(pts), P(M(pts))]; }
+  function EM(cx, cy, rx, ry) { return [E(cx, cy, rx, ry), E(cx, 32 - cy, rx, ry)]; }
   function cat() { return [].concat.apply([], arguments); }
+  function R(x0, y0, x1, y1) { return P([[x0, y0], [x1, y0], [x1, y1], [x0, y1]]); }
 
   var SHAPES = {
+    // single-aisle airliner: engines under the wings
     narrow: cat([E(16, 16, 15, 2.1)], PM([[18, 15], [9, 2], [12.5, 2], [22, 14.5]]), PM([[5, 15], [1, 9], [3.5, 9], [8, 15]]),
-                [E(14, 8, 2.2, 1.1), E(14, 24, 2.2, 1.1)]),
+                EM(14, 8, 2.2, 1.1)),
+    // twin wide-body: bigger, two big engines
     wide: cat([E(16, 16, 15.5, 2.8)], PM([[19, 14], [8, 1], [12.5, 1], [23, 13.5]]), PM([[5, 14], [1, 8], [4, 8], [9, 14]]),
-              [E(15, 7, 2.2, 1.2), E(12.5, 11, 2, 1.1), E(15, 25, 2.2, 1.2), E(12.5, 21, 2, 1.1)]),
+              EM(14.5, 7, 2.5, 1.4)),
+    // four engines
+    quad: cat([E(16, 16, 15.5, 2.8)], PM([[19, 14], [8, 1], [12.5, 1], [23, 13.5]]), PM([[5, 14], [1, 8], [4, 8], [9, 14]]),
+              EM(15, 7.2, 2.2, 1.1), EM(12.5, 11.3, 2.2, 1.1)),
+    // rear-engined T-tail jet
+    rearjet: cat([E(16, 16, 14.5, 1.9)], PM([[17, 15], [11, 4], [14.5, 4], [21, 14.5]]), PM([[5, 15], [0.5, 8], [3.5, 8], [8, 15]]),
+                 EM(6.5, 12.6, 3.6, 1.2)),
+    // twin turboprop: straight high wing, props
     turboprop: cat([E(16, 16, 15, 1.9)], PM([[15, 15], [14, 3], [18.5, 3], [19, 15]]), PM([[4, 15], [2, 10], [4, 10], [7, 15]]),
-                   [E(17, 8, 2.5, 1), E(17, 24, 2.5, 1)], PM([[20.5, 4.5], [21.5, 4.5], [21.5, 11.5], [20.5, 11.5]])),
+                   EM(17, 8, 2.5, 1), PM([[20.5, 4.5], [21.5, 4.5], [21.5, 11.5], [20.5, 11.5]])),
+    // business jet: swept wing, tail engines
     bizjet: cat([E(16, 16, 14, 1.8)], PM([[17, 15], [11, 5], [14.5, 5], [20, 14.5]]), PM([[5, 15], [2, 9], [4.5, 9], [8, 15]]),
-                [E(8, 12.5, 3, 1.1), E(8, 19.5, 3, 1.1)]),
+                EM(8, 12.5, 3, 1.1)),
+    // single-engine light aircraft with propeller
     light: cat([E(15, 16, 12, 1.7)], PM([[14, 15], [13, 3], [18, 3], [19, 15]]), PM([[4, 15], [2, 10.5], [4.5, 10.5], [7, 15]]),
-               [P([[28, 10], [29.2, 10], [29.2, 22], [28, 22]])]),
-    heli: [P([[2, 5], [30, 5], [30, 6.2], [2, 6.2]]), P([[15, 6], [17, 6], [17, 9], [15, 9]]), E(18, 15, 8, 5),
+               [R(28, 10, 29.2, 22)]),
+    // twin piston: two engines on the wing, two propellers
+    twinprop: cat([E(16, 16, 13, 1.7)], PM([[14, 15], [13, 3.5], [18, 3.5], [19, 15]]), PM([[4, 15], [2, 10.5], [4.5, 10.5], [7, 15]]),
+                  EM(16, 9, 3.3, 1.1), PM([[19.4, 6], [20.6, 6], [20.6, 12], [19.4, 12]])),
+    heli: [R(2, 5, 30, 6.2), R(15, 6, 17, 9), E(18, 15, 8, 5),
            P([[11, 13], [1, 12.5], [1, 14.5], [11, 16.5]]), E(2, 12, 1.2, 3.5),
-           P([[10, 23], [27, 23], [27, 24.2], [10, 24.2]]), P([[14, 19.5], [15.2, 19.5], [15.2, 23], [14, 23]]),
-           P([[21, 19.5], [22.2, 19.5], [22.2, 23], [21, 23]])]
+           R(10, 23, 27, 24.2), R(14, 19.5, 15.2, 23), R(21, 19.5, 22.2, 23)],
+    // swept-wing combat jet: long pointed nose, swept wings and tailplanes
+    fighter: cat([P([[31.5, 16], [26, 14.7], [8, 14], [1.5, 14.6], [1.5, 17.4], [8, 18], [26, 17.3]])],
+                 PM([[21, 15], [11, 2.5], [7.5, 2.5], [9, 15]]), PM([[6, 15], [1, 9], [0.5, 8], [3, 8], [5.5, 14.5]])),
+    // delta-wing jet
+    delta: cat([P([[31.5, 16], [24, 14.8], [4, 14.4], [1, 15], [1, 17], [4, 17.6], [24, 17.2]])],
+               PM([[22, 15], [2, 2], [1, 3], [1, 15]]), PM([[25, 14.5], [21, 11], [23, 10.5], [27, 14]])),
+    // military transport: big body, high straight wing, four engines
+    airlifter: cat([E(16, 16, 15, 2.7)], PM([[18, 14], [16.5, 1.5], [21, 1.5], [21.5, 13.5]]), PM([[5, 14], [1.5, 7], [4, 7], [8, 14]]),
+                   EM(17.5, 6.2, 2.3, 0.9), EM(17.5, 10.4, 2.3, 0.9)),
+    // bomber: long body, long swept wings with engine pods
+    bomber: cat([E(16, 16, 15.5, 1.5)], PM([[19, 15], [5, 0.5], [9, 0.5], [22.5, 14.8]]), PM([[5, 15], [1, 10], [3, 10], [7, 15]]),
+                EM(14, 7, 2.6, 0.9), EM(11.5, 10.5, 2.6, 0.9)),
+    // glider: very long thin wing
+    glider: cat([E(15, 16, 14, 1.1)], [R(13, 0.5, 17.5, 31.5)], PM([[3, 15], [1.2, 11], [3.4, 11], [5.5, 15]])),
+    balloon: [E(16, 12, 10, 11), P([[13, 23], [19, 23], [18.5, 29], [13.5, 29]]), P([[8, 19], [9, 19], [13, 23], [12.3, 23]]),
+              P([[24, 19], [23, 19], [19, 23], [19.7, 23]])]
   };
   SHAPES.generic = SHAPES.narrow;
 
@@ -46,22 +77,7 @@
     return out;
   }
 
-  // Logo file format: {"w":W,"h":H,"palette":["#rrggbb",...],"rows":["..0011..",...]}  ('.' = transparent, 0-9a-z = palette index)
-  function decodeLogo(logo) {
-    var cells = [];
-    if (!logo || !logo.rows || !logo.palette) return { w: 0, h: 0, cells: cells };
-    for (var y = 0; y < logo.rows.length; y++) {
-      var row = logo.rows[y];
-      for (var x = 0; x < row.length; x++) {
-        var ch = row[x]; if (ch === "." || ch === " ") continue;
-        var col = logo.palette[parseInt(ch, 36)];
-        if (col) cells.push({ x: x, y: y, color: parseInt(col.replace("#", ""), 16) });
-      }
-    }
-    return { w: logo.w || 0, h: logo.h || logo.rows.length, cells: cells };
-  }
-
-  var api = { SHAPES: SHAPES, rasterize: rasterize, decodeLogo: decodeLogo };
+  var api = { SHAPES: SHAPES, rasterize: rasterize };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.Shapes = api;
 })(typeof self !== "undefined" ? self : this);

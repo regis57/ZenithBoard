@@ -28,7 +28,7 @@
     return o;
   }
 
-  // Returns the text rows shown for one aircraft. W = characters per text row (the right-hand column holds logo + photo).
+  // Returns the text rows shown for one aircraft. W = characters per text row (the right-hand column holds the silhouette + photo).
   function planeLines(p, units, index, total, radiusLabel, W) {
     W = W || 14;
     var c = convert(p, units), imp = units === "imperial";

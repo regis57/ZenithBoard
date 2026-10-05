@@ -33,6 +33,8 @@ zb_update_components() {
   fi
   if is_flightinfo; then
     log "FlightInfo"; systemctl daemon-reload; install -m 644 "$ZB_HOME/systemd/zenithboard-flightinfo.service" /etc/systemd/system/; systemctl daemon-reload; restart_flightinfo
+    data_refresh_apply
+    [ "$(cfg_get AUTO_DATA_REFRESH 1)" != 1 ] || data_refresh_now || warn "aircraft data refresh failed (kept the previous data)"
   fi
   if is_acars; then
     log "ACARS (rebuilding acarsdec)"

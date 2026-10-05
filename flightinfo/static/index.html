@@ -11,7 +11,11 @@
 </head>
 <body data-theme="amber">
   <canvas id="wall"></canvas>
-  <div id="credit"></div>
+  <canvas id="scene" hidden></canvas>
+  <div id="photobox" hidden>
+    <a id="photolink" rel="noopener"><img id="photo" alt="Photo of the aircraft"></a>
+    <div id="photocap"></div>
+  </div>
 
   <button id="gear" aria-label="Settings" title="Settings">&#9881;</button>
   <div id="settings" hidden>
@@ -30,6 +34,7 @@
 
   <script src="/static/font5x7.js"></script>
   <script src="/static/shapes.js"></script>
+  <script src="/static/scene.js"></script>
   <script src="/static/format.js"></script>
   <script src="/static/app.js"></script>
 </body>

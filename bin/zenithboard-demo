@@ -1,6 +1,6 @@
 #!/bin/bash
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Try the dot-matrix wall WITHOUT an antenna, using fake aircraft, fictional airlines/logos and mock photos.
+# Try the dot-matrix wall WITHOUT an antenna, using fake aircraft, fictional airlines and mock photos.
 #   ./bin/zenithboard-demo [metric|imperial] [amber|green|red|white]
 # It listens on port 8081 by default so it never collides with the real wall (port 8080).
 # Use another port with:  PORT=8082 ./bin/zenithboard-demo
@@ -22,7 +22,6 @@ CYCLE_SECONDS=4
 PORT=$PORT
 DEMO=1
 SHOW_PHOTOS=1
-SHOW_LOGOS=1
 USER_DATA_DIR=/nonexistent
 AIRCRAFT_JSON=$HERE/flightinfo/demo/aircraft.json
 CFGEOF

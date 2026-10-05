@@ -1,10 +1,13 @@
 # Changelog
 
 ## 0.2.0
-- New wall layout (16:10): airline logo or aircraft-class silhouette top-right, LED-style Planespotters photo bottom-right, airline name line, distance/direction footer.
+- New wall layout (16:10): aircraft silhouette top-right, a real Planespotters photo (with credit and link) bottom-right, airline name line, distance/direction footer.
+- Silhouettes now match the real aircraft model: 15 kinds (single-aisle, wide-body, 747 hump, A380 double deck, rear-engined jets, turboprops, bizjets, light/twin piston, helicopters incl. Chinook and tilt-rotor, fighters, delta-wings, transports, bombers, gliders, balloons), including military types. Type table checked against the ICAO type list.
+- No photo? The corner shows an animated sky (drifting clouds, day/dusk/night, turning propellers and rotors) with a side view of the matching model and its name.
+- Airline logos removed entirely (no logo library, no `logo` command, no `SHOW_LOGOS`).
+- Optional monthly refresh of the aircraft model list (tar1090-db, downloaded to the Pi only): `zenithboard data update|auto on|off|status`, settings menu toggle, systemd timer.
 - Colour setting: `zenithboard color amber|green|red|white` (amber default), menu entry, per-tablet override.
-- Logo library: `zenithboard logo add|fetch|remove|list`, `zenithboard data update` (airline names). No real airline logos are bundled.
-- Photos are fetched by the Pi (proxy) and enabled by default for new installs; demo uses fictional airlines/logos and mock illustrations.
+- Photos are fetched by the Pi (proxy) and enabled by default for new installs. Demo has mock photos for some aircraft only, so both states show.
 - Demo runs on port 8081 so it cannot clash with the real wall; README documents the ports and the ADSB Exchange local map.
 - Detects low-memory (< 1.5 GB) and older Pi boards: one-time notice, ACARS marked "not recommended", warning for many feeders, memory in `zenithboard status`.
 - README: "Which Raspberry Pi?" table.
