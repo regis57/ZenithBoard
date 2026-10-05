@@ -1,0 +1,11 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>FlightInfo</title><link rel="stylesheet" href="/static/style.css"><link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet"></head>
+<body><div class="controls">Radius: <input type="number" id="radiusInput" value="30"> km</div>
+<div class="matrix-board"><div id="no-flights" class="hidden">NO FLIGHTS IN RADIUS</div><div id="flight-data">
+<div class="header-row"><span id="flight-callsign" class="highlight">------</span><span id="flight-hex" class="dim">------</span></div>
+<div class="details-grid">
+<div class="detail-item"><div class="label">SPEED (KM/H)</div><div class="value" id="flight-speed">---</div></div>
+<div class="detail-item"><div class="label">ALTITUDE (FT)</div><div class="value" id="flight-alt">---</div></div>
+<div class="detail-item"><div class="label">HEADING</div><div class="value" id="flight-track">---&deg;</div></div>
+<div class="detail-item"><div class="label">V-SPEED</div><div class="value" id="flight-vspeed">---</div></div>
+</div></div><div class="photo-container"><img id="flight-photo" src="" style="display:none;"></div></div>
+<script src="/static/app.js"></script></body></html>
