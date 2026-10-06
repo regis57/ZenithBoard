@@ -113,7 +113,7 @@ case "${1:-}" in
     root_or_die; valid_radius "${2:-}" || die "Radius must be one of: $RADIUS_PRESETS"
     cfg_set RADIUS "$2"; restart_flightinfo; echo "Radius: $2 $( [ "$(cfg_get UNITS)" = imperial ] && echo mi || echo km )" ;;
   location)
-    root_or_die; valid_lat "${2:-x}" && valid_lon "${3:-x}" || die "Usage: zenithboard location LAT LON [ALT_M]   e.g. 49.246 6.223 210"
+    root_or_die; valid_lat "${2:-x}" && valid_lon "${3:-x}" || die "Usage: zenithboard location LAT LON [ALT_M]   e.g. 49.1193 6.1757 180"
     zb_apply_location "$2" "$3" "${4:-}" ;;
   color|colour)
     root_or_die; valid_theme "${2:-}" || die "Usage: zenithboard color amber|green|red|white"
