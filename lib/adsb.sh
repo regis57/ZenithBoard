@@ -209,13 +209,15 @@ install_fr24() {
   [ -n "$key" ] || fr24_signup_help
   # With a key, FR24's own wizard is not needed: it gets no keyboard, and its answers are written below.
   local rc=0
+  # The fr24feed package starts FR24's own wizard when it is installed and finds no settings: give it the settings first.
+  [ -z "$key" ] || fr24_write_ini "$key"
   if [ -n "$key" ]; then bash /tmp/install_fr24.sh </dev/null || rc=$?; else bash /tmp/install_fr24.sh || rc=$?; fi
   if [ "$rc" != 0 ] && ! command -v fr24feed >/dev/null 2>&1; then
     # the installer adds the repository and then stops when apt refuses it: repair the key, then finish the job
     [ -n "$(fr24_source_file)" ] || { err "The Flightradar24 installer failed before adding its repository."; return 1; }
     fr24_repair_key || return 1
     if fr24_repo_broken; then err "apt still refuses the Flightradar24 repository. Nothing was changed about signature checking."; return 1; fi
-    apt_install fr24feed || return 1
+    if [ -n "$key" ]; then apt_install fr24feed </dev/null || return 1; else apt_install fr24feed || return 1; fi
     if [ -z "$key" ] && command -v fr24feed >/dev/null 2>&1; then
       fr24_signup_help
       fr24feed --signup || warn "Sign-up not finished: run it again with  sudo fr24feed --signup"
