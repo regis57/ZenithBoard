@@ -26,7 +26,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.3.2"
+VERSION = "0.4.0"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -55,6 +55,8 @@ DEFAULTS = {
     "SHOW_ROUTES": "1",         # where the flight comes from / goes to (looked up by callsign on adsbdb.com)
     "PORT": "8080",
     "AIRCRAFT_JSON": "",        # optional explicit path override
+    "UAT978": "0",              # merge the 978 MHz UAT aircraft (United States, dump978-fa + skyaware978)
+    "AIRCRAFT_JSON_978": "",    # optional explicit path override for the UAT list
     "DEMO": "0",                # 1 = fictional demo airlines and mock photos
     "USER_DATA_DIR": "/var/lib/zenithboard",   # data/types.json (monthly refresh) lives here
 }
@@ -119,6 +121,42 @@ def aircraft_json_path(cfg):
         if os.path.exists(alt):
             return alt
     return preferred
+
+
+def uat_json_path(cfg):
+    """The 978 MHz UAT aircraft list, or None when UAT is not enabled."""
+    if not cfg_bool(cfg, "UAT978"):
+        return None
+    return cfg.get("AIRCRAFT_JSON_978") or "/run/skyaware978/aircraft.json"
+
+
+def merge_aircraft(primary, uat):
+    """1090 MHz list + 978 MHz list -> one list. An aircraft heard on both keeps the more recent entry."""
+    out = dict(primary) if isinstance(primary, dict) else {}
+    merged, index = [], {}
+    for source in (primary, uat):
+        for ac in (source.get("aircraft") or []) if isinstance(source, dict) else []:
+            if not isinstance(ac, dict):
+                continue
+            hx = str(ac.get("hex") or "").lower()
+            if hx and hx in index:
+                old = merged[index[hx]]
+                if ac.get("seen_pos", ac.get("seen", 1e9)) < old.get("seen_pos", old.get("seen", 1e9)):
+                    merged[index[hx]] = ac
+                continue
+            if hx:
+                index[hx] = len(merged)
+            merged.append(ac)
+    out["aircraft"] = merged
+    return out
+
+
+def read_json(path):
+    try:
+        with open(path, "r", encoding="utf-8") as fh:
+            return json.load(fh)
+    except (OSError, ValueError):
+        return None
 
 
 # --------------------------------------------------------------------------- geometry
@@ -519,10 +557,13 @@ class Handler(BaseHTTPRequestHandler):
             radius_km = radius_to_km(cfg_float(cfg, "RADIUS", 10), units)
         radius_km = min(max(radius_km, 0.1), 500.0)
         path = aircraft_json_path(cfg)
-        try:
-            with open(path, "r", encoding="utf-8") as fh:
-                data = json.load(fh)
-        except (OSError, ValueError):
+        data = read_json(path)
+        upath = uat_json_path(cfg)
+        if upath:                                   # 978 MHz UAT: optional, never a reason to show an error
+            udata = read_json(upath)
+            if udata is not None:
+                data = merge_aircraft(data or {}, udata)
+        if data is None:
             return self._send(200, {"error": "no_data", "path": path, "server_id": SERVER_ID,
                                     "planes": [], "total": 0})
         demo = cfg_bool(cfg, "DEMO")

@@ -12,6 +12,8 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$ROOT/lib/adsb.sh"
 . "$ROOT/lib/flightinfo.sh"
 . "$ROOT/lib/acars.sh"
+. "$ROOT/lib/logs.sh"
+. "$ROOT/lib/uat.sh"
 . "$ROOT/lib/update.sh"
 
 usage() { echo "Usage: sudo ./install.sh [--deploy] [--uninstall-all] [--version]      (to upgrade: sudo zenithboard update)"; }
@@ -41,10 +43,19 @@ hardware_notice() {
 
 first_run_wizard() {
   grep -q '^LAT=.' "$ZB_CONFIG" && grep -q '^LON=.' "$ZB_CONFIG" && return 0
-  wt_msg "Welcome to ZenithBoard - ADSB Flight Info.\n\nA few questions first:\n  1. Units (metric or imperial)\n  2. Where your antenna is\n  3. The default detection radius\n\nYou can change all of them later:  sudo zenithboard config   (or Settings in this menu)." 16 || exit 0
+  wt_msg "Welcome to ZenithBoard - ADSB Flight Info.\n\nA few questions first:\n  1. Your region (decides whether 978 MHz UAT is offered)\n  2. Units (metric or imperial)\n  3. Where your antenna is\n  4. The default detection radius\n\nYou can change all of them later:  sudo zenithboard config   (or Settings in this menu)." 18 || exit 0
+  settings_region || exit 0
+  [ "$(cfg_get REGION world)" != us ] || cfg_set UNITS imperial     # a sensible start for the US; the next screen lets you change it
   settings_units || exit 0
   settings_location || exit 0
   local r; r=$(pick_radius) && cfg_set RADIUS "$r"
+}
+
+settings_region() {
+  local cur w u c; cur=$(cfg_get REGION world); w=OFF; u=OFF; [ "$cur" = us ] && u=ON || w=ON
+  c=$(wt_radio "Where will the antenna be?\n\nIn the United States (and its territories) a lot of small aircraft transmit on 978 MHz (UAT) instead of 1090 MHz. Choosing the US adds an optional 978 MHz step; it needs a second SDR dongle.\nEverywhere else only 1090 MHz is used." \
+      world "Everywhere else (1090 MHz only)" "$w" us "United States and territories (1090 MHz + optional 978 MHz UAT)" "$u") || return 1
+  cfg_set REGION "$c"
 }
 
 settings_units() {
@@ -79,10 +90,12 @@ settings_color() {
 settings_menu() {
   local c
   while true; do
-    c=$(wt_menu "Settings (applied immediately)\n\nUnits: $(cfg_get UNITS)   Radius: $(cfg_get RADIUS)   Position: $(cfg_get LAT), $(cfg_get LON)\nSeconds per aircraft: $(cfg_get CYCLE_SECONDS)   Photos: $(cfg_get SHOW_PHOTOS)   Routes: $(cfg_get SHOW_ROUTES 1)   Colour: $(cfg_get THEME amber)\nMonthly aircraft-data refresh: $( [ "$(cfg_get AUTO_DATA_REFRESH 1)" = 1 ] && echo ON || echo OFF )" \
-      units "Units: metric / imperial" color "Colour: amber / green / red / white" radius "Detection radius" location "Antenna position (updates it everywhere)" cycle "Seconds per aircraft" photos "Aircraft photos on/off" routes "Flight origin/destination on/off" data "Monthly aircraft-data refresh on/off" back "Back") || return 0
+    c=$(wt_menu "Settings (applied immediately)\n\nRegion: $(cfg_get REGION world)   Units: $(cfg_get UNITS)   Radius: $(cfg_get RADIUS)   Position: $(cfg_get LAT), $(cfg_get LON)\nSeconds per aircraft: $(cfg_get CYCLE_SECONDS)   Photos: $(cfg_get SHOW_PHOTOS)   Routes: $(cfg_get SHOW_ROUTES 1)   Colour: $(cfg_get THEME amber)\nMonthly aircraft-data refresh: $( [ "$(cfg_get AUTO_DATA_REFRESH 1)" = 1 ] && echo ON || echo OFF )" \
+      region "Region: world / United States (978 MHz UAT)" units "Units: metric / imperial" color "Colour: amber / green / red / white" radius "Detection radius" location "Antenna position (updates it everywhere)" cycle "Seconds per aircraft" photos "Aircraft photos on/off" routes "Flight origin/destination on/off" data "Monthly aircraft-data refresh on/off" logs "Logs: size limit, review, clean" back "Back") || return 0
     case "$c" in
+      region) settings_region && wt_msg "Region saved: $(cfg_get REGION world).\n\nIn menu 1 ADSB the 978 MHz UAT option appears for the United States." 10 ;;
       units) settings_units && restart_flightinfo ;;
+      logs) logs_menu ;;
       color) settings_color && restart_flightinfo ;;
       radius) change_radius ;;
       location)
@@ -128,7 +141,7 @@ main_menu() {
       1 "ADSB        - decoder + share to ADSB Exchange, FlightAware, FR24..." \
       2 "FlightInfo  - dot-matrix wall for an old tablet" \
       3 "ACARS       - optional ACARS messages in Grafana (2nd dongle)$(weak_hw_tag)" \
-      4 "Settings    - units, radius, antenna position" \
+      4 "Settings    - region, units, radius, position, logs" \
       5 "Status      - what is running" \
       6 "Update      - upgrade ZenithBoard, decoder, feeders, ACARS" \
       7 "Uninstall everything" \

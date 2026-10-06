@@ -229,5 +229,39 @@ class RouteTests(unittest.TestCase):
         self.assertLess(len(with_route), len(planes), "some demo aircraft must show the no-route state")
 
 
+
+
+class UatMergeTests(unittest.TestCase):
+    def test_path_only_when_enabled(self):
+        self.assertIsNone(server.uat_json_path({"UAT978": "0"}))
+        self.assertIsNone(server.uat_json_path({}))
+        self.assertEqual(server.uat_json_path({"UAT978": "1"}), "/run/skyaware978/aircraft.json")
+        self.assertEqual(server.uat_json_path({"UAT978": "1", "AIRCRAFT_JSON_978": "/x.json"}), "/x.json")
+
+    def test_lists_are_joined(self):
+        a = {"now": 5, "aircraft": [{"hex": "aaaaaa", "lat": 1, "lon": 1}]}
+        u = {"aircraft": [{"hex": "~123456", "lat": 2, "lon": 2}]}
+        out = server.merge_aircraft(a, u)
+        self.assertEqual([x["hex"] for x in out["aircraft"]], ["aaaaaa", "~123456"])
+        self.assertEqual(out["now"], 5)
+
+    def test_same_aircraft_keeps_the_fresher_entry(self):
+        a = {"aircraft": [{"hex": "ABCDEF", "seen_pos": 9, "tag": "1090"}]}
+        u = {"aircraft": [{"hex": "abcdef", "seen_pos": 1, "tag": "978"}]}
+        out = server.merge_aircraft(a, u)
+        self.assertEqual(len(out["aircraft"]), 1)
+        self.assertEqual(out["aircraft"][0]["tag"], "978")
+        out = server.merge_aircraft(u, a)
+        self.assertEqual(out["aircraft"][0]["tag"], "978")
+
+    def test_missing_or_broken_sides_are_harmless(self):
+        self.assertEqual(server.merge_aircraft({}, {"aircraft": [{"hex": "a"}]})["aircraft"], [{"hex": "a"}])
+        self.assertEqual(server.merge_aircraft({"aircraft": [{"hex": "a"}]}, {})["aircraft"], [{"hex": "a"}])
+        self.assertEqual(server.merge_aircraft({"aircraft": [3, None, {"hex": "b"}]}, {"aircraft": "x"})["aircraft"], [{"hex": "b"}])
+
+    def test_read_json(self):
+        self.assertIsNone(server.read_json("/nonexistent/file.json"))
+
+
 if __name__ == "__main__":
     unittest.main()
