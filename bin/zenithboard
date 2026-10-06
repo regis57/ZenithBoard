@@ -142,11 +142,12 @@ case "${1:-}" in
       *) die "Usage: zenithboard photos on|off|test [HEX]" ;;
     esac ;;
   routes)
+    [ "${2:-}" != test ] || { python3 "$ZB_HOME/tools/route_check.py" "${3:-}"; exit $?; }
     root_or_die
     case "${2:-}" in
       on)  cfg_set SHOW_ROUTES 1; restart_flightinfo; echo "Flight routes are ON (origin and destination, looked up by callsign). The wall reloads by itself." ;;
       off) cfg_set SHOW_ROUTES 0; restart_flightinfo; echo "Flight routes are OFF: no callsign is sent to the internet." ;;
-      *) die "Usage: zenithboard routes on|off" ;;
+      *) die "Usage: zenithboard routes on|off|test [CALLSIGN]" ;;
     esac ;;
   mlat-guard) root_or_die; zb_mlat_guard ;;
   update) root_or_die; zb_update "${2:-}" ;;
