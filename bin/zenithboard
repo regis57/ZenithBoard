@@ -11,6 +11,10 @@ HERE="$(dirname "$(readlink -f "$0")")"
 . "$HERE/../lib/flightinfo.sh"
 # shellcheck source=lib/acars.sh
 . "$HERE/../lib/acars.sh"
+# shellcheck source=lib/logs.sh
+. "$HERE/../lib/logs.sh"
+# shellcheck source=lib/uat.sh
+. "$HERE/../lib/uat.sh"
 # shellcheck source=lib/update.sh
 . "$HERE/../lib/update.sh"
 
@@ -20,6 +24,8 @@ ZenithBoard $ZB_VERSION - ADSB Flight Info
 
   zenithboard status                    what is installed / running, MLAT check
   zenithboard config                    show the current settings
+  zenithboard region world|us          where the antenna is (us adds the optional 978 MHz UAT step in the menu)
+  zenithboard region world|us           where the antenna is (us adds the optional 978 MHz UAT step in the menu)
   zenithboard units metric|imperial     km, km/h, m   |   mi, knots, ft
   zenithboard radius 1|2|5|10|15|30|50  wall detection radius (in your unit: km or miles)
   zenithboard location LAT LON [ALT_M]  set the antenna position EVERYWHERE it is stored
@@ -33,7 +39,10 @@ ZenithBoard $ZB_VERSION - ADSB Flight Info
   zenithboard data status               when it was last refreshed
   zenithboard update                    upgrade ZenithBoard + decoder + feeders + ACARS + Grafana
   zenithboard mlat-guard                re-enforce a single MLAT client
-  zenithboard logs [flightinfo|acars|decoder]
+  zenithboard logs [flightinfo|acars|decoder|uat]   show the last 100 lines of a service
+  zenithboard logs usage|review         size of the system logs / size + recent warnings
+  zenithboard logs limit MB|default     cap the size of the system logs (10-2000 MB)
+  zenithboard logs clean [DAYS|all]     delete old logs (default: keep the last 7 days)
   zenithboard menu                      open the installer menu (add / remove components)
 USAGE
 }
@@ -56,6 +65,7 @@ cmd_status() {
   show_state "FlightAware (piaware)" is_piaware piaware
   show_state "Flightradar24" is_fr24 fr24feed
   show_state "Plane Finder" is_planefinder pfclient
+  if is_region_us || is_uat978; then show_state "978 MHz UAT (dump978-fa)" is_uat978 dump978-fa; fi
   echo "Displays:"
   show_state "FlightInfo wall" is_flightinfo zenithboard-flightinfo
   show_state "ACARS decoder" is_acars zenithboard-acarsdec
@@ -65,6 +75,7 @@ cmd_status() {
   if [ "${n:-0}" -le 1 ]; then echo "MLAT clients running: ${n:-0}  ${C_G}(OK: max 1)${C_0}"; else echo "MLAT clients running: $n  ${C_R}(too many! run: sudo zenithboard mlat-guard)${C_0}"; fi
   local j; j=$(decoder_json)
   if [ -f "$j" ]; then echo "Aircraft in decoder right now: $(grep -o '"hex"' "$j" | wc -l)"; fi
+  if is_uat978 && [ -f /run/skyaware978/aircraft.json ]; then echo "Aircraft on 978 MHz right now:  $(grep -o '"hex"' /run/skyaware978/aircraft.json | wc -l)"; fi
   if is_flightinfo; then
     echo "Wall:     http://$(local_ip):$(cfg_get PORT 8080)/"
     echo "Aircraft photos (Planespotters): $( [ "$(cfg_get SHOW_PHOTOS 1)" = 1 ] && echo "ON" || echo "OFF (turn on: sudo zenithboard photos on)" )"
@@ -152,8 +163,19 @@ case "${1:-}" in
   mlat-guard) root_or_die; zb_mlat_guard ;;
   update) root_or_die; zb_update "${2:-}" ;;
   update-components) root_or_die; zb_update_components ;;
+  region)
+    case "${2:-}" in
+      world|us) root_or_die; cfg_set REGION "$2"; echo "Region: $2. $( [ "$2" = us ] && echo "Menu 1 ADSB now offers the 978 MHz UAT step (needs a 2nd dongle)." || echo "1090 MHz only." )" ;;
+      "") echo "Region: $(cfg_get REGION world)" ;;
+      *) die "Usage: zenithboard region world|us" ;;
+    esac ;;
   logs)
     case "${2:-flightinfo}" in
+      usage) logs_usage ;;
+      review) logs_review ;;
+      limit) root_or_die; logs_set_limit "${3:-}" ;;
+      clean) root_or_die; logs_clean "${3:-7}" ;;
+      uat) journalctl -u dump978-fa -u skyaware978 -n 100 --no-pager ;;
       flightinfo) journalctl -u zenithboard-flightinfo -n 100 --no-pager ;;
       acars) journalctl -u zenithboard-acarsdec -u zenithboard-acars-ingest -n 100 --no-pager ;;
       decoder) journalctl -u "$(cfg_get DECODER readsb)" -n 100 --no-pager ;;

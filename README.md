@@ -70,11 +70,12 @@ sudo ./install.sh
 ### 4. Answer the first questions
 The first run asks, once:
 
+* **Region** — *everywhere else* (1090 MHz only) or *United States and territories*. In the US many small aircraft use **978 MHz (UAT)**, so the installer offers an optional extra step for it (see [978 MHz UAT](#978-mhz-uat-united-states)) and starts with *imperial* units pre-selected. Elsewhere nothing about 978 MHz is shown.
 * **Units** — *metric* (km, km/h, metres, m/s) or *imperial* (miles, knots, feet, ft/min).
 * **Antenna position** — latitude, longitude, altitude (needed by the decoder, MLAT and the wall's distance calculation). Tip: right-click your house in Google Maps to copy the coordinates.
 * **Default radius** — how close a plane must be to appear on the wall.
 
-<p align="center"><img src="docs/images/install-1-welcome.png" alt="The welcome screen lists the three first questions" width="520"></p>
+<p align="center"><img src="docs/images/install-1-welcome.png" alt="The welcome screen lists the first questions (the region question was added later)" width="520"></p>
 <p align="center"><img src="docs/images/install-2-units.png" alt="Choosing metric or imperial units" width="520"></p>
 
 ### 5. Use the menu
@@ -106,7 +107,7 @@ Three ways, pick the one that suits you.
 | Where | How |
 |---|---|
 | **Command line** (affects every screen) | `sudo zenithboard units imperial` · `sudo zenithboard units metric` · `sudo zenithboard radius 5` · `sudo zenithboard cycle 8` |
-| **Menu** | `sudo zenithboard menu` → *4 Settings* |
+| **Menu** | `sudo zenithboard menu` → *4 Settings* (region, units, colour, radius, position, photos, routes, logs) |
 | **On the tablet** (that tablet only) | Tap the faint gear in the top-right corner: units, radius, seconds per plane, colour (amber / green / red / white). Or use a link: `http://<pi>:8080/?units=imperial&radius=5&theme=green` |
 
 Radius presets are **1, 2, 5, 10, 15, 30, 50** — read as kilometres in metric mode and miles in imperial mode. Changes apply immediately, no restart or reinstall.
@@ -195,6 +196,16 @@ To show full model names and to recognise newly registered type codes, ZenithBoa
 * Refresh now: `sudo zenithboard data update`. Check: `zenithboard data status`.
 * A failed download (no internet, broken file) changes nothing: the previous list stays in use, and the wall works without the list at all.
 
+## 978 MHz UAT (United States)
+
+In the United States many general-aviation aircraft transmit on **978 MHz (UAT)** instead of 1090 MHz; the rest of the world uses 1090 MHz only. ZenithBoard therefore asks for your **region** at the first run (change it any time: `sudo zenithboard region us|world`, or menu *4 Settings → Region*). Only with `us` the optional UAT step appears: menu *1 ADSB* → tick **978 MHz UAT**.
+
+* **What you need:** a **second SDR dongle** with its own serial number (`rtl_eeprom -d 1 -s 00000978`) and, for real range, a **978 MHz antenna** (a 1090 MHz antenna is poor at 978 MHz). The installer asks for that dongle's serial and refuses the serial already used for 1090 MHz ADS-B or ACARS.
+* **What gets installed:** FlightAware's `dump978-fa` and `skyaware978` (from the FlightAware package repository). UAT aircraft are written to `/run/skyaware978/aircraft.json`; the **wall merges them with the 1090 MHz aircraft** (an aircraft heard on both appears once). If PiAware is installed it is pointed at the 978 MHz receiver as well (check your FlightAware stats page).
+* **Check it:** `sudo zenithboard status` shows the 978 MHz service and how many aircraft it hears; `sudo zenithboard logs uat` shows its log.
+* **Not shared with other feeders:** ADSB Exchange, Flightradar24 and Plane Finder keep receiving 1090 MHz only. The tar1090 map does not show UAT unless you add the `skyaware978` instance yourself ([tar1090 documentation](https://github.com/wiedehopf/tar1090#978-uat-support)).
+* **Honest status:** this part was written from the dump978-fa / tar1090 documentation **without a 978 MHz setup to test it on** (the author lives in Europe). The tests cover the dongle configuration, the region logic and the merge of the two aircraft lists, not the radio. If something does not work on your Pi, please open an issue with `zenithboard status` and `zenithboard logs uat`.
+
 ## Flight routes
 
 ADS-B only carries the aircraft's identity, position, altitude and speed: **it never says where the flight comes from or goes to.** ZenithBoard therefore looks the route up from the callsign (for example `DLH4YK`) on [adsbdb.com](https://www.adsbdb.com/), a free community database, and shows the airport's name when it fits in the 14 characters of the text column, otherwise the city. Accents are removed because the dot font has none (`ZÜRICH` → `ZURICH`).
@@ -229,6 +240,18 @@ Then open **`http://<the-pi-address>:8081/`** (or `http://localhost:8081/` on th
 > **Do not run the demo on port 8080.** The real wall already uses 8080 once FlightInfo is installed, and a second program on the same port fails with `Address already in use`. The demo therefore defaults to **8081**. If 8081 is also taken: `PORT=8082 ./bin/zenithboard-demo`.
 
 ---
+
+## Logs: size, review, clean (optional)
+
+Every service writes to the system journal, which already limits itself (up to 10 % of the disk, at most 4 GB, and it is kept in memory on many Pi setups). On a small SD card you may want less. Nothing changes unless you ask.
+
+| Menu *4 Settings → Logs* | Command |
+|---|---|
+| **Review** (size, limit, recent warnings) | `zenithboard logs usage` · `zenithboard logs review` |
+| **Size**: set a maximum | `sudo zenithboard logs limit 50` (10-2000 MB) · `sudo zenithboard logs limit default` |
+| **Clean**: keep the last 7 days / delete everything | `sudo zenithboard logs clean 7` · `sudo zenithboard logs clean all` |
+
+The limit applies to all system logs (it is a journald setting, written to `/etc/systemd/journald.conf.d/zenithboard.conf`). To read a service's log: `zenithboard logs flightinfo|decoder|acars|uat`.
 
 ## Network ports (what answers where)
 

@@ -20,6 +20,10 @@ sudo rtl_eeprom -d 0 -s 00000131
 ```
 Unplug and re-plug **both**. Now enter `00001090` as the ADS-B dongle (menu 1) and `00000131` as the ACARS dongle (menu 3). (If a dongle refuses a serial change, use its index `0` / `1` instead.)
 
+## Three dongles (ADS-B + ACARS + 978 MHz UAT, United States)
+
+Each dongle needs its own serial number (`rtl_eeprom -d <index> -s <serial>`, then unplug and replug). 978 MHz UAT uses its own dongle and ideally a 978 MHz antenna. A Raspberry Pi 4 or 5 and a powered USB hub are advised for three dongles; ACARS + Grafana are not recommended together with everything else on a 1-2 GB board.
+
 ## Antennas
 * ADS-B: 1090 MHz (λ/4 ≈ 6.9 cm). A cheap collinear or ground-plane antenna works well.
 * ACARS: 131 MHz band (λ/4 ≈ 57 cm). A simple vertical wire or a telescopic whip at ~57 cm works to start. Do not share one antenna between the two.

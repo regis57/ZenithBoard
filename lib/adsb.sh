@@ -224,11 +224,12 @@ adsb_menu() {
 
   local st_fa=OFF st_fr=OFF st_pf=OFF
   is_piaware && st_fa=ON; is_fr24 && st_fr=ON; is_planefinder && st_pf=ON
-  feeders=$(wt_check "Where do you want to share your data?\n\nADSB Exchange is mandatory (it owns the single MLAT client).\nUnchecking an installed feeder REMOVES it." \
-      ADSBX "ADSB Exchange (mandatory)" ON \
-      FLIGHTAWARE "FlightAware (piaware)" "$st_fa" \
-      FR24 "Flightradar24" "$st_fr" \
-      PLANEFINDER "Plane Finder" "$st_pf") || return 0
+  local -a items=(ADSBX "ADSB Exchange (mandatory)" ON FLIGHTAWARE "FlightAware (piaware)" "$st_fa" FR24 "Flightradar24" "$st_fr" PLANEFINDER "Plane Finder" "$st_pf")
+  local st_uat=OFF
+  is_uat978 && st_uat=ON
+  # 978 MHz UAT is only used in the United States; a region that has it installed keeps seeing it so it can be removed
+  if is_region_us || is_uat978; then items+=(UAT978 "978 MHz UAT (USA only, needs a 2nd dongle)" "$st_uat"); fi
+  feeders=$(wt_check "Where do you want to share your data?\n\nADSB Exchange is mandatory (it owns the single MLAT client).\nUnchecking an installed feeder REMOVES it." "${items[@]}") || return 0
   feeders=" ${feeders//\"/} ADSBX "
 
   [ "$dec_now" != "$dec_sel" ] && plan+="- Decoder: ${dec_now:-none} -> $dec_sel\n"
@@ -239,6 +240,9 @@ adsb_menu() {
     if [[ "$feeders" == *" $f "* ]]; then $checker || plan+="- Install $f\n"
     else $checker && plan+="- REMOVE $f\n"; fi
   done
+  if is_region_us || is_uat978; then
+    if [[ "$feeders" == *" UAT978 "* ]]; then is_uat978 || plan+="- Install 978 MHz UAT (2nd dongle)\n"; else is_uat978 && plan+="- REMOVE 978 MHz UAT\n"; fi
+  fi
   local n_extra=0; for f in FLIGHTAWARE FR24 PLANEFINDER; do [[ "$feeders" == *" $f "* ]] && n_extra=$((n_extra+1)); done
   if is_low_mem && [ "$n_extra" -gt 2 ]; then plan+="\nNOTE: $(mem_total_mb) MB RAM is low for $n_extra extra feeders: consider fewer.\n"; fi
   [ -z "$plan" ] && plan="Nothing to change. (Feeders and MLAT policy will simply be re-checked.)\n"
@@ -260,6 +264,10 @@ adsb_menu() {
       case $name in piaware) is_piaware && remove_piaware ;; fr24) is_fr24 && remove_fr24 ;; planefinder) is_planefinder && remove_planefinder ;; esac
     fi
   done
+  if is_region_us || is_uat978; then
+    if [[ "$feeders" == *" UAT978 "* ]]; then is_uat978 || install_uat978 || warn "978 MHz UAT was not installed."
+    else is_uat978 && remove_uat978; fi
+  fi
   zb_mlat_guard
   echo; log "ADSB step finished. Check everything with:  zenithboard status"
   read -rp "Press Enter to return to the menu..." _
