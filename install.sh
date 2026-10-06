@@ -57,11 +57,11 @@ settings_units() {
 settings_location() {
   local lat lon alt
   while true; do
-    lat=$(wt_input "Antenna LATITUDE in decimal degrees (e.g. 49.246, south is negative)." "$(cfg_get LAT)") || return 1
+    lat=$(wt_input "Antenna LATITUDE in decimal degrees (e.g. 49.1193, south is negative)." "$(cfg_get LAT)") || return 1
     valid_lat "$lat" && break; wt_msg "Not a valid latitude (-90..90)." 8
   done
   while true; do
-    lon=$(wt_input "Antenna LONGITUDE in decimal degrees (e.g. 6.223, west is negative)." "$(cfg_get LON)") || return 1
+    lon=$(wt_input "Antenna LONGITUDE in decimal degrees (e.g. 6.1757, west is negative)." "$(cfg_get LON)") || return 1
     valid_lon "$lon" && break; wt_msg "Not a valid longitude (-180..180)." 8
   done
   alt=$(wt_input "Antenna altitude above sea level in METRES (approximate is fine)." "$(cfg_get ALT_M 0)") || return 1

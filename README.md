@@ -114,12 +114,22 @@ Radius presets are **1, 2, 5, 10, 15, 30, 50** — read as kilometres in metric 
 ### Moving the antenna (position)
 
 ```bash
-sudo zenithboard location 49.246 6.223 210      # latitude, longitude, altitude in metres
+sudo zenithboard location 49.1193 6.1757 180      # latitude, longitude, altitude in metres
 ```
 
 (or menu *4 Settings → Antenna position*). The position is updated **everywhere ZenithBoard can reach**: the wall, readsb / dump1090-fa, ADSB Exchange (including its MLAT) and Plane Finder. A summary then lists anything only the provider's website can change (FlightAware and Flightradar24 hold your position in your online account) with the page to open.
 
 All settings live in one readable file: `/etc/zenithboard/config.env`.
+
+> **Note — position and altitude per feeder**
+>
+> * **Altitude** is the height of the *antenna above sea level*: ground elevation at your house **plus** the antenna's height above the ground. `zenithboard location` takes it in **metres**.
+> * **Precision:** 4 decimals (about 10 m) is plenty, e.g. `49.1193 6.1757`.
+> * Updated automatically by `zenithboard location`: ZenithBoard, readsb / dump1090-fa, ADSB Exchange (feeder and MLAT), Plane Finder when its config file is found.
+> * **Flightradar24 — by hand:** [flightradar24.com](https://www.flightradar24.com) → your account → *My data sharing* → your receiver → edit latitude, longitude and altitude. FR24 wants the altitude in **feet** (metres × 3.281; 180 m ≈ 591 ft). The position is stored in your FR24 account, not on the Pi.
+> * **FlightAware — by hand** (only if PiAware is installed): [flightaware.com/adsb/stats](https://flightaware.com/adsb/stats) → *My ADS-B* → your site → edit the location. Check the unit shown next to the altitude field before typing.
+> * **Plane Finder — by hand** if the command could not do it: open `http://<pi-address>:30053` and change the position there (check the unit shown).
+> * A wrong position on a provider's site does not break anything: aircraft are simply plotted slightly off there, and MLAT (ADSB Exchange only) is less accurate. Your own wall is not affected.
 
 ---
 
