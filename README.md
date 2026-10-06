@@ -202,7 +202,8 @@ ADS-B only carries the aircraft's identity, position, altitude and speed: **it n
 * **No route is shown** for aircraft whose callsign is not an airline callsign (private planes, helicopters, military) or that are not in the database: the two rows stay empty.
 * **It is an indication, not a guarantee.** A callsign can be reused for another route, and the database is maintained by volunteers.
 * **Privacy:** only the callsign of an aircraft in your radius is sent to adsbdb.com, never your position. Requests are spaced out (one every 1.5 s) and answers are kept for 12 hours. Turn it off if you prefer nothing to leave the Pi: `sudo zenithboard routes off` (or menu *4 Settings → Flight origin/destination*).
-* Needs internet on the Pi; the wall works without it.
+* Needs internet on the Pi; the wall works without it. If a lookup fails (network hiccup) it is retried after one minute.
+* **Route missing on a flight you know?** Run `zenithboard routes test TRA913C` (use your callsign): it asks adsbdb from your Pi and prints what it knows, or why it could not. `zenithboard logs flightinfo` lists failed lookups.
 
 ## Photos
 

@@ -409,8 +409,8 @@ def fetch_photo_bytes(hex_code):
 # community database adsbdb.com. It is only an indication: a callsign can be reused for another route, and
 # some flights are missing.
 ROUTE_GAP_S = 1.5                   # at most one request every 1.5 s
-ROUTE_RETRY_S = 600                 # no answer (error, timeout, no internet): try again after 10 min
-ROUTE_MISS_RETRY_S = 6 * 3600       # callsign not in the database
+ROUTE_RETRY_S = 60                  # no answer (error, timeout, no internet): try again after 1 min (a flight lasts minutes)
+ROUTE_MISS_RETRY_S = 2 * 3600       # callsign not in the database
 ROUTE_TTL_S = 12 * 3600             # a known route is looked up again after 12 h (callsigns get reused)
 CALLSIGN_RE = re.compile(r"^[A-Z]{3}[0-9][0-9A-Z]{0,3}$")      # airline callsigns like DLH4YK; skips registrations and GA
 
@@ -439,11 +439,14 @@ def _route_api(callsign):
     url = "https://api.adsbdb.com/v0/callsign/%s" % callsign
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "ZenithBoard/%s (+https://github.com/regis57/ZenithBoard)" % VERSION})
-        with urllib.request.urlopen(req, timeout=6) as resp:
+        with urllib.request.urlopen(req, timeout=10) as resp:
             return parse_route(json.load(resp)), True
     except urllib.error.HTTPError as exc:
+        if exc.code != 404:
+            print("route lookup %s: HTTP %s, retrying in %d s" % (callsign, exc.code, ROUTE_RETRY_S), file=sys.stderr, flush=True)
         return None, exc.code == 404            # 404 = unknown callsign (a real answer); anything else = try later
-    except Exception:
+    except Exception as exc:
+        print("route lookup %s failed (%s), retrying in %d s" % (callsign, exc, ROUTE_RETRY_S), file=sys.stderr, flush=True)
         return None, False
 
 
