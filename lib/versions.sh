@@ -2,7 +2,7 @@
 # shellcheck disable=SC2034
 # shellcheck shell=bash
 # Third-party pins. Bump here when an upstream moves; everything else reads these.
-ZB_VERSION="0.3.1"
+ZB_VERSION="0.3.2"
 
 # FlightAware APT repository package (provides piaware and dump1090-fa). FlightAware renamed it from
 # piaware-repository (9.0.1) to flightaware-apt-repository; see https://www.flightaware.com/adsb/piaware/install
@@ -20,6 +20,10 @@ ADSBX_UNINSTALL="/usr/local/share/adsbexchange/uninstall.sh"
 
 # Flightradar24
 FR24_INSTALL_URL="https://repo-feed.flightradar24.com/install_fr24_rpi.sh"
+# FR24 re-signed its apt repository with a new key because Debian 13 (trixie) rejects SHA1 signatures since
+# 2026-02-01. The key is only installed if it has exactly this fingerprint (the one apt reports as "missing").
+FR24_KEY_URL="https://repo-feed.flightradar24.com/flightradar24.2026.pub"
+FR24_KEY_FPR="ED843290A602413685E57D436F7703F65FA1BDAF"
 
 # Plane Finder client. Check https://planefinder.net/sharing/client for newer versions.
 PF_VERSION_ARMHF="5.4.211"

@@ -110,10 +110,57 @@ install_piaware() {
 }
 remove_piaware() { systemctl disable --now piaware 2>/dev/null || true; apt_remove piaware; }
 
+# --- Flightradar24 -------------------------------------------------------------------------------------------
+# Debian 13 (trixie) refuses signatures made with SHA1 since 2026-02-01 and FR24's first signing key used one, so
+# `apt update` says the FR24 repository "is not signed". FR24 published a new key. We install it, but ONLY when its
+# fingerprint is the pinned one: signature checking is never switched off.
+fr24_source_file() { grep -rl "repo-feed.flightradar24.com" "${ZB_APT_DIR:-/etc/apt}/sources.list" "${ZB_APT_DIR:-/etc/apt}/sources.list.d" 2>/dev/null | head -1; }
+
+fr24_repair_key() {
+  local apt_dir="${ZB_APT_DIR:-/etc/apt}" src keyring="" tmp fprs
+  src=$(fr24_source_file)
+  # the keyring file the FR24 source points to (deb822 "Signed-By:" or one-line "[signed-by=...]")
+  [ -z "$src" ] || keyring=$(grep -o -i -E 'signed-by(=|: *)[^] ]+' "$src" | head -1 | sed -E 's/^[^=:]*(=|: *)//')
+  [ -n "$keyring" ] || keyring="$apt_dir/keyrings/flightradar24.gpg"
+  command -v gpg >/dev/null 2>&1 || apt_install gpg || return 1
+  tmp=$(mktemp -d) || return 1
+  if ! fetch "$FR24_KEY_URL" "$tmp/key.pub"; then rm -rf "$tmp"; return 1; fi
+  fprs=$(gpg --batch --show-keys --with-colons "$tmp/key.pub" 2>/dev/null | awk -F: '$1=="fpr"{print $10}')
+  if ! printf '%s\n' "$fprs" | grep -qx "$FR24_KEY_FPR"; then
+    err "The Flightradar24 key does not have the expected fingerprint ($FR24_KEY_FPR): NOT installed."
+    err "Flightradar24 may have changed its key again: check lib/versions.sh against https://forum.flightradar24.com/"
+    rm -rf "$tmp"; return 1
+  fi
+  install -d -m 755 "$(dirname "$keyring")"
+  case "$keyring" in
+    *.asc) install -m 644 "$tmp/key.pub" "$keyring" ;;                           # apt wants it armoured
+    *)     gpg --batch --yes --dearmor -o "$tmp/key.gpg" "$tmp/key.pub" && install -m 644 "$tmp/key.gpg" "$keyring" ;;
+  esac
+  local rc=$?
+  rm -rf "$tmp"
+  [ "$rc" -eq 0 ] && log "Flightradar24 signing key (2026) installed in $keyring"
+  return "$rc"
+}
+
+# true when `apt-get update` still complains about the FR24 repository
+fr24_repo_broken() { apt-get update 2>&1 | grep -i "flightradar24" | grep -qi -E "not signed|signature|NO_PUBKEY|GPG error"; }
+
 install_fr24() {
   log "Installing Flightradar24 feeder"
+  # a repository left by an earlier attempt: give it the new key first
+  [ -z "$(fr24_source_file)" ] || fr24_repair_key || true
   fetch "$FR24_INSTALL_URL" /tmp/install_fr24.sh || return 1
-  bash /tmp/install_fr24.sh || return 1
+  if ! bash /tmp/install_fr24.sh; then
+    # the installer adds the repository and then stops when apt refuses it: repair the key, then finish the job
+    [ -n "$(fr24_source_file)" ] || { err "The Flightradar24 installer failed before adding its repository."; return 1; }
+    fr24_repair_key || return 1
+    if fr24_repo_broken; then err "apt still refuses the Flightradar24 repository. Nothing was changed about signature checking."; return 1; fi
+    apt_install fr24feed || return 1
+    if command -v fr24feed >/dev/null 2>&1; then
+      log "Finish the Flightradar24 sign-up (choose: Beast, 127.0.0.1, port 30005, MLAT = no)"
+      fr24feed --signup || warn "Sign-up not finished: run it again with  sudo fr24feed --signup"
+    fi
+  fi
   if [ -f /etc/fr24feed.ini ]; then
     ini_set /etc/fr24feed.ini receiver beast-tcp
     ini_set /etc/fr24feed.ini host 127.0.0.1:30005
