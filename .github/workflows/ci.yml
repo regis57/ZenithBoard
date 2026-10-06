@@ -14,6 +14,7 @@ jobs:
         run: |
           bash tests/test_hardware.sh
           bash tests/test_update_sync.sh
+          bash tests/test_versions.sh
       - name: JavaScript tests
         run: |
           node tests/test_format.js
