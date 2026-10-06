@@ -299,7 +299,7 @@ sudo /opt/zenithboard/install.sh --uninstall-all      # remove everything
 ## Known limits
 
 * **Not yet validated on a real Raspberry Pi** — third-party installers (readsb, ADSB Exchange, Flightradar24, Plane Finder, `acarsdec`) change over time. Version pins and URLs are all in [`lib/versions.sh`](lib/versions.sh).
-* The Plane Finder package URL for 64-bit systems must be checked against their site.
+* Feeder download addresses (FlightAware, Plane Finder, ...) are pinned in [`lib/versions.sh`](lib/versions.sh) and were copied from each provider's own page on 6 October 2026. Providers do rename and move files from time to time; if an install stops with a 404, that file is the one to update (and a pull request or issue is welcome).
 * FlightAware and Flightradar24 store your antenna position on their websites: after `zenithboard location`, update it there too (the command tells you where).
 * ACARS legality differs per country — check your local rules before collecting ACARS messages.
 * Photos come from Planespotters and need internet on the Pi. The live photo lookup has not yet been checked against the real service on a Raspberry Pi; the demo and the tests exercise the same code with stand-ins. Run `zenithboard photos test` on your own Pi to confirm it works there.

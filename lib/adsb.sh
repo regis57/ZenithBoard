@@ -27,10 +27,15 @@ zb_mlat_guard() {
 
 # ------------------------------------------------------------------ decoder
 ensure_fa_repo() {
+  # flightaware-apt-repository is the current name; piaware-repository is what older installs have (still valid)
+  pkg_installed flightaware-apt-repository && return 0
   pkg_installed piaware-repository && return 0
   log "Adding the FlightAware package repository"
-  fetch "$PIAWARE_REPO_URL" /tmp/piaware-repository.deb || return 1
-  dpkg -i /tmp/piaware-repository.deb && apt-get update
+  fetch "$FA_REPO_URL" /tmp/flightaware-apt-repository.deb || {
+    warn "FlightAware may have moved its repository package: check lib/versions.sh against https://www.flightaware.com/adsb/piaware/install"
+    return 1
+  }
+  dpkg -i /tmp/flightaware-apt-repository.deb && apt-get update
 }
 
 set_sdr_serial_readsb() {  # set_sdr_serial_readsb SERIAL_OR_INDEX
