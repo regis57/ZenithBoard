@@ -108,9 +108,26 @@ Three ways, pick the one that suits you.
 |---|---|
 | **Command line** (affects every screen) | `sudo zenithboard units imperial` · `sudo zenithboard units metric` · `sudo zenithboard radius 5` · `sudo zenithboard cycle 8` |
 | **Menu** | `sudo zenithboard menu` → *4 Settings* (region, units, colour, radius, position, photos, routes, logs) |
-| **On the tablet** (that tablet only) | Tap the faint gear in the top-right corner: units, radius, seconds per plane, colour (amber / green / red / white). Or use a link: `http://<pi>:8080/?units=imperial&radius=5&theme=green` |
+| **On the tablet** (that tablet only) | Tap the faint gear in the top-right corner: units, radius, seconds per plane, colour (amber / green / red / white). Or use a link, see [Tablet links](#tablet-links-one-address-per-look) below. |
 
 Radius presets are **1, 2, 5, 10, 15, 30, 50** — read as kilometres in metric mode and miles in imperial mode. Changes apply immediately, no restart or reinstall.
+
+### Tablet links: one address per look
+
+Each tablet can have its own look through the link you open. The settings are remembered by that tablet's browser, so you only need the link once. Replace `<pi>` by the Pi's address (shown by `zenithboard status`, e.g. `192.168.1.50`).
+
+| Link | Units | Distance (radius) | Colour |
+|---|---|---|---|
+| `http://<pi>:8080/` | the Pi's setting | the Pi's setting | the Pi's setting |
+| `http://<pi>:8080/?units=metric&radius=10&theme=amber` | metric: km, km/h, m | **10 km** | amber |
+| `http://<pi>:8080/?units=metric&radius=15&theme=green` | metric | **15 km** | green |
+| `http://<pi>:8080/?units=imperial&radius=5&theme=red` | imperial: miles, knots, ft | **5 miles** | red |
+| `http://<pi>:8080/?units=imperial&radius=30&theme=white` | imperial | **30 miles** | white |
+| `http://<pi>:8080/?units=metric&radius=50&theme=green&cycle=10` | metric | **50 km** | green, **10 s** per aircraft |
+
+* `units` = `metric` or `imperial` · `radius` = `1`, `2`, `5`, `10`, `15`, `30` or `50` (**kilometres with `metric`, miles with `imperial`**) · `theme` = `amber`, `green`, `red` or `white` · `cycle` = seconds per aircraft (2 or more). Any of them can be left out.
+* The distance on the wall's last line follows the same units: `6.7KM NW` in metric, `4.2MI NW` in imperial. Altitude is in metres or feet, speed in km/h or knots.
+* To go back to the Pi's settings, tap the gear → *Reset*.
 
 ### Moving the antenna (position)
 

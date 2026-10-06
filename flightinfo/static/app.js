@@ -64,19 +64,28 @@
     var cw = canvas.clientWidth, ch = canvas.clientHeight, pitch = Math.min(cw / (GW + 3), ch / (GH + 3));
     return { pitch: pitch, ox: (cw - pitch * GW) / 2, oy: (ch - pitch * GH) / 2 };
   }
+  // The animated scene fills the whole corner; a real photo is shown COMPLETE (never cropped): it keeps its own
+  // proportions, is as large as the corner allows, sits in the bottom-right and carries its credit underneath.
+  function fitPhoto(g) {
+    var W = PHOTO_BOX.w * g.pitch, H = PHOTO_BOX.h * g.pitch, fs = Math.max(8, g.pitch * 1.5);
+    var iw = photoImg.naturalWidth, ih = photoImg.naturalHeight, ratio = iw && ih ? iw / ih : 1.5;
+    var imgH = Math.max(10, H - fs * 1.6), w = Math.min(W, imgH * ratio);
+    box.style.fontSize = fs + "px";
+    box.style.left = "auto"; box.style.top = "auto"; box.style.height = "auto"; box.style.width = w + "px";
+    box.style.right = (canvas.clientWidth - (g.ox + (PHOTO_BOX.x + PHOTO_BOX.w) * g.pitch)) + "px";
+    box.style.bottom = (canvas.clientHeight - (g.oy + (PHOTO_BOX.y + PHOTO_BOX.h) * g.pitch)) + "px";
+  }
   function placeCorner() {
-    var g = geom(), st = [box, sceneCanvas];
-    st.forEach(function (el) {
-      el.style.left = (g.ox + PHOTO_BOX.x * g.pitch) + "px"; el.style.top = (g.oy + PHOTO_BOX.y * g.pitch) + "px";
-      el.style.width = (PHOTO_BOX.w * g.pitch) + "px"; el.style.height = (PHOTO_BOX.h * g.pitch) + "px";
-    });
-    box.style.fontSize = Math.max(8, g.pitch * 1.5) + "px";
+    var g = geom(), el = sceneCanvas;
+    el.style.left = (g.ox + PHOTO_BOX.x * g.pitch) + "px"; el.style.top = (g.oy + PHOTO_BOX.y * g.pitch) + "px";
+    el.style.width = (PHOTO_BOX.w * g.pitch) + "px"; el.style.height = (PHOTO_BOX.h * g.pitch) + "px";
+    fitPhoto(g);
     scene.resize(); if (!sceneCanvas.hidden && scene.ops) scene.render(performance.now());
   }
   function hideCorner() { cornerKey = null; photoToken++; box.hidden = true; sceneCanvas.hidden = true; scene.stop(); }
   function showScene() { box.hidden = true; sceneCanvas.hidden = false; placeCorner(); scene.start(); }   // size it only once it is visible
   function showPhoto(p) {
-    scene.stop(); sceneCanvas.hidden = true; box.hidden = false;
+    scene.stop(); sceneCanvas.hidden = true; box.hidden = false; fitPhoto(geom());
     photoCap.textContent = p.photo_credit ? "\u00a9 " + p.photo_credit + (p.photo_link ? " \u00b7 planespotters.net" : "") : "";
     if (p.photo_link) { photoLink.href = p.photo_link; photoLink.setAttribute("target", "_blank"); } else photoLink.removeAttribute("href");
   }
