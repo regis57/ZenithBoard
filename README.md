@@ -10,9 +10,26 @@ ZenithBoard turns a Raspberry Pi (4 or newer recommended) and a cheap USB radio 
 
 Everything is installed from one menu, and you can come back at any time to add or remove parts.
 
-> **Status: v0.1 (early).** The wall, the configuration tools and the tests work and are verified on a PC. The installer scripts have **not yet been run on real Raspberry Pi hardware** — please try it and open an issue with anything that breaks. See [Known limits](#known-limits).
+> **Status:** running every day on the author's Raspberry Pi (Raspberry Pi OS, Debian 13) with readsb, ADSB Exchange and Flightradar24. Parts that could not be tried on real hardware yet (978 MHz UAT for the US, ACARS) are marked as such. Please open an issue with anything that breaks. See [Known limits](#known-limits).
 
 Inspired by [jprochazka/adsb-receiver](https://github.com/jprochazka/adsb-receiver). ZenithBoard is an independent project with a smaller scope, not a fork.
+
+---
+
+## See it
+
+<p align="center"><img src="docs/images/wall/zb-wall-green.gif" alt="The ZenithBoard wall cycling through aircraft in green" width="720"></p>
+
+<p align="center"><img src="docs/images/wall/zb-three-colours.jpg" alt="The same flight, Lufthansa DLH4YK Munich to Sofia, in red, white and green" width="900"></p>
+
+Real flights over the author's antenna, with the aircraft's own photo from Planespotters.net (credited on the wall):
+
+| | |
+|---|---|
+| <img src="docs/images/wall/zb-ezs71bm-white.jpg" alt="easyJet Switzerland EZS71BM, Keflavik to Basel-Mulhouse, white" width="420"> | <img src="docs/images/wall/zb-ryr65cn-amber.jpg" alt="Ryanair RYR65CN, Manchester to Milan Malpensa, amber" width="420"> |
+| <img src="docs/images/wall/zb-bel4sf-amber.jpg" alt="Brussels Airlines BEL4SF, Lyon to Brussels, amber" width="420"> | <img src="docs/images/wall/zb-sfs40-amber.jpg" alt="A Beechcraft King Air with its photo, amber" width="420"> |
+
+**Video:** a 37-second tour, [`docs/media/ZenithBoard-short.mp4`](docs/media/ZenithBoard-short.mp4) (opens in GitHub's player).
 
 ---
 
