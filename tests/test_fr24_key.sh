@@ -82,4 +82,20 @@ check "a failed download is an error, not a silent success" '[ "$rc" -ne 0 ] && 
 # 8. signature checking is never switched off anywhere in the installer
 check "no [trusted=yes] / allow-insecure / --allow-unauthenticated in the code" '! grep -rn -E "trusted=yes|allow-insecure|allow-unauthenticated|AllowInsecure|--force-yes" lib install.sh bin'
 
+# 9. sharing key: validation, pre-filled ini, existing key reused, no prompt when ZB_FR24_KEY is set
+check "a normal key is accepted"            'fr24_key_ok 0123456789abcdef'
+check "empty / spaces / junk are refused"   '! fr24_key_ok "" && ! fr24_key_ok "a b" && ! fr24_key_ok "abc" && ! fr24_key_ok "key;rm -rf"'
+FR24_INI="$t/fr24feed.ini"; rm -f "$FR24_INI"
+fr24_write_ini 0123456789abcdef
+check "ini: key stored"                     'grep -qx "fr24key=\"0123456789abcdef\"" "$FR24_INI"'
+check "ini: Beast on 127.0.0.1:30005"       'grep -qx "receiver=\"beast-tcp\"" "$FR24_INI" && grep -qx "host=\"127.0.0.1:30005\"" "$FR24_INI"'
+check "ini: MLAT off, no bs/raw"            'grep -qx "mlat=\"no\"" "$FR24_INI" && grep -qx "mlat-without-gps=\"no\"" "$FR24_INI" && grep -qx "bs=\"no\"" "$FR24_INI" && grep -qx "raw=\"no\"" "$FR24_INI"'
+printf 'receiver="dvbt"\nmlat="yes"\nfr24key="old"\n' > "$FR24_INI"
+fr24_write_ini ""
+check "ini: wrong wizard answers corrected, key kept without a new one" 'grep -qx "mlat=\"no\"" "$FR24_INI" && grep -qx "receiver=\"beast-tcp\"" "$FR24_INI" && grep -qx "fr24key=\"old\"" "$FR24_INI"'
+printf 'fr24key="abcdef0123456789"\n' > "$FR24_INI"
+check "an existing key in the ini is reused without asking" '[ "$(fr24_ask_key </dev/null)" = abcdef0123456789 ]'
+rm -f "$FR24_INI"
+check "ZB_FR24_KEY skips the question"      '[ "$(ZB_FR24_KEY=zzzz1234zzzz fr24_ask_key)" = zzzz1234zzzz ]'
+
 exit "$fail"

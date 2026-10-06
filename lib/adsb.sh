@@ -145,30 +145,89 @@ fr24_repair_key() {
 # true when `apt-get update` still complains about the FR24 repository
 fr24_repo_broken() { apt-get update 2>&1 | grep -i "flightradar24" | grep -qi -E "not signed|signature|NO_PUBKEY|GPG error"; }
 
+FR24_INI="${FR24_INI:-/etc/fr24feed.ini}"
+
+# A sharing key is 16 letters/digits in practice; be lenient (8-64) so a format change does not block anyone.
+fr24_key_ok() { [[ "${1:-}" =~ ^[A-Za-z0-9]{8,64}$ ]]; }
+
+# Everything the sign-up wizard would ask is answered here: Beast from the local decoder, MLAT off (ADSB Exchange owns the one MLAT).
+fr24_write_ini() {  # fr24_write_ini [KEY]
+  [ -z "${1:-}" ] || ini_set "$FR24_INI" fr24key "$1"
+  ini_set "$FR24_INI" receiver beast-tcp
+  ini_set "$FR24_INI" host 127.0.0.1:30005
+  ini_set "$FR24_INI" bs no
+  ini_set "$FR24_INI" raw no
+  ini_set "$FR24_INI" mlat no
+  ini_set "$FR24_INI" mlat-without-gps no
+}
+
+fr24_ask_key() {  # prints the key typed by the user, or nothing. ZB_FR24_KEY skips the question.
+  local k
+  if [ -n "${ZB_FR24_KEY+x}" ]; then printf '%s' "$ZB_FR24_KEY"; return 0; fi
+  if [ -f "$FR24_INI" ]; then
+    k=$(sed -n -E 's/^fr24key="?([A-Za-z0-9]+)"?$/\1/p' "$FR24_INI" | head -1)
+    if fr24_key_ok "$k"; then printf '%s' "$k"; return 0; fi
+  fi
+  while true; do
+    k=$(wt_input "Flightradar24 SHARING KEY
+
+Already feeding Flightradar24? Enter your key here: no sign-up needed.
+  flightradar24.com > your account > My data sharing
+  (or the line fr24key= in /etc/fr24feed.ini of an old receiver).
+
+No key yet? Leave empty: the installer starts FR24's sign-up and tells you what to answer
+(Beast, 127.0.0.1, port 30005, MLAT no; all re-applied afterwards)." "") || return 0
+    k="${k//[[:space:]]/}"
+    [ -n "$k" ] || return 0
+    if fr24_key_ok "$k"; then printf '%s' "$k"; return 0; fi
+    wt_msg "That does not look like a sharing key (letters and digits only, about 16 characters). Try again, or leave it empty."
+  done
+}
+
+fr24_signup_help() {
+  cat >&2 <<'EOT'
+
+  Flightradar24 sign-up. Answer like this:
+    Email / sharing key ........ your FR24 email (a free account is created on the way) or an existing key
+    Receiver type .............. ModeS Beast (Beast TCP)
+    Receiver host and port ..... 127.0.0.1  and  30005
+    Multilateration (MLAT) ..... no   (ADSB Exchange keeps the only MLAT)
+    Raw / BS data feed ......... no
+  At the end FR24 prints your SHARING KEY: note it (it is also kept in /etc/fr24feed.ini).
+  ZenithBoard re-applies the settings above afterwards, so a wrong answer is corrected.
+
+EOT
+}
+
 install_fr24() {
+  local key
+  key=$(fr24_ask_key)
   log "Installing Flightradar24 feeder"
   # a repository left by an earlier attempt: give it the new key first
   [ -z "$(fr24_source_file)" ] || fr24_repair_key || true
   fetch "$FR24_INSTALL_URL" /tmp/install_fr24.sh || return 1
-  if ! bash /tmp/install_fr24.sh; then
+  [ -n "$key" ] || fr24_signup_help
+  # With a key, FR24's own wizard is not needed: it gets no keyboard, and its answers are written below.
+  local rc=0
+  if [ -n "$key" ]; then bash /tmp/install_fr24.sh </dev/null || rc=$?; else bash /tmp/install_fr24.sh || rc=$?; fi
+  if [ "$rc" != 0 ] && ! command -v fr24feed >/dev/null 2>&1; then
     # the installer adds the repository and then stops when apt refuses it: repair the key, then finish the job
     [ -n "$(fr24_source_file)" ] || { err "The Flightradar24 installer failed before adding its repository."; return 1; }
     fr24_repair_key || return 1
     if fr24_repo_broken; then err "apt still refuses the Flightradar24 repository. Nothing was changed about signature checking."; return 1; fi
     apt_install fr24feed || return 1
-    if command -v fr24feed >/dev/null 2>&1; then
-      log "Finish the Flightradar24 sign-up (choose: Beast, 127.0.0.1, port 30005, MLAT = no)"
+    if [ -z "$key" ] && command -v fr24feed >/dev/null 2>&1; then
+      fr24_signup_help
       fr24feed --signup || warn "Sign-up not finished: run it again with  sudo fr24feed --signup"
     fi
   fi
-  if [ -f /etc/fr24feed.ini ]; then
-    ini_set /etc/fr24feed.ini receiver beast-tcp
-    ini_set /etc/fr24feed.ini host 127.0.0.1:30005
-    ini_set /etc/fr24feed.ini mlat no
-    ini_set /etc/fr24feed.ini mlat-without-gps no
+  if [ -n "$key" ] || [ -f "$FR24_INI" ]; then
+    fr24_write_ini "$key"
+    systemctl enable fr24feed 2>/dev/null || true
     systemctl restart fr24feed || true
+    [ -z "$key" ] || log "Flightradar24 feeder set up with your sharing key (Beast 127.0.0.1:30005, MLAT off)."
   else
-    warn "/etc/fr24feed.ini not found: finish the FR24 sign-up with 'sudo fr24feed --signup' (choose Beast, 127.0.0.1:30005, MLAT = no)."
+    warn "$FR24_INI not found: finish the FR24 sign-up with 'sudo fr24feed --signup' (Beast, 127.0.0.1, 30005, MLAT = no)."
   fi
 }
 remove_fr24() { systemctl disable --now fr24feed 2>/dev/null || true; apt_remove fr24feed; }
