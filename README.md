@@ -82,7 +82,7 @@ After the questions, the installer shows its main menu. You can come back to it 
 
 <p align="center"><img src="docs/images/install-3-menu.png" alt="The ZenithBoard main menu: ADSB, FlightInfo, ACARS, Settings, Status, Update, Uninstall" width="640"></p>
 
-**1 · ADSB** — pick the decoder (**readsb** is recommended; **dump1090-fa** is supported as an alternative; both feed the same local port so every feeder works with either). Then tick where to share. *ADSB Exchange is always on.* The ADSB Exchange script will ask for a station name and your position, and prints a link to see your feed. FlightAware prints a claim link; Plane Finder finishes setup on a small web page. Unticking an installed feeder removes it after a confirmation.
+**1 · ADSB** — pick the decoder (**readsb** is recommended; **dump1090-fa** is supported as an alternative; both feed the same local port so every feeder works with either). Then tick where to share. *ADSB Exchange is always on.* The ADSB Exchange script will ask for a station name and your position, and prints a link to see your feed. FlightAware prints a claim link; **Flightradar24** asks for your *sharing key* first (flightradar24.com → your account → *My data sharing*, or `fr24key=` in `/etc/fr24feed.ini`): with a key there is no sign-up, without one the installer starts FR24's sign-up and tells you what to answer — Beast, `127.0.0.1`, port `30005`, MLAT no are filled in for you either way; Plane Finder finishes setup on a small web page. Unticking an installed feeder removes it after a confirmation.
 
 **2 · FlightInfo** — installs the wall. At the end it prints the address, e.g. `http://192.168.1.50:8080/`.
 
@@ -292,6 +292,7 @@ sudo /opt/zenithboard/install.sh --uninstall-all      # remove everything
 | Wall opens but looks cropped | Use the gear → **Full screen**, or *Add to Home Screen*. |
 | Two MLAT clients in `status` | `sudo zenithboard mlat-guard` |
 | ACARS panels empty | `zenithboard logs acars`; confirm the ACARS dongle serial in `zenithboard config` and that frequencies are correct for your region. |
+| `apt update` says the **Flightradar24 repository "is not signed"** (`SHA1 is not considered secure`) | Debian 13 (trixie) rejects the SHA1 signature of FR24's first key. `sudo zenithboard update` installs FR24's 2026 key, **only if its fingerprint is `ED84 3290 A602 4136 85E5 7D43 6F77 03F6 5FA1 BDAF`**, and never turns signature checking off. Then add Flightradar24 again from menu *1 ADSB*. |
 | Grafana asks for a login | Default `admin` / `admin`. Menu 3 can allow anonymous *viewing* on your LAN only. |
 
 ---

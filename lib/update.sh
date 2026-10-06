@@ -44,6 +44,7 @@ zb_update() {  # zb_update [--no-pull]
 
 zb_update_components() {
   log "ZenithBoard $ZB_VERSION: updating installed components"
+  [ -z "$(fr24_source_file)" ] || fr24_repair_key || warn "Flightradar24 signing key not refreshed (see above)."
   apt-get update -qq
   if is_readsb; then
     log "readsb"; fetch "$READSB_INSTALL_URL" /tmp/readsb-install.sh && bash /tmp/readsb-install.sh || warn "readsb update failed"
