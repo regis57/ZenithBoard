@@ -88,6 +88,10 @@ c=$(ddns_curl_config freedns x.mooo.com "" TokEN123abc456)
 check "freedns url"              'printf "%s\n" "$c" | grep -q "sync.afraid.org/u/TokEN123abc456/"'
 check "unknown provider refused" '! ddns_curl_config nope a b c'
 
+# ---- the timer must fire by itself after being switched on (OnBootSec alone never fires when enabled long after boot)
+check "timer: first run shortly after start"  'grep -q "^OnActiveSec=" systemd/zenithboard-ddns.timer'
+check "timer: repeats every 5 minutes"        'grep -qE "^OnUnit(Inactive|Active)Sec=5min" systemd/zenithboard-ddns.timer'
+
 # ---- domain name: answers
 check "duckdns OK"               '[ "$(ddns_interpret duckdns OK)" = ok ]'
 check "duckdns KO"               '[ "$(ddns_interpret duckdns KO)" = fail ]'
@@ -111,6 +115,12 @@ check "set: secret not in config" '! grep -q tok12345678 "$ZENITHBOARD_ETC/confi
 check "set: state written"       'grep -q "ok" "$DDNS_STATE"'
 printf '#!/bin/bash\necho KO\n' > "$t/bin/curl"
 check "update: a refusal is reported" '! ddns_update && grep -q FAILED "$DDNS_STATE"'
+# a refusal followed by an OK (network still settling after the setup): the retry makes the first update succeed
+export ZB_DDNS_RETRY_SLEEP=0
+printf '#!/bin/bash\nn=$(cat %s/n 2>/dev/null || echo 0); echo $((n+1)) > %s/n\n[ "$n" -ge 1 ] && echo OK || echo KO\n' "$t" "$t" > "$t/bin/curl"; rm -f "$t/n"
+check "update: retry turns a first refusal into success" 'ddns_update 2 && grep -q " ok" "$DDNS_STATE"'
+printf '#!/bin/bash\necho KO\n' > "$t/bin/curl"
+ddns_update 1; check "update: the service answer is shown" 'grep -q "FAILED: .*(answer: KO)" "$DDNS_STATE"'
 ddns_off
 check "off: key deleted"         '[ ! -e "$DDNS_CURL" ] && [ "$(cfg_get DDNS_PROVIDER)" = none ]'
 out=$(ddns_set noip a.ddns.net "" ""); check "noip without key refused" '[ $? -ne 0 ] || printf "%s" "$out" | grep -q needs'

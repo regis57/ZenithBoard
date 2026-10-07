@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.8.5
+- **Domain name timer fixed**: it only had a "60 s after boot" start, so when the name was set up long after boot the 5-minute refresh never started until the next reboot. It now starts 30 s after being switched on and repeats every 5 minutes.
+- Domain name status says plainly when the name points to your address ("it works"), whatever older line is shown.
+- Domain name: the first update right after the setup is retried up to 3 times (5 s apart) before it is reported as failed, since the network or the service can still be settling; the status line now shows the service's own short answer (`OK`, `KO`, `badauth`...), which never contains the token.
+
 ## 0.8.4
 - README: badges (licence, CI, Buy Me a Coffee) and a short "Support the project" section; `.github/FUNDING.yml` adds GitHub's *Sponsor* button to the repository page, pointing to https://buymeacoffee.com/regis57.
 

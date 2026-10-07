@@ -1,9 +1,9 @@
 [Unit]
-Description=ZenithBoard domain name update, every 5 minutes
+Description=ZenithBoard domain name update, 30 seconds after start-up and then every 5 minutes
 
 [Timer]
-OnBootSec=60
-OnUnitActiveSec=5min
+OnActiveSec=30s
+OnUnitInactiveSec=5min
 
 [Install]
 WantedBy=timers.target
