@@ -155,7 +155,7 @@ update_menu() {
       all "Update everything (ZenithBoard + every installed component)" \
       pick "Choose what to update (tick the ones you want)" \
       list "What is installed" \
-      back "Back") || return 0
+      back "Return to the previous menu") || return 0
     case "$c" in
       all) clear; "$ZB_HOME/bin/zenithboard" update; read -rp "Press Enter..." _; return 0 ;;
       list) clear; zb_update_list; echo; read -rp "Press Enter..." _ ;;

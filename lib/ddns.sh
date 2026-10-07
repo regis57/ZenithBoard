@@ -165,7 +165,7 @@ ddns_menu() {
       status "Status: last update, public address, links" \
       update "Update now" \
       off "Turn the domain name off (deletes the saved key)" \
-      back "Back") || return 0
+      back "Return to the previous menu") || return 0
     case "$c" in
       guide) ddns_guide ;;
       setup) ddns_setup ;;

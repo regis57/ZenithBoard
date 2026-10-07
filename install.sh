@@ -105,7 +105,7 @@ network_menu() {
       ip "2  Fixed IP address, mask, gateway, DNS" \
       name "3  Domain name (DuckDNS, No-IP, FreeDNS)" \
       status "Status of all of the above" \
-      back "Back") || return 0
+      back "Return to the previous menu") || return 0
     case "$c" in
       wifi) wifi_menu ;;
       ip) net_static_menu ;;
@@ -123,7 +123,7 @@ settings_receiver_menu() {
       region "1  Region: world / United States (978 MHz UAT)" \
       units "2  Units: metric / imperial" \
       location "3  Antenna position (updates it everywhere)" \
-      back "Back") || return 0
+      back "Return to the previous menu") || return 0
     case "$c" in
       region) settings_region && wt_msg "Region saved: $(cfg_get REGION world).\n\nIn menu 1 ADSB the 978 MHz UAT option appears for the United States." 10 ;;
       units) settings_units && restart_flightinfo ;;
@@ -149,7 +149,7 @@ settings_wall_menu() {
       photos "5  Aircraft photos on/off" \
       routes "6  Flight origin/destination on/off" \
       data "7  Monthly aircraft-data refresh on/off" \
-      back "Back") || return 0
+      back "Return to the previous menu") || return 0
     case "$c" in
       style) settings_style && restart_flightinfo && wt_msg "Look saved: $(cfg_get DISPLAY_MODE dots).\n\nThis is the default for every screen. A tablet that chose its own look (?mode=... or the gear icon) keeps it until you press Reset in its gear panel." 11 ;;
       color) settings_color && restart_flightinfo ;;
@@ -173,7 +173,7 @@ settings_menu() {
       receiver "2  Receiver: region, units, antenna position" \
       wall "3  ZenithBoard wall: radius, look, colour, photos, routes..." \
       logs "4  Logs: size limit, review, automatic cleaning" \
-      back "Back") || return 0
+      back "Return to the previous menu") || return 0
     case "$c" in
       network) network_menu ;;
       receiver) settings_receiver_menu ;;

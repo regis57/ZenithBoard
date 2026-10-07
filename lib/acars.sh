@@ -81,10 +81,10 @@ acars_menu() {
   while true; do
     if is_acars; then
       choice=$(wt_menu "ACARS is INSTALLED.\nDashboard: http://$(local_ip):3000/\nDongle: '$(cfg_get ACARS_SDR)'  Frequencies: $(cfg_get ACARS_FREQS)\nRetention: $(cfg_get ACARS_RETENTION_DAYS) days" \
-        freqs "Change dongle / frequencies" anon "Grafana: allow anonymous viewing on the LAN" update "Update / reinstall" remove "Remove ACARS" back "Back") || return 0
+        freqs "Change dongle / frequencies" anon "Grafana: allow anonymous viewing on the LAN" update "Update / reinstall" remove "Remove ACARS" back "Return to the previous menu") || return 0
     else
       choice=$(wt_menu "ACARS is not installed.\nOptional: collects ACARS aircraft messages (131 MHz) into Grafana, filtered and\nrolled every 7 days. REQUIRES a 2nd SDR dongle." \
-        install "Install ACARS + Grafana" back "Back") || return 0
+        install "Install ACARS + Grafana" back "Return to the previous menu") || return 0
     fi
     case "$choice" in
       install|update)

@@ -80,7 +80,7 @@ logs_menu() {
       limit "Size: set a maximum (MB)" \
       default "Size: back to the system default" \
       cleanall "Delete ALL logs now" \
-      back "Back") || return 0
+      back "Return to the previous menu") || return 0
     case "$c" in
       review) clear; logs_review; read -rp "Press Enter to continue..." _ ;;
       auto)
