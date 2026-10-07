@@ -26,7 +26,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.9.1"
+VERSION = "0.9.2"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -288,6 +288,7 @@ def build_planes(data, lat, lon, radius_km, airlines=None, photo_lookup=None, de
             route = ac["demo_route"]
         else:
             route = route_lookup(flight) if route_lookup is not None else None
+            route = route_plausible(route, ac["lat"], ac["lon"], ac.get("track"), ac.get("gs"))
         # The decoder only knows the type and the registration when its aircraft database has the airframe. When it
         # does not, ask adsbdb.com (by the aircraft's hex code) so the model is still shown and the silhouette fits.
         reg, code, found = ac.get("r"), ac.get("t"), None
@@ -471,6 +472,10 @@ def _airport(a):
     out = {"iata": str(a.get("iata_code") or ""), "icao": str(a.get("icao_code") or ""),
            "name": str(a.get("name") or ""), "city": str(a.get("municipality") or ""),
            "country": str(a.get("country_iso_name") or "")}
+    for key, src in (("lat", "latitude"), ("lon", "longitude")):     # kept only to check the route is plausible, never shown
+        v = a.get(src)
+        if isinstance(v, (int, float)) and not isinstance(v, bool):
+            out[key] = float(v)
     return out if (out["name"] or out["city"] or out["iata"] or out["icao"]) else None
 
 
@@ -482,6 +487,58 @@ def parse_route(data):
         return None
     origin, dest = _airport(fr.get("origin")), _airport(fr.get("destination"))
     return {"from": origin, "to": dest} if (origin or dest) else None
+
+
+def _same_airport(a, b):
+    for k in ("icao", "iata"):
+        if a.get(k) and a.get(k) == b.get(k):
+            return True
+    return bool(a.get("name")) and a.get("name") == b.get("name") and a.get("city") == b.get("city")
+
+
+def _leg_distance_km(plat, plon, a, b):
+    """Distance from the point to the great-circle segment a-b (both (lat, lon))."""
+    r = 6371.0088
+    length = haversine_km(a[0], a[1], b[0], b[1])
+    d13 = haversine_km(a[0], a[1], plat, plon) / r
+    diff = math.radians(bearing_deg(a[0], a[1], plat, plon) - bearing_deg(a[0], a[1], b[0], b[1]))
+    xt = math.asin(max(-1.0, min(1.0, math.sin(d13) * math.sin(diff)))) * r
+    along = r * math.atan2(math.sin(d13) * math.cos(diff), math.cos(d13))
+    if along < 0:
+        return haversine_km(plat, plon, a[0], a[1])
+    if along > length:
+        return haversine_km(plat, plon, b[0], b[1])
+    return abs(xt)
+
+
+ROUTE_CORRIDOR_MIN_KM = 120         # a real flight may leave the straight line by this much (weather, air traffic control)...
+ROUTE_CORRIDOR_FRACTION = 0.2       # ...or by this share of the route length when that is more
+ROUTE_HEADING_MAX_DEG = 100         # flying more than this away from the destination: probably the other direction of the callsign
+
+
+def route_plausible(route, plat, plon, track=None, gs=None):
+    """The database knows callsigns, not flights: a callsign can be reused for another route. Drop an answer that cannot
+    be this flight: same airport twice, an aircraft far from the line between the two airports, or one flying away from
+    the destination. When it cannot be checked (no airport position) the route is kept."""
+    if not route:
+        return route
+    a, b = route.get("from"), route.get("to")
+    if a and b and _same_airport(a, b):
+        return None
+    if not (a and b and "lat" in a and "lon" in a and "lat" in b and "lon" in b):
+        return route
+    pa, pb = (a["lat"], a["lon"]), (b["lat"], b["lon"])
+    length = haversine_km(pa[0], pa[1], pb[0], pb[1])
+    if length < 30:
+        return None
+    if _leg_distance_km(plat, plon, pa, pb) > max(ROUTE_CORRIDOR_MIN_KM, ROUTE_CORRIDOR_FRACTION * length):
+        return None
+    far = min(haversine_km(plat, plon, pa[0], pa[1]), haversine_km(plat, plon, pb[0], pb[1])) > 50
+    if far and isinstance(track, (int, float)) and isinstance(gs, (int, float)) and gs >= 100:
+        off = abs((track - bearing_deg(plat, plon, pb[0], pb[1]) + 180) % 360 - 180)
+        if off > ROUTE_HEADING_MAX_DEG:
+            return None
+    return route
 
 
 def _route_api(callsign):

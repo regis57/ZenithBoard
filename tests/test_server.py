@@ -196,6 +196,47 @@ class RouteTests(unittest.TestCase):
         self.assertEqual(half["from"]["city"], "Metz")
         self.assertIsNone(half["to"])
 
+    def test_implausible_routes_are_dropped(self):
+        def ap(code, lat, lon, city=""):
+            return {"iata": code, "icao": "", "name": code + " Airport", "city": city or code, "country": "", "lat": lat, "lon": lon}
+        ema, lux = ap("EMA", 52.83, -1.33), ap("LUX", 49.63, 6.20)
+        mad, mxp = ap("MAD", 40.49, -3.57), ap("MXP", 45.63, 8.72)
+        ok = server.route_plausible
+        # the same airport twice (a real case: East Midlands to East Midlands)
+        self.assertIsNone(ok({"from": ema, "to": dict(ema)}, 49.3, 6.3, 60, 250))
+        # LUX-EMA seen near the line, heading to EMA (west-north-west): kept
+        r = {"from": lux, "to": ema}
+        self.assertIs(ok(r, 50.5, 4.0, 300, 250), r)
+        # Madrid-Milan, but the aircraft is far north of that line over Lorraine: dropped
+        self.assertIsNone(ok({"from": mad, "to": mxp}, 49.0, 6.5, 120, 450))
+        # on the Madrid-Milan line: kept
+        r = {"from": mad, "to": mxp}
+        self.assertIs(ok(r, 43.0, 3.0, 65, 450), r)
+        # on the line but flying the other way (callsign reused for the return leg): dropped
+        self.assertIsNone(ok(r, 43.0, 3.0, 245, 450))
+        # no airport position (older cache / odd answer): cannot check, kept
+        r2 = {"from": {"city": "A"}, "to": {"city": "B"}}
+        self.assertIs(ok(r2, 49.0, 6.0, 0, 400), r2)
+        self.assertIsNone(ok(None, 49.0, 6.0))
+        # just after take-off the heading may point anywhere: not judged near the airports
+        r = {"from": lux, "to": ema}
+        self.assertIs(ok(r, 49.7, 6.3, 150, 180), r)
+        # only one end known: kept
+        r3 = {"from": lux, "to": None}
+        self.assertIs(ok(r3, 40.0, 0.0, 0, 400), r3)
+
+    def test_parse_keeps_airport_position_only_when_given(self):
+        a = dict(ADSBDB_SAMPLE["response"]["flightroute"]["origin"], latitude=48.35, longitude=11.78)
+        r = server.parse_route({"response": {"flightroute": {"origin": a, "destination": ADSBDB_SAMPLE["response"]["flightroute"]["destination"]}}})
+        self.assertEqual((r["from"]["lat"], r["from"]["lon"]), (48.35, 11.78))
+        self.assertNotIn("lat", r["to"])
+
+    def test_build_planes_drops_a_route_that_cannot_be_this_flight(self):
+        ema = {"iata": "EMA", "icao": "EGNX", "name": "East Midlands", "city": "East Midlands", "country": "GB", "lat": 52.83, "lon": -1.33}
+        data = {"aircraft": [{"hex": "4b0001", "flight": "LGL12", "lat": 49.25, "lon": 6.22, "seen_pos": 0, "track": 60, "gs": 250}]}
+        planes, _ = server.build_planes(data, 49.246, 6.223, 10, {}, None, False, None, lambda cs: {"from": ema, "to": dict(ema)})
+        self.assertIsNone(planes[0]["route"])
+
     def test_only_airline_callsigns_are_looked_up(self):
         asked = []
         real = server._routes
