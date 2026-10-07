@@ -14,6 +14,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$ROOT/lib/acars.sh"
 . "$ROOT/lib/logs.sh"
 . "$ROOT/lib/uat.sh"
+. "$ROOT/lib/wifi.sh"
 . "$ROOT/lib/update.sh"
 
 usage() { echo "Usage: sudo ./install.sh [--deploy] [--uninstall-all] [--version]      (to upgrade: sudo zenithboard update)"; }
@@ -90,9 +91,10 @@ settings_color() {
 settings_menu() {
   local c
   while true; do
-    c=$(wt_menu "Settings (applied immediately)\n\nRegion: $(cfg_get REGION world)   Units: $(cfg_get UNITS)   Radius: $(cfg_get RADIUS)   Position: $(cfg_get LAT), $(cfg_get LON)\nSeconds per aircraft: $(cfg_get CYCLE_SECONDS)   Photos: $(cfg_get SHOW_PHOTOS)   Routes: $(cfg_get SHOW_ROUTES 1)   Colour: $(cfg_get THEME amber)\nMonthly aircraft-data refresh: $( [ "$(cfg_get AUTO_DATA_REFRESH 1)" = 1 ] && echo ON || echo OFF )" \
-      region "Region: world / United States (978 MHz UAT)" units "Units: metric / imperial" color "Colour: amber / green / red / white" radius "Detection radius" location "Antenna position (updates it everywhere)" cycle "Seconds per aircraft" photos "Aircraft photos on/off" routes "Flight origin/destination on/off" data "Monthly aircraft-data refresh on/off" logs "Logs: size limit, review, clean" back "Back") || return 0
+    c=$(wt_menu "Settings (applied immediately)\n\nWi-Fi: $(wifi_summary)\nRegion: $(cfg_get REGION world)   Units: $(cfg_get UNITS)   Radius: $(cfg_get RADIUS)   Position: $(cfg_get LAT), $(cfg_get LON)\nSeconds per aircraft: $(cfg_get CYCLE_SECONDS)   Photos: $(cfg_get SHOW_PHOTOS)   Routes: $(cfg_get SHOW_ROUTES 1)   Colour: $(cfg_get THEME amber)\nMonthly aircraft-data refresh: $( [ "$(cfg_get AUTO_DATA_REFRESH 1)" = 1 ] && echo ON || echo OFF )" \
+      wifi "Wi-Fi: on/off, country, networks, password" region "Region: world / United States (978 MHz UAT)" units "Units: metric / imperial" color "Colour: amber / green / red / white" radius "Detection radius" location "Antenna position (updates it everywhere)" cycle "Seconds per aircraft" photos "Aircraft photos on/off" routes "Flight origin/destination on/off" data "Monthly aircraft-data refresh on/off" logs "Logs: size limit, review, clean" back "Back") || return 0
     case "$c" in
+      wifi) wifi_menu ;;
       region) settings_region && wt_msg "Region saved: $(cfg_get REGION world).\n\nIn menu 1 ADSB the 978 MHz UAT option appears for the United States." 10 ;;
       units) settings_units && restart_flightinfo ;;
       logs) logs_menu ;;
@@ -118,6 +120,7 @@ settings_menu() {
 uninstall_all() {
   wt_yesno "UNINSTALL EVERYTHING?\n\nThis removes FlightInfo, ACARS, all feeders and the decoder installed through this menu." 12 || return 0
   clear
+  wifi_remove_unit
   is_acars && remove_acars
   is_flightinfo && remove_flightinfo
   is_planefinder && remove_planefinder
@@ -141,7 +144,7 @@ main_menu() {
       1 "ADSB        - decoder + share to ADSB Exchange, FlightAware, FR24..." \
       2 "FlightInfo  - dot-matrix wall for an old tablet" \
       3 "ACARS       - optional ACARS messages in Grafana (2nd dongle)$(weak_hw_tag)" \
-      4 "Settings    - region, units, radius, position, logs" \
+      4 "Settings    - Wi-Fi, region, units, radius, position, logs" \
       5 "Status      - what is running" \
       6 "Update      - upgrade ZenithBoard, decoder, feeders, ACARS" \
       7 "Uninstall everything" \

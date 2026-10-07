@@ -17,6 +17,7 @@ jobs:
           bash tests/test_versions.sh
           bash tests/test_fr24_key.sh
           bash tests/test_logs_uat.sh
+          bash tests/test_wifi.sh
       - name: JavaScript tests
         run: |
           node tests/test_format.js

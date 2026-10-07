@@ -276,6 +276,25 @@ Then open **`http://<the-pi-address>:8081/`** (or `http://localhost:8081/` on th
 
 ---
 
+## Wi-Fi (optional)
+
+Menu *4 Settings → Wi-Fi* (first entry) sets up the Pi's Wi-Fi without leaving the installer. It uses NetworkManager, the default on Raspberry Pi OS Bookworm and newer. On a Pi that does not have it (older images), the menu offers to install and enable it, after an explicit confirmation: the network is interrupted for a few seconds, `dhcpcd` is switched off, and Wi-Fi networks stored the old way are not carried over. Do it with the Ethernet cable plugged in (the command is `sudo zenithboard wifi install-nm`).
+
+**A wired Ethernet cable is still the best choice for a feeder, and it stays the preferred connection.** When the cable is plugged in it carries all the traffic (lowest route metric); Wi-Fi is only the fallback and takes over if the cable is unplugged. The menu reminds you of this when you open it, and warns you before any change that could cut an SSH session running over Wi-Fi.
+
+| Menu item | Command |
+|---|---|
+| **Turn Wi-Fi on / off** (kept after a reboot) | `sudo zenithboard wifi on` · `sudo zenithboard wifi off` |
+| **Country** (required by law, sets the allowed channels) | `sudo zenithboard wifi country FR` |
+| **Find and connect**: networks in range with signal strength, then the password | `zenithboard wifi scan` · `sudo zenithboard wifi connect "My network"` |
+| **Hidden network** | `sudo zenithboard wifi connect "My network" --hidden` |
+| **Saved networks**: connect, change password, auto-connect on/off, forget | `zenithboard wifi list` · `sudo zenithboard wifi forget "My network"` |
+| **Status** (radio, country, network, wired/Wi-Fi priority) | `zenithboard wifi status` |
+
+What is kept after a crash, a power cut or a reboot: each network is a NetworkManager profile file (root only, readable by nobody else, `/etc/NetworkManager/system-connections/zenithboard-wifi-*.nmconnection`), joined automatically at boot. The on/off choice and the country are saved in the ZenithBoard settings and re-applied at every boot by a small service (`zenithboard-wifi`). A Pi that was set up some other way is not touched until you use this menu once. The password is typed in a hidden field and goes straight into the protected file: it never appears on a command line.
+
+Supported: networks with a password (WPA2, WPA3) and open networks. Not supported here: company networks (802.1X) and captive portals. *Not yet tried on a real Pi by the author (see [Known limits](#known-limits)): please report anything odd.*
+
 ## Logs: size, review, clean (optional)
 
 Every service writes to the system journal, which already limits itself (up to 10 % of the disk, at most 4 GB, and it is kept in memory on many Pi setups). On a small SD card you may want less. Nothing changes unless you ask.
@@ -375,6 +394,7 @@ sudo /opt/zenithboard/install.sh --uninstall-all      # remove everything
 * Photos come from Planespotters and need internet on the Pi. The live photo lookup has not yet been checked against the real service on a Raspberry Pi; the demo and the tests exercise the same code with stand-ins. Run `zenithboard photos test` on your own Pi to confirm it works there.
 * Routes come from adsbdb.com by callsign. The answer format is checked against the real service and covered by tests, but the live lookup has not yet been run on a Raspberry Pi: `REAL_PHOTOS=1 ./bin/zenithboard-demo` shows the real route of the demo's two airliners.
 * The airline name list is built in (about 90 major airlines); other airlines show the callsign only.
+* The Wi-Fi menu was written and unit-tested without a Raspberry Pi in hand (it relies on NetworkManager's `nmcli` and profile files). Try it with the Ethernet cable plugged in, and report anything odd.
 
 ## Contributing & tests
 
