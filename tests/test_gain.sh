@@ -75,7 +75,7 @@ out=$(gain_check 2>&1)
 check "8% strong -> too high, says the step"  'echo "$out" | grep -q "TOO HIGH" && echo "$out" | grep -q "38.6 dB"'
 check "shows messages, range"                 'echo "$out" | grep -q "10000 messages" && echo "$out" | grep -q "250 km"'
 stats readsb 10000 30 250000
-check "0.3% strong, not at max -> try one step up" 'gain_check 2>&1 | grep -q "ROOM TO RAISE.*42.1 dB"'
+check "0.3% strong, not at max -> judge at a busy hour, then one step up" 'gain_check 2>&1 | grep -q "LOW SHARE.*BUSY hour.*42.1 dB"'
 stats readsb 10000 300 250000
 check "3% -> good, leave it"                  'gain_check 2>&1 | grep -q "^GOOD"'
 printf 'RECEIVER_OPTIONS="--gain 49.6"\n' > "$r"; stats readsb 10000 30 250000

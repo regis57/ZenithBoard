@@ -402,7 +402,7 @@ The gain is how much the dongle amplifies the radio signal. Too low and distant 
 | **Check** | `zenithboard gain check` reads the decoder's own statistics of the last 15 minutes (messages, farthest aircraft, **share of very strong messages**) and says *too high*, *good* or *room to raise* |
 | **Change** | `sudo zenithboard gain set max` · `gain set 40.2` · `gain down` · `gain up` · `gain set default` · the real steps: `zenithboard gain steps` |
 
-* **The rule of thumb:** 1 % to 5 % very strong messages is good. Above 5 % lower the gain by **one step**; under 1 % with a gain below the maximum, you may try one step up.
+* **The rule of thumb:** 1 % to 5 % very strong messages is good. Above 5 % lower the gain by **one step**; under 1 % with a gain below the maximum is no reason to change anything by itself: the share depends on traffic and is lower at night. Check again at a **busy hour**, and only if it is still under 1 % then, try one step up.
 * **Method:** change one step, wait 15 to 30 minutes (ideally at a busy time of day), run the check again, and keep what gives the most aircraft and the longest range. There is no universal best value: it depends on your dongle, antenna, any LNA or filter, and what transmits nearby.
 * **The dongle only has fixed steps** (0.0, 0.9, 1.4 … 48.0, 49.6 dB): a value such as 30 becomes 29.7.
 * **Careful with `-10`:** in the decoder options `--gain -10` does not mean "maximum", it switches the dongle's own automatic gain on, which is usually worse for aircraft. The check tells you when that is what you have. readsb's `--gain=auto` is a different, experimental feature and is left alone unless you replace it.
