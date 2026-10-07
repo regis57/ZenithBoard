@@ -124,12 +124,11 @@ wt_input() { whiptail --title "$WT_TITLE" --inputbox "$1" 10 76 "${2:-}" 3>&1 1>
 # there is no Cancel button next to it (that made two). A menu without such an entry (a plain picker) keeps its button, named
 # Back. Esc always works too.
 wt_menu() {
-  local t="$1" i out=() cancel=(--cancel-button Back); shift
+  local t="$1" i cancel=(--cancel-button Back); shift
   for ((i = 1; i <= $#; i += 2)); do
     case "${!i}" in back|0) cancel=(--nocancel) ;; esac
   done
-  out=("$@")
-  whiptail --title "$WT_TITLE" "${cancel[@]}" --menu "$t" 22 76 12 "${out[@]}" 3>&1 1>&2 2>&3
+  whiptail --title "$WT_TITLE" "${cancel[@]}" --menu "$t" 22 76 12 "$@" 3>&1 1>&2 2>&3
 }
 # wt_radio "text" tag item ON|OFF ...
 wt_radio() { local t="$1"; shift; whiptail --title "$WT_TITLE" --radiolist "$t" 20 76 8 "$@" 3>&1 1>&2 2>&3; }
