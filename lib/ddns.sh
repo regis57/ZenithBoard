@@ -62,14 +62,22 @@ ddns_reason() {   # a human sentence for a failed answer
 }
 
 # ------------------------------------------------------------------ run
+# ddns_update [RETRIES]   one request; with RETRIES it asks again a few seconds later when the answer is a refusal or no answer
+# (used right after the setup, when the network or the service may still be settling). The service's own short answer
+# (OK, KO, good, badauth...) is kept in the status line: it never contains the token.
 ddns_update() {
-  local p r res
+  local p r res tries="${1:-0}" n=0
   p=$(cfg_get DDNS_PROVIDER none)
   [ "$p" != none ] && [ -f "$DDNS_CURL" ] || return 0
-  r=$(curl -K "$DDNS_CURL" 2>&1 | head -c 200)
-  res=$(ddns_interpret "$p" "$r")
+  while :; do
+    r=$(curl -K "$DDNS_CURL" 2>&1 | head -c 200 | tr -d '\r' | head -1)
+    res=$(ddns_interpret "$p" "$r")
+    [ "$res" != fail ] && break
+    [ "$n" -lt "$tries" ] || break
+    n=$((n + 1)); sleep "${ZB_DDNS_RETRY_SLEEP:-5}"
+  done
   mkdir -p "$(dirname "$DDNS_STATE")" 2>/dev/null
-  if [ "$res" = fail ]; then printf '%s FAILED: %s\n' "$(date '+%F %T')" "$(ddns_reason "$r")" > "$DDNS_STATE" 2>/dev/null
+  if [ "$res" = fail ]; then printf '%s FAILED: %s (answer: %s)\n' "$(date '+%F %T')" "$(ddns_reason "$r")" "${r:-none}" > "$DDNS_STATE" 2>/dev/null
   else printf '%s ok (%s)\n' "$(date '+%F %T')" "$res" > "$DDNS_STATE" 2>/dev/null; fi
   [ "$res" != fail ]
 }
@@ -97,7 +105,7 @@ ddns_set() {
   umask "$old"; chmod 600 "$DDNS_CURL"
   cfg_set DDNS_PROVIDER "$p"; cfg_set DDNS_HOST "$h"
   ddns_install_units
-  if ddns_update; then echo "OK: $(cat "$DDNS_STATE" 2>/dev/null)"; else echo "Saved, but the first update failed: $(cat "$DDNS_STATE" 2>/dev/null)"; return 2; fi
+  if ddns_update 2; then echo "OK: $(cat "$DDNS_STATE" 2>/dev/null)"; else echo "Saved, but the first update failed (asked 3 times): $(cat "$DDNS_STATE" 2>/dev/null)  The timer asks again every 5 minutes. Check later with: zenithboard ddns status"; return 2; fi
 }
 ddns_off() {
   cfg_set DDNS_PROVIDER none; rm -f "$DDNS_CURL" "$DDNS_STATE"; ddns_remove_units
@@ -122,7 +130,8 @@ ddns_status() {
   res=$(getent hosts "${h%.}" 2>/dev/null | awk '{print $1; exit}')
   echo "Your public address (as the internet sees it): ${pub:-unknown}"
   echo "The name points to:                            ${res:-does not resolve yet}"
-  if [ -n "$pub" ] && [ -n "$res" ] && [ "$pub" != "$res" ]; then echo "They differ: wait a few minutes, or run  sudo zenithboard ddns update"; fi
+  if [ -n "$pub" ] && [ -n "$res" ] && [ "$pub" = "$res" ]; then echo "RESULT: the name points to your address, so it works (an older FAILED line above is only the last answer the service gave; the next refresh replaces it)."
+  elif [ -n "$pub" ] && [ -n "$res" ]; then echo "They differ: wait a few minutes, or run  sudo zenithboard ddns update"; fi
   case "$pub" in 100.6[4-9].*|100.[7-9]*.*|100.1[01]*.*|100.12[0-7].*) echo "WARNING: $pub is a shared (CGNAT) address: your provider does not give you a public one, so a port cannot be opened to your Pi. Ask the provider for a public address, or use a VPN such as Tailscale." ;; esac
 }
 ddns_links() {   # the addresses once the router forwards the ports
