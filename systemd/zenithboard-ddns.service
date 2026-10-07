@@ -1,0 +1,8 @@
+[Unit]
+Description=ZenithBoard domain name update (tells your dynamic-DNS service the current address)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/zenithboard/bin/zenithboard ddns update

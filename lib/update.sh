@@ -72,6 +72,7 @@ zb_update_components() {
     is_grafana && { apt_install --only-upgrade grafana || warn "grafana update failed"; install -m 644 "$ZB_HOME/acars/grafana-dashboard.json" /var/lib/grafana/zenithboard-dashboards/acars.json; systemctl restart grafana-server; }
   fi
   if [ -f /etc/systemd/system/zenithboard-wifi.service ]; then wifi_install_unit; fi
+  if [ "$(cfg_get DDNS_PROVIDER none)" != none ]; then ddns_install_units; fi
   zb_mlat_guard
   log "Update finished. Check:  zenithboard status"
 }
