@@ -26,7 +26,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.9.1"
+VERSION = "0.9.2"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -260,7 +260,7 @@ def describe_type(ac, types=None):
 
 # --------------------------------------------------------------------------- planes
 def build_planes(data, lat, lon, radius_km, airlines=None, photo_lookup=None, demo=False, types=None, route_lookup=None,
-                 aircraft_lookup=None):
+                 aircraft_lookup=None, route_fallback=None):
     """Return (planes_in_radius_sorted_by_distance, total_with_position)."""
     airlines = airlines or {}
     planes, total = [], 0
@@ -288,6 +288,13 @@ def build_planes(data, lat, lon, radius_km, airlines=None, photo_lookup=None, de
             route = ac["demo_route"]
         else:
             route = route_lookup(flight) if route_lookup is not None else None
+            checked = route_plausible(route, ac["lat"], ac["lon"], ac.get("track"), ac.get("gs"))
+            if route and not checked and route_fallback is not None:      # a second opinion, only when the first answer is wrong
+                for leg in route_fallback(flight) or ():
+                    checked = route_plausible(leg, ac["lat"], ac["lon"], ac.get("track"), ac.get("gs"), strict=True)
+                    if checked:
+                        break
+            route = checked
         # The decoder only knows the type and the registration when its aircraft database has the airframe. When it
         # does not, ask adsbdb.com (by the aircraft's hex code) so the model is still shown and the silhouette fits.
         reg, code, found = ac.get("r"), ac.get("t"), None
@@ -471,6 +478,10 @@ def _airport(a):
     out = {"iata": str(a.get("iata_code") or ""), "icao": str(a.get("icao_code") or ""),
            "name": str(a.get("name") or ""), "city": str(a.get("municipality") or ""),
            "country": str(a.get("country_iso_name") or "")}
+    for key, src in (("lat", "latitude"), ("lon", "longitude")):     # kept only to check the route is plausible, never shown
+        v = a.get(src)
+        if isinstance(v, (int, float)) and not isinstance(v, bool):
+            out[key] = float(v)
     return out if (out["name"] or out["city"] or out["iata"] or out["icao"]) else None
 
 
@@ -482,6 +493,58 @@ def parse_route(data):
         return None
     origin, dest = _airport(fr.get("origin")), _airport(fr.get("destination"))
     return {"from": origin, "to": dest} if (origin or dest) else None
+
+
+def _same_airport(a, b):
+    for k in ("icao", "iata"):
+        if a.get(k) and a.get(k) == b.get(k):
+            return True
+    return bool(a.get("name")) and a.get("name") == b.get("name") and a.get("city") == b.get("city")
+
+
+def _leg_distance_km(plat, plon, a, b):
+    """Distance from the point to the great-circle segment a-b (both (lat, lon))."""
+    r = 6371.0088
+    length = haversine_km(a[0], a[1], b[0], b[1])
+    d13 = haversine_km(a[0], a[1], plat, plon) / r
+    diff = math.radians(bearing_deg(a[0], a[1], plat, plon) - bearing_deg(a[0], a[1], b[0], b[1]))
+    xt = math.asin(max(-1.0, min(1.0, math.sin(d13) * math.sin(diff)))) * r
+    along = r * math.atan2(math.sin(d13) * math.cos(diff), math.cos(d13))
+    if along < 0:
+        return haversine_km(plat, plon, a[0], a[1])
+    if along > length:
+        return haversine_km(plat, plon, b[0], b[1])
+    return abs(xt)
+
+
+ROUTE_CORRIDOR_MIN_KM = 120         # a real flight may leave the straight line by this much (weather, air traffic control)...
+ROUTE_CORRIDOR_FRACTION = 0.2       # ...or by this share of the route length when that is more
+ROUTE_HEADING_MAX_DEG = 100         # flying more than this away from the destination: probably the other direction of the callsign
+
+
+def route_plausible(route, plat, plon, track=None, gs=None, strict=False):
+    """The database knows callsigns, not flights: a callsign can be reused for another route. Drop an answer that cannot
+    be this flight: same airport twice, an aircraft far from the line between the two airports, or one flying away from
+    the destination. When it cannot be checked (no airport position) the route is kept, unless strict."""
+    if not route:
+        return route
+    a, b = route.get("from"), route.get("to")
+    if a and b and _same_airport(a, b):
+        return None
+    if not (a and b and "lat" in a and "lon" in a and "lat" in b and "lon" in b):
+        return None if strict else route          # strict (a second opinion): only a route that could be checked is believed
+    pa, pb = (a["lat"], a["lon"]), (b["lat"], b["lon"])
+    length = haversine_km(pa[0], pa[1], pb[0], pb[1])
+    if length < 30:
+        return None
+    if _leg_distance_km(plat, plon, pa, pb) > max(ROUTE_CORRIDOR_MIN_KM, ROUTE_CORRIDOR_FRACTION * length):
+        return None
+    far = min(haversine_km(plat, plon, pa[0], pa[1]), haversine_km(plat, plon, pb[0], pb[1])) > 50
+    if far and isinstance(track, (int, float)) and isinstance(gs, (int, float)) and gs >= 100:
+        off = abs((track - bearing_deg(plat, plon, pb[0], pb[1]) + 180) % 360 - 180)
+        if off > ROUTE_HEADING_MAX_DEG:
+            return None
+    return route
 
 
 def _route_api(callsign):
@@ -507,6 +570,80 @@ def lookup_route(callsign):
     """Non-blocking: the route we already know for this callsign; a request is queued when it is missing."""
     cs = (callsign or "").strip().upper()
     return _routes.get(cs) if CALLSIGN_RE.match(cs) else None
+
+
+# --------------------------------------------------------------------------- routes, second opinion (hexdb.io, optional)
+# Asked ONLY when adsbdb gave a route that cannot be this flight, once per callsign (answers kept for hours). hexdb gives
+# airport codes only, so the position of each airport is asked once and kept for good. Several legs ("EGNX-ELLX-EGNX")
+# are all offered; the wall takes the first one the aircraft can really be on.
+HEXDB_URL = "https://hexdb.io/api/v1"
+ICAO_AIRPORT_RE = re.compile(r"^[A-Z0-9]{4}$")
+_airport_cache = {}                 # ICAO code -> airport dict (with lat/lon) or None; small and kept until restart
+_airport_lock = threading.Lock()
+
+
+def _hexdb_json(path):
+    req = urllib.request.Request(HEXDB_URL + path, headers={"User-Agent": "ZenithBoard/%s (+https://github.com/regis57/ZenithBoard)" % VERSION})
+    with urllib.request.urlopen(req, timeout=10) as resp:
+        return json.load(resp)
+
+
+def _hexdb_airport(code):
+    """-> airport dict with lat/lon, or None. Raises when hexdb cannot be reached (so nothing wrong is remembered)."""
+    with _airport_lock:
+        if code in _airport_cache:
+            return _airport_cache[code]
+    try:
+        d = _hexdb_json("/airport/icao/%s" % code)
+        lat, lon = d.get("latitude"), d.get("longitude")
+        ok = isinstance(lat, (int, float)) and isinstance(lon, (int, float))
+        a = {"iata": str(d.get("iata") or ""), "icao": code, "name": str(d.get("airport") or ""),
+             "city": str(d.get("location") or ""), "country": str(d.get("country_code") or ""),
+             "lat": float(lat), "lon": float(lon)} if ok else None
+    except urllib.error.HTTPError as exc:
+        if exc.code != 404:
+            raise
+        a = None
+    with _airport_lock:
+        if len(_airport_cache) > 2000:
+            _airport_cache.clear()
+        _airport_cache[code] = a
+    return a
+
+
+def parse_hexdb_route(text):
+    """'EGNX-ELLX-EGNX' -> [('EGNX','ELLX'), ('ELLX','EGNX')]; anything odd -> []."""
+    codes = [c.strip().upper() for c in str(text or "").split("-")]
+    if not 2 <= len(codes) <= 6 or not all(ICAO_AIRPORT_RE.match(c) for c in codes):
+        return []
+    return [(codes[i], codes[i + 1]) for i in range(len(codes) - 1) if codes[i] != codes[i + 1]]
+
+
+def _route2_api(callsign):
+    """-> (list of routes|None, ok)."""
+    try:
+        legs = parse_hexdb_route(_hexdb_json("/route/icao/%s" % callsign).get("route"))
+        out = []
+        for a, b in legs[:4]:
+            pa, pb = _hexdb_airport(a), _hexdb_airport(b)
+            if pa and pb:
+                out.append({"from": pa, "to": pb})
+            time.sleep(0.3)
+        return (out or None), True
+    except urllib.error.HTTPError as exc:
+        return None, exc.code == 404
+    except Exception as exc:
+        print("route (hexdb) %s failed (%s), retrying in %d s" % (callsign, exc, ROUTE_RETRY_S), file=sys.stderr, flush=True)
+        return None, False
+
+
+_routes2 = ThrottledLookup(lambda k: _route2_api(k), ROUTE_GAP_S, ROUTE_RETRY_S, ROUTE_MISS_RETRY_S, found_ttl=ROUTE_TTL_S, max_queue=20)
+
+
+def lookup_route_fallback(callsign):
+    """Non-blocking: the routes hexdb knows for this callsign (a list), or None while unknown / not asked yet."""
+    cs = (callsign or "").strip().upper()
+    return _routes2.get(cs) if CALLSIGN_RE.match(cs) else None
 
 
 # --------------------------------------------------------------------------- aircraft model (adsbdb.com, optional)
@@ -631,8 +768,9 @@ class Handler(BaseHTTPRequestHandler):
         lookup = lookup_photo if cfg_bool(cfg, "SHOW_PHOTOS") and real_lookups else None
         route_lookup = lookup_route if cfg_bool(cfg, "SHOW_ROUTES") and real_lookups else None
         aircraft_lookup = lookup_aircraft if cfg_bool(cfg, "SHOW_ROUTES") and real_lookups else None
+        route_fallback = lookup_route_fallback if route_lookup is not None else None
         planes, total = build_planes(data, cfg_float(cfg, "LAT", 0), cfg_float(cfg, "LON", 0), radius_km,
-                                     load_airlines(cfg), lookup, demo, load_types(cfg), route_lookup, aircraft_lookup)
+                                     load_airlines(cfg), lookup, demo, load_types(cfg), route_lookup, aircraft_lookup, route_fallback)
         return self._send(200, {"planes": planes, "total": total, "radius_km": radius_km,
                                 "server_id": SERVER_ID, "updated": time.time()})
 

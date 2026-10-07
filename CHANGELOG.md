@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.2
+- **Wrong routes are no longer shown.** The route database knows *callsigns*, not flights, and a callsign can be reused for another route or the other direction. The wall now drops an answer that cannot be this flight: the same airport as origin and destination (seen: "East Midlands → East Midlands"), an aircraft far from the line between the two airports (more than 120 km, or 20 % of the route length), or one flying away from the destination. A blank route row is better than a wrong one. The airport positions used for this check are never displayed.
+- **Second opinion from hexdb.io**, only when adsbdb's answer is dropped as impossible: the callsign is asked once on [hexdb.io](https://www.hexdb.io/) (answers kept 12 h, a few requests in total, never from the display loop) and the wall takes the first leg of that route the aircraft can really be on. Airport positions are asked once each and kept until restart. If hexdb is unreachable nothing wrong is shown or remembered.
+
 ## 0.9.1
 - Gain check: an "under 1 % strong messages" reading no longer reads as an invitation to raise the gain. It now says the share depends on traffic (lower at night) and to check again at a busy hour first. README wording the same.
 
