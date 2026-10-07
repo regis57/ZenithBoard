@@ -83,6 +83,18 @@ wifi_set_radio maybe 2>/dev/null; rc=$?
 check "bad on/off value refused"            '[ "$rc" -ne 0 ] && [ "$(cfg_get WIFI)" = 1 ]'
 check "untouched Pi: WIFI empty by default" 'cfg_defaults; : > "$ZB_CONFIG"; cfg_defaults; [ -z "$(cfg_get WIFI)" ] && [ -z "$(cfg_get WIFI_COUNTRY)" ]'
 
+# ---- NetworkManager install: switches dhcpcd off, refuses over Wi-Fi (stubs, nothing is really installed)
+calls=""
+wifi_has_nm() { return 1; }; apt-get() { :; }; apt_install() { calls="$calls apt:$*"; }
+systemctl() { calls="$calls sc:$*"; case "$1 $2" in "is-enabled --quiet") [ "$3" = dhcpcd ] ;; *) return 0 ;; esac; }
+wifi_session_on_wifi() { return 1; }
+wifi_install_nm >/dev/null 2>&1
+check "install-nm: installs the package"        'case "$calls" in *apt:network-manager*) true ;; *) false ;; esac'
+check "install-nm: switches dhcpcd off, starts NM" 'case "$calls" in *"sc:disable --now dhcpcd"*"sc:enable --now NetworkManager"*) true ;; *) false ;; esac'
+calls=""; wifi_session_on_wifi() { return 0; }
+wifi_install_nm >/dev/null 2>&1; rc=$?
+check "install-nm: refused when the session runs over Wi-Fi, nothing touched" '[ "$rc" -ne 0 ] && [ -z "$calls" ]'
+
 # ---- the boot unit exists and calls the CLI
 check "systemd unit present"                'grep -q "wifi apply" systemd/zenithboard-wifi.service && grep -q "After=NetworkManager.service" systemd/zenithboard-wifi.service'
 

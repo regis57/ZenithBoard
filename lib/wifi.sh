@@ -206,6 +206,28 @@ wifi_status() {
   echo "$(wifi_wired_note)"
 }
 
+# ------------------------------------------------------------------ install NetworkManager when it is missing
+# Only for Pis that use something else (older Raspberry Pi OS with dhcpcd, or a custom setup). It is always opt-in:
+# switching the network manager briefly interrupts the network and forgets Wi-Fi networks stored the old way.
+wifi_install_nm() {
+  wifi_has_nm && { echo "NetworkManager is already running."; return 0; }
+  if wifi_session_on_wifi; then
+    err "You are connected to this Pi through Wi-Fi: switching network manager would cut you off. Use the Ethernet cable (or a screen and keyboard) and try again."; return 1
+  fi
+  log "Installing NetworkManager"
+  apt-get update -qq
+  apt_install network-manager || { err "Could not install NetworkManager."; return 1; }
+  local u
+  for u in dhcpcd dhcpcd5; do   # one network manager at a time: dhcpcd would fight NetworkManager for the same interfaces
+    if systemctl is-enabled --quiet "$u" 2>/dev/null || systemctl is-active --quiet "$u" 2>/dev/null; then
+      log "Switching off $u (NetworkManager takes over)"; systemctl disable --now "$u" 2>/dev/null || true
+    fi
+  done
+  systemctl enable --now NetworkManager || { err "NetworkManager did not start."; return 1; }
+  grep -qE '^iface (eth|en)[a-z0-9]* inet' /etc/network/interfaces 2>/dev/null && warn "/etc/network/interfaces still describes your wired interface: NetworkManager leaves it alone (unmanaged). Remove that block if the cable does not come back after a reboot."
+  echo "    NetworkManager is installed and running. Wi-Fi networks stored the old way (wpa_supplicant.conf) are not carried over: add them in the Wi-Fi menu. A reboot is recommended."
+}
+
 # ------------------------------------------------------------------ menus
 WIFI_COUNTRIES=(FR France BE Belgium CH Switzerland LU Luxembourg DE Germany AT Austria NL Netherlands IT Italy ES Spain PT Portugal GB "United Kingdom" IE Ireland DK Denmark SE Sweden NO Norway FI Finland PL Poland CZ Czechia GR Greece US "United States" CA Canada MX Mexico BR Brazil AU Australia NZ "New Zealand" JP Japan KR "South Korea" IN India ZA "South Africa" AE "United Arab Emirates")
 
@@ -314,7 +336,11 @@ wifi_toggle() {
 
 wifi_menu() {
   local c
-  if ! wifi_has_nm; then wt_msg "The Wi-Fi menu needs NetworkManager, the default on Raspberry Pi OS Bookworm and newer. It is not running here, so nothing is changed. Set Wi-Fi with raspi-config instead." 11; return 0; fi
+  if ! wifi_has_nm; then
+    wt_yesno "The Wi-Fi menu needs NetworkManager (the default on Raspberry Pi OS Bookworm and newer). It is not running on this Pi.\n\nInstall and enable it now?\n\nThis switches the Pi's network manager: the network is interrupted for a few seconds, and Wi-Fi networks stored the old way are forgotten (you re-add them here). Do it with the Ethernet cable plugged in. Nothing changes if you answer No." 18 || return 0
+    clear; wifi_install_nm; echo; read -rp "Press Enter to continue..." _
+    wifi_has_nm || return 0
+  fi
   [ -n "$(wifi_iface)" ] || { wt_msg "No Wi-Fi adapter found on this Pi." 7; return 0; }
   wt_msg "$(wifi_wired_note)" 13
   while true; do

@@ -31,6 +31,7 @@ ZenithBoard $ZB_VERSION - ADSB Flight Info
   zenithboard wifi country XX           Wi-Fi country code, e.g. FR BE CH DE GB US (kept after a reboot)
   zenithboard wifi scan                 networks in range with signal strength
   zenithboard wifi connect SSID         save and join a network (asks for the password; hidden: add --hidden)
+  zenithboard wifi install-nm           install NetworkManager if this Pi does not have it (run it with the cable plugged in)
   zenithboard wifi list|forget SSID     saved networks / forget one
   zenithboard region world|us           where the antenna is (us adds the optional 978 MHz UAT step in the menu)
   zenithboard units metric|imperial     km, km/h, m   |   mi, knots, ft
@@ -174,7 +175,7 @@ case "${1:-}" in
   wifi)
     case "${2:-status}" in
       status) wifi_status ;;
-      on|off) root_or_die; wifi_has_nm || die "Wi-Fi needs NetworkManager (Raspberry Pi OS Bookworm or newer)."; [ "$2" = off ] && wifi_session_on_wifi && warn "You seem to be connected through Wi-Fi: turning it off will cut this session."
+      on|off) root_or_die; wifi_has_nm || die "Wi-Fi needs NetworkManager. Install it with:  sudo zenithboard wifi install-nm"; [ "$2" = off ] && wifi_session_on_wifi && warn "You seem to be connected through Wi-Fi: turning it off will cut this session."
               [ "$2" = on ] && [ -z "$(wifi_country_now)" ] && die "Set the country first:  sudo zenithboard wifi country FR"
               wifi_set_radio "$2" && echo "Wi-Fi is $2 (kept after a reboot)." ;;
       country) root_or_die; wifi_set_country "${3:-}" && echo "Wi-Fi country: $3 (kept after a reboot)." ;;
@@ -194,6 +195,7 @@ case "${1:-}" in
         u=$(wifi_saved | awk -F'\t' -v n="$3" '$2==n || $2 ~ ("^zenithboard-wifi-" n "-") {print $1; exit}')
         [ -n "$u" ] || die "No saved network called $3 (see: zenithboard wifi list)"
         wifi_forget "$u" && echo "Forgotten: $3" ;;
+      install-nm) root_or_die; wifi_install_nm ;;
       apply) root_or_die; wifi_apply ;;
       *) die "Usage: zenithboard wifi status|on|off|country XX|scan|connect SSID|list|forget SSID" ;;
     esac ;;
