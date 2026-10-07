@@ -17,6 +17,10 @@ HERE="$(dirname "$(readlink -f "$0")")"
 . "$HERE/../lib/uat.sh"
 # shellcheck source=lib/wifi.sh
 . "$HERE/../lib/wifi.sh"
+# shellcheck source=lib/network.sh
+. "$HERE/../lib/network.sh"
+# shellcheck source=lib/ddns.sh
+. "$HERE/../lib/ddns.sh"
 # shellcheck source=lib/update.sh
 . "$HERE/../lib/update.sh"
 
@@ -26,6 +30,11 @@ ZenithBoard $ZB_VERSION - ADSB Flight Info
 
   zenithboard status                    what is installed / running, MLAT check
   zenithboard config                    show the current settings
+  zenithboard net status                saved connections, their addresses, default route, DNS
+  zenithboard net static IP MASK GATEWAY [cloudflare|google|router|"DNS DNS"] [PROFILE]   fixed address (MASK: 255.255.255.0 or 24)
+  zenithboard net dhcp [PROFILE]        back to an automatic address
+  zenithboard ddns status|update|off    domain name (DuckDNS / No-IP / FreeDNS): state, refresh now, stop
+  zenithboard ddns set PROVIDER NAME    duckdns|noip|freedns, then asks for the token / key (never on the command line)
   zenithboard wifi status               Wi-Fi: radio, country, connection, and wired-vs-Wi-Fi priority
   zenithboard wifi on|off               turn Wi-Fi on or off (kept after a reboot)
   zenithboard wifi country XX           Wi-Fi country code, e.g. FR BE CH DE GB US (kept after a reboot)
@@ -68,6 +77,7 @@ cmd_status() {
   local dec; dec=$(installed_decoder)
   echo "${C_B}ZenithBoard $ZB_VERSION${C_0}   units: $(cfg_get UNITS metric)   position: $(cfg_get LAT ?) , $(cfg_get LON ?)"
   if wifi_has_nm && [ -n "$(wifi_iface)" ]; then echo "Wi-Fi: $(wifi_summary)   (details: zenithboard wifi status)"; fi
+  if [ "$(cfg_get DDNS_PROVIDER none)" != none ]; then echo "Domain name: $(ddns_summary)   (details: zenithboard ddns status)"; fi
   echo "Hardware: $(pi_model || true)  RAM: $(mem_avail_mb) / $(mem_total_mb) MB free$(is_low_mem && echo '  (low-memory board: skip ACARS/Grafana)')"
   echo "Decoder / feeders:"
   if [ -n "$dec" ]; then show_state "Decoder ($dec)" true "$dec"; else echo "  Decoder                    not installed"; fi
@@ -180,6 +190,40 @@ case "${1:-}" in
   mlat-guard) root_or_die; zb_mlat_guard ;;
   update) root_or_die; zb_update "${2:-}" ;;
   update-components) root_or_die; zb_update_components ;;
+  net)
+    case "${2:-status}" in
+      status) net_status ;;
+      static)
+        root_or_die; net_has_nm || die "A fixed address needs NetworkManager."
+        [ -n "${3:-}" ] && [ -n "${4:-}" ] && [ -n "${5:-}" ] || die "Usage: sudo zenithboard net static IP MASK GATEWAY [cloudflare|google|router|\"DNS DNS\"] [PROFILE-NAME]"
+        net_valid_host_ip "$3" || die "Not a valid address: $3"
+        p=$(net_to_prefix "$4") || die "Not a valid mask: $4 (try 255.255.255.0 or 24)"
+        net_valid_host_ip "$5" || die "Not a valid gateway: $5"
+        net_same_subnet "$3" "$5" "$p" || die "The gateway $5 is not in the network of $3/$p: the Pi would lose its connection."
+        dns=$(net_dns_preset "${6:-cloudflare}" "$5"); net_valid_dns_list "$dns" || die "Not a valid DNS list: ${6:-}"
+        if [ -n "${7:-}" ]; then u=$(net_profiles | awk -F'\t' -v n="$7" '$3==n {print $1; exit}'); else u=$(net_default_profile); fi
+        [ -n "$u" ] || die "Which connection? Give its name (see: zenithboard net status) as the last argument."
+        net_session_uses "$u" && warn "You are connected through this connection: the session will drop. Reconnect at $3."
+        net_apply_static "$u" "$3" "$p" "$5" "$dns" && echo "Fixed address saved: $3/$p via $5, DNS $dns (kept after a reboot). Undo: sudo zenithboard net dhcp" || die "Could not apply it. Check: zenithboard net status" ;;
+      dhcp)
+        root_or_die; net_has_nm || die "NetworkManager is not running."
+        if [ -n "${3:-}" ]; then u=$(net_profiles | awk -F'\t' -v n="$3" '$3==n {print $1; exit}'); else u=$(net_default_profile); fi
+        [ -n "$u" ] || die "Which connection? Give its name (see: zenithboard net status)."
+        net_apply_dhcp "$u" && echo "Automatic address restored." || die "Could not apply it." ;;
+      *) die "Usage: zenithboard net status|static IP MASK GATEWAY [DNS]|dhcp" ;;
+    esac ;;
+  ddns)
+    case "${2:-status}" in
+      status) ddns_status; [ "$(cfg_get DDNS_PROVIDER none)" = none ] || { echo; ddns_links; } ;;
+      update) root_or_die; ddns_update && cat "$DDNS_STATE" 2>/dev/null || { cat "$DDNS_STATE" 2>/dev/null; exit 1; } ;;
+      off) root_or_die; ddns_off; echo "Domain name is off; the saved key was deleted." ;;
+      set)
+        root_or_die; [ -n "${3:-}" ] && [ -n "${4:-}" ] || die "Usage: sudo zenithboard ddns set duckdns|noip|freedns FULL.NAME"
+        u=""; if [ "$3" = noip ]; then read -rp "No-IP DDNS key user name: " u; read -rsp "No-IP DDNS key password: " s; echo
+        else read -rsp "Token (or the whole FreeDNS direct URL): " s; echo; fi
+        ddns_set "$3" "$4" "$u" "$s" ;;
+      *) die "Usage: zenithboard ddns status|set PROVIDER NAME|update|off" ;;
+    esac ;;
   wifi)
     case "${2:-status}" in
       status) wifi_status ;;

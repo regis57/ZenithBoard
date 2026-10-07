@@ -15,6 +15,8 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$ROOT/lib/logs.sh"
 . "$ROOT/lib/uat.sh"
 . "$ROOT/lib/wifi.sh"
+. "$ROOT/lib/network.sh"
+. "$ROOT/lib/ddns.sh"
 . "$ROOT/lib/update.sh"
 
 usage() { echo "Usage: sudo ./install.sh [--deploy] [--uninstall-all] [--version]      (to upgrade: sudo zenithboard update)"; }
@@ -95,14 +97,45 @@ settings_color() {
   cfg_set THEME "$c"
 }
 
+network_menu() {
+  local c u
+  while true; do
+    c=$(wt_menu "Network - in the order you usually need it\n\nWi-Fi: $(wifi_summary)\nAddress: $(net_has_nm && { u=$(net_default_profile) && net_profile_summary "$u"; } || echo 'not managed by NetworkManager')\nDomain name: $(ddns_summary)\n\nEthernet stays the preferred connection; nothing here changes that." \
+      wifi "1  Wi-Fi: on/off, country, networks, password" \
+      ip "2  Fixed IP address, mask, gateway, DNS" \
+      name "3  Domain name (DuckDNS, No-IP, FreeDNS)" \
+      status "Status of all of the above" \
+      back "Back") || return 0
+    case "$c" in
+      wifi) wifi_menu ;;
+      ip) net_static_menu ;;
+      name) ddns_menu ;;
+      status) clear; net_status; echo; wifi_has_nm && [ -n "$(wifi_iface)" ] && { wifi_status; echo; }; ddns_status; echo; read -rp "Press Enter to continue..." _ ;;
+      *) return 0 ;;
+    esac
+  done
+}
+
 settings_menu() {
   local c
   while true; do
-    c=$(wt_menu "Settings (applied immediately)\n\nWi-Fi: $(wifi_summary)   Look: $(cfg_get DISPLAY_MODE dots)\nRegion: $(cfg_get REGION world)   Units: $(cfg_get UNITS)   Radius: $(cfg_get RADIUS)   Position: $(cfg_get LAT), $(cfg_get LON)\nSeconds per aircraft: $(cfg_get CYCLE_SECONDS)   Photos: $(cfg_get SHOW_PHOTOS)   Routes: $(cfg_get SHOW_ROUTES 1)   Colour: $(cfg_get THEME amber)\nMonthly aircraft-data refresh: $( [ "$(cfg_get AUTO_DATA_REFRESH 1)" = 1 ] && echo ON || echo OFF )" \
-      wifi "Wi-Fi: on/off, country, networks, password" style "Look: dot matrix / split-flap airport board" region "Region: world / United States (978 MHz UAT)" units "Units: metric / imperial" color "Colour: amber / green / red / white" radius "Detection radius" location "Antenna position (updates it everywhere)" cycle "Seconds per aircraft" photos "Aircraft photos on/off" routes "Flight origin/destination on/off" data "Monthly aircraft-data refresh on/off" logs "Logs: size limit, review, clean" back "Back") || return 0
+    c=$(wt_menu "Settings (applied immediately), in the order of a first setup\n\nNetwork: Wi-Fi $(wifi_summary)\nPlace: $(cfg_get REGION world), $(cfg_get UNITS), radius $(cfg_get RADIUS), $(cfg_get LAT), $(cfg_get LON)\nLook: $(cfg_get DISPLAY_MODE dots), $(cfg_get THEME amber), $(cfg_get CYCLE_SECONDS) s per aircraft\nData: photos $(cfg_get SHOW_PHOTOS), routes $(cfg_get SHOW_ROUTES 1), monthly refresh $( [ "$(cfg_get AUTO_DATA_REFRESH 1)" = 1 ] && echo ON || echo OFF )\n\nThese are the defaults for every screen; a tablet can override them for itself (gear icon)." \
+      network "1  Network: Wi-Fi, fixed IP, domain name" \
+      region "2  Region: world / United States (978 MHz UAT)" \
+      units "3  Units: metric / imperial" \
+      location "4  Antenna position (updates it everywhere)" \
+      radius "5  Detection radius" \
+      style "6  Look: dot matrix / split-flap airport board" \
+      color "7  Colour: amber / green / red / white" \
+      cycle "8  Seconds per aircraft" \
+      photos "9  Aircraft photos on/off" \
+      routes "10 Flight origin/destination on/off" \
+      data "11 Monthly aircraft-data refresh on/off" \
+      logs "12 Logs: size limit, review, clean" \
+      back "Back") || return 0
     case "$c" in
-      wifi) wifi_menu ;;
-      style) local c; settings_style && restart_flightinfo && wt_msg "Look saved: $(cfg_get DISPLAY_MODE dots).\n\nThe wall reloads by itself. Tablets that chose their own look with ?mode=... or the gear keep it (gear > Reset)." 10 ;;
+      network) network_menu ;;
+      style) settings_style && restart_flightinfo && wt_msg "Look saved: $(cfg_get DISPLAY_MODE dots).\n\nThis is the default for every screen. A tablet that chose its own look (?mode=... or the gear icon) keeps it until you press Reset in its gear panel." 11 ;;
       region) settings_region && wt_msg "Region saved: $(cfg_get REGION world).\n\nIn menu 1 ADSB the 978 MHz UAT option appears for the United States." 10 ;;
       units) settings_units && restart_flightinfo ;;
       logs) logs_menu ;;
@@ -116,7 +149,7 @@ settings_menu() {
         fi ;;
       cycle) local s; s=$(wt_input "Seconds each aircraft stays on the wall (2-60)." "$(cfg_get CYCLE_SECONDS 6)") && is_number "$s" && cfg_set CYCLE_SECONDS "$s" && restart_flightinfo ;;
       photos) if wt_yesno "Show aircraft photos (Planespotters) on the wall? Needs internet on the Pi." 8; then cfg_set SHOW_PHOTOS 1; else cfg_set SHOW_PHOTOS 0; fi ;;
-      routes) if wt_yesno "Show where each flight comes from and goes to?\n\nThe callsign (for example DLH4YK) is looked up on the free adsbdb.com database. Needs internet on the Pi." 11; then cfg_set SHOW_ROUTES 1; else cfg_set SHOW_ROUTES 0; fi ;;
+      routes) if wt_yesno "Show where each flight comes from and goes to?\n\nThe callsign (for example DLH4YK) is looked up on the free adsbdb.com database. When your decoder does not know an aircraft, its address is also used to find the model name. Needs internet on the Pi." 13; then cfg_set SHOW_ROUTES 1; else cfg_set SHOW_ROUTES 0; fi ;;
       data)
         if wt_yesno "Refresh the aircraft model list automatically once a month?\n\n(Downloads a free list of aircraft names from GitHub. Needs internet on the Pi; the wall works without it.)" 12; then cfg_set AUTO_DATA_REFRESH 1; else cfg_set AUTO_DATA_REFRESH 0; fi
         data_refresh_apply ;;
@@ -129,6 +162,7 @@ uninstall_all() {
   wt_yesno "UNINSTALL EVERYTHING?\n\nThis removes FlightInfo, ACARS, all feeders and the decoder installed through this menu." 12 || return 0
   clear
   wifi_remove_unit
+  ddns_remove_units
   is_acars && remove_acars
   is_flightinfo && remove_flightinfo
   is_planefinder && remove_planefinder
@@ -152,7 +186,7 @@ main_menu() {
       1 "ADSB        - decoder + share to ADSB Exchange, FlightAware, FR24..." \
       2 "FlightInfo  - dot-matrix wall for an old tablet" \
       3 "ACARS       - optional ACARS messages in Grafana (2nd dongle)$(weak_hw_tag)" \
-      4 "Settings    - Wi-Fi, look, region, units, radius, position, logs" \
+      4 "Settings    - network (Wi-Fi, IP, domain), place, look, data, logs" \
       5 "Status      - what is running" \
       6 "Update      - upgrade ZenithBoard, decoder, feeders, ACARS" \
       7 "Uninstall everything" \
