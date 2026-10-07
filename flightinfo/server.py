@@ -26,7 +26,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.5.0"
+VERSION = "0.6.0"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -52,6 +52,7 @@ DEFAULTS = {
     "RADIUS": "10",             # in km (metric) or miles (imperial)
     "CYCLE_SECONDS": "6",
     "SHOW_PHOTOS": "1",
+    "DISPLAY_MODE": "dots",     # dots (dot matrix) | flap (split-flap airport board)
     "SHOW_ROUTES": "1",         # where the flight comes from / goes to (looked up by callsign on adsbdb.com)
     "PORT": "8080",
     "AIRCRAFT_JSON": "",        # optional explicit path override
@@ -258,7 +259,8 @@ def describe_type(ac, types=None):
 
 
 # --------------------------------------------------------------------------- planes
-def build_planes(data, lat, lon, radius_km, airlines=None, photo_lookup=None, demo=False, types=None, route_lookup=None):
+def build_planes(data, lat, lon, radius_km, airlines=None, photo_lookup=None, demo=False, types=None, route_lookup=None,
+                 aircraft_lookup=None):
     """Return (planes_in_radius_sorted_by_distance, total_with_position)."""
     airlines = airlines or {}
     planes, total = [], 0
@@ -286,12 +288,22 @@ def build_planes(data, lat, lon, radius_km, airlines=None, photo_lookup=None, de
             route = ac["demo_route"]
         else:
             route = route_lookup(flight) if route_lookup is not None else None
-        kind = describe_type(ac, types)
+        # The decoder only knows the type and the registration when its aircraft database has the airframe. When it
+        # does not, ask adsbdb.com (by the aircraft's hex code) so the model is still shown and the silhouette fits.
+        reg, code, found = ac.get("r"), ac.get("t"), None
+        if aircraft_lookup is not None and not (reg and code) and not (demo and ac.get("t")):
+            found = aircraft_lookup(ac.get("hex"))
+            if found:
+                reg = reg or found.get("registration")
+                code = code or found.get("icao_type")
+        kind = describe_type(dict(ac, t=code) if code != ac.get("t") else ac, types)
+        if not kind["type_name"] and found and found.get("type"):
+            kind["type_name"] = " ".join(x for x in (found.get("manufacturer"), found.get("type")) if x)
         planes.append({
             "hex": ac.get("hex", ""),
             "flight": flight,
-            "registration": ac.get("r"),
-            "type": ac.get("t"),
+            "registration": reg,
+            "type": code,
             "type_name": kind["type_name"],
             "shape": kind["shape"],
             "variant": kind["variant"],
@@ -497,6 +509,51 @@ def lookup_route(callsign):
     return _routes.get(cs) if CALLSIGN_RE.match(cs) else None
 
 
+# --------------------------------------------------------------------------- aircraft model (adsbdb.com, optional)
+# Fallback for aircraft whose type / registration the decoder does not know: adsbdb.com is asked by hex code.
+AIRCRAFT_GAP_S = 2.0
+AIRCRAFT_RETRY_S = 60
+AIRCRAFT_MISS_RETRY_S = 24 * 3600
+AIRCRAFT_TTL_S = 7 * 24 * 3600
+HEX_RE = re.compile(r"^[0-9A-F]{6}$")
+
+
+def parse_aircraft(data):
+    """adsbdb /aircraft answer -> {"icao_type", "type", "manufacturer", "registration"} or None."""
+    resp = data.get("response") if isinstance(data, dict) else None
+    ac = resp.get("aircraft") if isinstance(resp, dict) else None
+    if not isinstance(ac, dict):
+        return None
+    out = {"icao_type": str(ac.get("icao_type") or "").upper(), "type": str(ac.get("type") or ""),
+           "manufacturer": str(ac.get("manufacturer") or ""), "registration": str(ac.get("registration") or "")}
+    return out if (out["icao_type"] or out["type"] or out["registration"]) else None
+
+
+def _aircraft_api(hex_code):
+    """-> (info|None, ok). ok is False when we could not get an answer."""
+    url = "https://api.adsbdb.com/v0/aircraft/%s" % hex_code
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "ZenithBoard/%s (+https://github.com/regis57/ZenithBoard)" % VERSION})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return parse_aircraft(json.load(resp)), True
+    except urllib.error.HTTPError as exc:
+        if exc.code != 404:
+            print("aircraft lookup %s: HTTP %s, retrying in %d s" % (hex_code, exc.code, AIRCRAFT_RETRY_S), file=sys.stderr, flush=True)
+        return None, exc.code == 404
+    except Exception as exc:
+        print("aircraft lookup %s failed (%s), retrying in %d s" % (hex_code, exc, AIRCRAFT_RETRY_S), file=sys.stderr, flush=True)
+        return None, False
+
+
+_aircraft = ThrottledLookup(lambda k: _aircraft_api(k), AIRCRAFT_GAP_S, AIRCRAFT_RETRY_S, AIRCRAFT_MISS_RETRY_S, found_ttl=AIRCRAFT_TTL_S)
+
+
+def lookup_aircraft(hex_code):
+    """Non-blocking: what we already know about this airframe; a request is queued when it is missing."""
+    h = (hex_code or "").strip().upper()
+    return _aircraft.get(h) if HEX_RE.match(h) else None
+
+
 # --------------------------------------------------------------------------- HTTP
 def public_config(cfg):
     units = cfg.get("UNITS", "metric")
@@ -512,6 +569,7 @@ def public_config(cfg):
         "radius_presets": RADIUS_PRESETS,
         "cycle_seconds": max(2, cfg_float(cfg, "CYCLE_SECONDS", 6)),
         "show_photos": cfg_bool(cfg, "SHOW_PHOTOS"),
+        "display_mode": "flap" if str(cfg.get("DISPLAY_MODE", "dots")).lower() == "flap" else "dots",
         "demo": cfg_bool(cfg, "DEMO"),
     }
 
@@ -572,8 +630,9 @@ class Handler(BaseHTTPRequestHandler):
         real_lookups = not demo or cfg_bool(cfg, "DEMO_REAL_PHOTOS")
         lookup = lookup_photo if cfg_bool(cfg, "SHOW_PHOTOS") and real_lookups else None
         route_lookup = lookup_route if cfg_bool(cfg, "SHOW_ROUTES") and real_lookups else None
+        aircraft_lookup = lookup_aircraft if cfg_bool(cfg, "SHOW_ROUTES") and real_lookups else None
         planes, total = build_planes(data, cfg_float(cfg, "LAT", 0), cfg_float(cfg, "LON", 0), radius_km,
-                                     load_airlines(cfg), lookup, demo, load_types(cfg), route_lookup)
+                                     load_airlines(cfg), lookup, demo, load_types(cfg), route_lookup, aircraft_lookup)
         return self._send(200, {"planes": planes, "total": total, "radius_km": radius_km,
                                 "server_id": SERVER_ID, "updated": time.time()})
 

@@ -13,6 +13,7 @@
   var SIL_BOX = { x: RX, y: 0, w: RW, h: 34 };
   var PHOTO_BOX = { x: 86, y: 38, w: 42, h: 30 };  // 7:5, like the 3:2 Planespotters thumbnails
   var ON = 1;                                      // grid value: 1 = lit in the theme colour
+  var FLAP_COLS = 16, FLAP_ROWS = 8, FLAP_W = 84;  // split-flap style: 16 letters x 8 rows on the left 84 dots (the photo keeps the right-hand column)
 
   var canvas = document.getElementById("wall"), ctx = canvas.getContext("2d");
   var server = { units: "metric", theme: "amber", radius: 10, radius_presets: [1, 2, 5, 10, 15, 30, 50], cycle_seconds: 6,
@@ -23,12 +24,14 @@
   var box = document.getElementById("photobox"), photoImg = document.getElementById("photo"), photoLink = document.getElementById("photolink");
   var photoCap = document.getElementById("photocap"), sceneCanvas = document.getElementById("scene");
   var scene = new SceneKit.Scene(sceneCanvas), cornerKey = null, photoToken = 0;
+  var board = new FlapKit.Board(FLAP_COLS, FLAP_ROWS), flapRaf = 0, flapSil = null, flapTimer = 0;
+  var reduceMotion = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 
   // ------------------------------------------------------------------ preferences
   function loadPrefs() {
     try { prefs = JSON.parse(localStorage.getItem("zenithboard") || "{}") || {}; } catch (e) { prefs = {}; }
-    var q = new URLSearchParams(location.search);       // ?units=imperial&radius=5&cycle=8&theme=green
-    ["units", "radius", "cycle", "theme"].forEach(function (k) { if (q.has(k)) prefs[k] = q.get(k); });
+    var q = new URLSearchParams(location.search);       // ?units=imperial&radius=5&cycle=8&theme=green&mode=flap
+    ["units", "radius", "cycle", "theme", "mode"].forEach(function (k) { if (q.has(k)) prefs[k] = q.get(k); });
     savePrefs();
   }
   function savePrefs() { try { localStorage.setItem("zenithboard", JSON.stringify(prefs)); } catch (e) {} }
@@ -36,6 +39,7 @@
   function radius() { var r = parseFloat(prefs.radius); return r > 0 ? r : server.radius; }
   function cycleMs() { var c = parseFloat(prefs.cycle); return Math.max(2, c > 0 ? c : server.cycle_seconds) * 1000; }
   function theme() { return prefs.theme || server.theme || "amber"; }
+  function mode() { return prefs.mode === "flap" || prefs.mode === "dots" ? prefs.mode : (server.display_mode === "flap" ? "flap" : "dots"); }
   function applyTheme() { document.body.setAttribute("data-theme", theme()); }
 
   // ------------------------------------------------------------------ dot grid
@@ -102,11 +106,12 @@
     }
   }
 
+  function centered(str) { str = String(str); var n = Math.max(0, Math.floor((FLAP_COLS - str.length) / 2)); return new Array(n + 1).join(" ") + str; }
   function buildScreen() {
     var g = blank(), u = units();
     if (error) {
       textCenter(g, "NO DATA", 8, 2); textCenter(g, "RECEIVER NOT RESPONDING", 36, 1); textCenter(g, "CHECK THE DECODER", 48, 1);
-      return { g: g, sig: "error", plane: null };
+      return { g: g, sig: "error", plane: null, lines: ["", centered("NO DATA"), "", centered("RECEIVER NOT"), centered("RESPONDING"), "", centered("CHECK THE"), centered("DECODER")] };
     }
     var p = planes.filter(function (x) { return x.hex === curHex; })[0];
     if (!p) {
@@ -114,7 +119,9 @@
       textCenter(g, "WITHIN " + radius() + (u === "imperial" ? " MI" : " KM"), 28, 1);
       textCenter(g, "SEEN " + total + " AIRCRAFT", 40, 1);
       textCenter(g, clock(), 54, 2);
-      return { g: g, sig: "empty" + total + clock() + radius() + u, plane: null };
+      var within = "WITHIN " + radius() + (u === "imperial" ? " MI" : " KM");
+      return { g: g, sig: "empty" + total + clock() + radius() + u, plane: null,
+               lines: ["", centered("NO FLIGHTS"), "", centered(within), centered("SEEN " + total + " AIRCRAFT"), "", centered(clock()), ""] };
     }
     var L = Fmt.planeLines(p, u, planes.indexOf(p), planes.length, COLS);
     text(g, L.callsign, 0, 0, 2);
@@ -122,7 +129,8 @@
     text(g, L.alt, 0, 34, 1); text(g, L.spd, 0, 43, 1); text(g, L.from, 0, 52, 1); text(g, L.to, 0, 61, 1);       // where the flight comes from / goes to (blank when unknown)
     text(g, L.footer, 0, 72, 1);
     silhouette(g, p.shape || "generic", SIL_BOX);
-    return { g: g, sig: "p" + p.hex + L.callsign + L.footer + L.alt + L.spd + L.from + L.to + (p.photo || ""), plane: p };
+    return { g: g, sig: "p" + p.hex + L.callsign + L.footer + L.alt + L.spd + L.type + L.from + L.to + (p.photo || ""), plane: p,
+             lines: [L.callsign, L.airline, L.type, L.alt, L.spd, L.from, L.to, L.footer] };
   }
 
   // ------------------------------------------------------------------ rendering
@@ -132,7 +140,8 @@
     var dpr = window.devicePixelRatio || 1, w = canvas.clientWidth, h = canvas.clientHeight;
     canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
     dotColor = themeColor();
-    draw(grid, null, 1); placeCorner();
+    if (mode() === "flap") renderFlap(performance.now()); else draw(grid, null, 1);
+    placeCorner();
   }
   function hex6(v) { return "#" + ("000000" + (v & 0xffffff).toString(16)).slice(-6); }
   function draw(a, b, progress) {
@@ -151,9 +160,82 @@
     Object.keys(lit).forEach(function (k) { var col = k === "t" ? dotColor : k; ctx.fillStyle = col; ctx.shadowColor = col; ctx.fill(lit[k]); });
     ctx.shadowBlur = 0;
   }
+  // ------------------------------------------------------------------ split-flap style (?mode=flap)
+  function flapGeom() {
+    var g = geom(), cw = FLAP_W * g.pitch / FLAP_COLS, ch = GH * g.pitch / FLAP_ROWS;
+    var f = { ox: g.ox, oy: g.oy, cw: cw, ch: ch, pitch: g.pitch, pad: Math.max(1, cw * 0.06) };
+    f.font = "bold " + Math.round(ch * 0.66) + "px 'Arial Narrow','Roboto Condensed','DejaVu Sans Condensed',Arial,sans-serif";
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.font = f.font; var wide = ctx.measureText("W").width / (canvas.width / canvas.clientWidth); ctx.restore();
+    f.sx = Math.min(1, (cw - 2 * f.pad) * 0.9 / Math.max(1, wide));          // squeeze wide fonts so every letter fits its flap
+    return f;
+  }
+  function flapHalf(f, x, y, ch, top, scale, shade) {            // one half of a flap, optionally folded towards the hinge
+    var dpr = canvas.width / canvas.clientWidth, w = f.cw - 2 * f.pad, h = f.ch - 2 * f.pad, hx = x + f.pad, hy = y + f.pad, mid = hy + h / 2;
+    ctx.save(); ctx.translate(0, mid); ctx.scale(1, Math.max(0.001, scale)); ctx.translate(0, -mid);
+    ctx.beginPath(); ctx.rect(hx, top ? hy : mid, w, h / 2); ctx.clip();
+    var gr = ctx.createLinearGradient(0, hy, 0, hy + h); gr.addColorStop(0, "#202020"); gr.addColorStop(0.5, "#151515"); gr.addColorStop(0.5, "#121212"); gr.addColorStop(1, "#0b0b0b");
+    ctx.fillStyle = gr; ctx.fillRect(hx, hy, w, h);
+    if (ch !== " ") {
+      ctx.fillStyle = dotColor; ctx.font = f.font; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.translate(hx + w / 2, 0); ctx.scale(f.sx, 1); ctx.fillText(ch, 0, hy + h * 0.53);
+    }
+    if (shade) { ctx.fillStyle = "rgba(0,0,0," + shade + ")"; ctx.fillRect(hx, hy, w, h); }
+    ctx.restore(); void dpr;
+  }
+  function renderFlap(now) {
+    var f = flapGeom(), W = canvas.width, H = canvas.height, dpr = W / canvas.clientWidth;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+    ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+    for (var r = 0; r < FLAP_ROWS; r++) for (var c = 0; c < FLAP_COLS; c++) {
+      var st = board.cell(r, c, now), x = f.ox + c * f.cw, y = f.oy + r * f.ch, hy = y + f.pad, h = f.ch - 2 * f.pad;
+      if (!st.flipping) { flapHalf(f, x, y, st.prev, true, 1); flapHalf(f, x, y, st.prev, false, 1); }
+      else {
+        flapHalf(f, x, y, st.next, true, 1); flapHalf(f, x, y, st.prev, false, 1);              // what is revealed / what is left
+        var a = st.phase * Math.PI;
+        if (st.phase < 0.5) flapHalf(f, x, y, st.prev, true, Math.cos(a), 0.15 + 0.4 * st.phase);   // the top flap falls
+        else flapHalf(f, x, y, st.next, false, -Math.cos(a), 0.4 * (1 - st.phase));                // and lands as the bottom flap of the new letter
+      }
+      ctx.fillStyle = "#000"; ctx.fillRect(x + f.pad, hy + h / 2 - 0.75, f.cw - 2 * f.pad, 1.5);  // the hinge
+    }
+    if (flapSil) {                                            // the aircraft pictogram stays dotted, top right
+      var rr = f.pitch * 0.42; ctx.fillStyle = dotColor; ctx.shadowColor = dotColor; ctx.shadowBlur = f.pitch * 1.2; ctx.beginPath();
+      for (var y2 = SIL_BOX.y; y2 < SIL_BOX.y + SIL_BOX.h; y2++) for (var x2 = SIL_BOX.x; x2 < SIL_BOX.x + SIL_BOX.w; x2++) if (flapSil[y2 * GW + x2]) {
+        var cx = f.ox + (x2 + 0.5) * f.pitch, cy = f.oy + (y2 + 0.5) * f.pitch; ctx.moveTo(cx + rr, cy); ctx.arc(cx, cy, rr, 0, 6.2832);
+      }
+      ctx.fill(); ctx.shadowBlur = 0;
+    }
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+  }
+  function flapLoop(now) {
+    flapRaf = 0;
+    var busy = board.update(now); renderFlap(now);
+    if (busy) flapRaf = requestAnimationFrame(flapLoop);
+  }
+  function flapKick() { if (!flapRaf) flapRaf = requestAnimationFrame(flapLoop); }
+  function flapStop() { if (flapRaf) cancelAnimationFrame(flapRaf); flapRaf = 0; clearTimeout(flapTimer); }
+  function showFlap(screen, wipe) {
+    if (anim) { cancelAnimationFrame(anim); anim = null; }
+    flapSil = screen.g;
+    var changed = wipe || !screen.plane || !cornerKey || cornerKey.indexOf(screen.plane.hex) !== 0;
+    if (changed) hideCorner();
+    board.setRows(screen.lines, performance.now(), reduceMotion || firstFlap);
+    firstFlap = false;
+    flapKick();
+    clearTimeout(flapTimer);
+    flapTimer = setTimeout(function () { updateCorner(screen.plane); }, changed && !reduceMotion ? 1400 : 0);   // the photo comes back once the letters have settled
+  }
+  var firstFlap = true;
+  function applyMode() {                                      // switching style on a running wall
+    flapStop(); lastSig = ""; grid = blank(); hideCorner(); firstFlap = true;
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (mode() === "flap") { board = new FlapKit.Board(FLAP_COLS, FLAP_ROWS); }
+    resize(); poll();
+  }
+
   function show(screen, wipe) {
     if (screen.sig === lastSig) return;
     lastSig = screen.sig;
+    if (mode() === "flap") { showFlap(screen, wipe); return; }
     if (!wipe) {
       if (anim) { cancelAnimationFrame(anim); anim = null; }      // a late update must not be overwritten by a running wipe
       grid = screen.g; draw(grid, null, 1); updateCorner(screen.plane); return;
@@ -213,6 +295,7 @@
     document.getElementById("s-units").value = u;
     document.getElementById("s-cycle").value = cycleMs() / 1000;
     document.getElementById("s-theme").value = theme();
+    document.getElementById("s-mode").value = mode();
   }
   function bindPanel() {
     document.getElementById("gear").onclick = function () { fillPanel(); panel.hidden = !panel.hidden; };
@@ -220,7 +303,8 @@
     document.getElementById("s-radius").onchange = function () { prefs.radius = this.value; savePrefs(); lastSig = ""; poll(); };
     document.getElementById("s-cycle").onchange = function () { prefs.cycle = this.value; savePrefs(); startCycle(); };
     document.getElementById("s-theme").onchange = function () { prefs.theme = this.value; savePrefs(); applyTheme(); resize(); };
-    document.getElementById("s-reset").onclick = function () { prefs = {}; savePrefs(); applyTheme(); fillPanel(); lastSig = ""; startCycle(); poll(); resize(); };
+    document.getElementById("s-mode").onchange = function () { prefs.mode = this.value; savePrefs(); applyMode(); };
+    document.getElementById("s-reset").onclick = function () { var m = mode(); prefs = {}; savePrefs(); applyTheme(); fillPanel(); startCycle(); if (mode() !== m) applyMode(); else { lastSig = ""; poll(); resize(); } };
     document.getElementById("s-full").onclick = function () {
       var el = document.documentElement; (el.requestFullscreen || el.webkitRequestFullscreen || function () {}).call(el); keepAwake();
     };

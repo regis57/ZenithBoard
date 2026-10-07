@@ -44,6 +44,13 @@ assert.deepStrictEqual(Fmt.routeLines(null, 14), { from: "", to: "" });
 L = Fmt.planeLines({ ...plane, route: { from: ap("Luxembourg-Findel International Airport", "Luxembourg"), to: ap("Charles de Gaulle International Airport", "Paris") } }, "metric", 0, 3, 14);
 assert.strictEqual(L.from, "LUXEMBOURG"); assert.strictEqual(L.to, "\u2192PARIS");
 
+// the model row: the name when it fits, then the name without its maker, then the ICAO code with the registration
+assert.strictEqual(Fmt.planeLines({ ...plane, type_name: "Airbus A321neo" }, "metric", 0, 1, 14).type, "AIRBUS A321NEO");
+assert.strictEqual(Fmt.planeLines({ ...plane, type_name: "Embraer E195-E2" }, "metric", 0, 1, 14).type, "E195-E2");
+assert.strictEqual(Fmt.planeLines({ ...plane, type_name: "Bombardier C Series 300" }, "metric", 0, 1, 14).type, "C SERIES 300");
+assert.strictEqual(Fmt.planeLines({ ...plane, type_name: null }, "metric", 0, 1, 14).type, "A320 F-GKXA");
+assert.strictEqual(Fmt.planeLines({ ...plane, type_name: null, type: null, registration: null }, "metric", 0, 1, 14).type, "");
+
 // every text row must fit the 14-character text column and use only glyphs that exist, whatever the data looks like
 const NASTY = [ap("\u00c5lesund Airport, Vigra \u2013 \u201cLong\u201d & Odd/Name #1 (Intl)", "\u00c5lesund"), ap("\u5317\u4eac\u9996\u90fd\u56fd\u9645\u673a\u573a", "\u5317\u4eac"),
                ap("A".repeat(80), "B".repeat(80)), ap("x", ""), { iata: "ZZZ" }];

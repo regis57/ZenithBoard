@@ -190,6 +190,22 @@ All settings live in one readable file: `/etc/zenithboard/config.env`.
 * **Bottom right (a real picture, not dots):** the **photo of that exact aircraft** from [Planespotters](https://www.planespotters.net/), with the photographer's name and a link to the photo page. When there is no photo (or no internet) it shows an **animated sky** with a **side view of the matching aircraft model**, labelled with the model name. The sky follows your clock as one continuous day: the sun rises along its arc and sets, the colours slide from dawn through midday to dusk, the clouds are lit from the side the sun is on, thin cirrus drifts overhead, and at night the stars twinkle under a crescent moon. Propellers and rotors turn.
 * Aircraft are shown nearest first, one at a time, for a few seconds each, with a wipe transition. With nothing in range the wall shows a clock and how many aircraft your antenna sees.
 
+## Look: dot matrix or airport split-flap board
+
+Two looks, same data. **Dot matrix** (default) is the amber dot display above. **Split-flap** imitates an old airport departure board (Frankfurt style): every row is made of small flaps, and when the wall moves to another aircraft the letters **roll one by one, row after row**, through the alphabet until they land on the new text. The photo and the silhouette stay as they are.
+
+![Split-flap look](docs/images/wall/zb-flap.jpg)
+
+| Where | How |
+|---|---|
+| **Try it on one tablet only** | add `?mode=flap` to the address, e.g. `http://PI-IP:8080/?mode=flap` (back: `?mode=dots`) |
+| **On the tablet** | gear icon → *Style* → *Split-flap* (gear → *Reset* returns to the Pi's default) |
+| **Every screen** | `sudo zenithboard mode flap` (back to the default: `sudo zenithboard mode dots`) |
+| **Menu** | `sudo zenithboard menu` → *4 Settings → Look* |
+| **Without a Pi** | `./bin/zenithboard-demo`, then open `http://localhost:8081/?mode=flap` |
+
+Not convincing? Nothing to undo: the dot matrix stays the default until you change it, and any of the ways above switches back at once. Colours work in both looks. Devices that ask for reduced motion get the final text without the rolling.
+
 ## Colours
 
 The dots are **amber by default**. Pick amber, green, red or white:
@@ -245,6 +261,7 @@ In the United States many general-aviation aircraft transmit on **978 MHz (UAT)*
 
 ADS-B only carries the aircraft's identity, position, altitude and speed: **it never says where the flight comes from or goes to.** ZenithBoard therefore looks the route up from the callsign (for example `DLH4YK`) on [adsbdb.com](https://www.adsbdb.com/), a free community database, and shows the airport's name when it fits in the 14 characters of the text column, otherwise the city. Accents are removed because the dot font has none (`ZÜRICH` → `ZURICH`).
 
+* **Aircraft model fallback:** when your receiver does not know an aircraft's type or registration, the model row (`A320 F-ZZAA`, or the model name) is completed from adsbdb using the aircraft's 24-bit address. This is part of the same setting: with routes off, nothing is sent. Unknown aircraft keep an empty model row.
 * **No route is shown** for aircraft whose callsign is not an airline callsign (private planes, helicopters, military) or that are not in the database: the two rows stay empty.
 * **It is an indication, not a guarantee.** A callsign can be reused for another route, and the database is maintained by volunteers.
 * **Privacy:** only the callsign of an aircraft in your radius is sent to adsbdb.com, never your position. Requests are spaced out (one every 1.5 s) and answers are kept for 12 hours. Turn it off if you prefer nothing to leave the Pi: `sudo zenithboard routes off` (or menu *4 Settings → Flight origin/destination*).

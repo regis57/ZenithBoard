@@ -57,13 +57,25 @@
     return { from: placeName(route.from, W), to: route.to ? "\u2192" + placeName(route.to, W - 1) : "" };
   }
 
+  // The model row: the aircraft's name when it fits ("AIRBUS A321NEO"), else the name without the maker, else the
+  // ICAO code with the registration (the decoder alone only knows the code).
+  var MAKERS = /^(AIRBUS|BOEING|EMBRAER|BOMBARDIER|DE HAVILLAND|DE HAVILLAND CANADA|CESSNA|BEECHCRAFT|BEECH|PIPER|DASSAULT|GULFSTREAM|SAAB|FOKKER|COMAC|MCDONNELL DOUGLAS|CANADAIR|DIAMOND|PILATUS|TEXTRON|LEARJET|HONDA|CIRRUS|ROBINSON|BELL|SIKORSKY|LOCKHEED|ANTONOV|ILYUSHIN|TUPOLEV|SUKHOI|MIL|AGUSTA|LEONARDO|EUROCOPTER|AEROSPATIALE|BRITISH AEROSPACE|BAE SYSTEMS)\s+/;
+  function modelLine(p, W) {
+    var name = plain(p.type_name || "");
+    if (name) {
+      if (name.length <= W) return name;
+      var rest = name.replace(MAKERS, "");
+      return cut(rest, W);
+    }
+    return [p.type, p.registration].filter(Boolean).join(" ").toUpperCase().slice(0, W);
+  }
+
   // Returns the text rows shown for one aircraft. W = characters per text row (the right-hand column holds the silhouette + photo).
   function planeLines(p, units, index, total, W) {
     W = W || 14;
     var c = convert(p, units), imp = units === "imperial";
     var callsign = (p.flight || p.hex || "UNKNOWN").toUpperCase().slice(0, 7);
     var distTxt = (c.dist < 10 ? c.dist.toFixed(1) : String(Math.round(c.dist))) + c.distUnit;
-    var type = [p.type, p.registration].filter(Boolean).join(" ").toUpperCase();
     var alt = p.on_ground ? "GROUND" : (c.alt == null ? "---" : String(Math.round(imp ? c.alt : c.alt / 10) * (imp ? 1 : 10)) + " " + c.altUnit);
     var spd = c.speed == null ? "---" : Math.round(c.speed) + " " + c.speedUnit;
     function fit(s) { return String(s).slice(0, W); }
@@ -71,7 +83,7 @@
     return {
       callsign: callsign,
       airline: fit((p.airline || "").toUpperCase()),
-      type: fit(type || ""),
+      type: modelLine(p, W),
       alt: fit("ALT  " + alt),
       spd: fit("SPD  " + spd),
       from: r.from,
@@ -84,7 +96,7 @@
 
   var api = { compass: compass, radiusToKm: radiusToKm, convert: convert, planeLines: planeLines,
               radiusLabel: radiusLabel, spread: spread, pad: pad, KM_PER_MI: KM_PER_MI,
-              placeName: placeName, routeLines: routeLines, plain: plain };
+              placeName: placeName, routeLines: routeLines, plain: plain, modelLine: modelLine };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.Fmt = api;
 })(typeof self !== "undefined" ? self : this);
