@@ -178,7 +178,7 @@ net_static_menu() {
   action=$(wt_menu "$n\nNow: $cur" \
       static "Set a fixed address (IP, mask, gateway, DNS)" \
       dhcp "Back to automatic (DHCP, from the router)" \
-      back "Back") || return 0
+      back "Return to the previous menu") || return 0
   case "$action" in
     static)
       net_ask_static "$u" || return 0

@@ -12,7 +12,7 @@ fail=0
 check() { if eval "$2"; then echo "ok   $1"; else echo "FAIL $1"; fail=1; fi; }
 printf '#!/bin/bash\necho "$*" > %s/args\n' "$t" > "$t/whiptail"; chmod +x "$t/whiptail"; PATH="$t:$PATH"
 
-wt_menu "Settings" network "Network" logs "Logs" back "Back"
+wt_menu "Settings" network "Network" logs "Logs" back "Return to the previous menu"
 check "menu with a Back entry: no Cancel button"    'grep -q -- "--nocancel" "$t/args"'
 wt_menu "Main" 1 "ADSB" 0 "Exit"
 check "main menu: the 0 Exit entry is its way out"   'grep -q -- "--nocancel" "$t/args"'
@@ -27,7 +27,9 @@ check "an item text 'back' (not a tag) does not count"    'grep -q -- "--cancel-
 for f in install.sh lib/*.sh; do
   [ "$f" = lib/common.sh ] && continue
   n=$(grep -c 'wt_menu "' "$f"); [ "$n" -gt 0 ] || continue
-  b=$(grep -cE '(^|[ \\])(back "Back"|0 "Exit")' "$f")
+  b=$(grep -cE '(^|[ \\])(back "Return to the previous menu"|0 "Exit")' "$f")
   check "$f: $n wt_menu call(s), $b with a Back/Exit entry" '[ "$b" -ge 1 ]'
 done
+# the left column shows the tag and the right column the label: they must not say the same word twice ("back  Back")
+check "no entry repeats its own tag as its label" '! grep -rniE "(^|[ \\])(back|exit) \"(back|exit)\"" install.sh lib/*.sh'
 [ "$fail" = 0 ] && echo "ALL OK" || exit 1

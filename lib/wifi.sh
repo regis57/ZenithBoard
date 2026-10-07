@@ -351,7 +351,7 @@ wifi_menu() {
       hidden "Connect to a hidden network" \
       saved "Saved networks: connect, change password, forget" \
       status "Status and wired / Wi-Fi priority" \
-      back "Back") || return 0
+      back "Return to the previous menu") || return 0
     case "$c" in
       toggle) wifi_toggle ;;
       country) local cc; cc=$(wifi_pick_country) && wifi_set_country "$cc" && wt_msg "Country saved: $cc." 7 ;;
