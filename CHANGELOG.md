@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.8.4
+- README: badges (licence, CI, Buy Me a Coffee) and a short "Support the project" section; `.github/FUNDING.yml` adds GitHub's *Sponsor* button to the repository page, pointing to https://buymeacoffee.com/regis57.
+
 ## 0.8.3
 - Menu 6 Update: after an update (everything, or the components you ticked) the menu reopens by itself on the new version. Before, it stayed on the old code until you quit and came back.
 
