@@ -22,6 +22,19 @@ ddns_provider_name() {
 }
 ddns_valid_host() { [[ $1 =~ ^[A-Za-z0-9]([A-Za-z0-9.-]{0,251}[A-Za-z0-9])?$ ]]; }
 ddns_valid_token() { [[ $1 =~ ^[A-Za-z0-9_-]{8,80}$ ]]; }
+# DuckDNS tokens are UUIDs (36 characters, 8-4-4-4-12): a typo shows immediately instead of as a refusal later
+ddns_valid_token_for() {   # ddns_valid_token_for PROVIDER TOKEN
+  case "$1" in
+    duckdns) [[ $2 =~ ^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$ ]] ;;
+    *) ddns_valid_token "$2" ;;
+  esac
+}
+ddns_sent_summary() {   # what the saved request contains, without the secret: "sub-domain adsb-x, token 36 characters"
+  local sub tok
+  sub=$(sed -n -E 's/^url = ".*[?&]domains=([^&"]*).*/\1/p' "$DDNS_CURL" 2>/dev/null | head -1)
+  tok=$(sed -n -E 's/^url = ".*[?&]token=([^&"]*).*/\1/p' "$DDNS_CURL" 2>/dev/null | head -1)
+  [ -n "$sub" ] && printf 'sub-domain sent: %s, token: %s characters' "$sub" "${#tok}"
+}
 ddns_token_from() {   # accepts the bare token or the whole "direct URL" FreeDNS shows, and prints the token
   local t="${1%/}"; t="${t##*\?}"; t="${t##*/}"; printf '%s' "$t"
 }
@@ -77,7 +90,7 @@ ddns_update() {
     n=$((n + 1)); sleep "${ZB_DDNS_RETRY_SLEEP:-5}"
   done
   mkdir -p "$(dirname "$DDNS_STATE")" 2>/dev/null
-  if [ "$res" = fail ]; then printf '%s FAILED: %s (answer: %s)\n' "$(date '+%F %T')" "$(ddns_reason "$r")" "${r:-none}" > "$DDNS_STATE" 2>/dev/null
+  if [ "$res" = fail ]; then printf '%s FAILED: %s (answer: %s; %s)\n' "$(date '+%F %T')" "$(ddns_reason "$r")" "${r:-none}" "$(ddns_sent_summary)" > "$DDNS_STATE" 2>/dev/null
   else printf '%s ok (%s)\n' "$(date '+%F %T')" "$res" > "$DDNS_STATE" 2>/dev/null; fi
   [ "$res" != fail ]
 }
@@ -98,7 +111,11 @@ ddns_set() {
   if [ "$p" = noip ]; then
     [ -n "$u" ] && [ -n "$s" ] && [[ $u$s != *$'\n'* ]] || { echo "No-IP needs the DDNS key's user name and password."; return 1; }
   else
-    s=$(ddns_token_from "$s"); ddns_valid_token "$s" || { echo "That does not look like a token (letters, digits, - and _)."; return 1; }
+    s=$(ddns_token_from "$s")
+    ddns_valid_token_for "$p" "$s" || {
+      if [ "$p" = duckdns ]; then echo "That is not a DuckDNS token: it must be 36 characters like 1a2b3c4d-1111-2222-3333-444455556666 (yours has ${#s}). Copy it again from the top of duckdns.org."
+      else echo "That does not look like a token (letters, digits, - and _)."; fi
+      return 1; }
   fi
   old=$(umask); umask 077
   mkdir -p "$(dirname "$DDNS_CURL")"; ddns_curl_config "$p" "$h" "$u" "$s" > "$DDNS_CURL.new" && mv -f "$DDNS_CURL.new" "$DDNS_CURL"
@@ -133,6 +150,25 @@ ddns_status() {
   if [ -n "$pub" ] && [ -n "$res" ] && [ "$pub" = "$res" ]; then echo "RESULT: the name points to your address, so it works (an older FAILED line above is only the last answer the service gave; the next refresh replaces it)."
   elif [ -n "$pub" ] && [ -n "$res" ]; then echo "They differ: wait a few minutes, or run  sudo zenithboard ddns update"; fi
   case "$pub" in 100.6[4-9].*|100.[7-9]*.*|100.1[01]*.*|100.12[0-7].*) echo "WARNING: $pub is a shared (CGNAT) address: your provider does not give you a public one, so a port cannot be opened to your Pi. Ask the provider for a public address, or use a VPN such as Tailscale." ;; esac
+}
+# ddns_test: asks the service the same question in a few different ways and prints each short answer, so a refusal can be
+# explained (the token itself is never printed and never goes on a command line: each request is given to curl on stdin).
+ddns_test() {
+  local p sub tok ver="${ZB_VERSION:-0}" ans
+  p=$(cfg_get DDNS_PROVIDER none)
+  [ "$p" != none ] && [ -f "$DDNS_CURL" ] || { echo "No domain name is set up yet."; return 1; }
+  echo "Provider: $(ddns_provider_name "$p")   $(ddns_sent_summary)"
+  if [ "$p" != duckdns ]; then echo "As the timer sends it:   $(curl -sS -K "$DDNS_CURL" 2>&1 | head -c 120 | head -1)"; return 0; fi
+  sub=$(sed -n -E 's/^url = ".*[?&]domains=([^&"]*).*/\1/p' "$DDNS_CURL" | head -1)
+  tok=$(sed -n -E 's/^url = ".*[?&]token=([^&"]*).*/\1/p' "$DDNS_CURL" | head -1)
+  one() { printf 'silent\nshow-error\nmax-time = 20\nuser-agent = "%s"\nurl = "%s"\n' "$2" "$3" | curl $1 -K - 2>&1 | head -c 120 | tr '\n' ' '; }
+  ans=$(one "" "ZenithBoard/$ver" "https://www.duckdns.org/update?domains=$sub&token=$tok&ip=");           echo "A  as the timer sends it:             ${ans:-no answer}"
+  ans=$(one "" "ZenithBoard/$ver" "https://www.duckdns.org/update?domains=$sub&token=$tok");               echo "B  without the empty 'ip=':             ${ans:-no answer}"
+  ans=$(one "-4" "ZenithBoard/$ver" "https://www.duckdns.org/update?domains=$sub&token=$tok&ip=");         echo "C  over IPv4 only:                       ${ans:-no answer}"
+  ans=$(one "" "curl/8" "https://www.duckdns.org/update?domains=$sub&token=$tok&ip=&verbose=true");        echo "D  plain client name, verbose answer:    ${ans:-no answer}"
+  echo; echo "OK = accepted.  KO = refused for every way of asking means the token and the sub-domain '$sub' do not belong together"
+  echo "(check on duckdns.org that '$sub' is listed in the SAME account whose token you copied).  A line that says OK while A says KO"
+  echo "tells exactly what to change: send it back to the author."
 }
 ddns_links() {   # the addresses once the router forwards the ports
   local h port; h=$(cfg_get DDNS_HOST); port=$(cfg_get PORT 8080)
@@ -173,6 +209,7 @@ ddns_menu() {
       reach "How to reach it from outside (router, privacy)" \
       status "Status: last update, public address, links" \
       update "Update now" \
+      test "Test: ask the service in several ways (explains a refusal)" \
       off "Turn the domain name off (deletes the saved key)" \
       back "Return to the previous menu") || return 0
     case "$c" in
@@ -180,6 +217,7 @@ ddns_menu() {
       setup) ddns_setup ;;
       reach) ddns_how_to_reach ;;
       status) clear; ddns_status; [ "$(cfg_get DDNS_PROVIDER none)" = none ] || { echo; ddns_links; }; echo; read -rp "Press Enter to continue..." _ ;;
+      test) clear; ddns_test; echo; read -rp "Press Enter to continue..." _ ;;
       update) if [ "$(cfg_get DDNS_PROVIDER none)" = none ]; then wt_msg "Set up a name first." 7; elif ddns_update; then wt_msg "Updated: $(cat "$DDNS_STATE" 2>/dev/null)" 8; else wt_msg "Failed: $(cat "$DDNS_STATE" 2>/dev/null)" 9; fi ;;
       off) wt_yesno "Stop updating the name and delete the saved key?\n\nThe name itself stays on the service's website; it will just stop following your address." 10 && { ddns_off; wt_msg "Domain name is off." 7; } ;;
       *) return 0 ;;

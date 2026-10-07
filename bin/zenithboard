@@ -33,7 +33,7 @@ ZenithBoard $ZB_VERSION - ADSB Flight Info
   zenithboard net status                saved connections, their addresses, default route, DNS
   zenithboard net static IP MASK GATEWAY [cloudflare|google|router|"DNS DNS"] [PROFILE]   fixed address (MASK: 255.255.255.0 or 24)
   zenithboard net dhcp [PROFILE]        back to an automatic address
-  zenithboard ddns status|update|off    domain name (DuckDNS / No-IP / FreeDNS): state, refresh now, stop
+  zenithboard ddns status|update|test|off  domain name (DuckDNS / No-IP / FreeDNS): state, refresh now, stop
   zenithboard ddns set PROVIDER NAME    duckdns|noip|freedns, then asks for the token / key (never on the command line)
   zenithboard wifi status               Wi-Fi: radio, country, connection, and wired-vs-Wi-Fi priority
   zenithboard wifi on|off               turn Wi-Fi on or off (kept after a reboot)
@@ -224,6 +224,7 @@ case "${1:-}" in
     case "${2:-status}" in
       status) ddns_status; [ "$(cfg_get DDNS_PROVIDER none)" = none ] || { echo; ddns_links; } ;;
       update) root_or_die; ddns_update && cat "$DDNS_STATE" 2>/dev/null || { cat "$DDNS_STATE" 2>/dev/null; exit 1; } ;;
+      test) root_or_die; ddns_test ;;
       off) root_or_die; ddns_off; echo "Domain name is off; the saved key was deleted." ;;
       set)
         root_or_die; [ -n "${3:-}" ] && [ -n "${4:-}" ] || die "Usage: sudo zenithboard ddns set duckdns|noip|freedns FULL.NAME"
