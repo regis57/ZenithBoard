@@ -38,6 +38,7 @@ ZenithBoard $ZB_VERSION - ADSB Flight Info
   zenithboard radius 1|2|5|10|15|30|50  wall detection radius (in your unit: km or miles)
   zenithboard location LAT LON [ALT_M]  set the antenna position EVERYWHERE it is stored
   zenithboard color amber|green|red|white   dot colour of every wall (amber is the default)
+  zenithboard mode dots|flap            look of the wall: dot matrix (default) or split-flap airport board
   zenithboard cycle SECONDS             seconds each aircraft stays on the wall
   zenithboard photos on|off             aircraft photos on the wall (needs internet on the Pi)
   zenithboard photos test [HEX]         check that this Pi can fetch photos from Planespotters
@@ -152,6 +153,13 @@ case "${1:-}" in
     esac ;;
   config-set)
     root_or_die; [ -n "${2:-}" ] || die "Usage: zenithboard config-set KEY VALUE"; cfg_set "$2" "${3:-}"; restart_flightinfo ;;
+  mode|style)
+    case "${2:-}" in
+      dots|flap) root_or_die; cfg_set DISPLAY_MODE "$2"; restart_flightinfo
+                 echo "Look of the wall: $2. The wall reloads by itself. A tablet that chose its own look keeps it: open the gear on the wall and press Reset, or use  ?mode=$2  in its address." ;;
+      "") echo "Look of the wall: $(cfg_get DISPLAY_MODE dots)   (change: sudo zenithboard mode dots|flap)" ;;
+      *) die "Usage: zenithboard mode dots|flap" ;;
+    esac ;;
   cycle)
     root_or_die; is_number "${2:-x}" || die "Usage: zenithboard cycle SECONDS"; cfg_set CYCLE_SECONDS "$2"; restart_flightinfo ;;
   photos)

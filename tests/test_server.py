@@ -265,3 +265,57 @@ class UatMergeTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+class AircraftLookupTests(unittest.TestCase):
+    SAMPLE = {"response": {"aircraft": {"type": "C Series 300", "icao_type": "BCS3", "manufacturer": "Bombardier",
+                                        "mode_s": "4B1805", "registration": "HB-JCN"}}}
+
+    def test_parse(self):
+        info = server.parse_aircraft(self.SAMPLE)
+        self.assertEqual((info["icao_type"], info["registration"], info["manufacturer"]), ("BCS3", "HB-JCN", "Bombardier"))
+        for bad in ({"response": "unknown aircraft"}, {"response": {"aircraft": {}}}, "x", None):
+            self.assertIsNone(server.parse_aircraft(bad))
+
+    def test_only_hex_codes_are_looked_up(self):
+        asked = []
+        real = server._aircraft
+        server._aircraft = type("Fake", (), {"get": staticmethod(lambda k: asked.append(k) or None)})()
+        try:
+            for h in ("4b1805", "4B1805 ", "zzzzzz", "12345", "", None):
+                server.lookup_aircraft(h)
+        finally:
+            server._aircraft = real
+        self.assertEqual(asked, ["4B1805", "4B1805"])
+
+    def test_model_comes_from_lookup_when_the_decoder_has_none(self):
+        data = {"aircraft": [
+            {"hex": "4b1805", "flight": "SWR123", "lat": 49.25, "lon": 6.22, "seen_pos": 0},            # decoder knows nothing
+            {"hex": "3c6444", "flight": "DLH4YK", "lat": 49.26, "lon": 6.22, "seen_pos": 0, "t": "A320", "r": "D-AIUA"}]}
+        asked = []
+        def lk(h):
+            asked.append(h)
+            return server.parse_aircraft(self.SAMPLE)
+        planes, _ = server.build_planes(data, 49.246, 6.223, 20, {}, None, False, {}, None, lk)
+        by = {p["hex"]: p for p in planes}
+        self.assertEqual((by["4b1805"]["type"], by["4b1805"]["registration"], by["4b1805"]["type_name"]), ("BCS3", "HB-JCN", "Airbus A220-300"))
+        self.assertEqual(by["3c6444"]["type"], "A320")
+        self.assertEqual(asked, ["4b1805"])                      # the decoder already knew the other one: no request
+
+    def test_unknown_type_falls_back_on_maker_and_name(self):
+        info = {"icao_type": "ZZ99", "type": "Skyfoo 9", "manufacturer": "Acme", "registration": "X-1"}
+        data = {"aircraft": [{"hex": "aaaaaa", "lat": 49.25, "lon": 6.22, "seen_pos": 0}]}
+        planes, _ = server.build_planes(data, 49.246, 6.223, 20, {}, None, False, {}, None, lambda h: info)
+        self.assertEqual(planes[0]["type_name"], "Acme Skyfoo 9")
+
+    def test_no_lookup_when_turned_off(self):
+        data = {"aircraft": [{"hex": "aaaaaa", "lat": 49.25, "lon": 6.22, "seen_pos": 0}]}
+        planes, _ = server.build_planes(data, 49.246, 6.223, 20, {}, None, False, {}, None, None)
+        self.assertIsNone(planes[0]["type"])
+
+
+class DisplayModeTests(unittest.TestCase):
+    def test_display_mode_is_dots_unless_flap_is_chosen(self):
+        self.assertEqual(server.public_config({})["display_mode"], "dots")
+        self.assertEqual(server.public_config({"DISPLAY_MODE": "flap"})["display_mode"], "flap")
+        self.assertEqual(server.public_config({"DISPLAY_MODE": "FLAP"})["display_mode"], "flap")
+        self.assertEqual(server.public_config({"DISPLAY_MODE": "weird"})["display_mode"], "dots")

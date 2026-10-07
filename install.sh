@@ -81,6 +81,13 @@ settings_location() {
   cfg_set LAT "$lat"; cfg_set LON "$lon"; cfg_set ALT_M "$alt"
 }
 
+settings_style() {
+  local cur d f c; cur=$(cfg_get DISPLAY_MODE dots); d=OFF; f=OFF; [ "$cur" = flap ] && f=ON || d=ON
+  c=$(wt_radio "Look of the wall.\n\nDot matrix : glowing dots, wipes from one aircraft to the next (the default).\nSplit-flap  : an old airport departure board; every letter flips through the alphabet, row after row, when the aircraft changes.\n\nOne tablet can also choose by itself with the address  http://PI:8080/?mode=flap  (or ?mode=dots). To go back: choose Dot matrix here." \
+      dots "Dot matrix" "$d" flap "Split-flap airport board" "$f") || return 1
+  cfg_set DISPLAY_MODE "$c"
+}
+
 settings_color() {
   local cur c a g r w; cur=$(cfg_get THEME amber); a=OFF; g=OFF; r=OFF; w=OFF
   case "$cur" in green) g=ON ;; red) r=ON ;; white) w=ON ;; *) a=ON ;; esac
@@ -91,10 +98,11 @@ settings_color() {
 settings_menu() {
   local c
   while true; do
-    c=$(wt_menu "Settings (applied immediately)\n\nWi-Fi: $(wifi_summary)\nRegion: $(cfg_get REGION world)   Units: $(cfg_get UNITS)   Radius: $(cfg_get RADIUS)   Position: $(cfg_get LAT), $(cfg_get LON)\nSeconds per aircraft: $(cfg_get CYCLE_SECONDS)   Photos: $(cfg_get SHOW_PHOTOS)   Routes: $(cfg_get SHOW_ROUTES 1)   Colour: $(cfg_get THEME amber)\nMonthly aircraft-data refresh: $( [ "$(cfg_get AUTO_DATA_REFRESH 1)" = 1 ] && echo ON || echo OFF )" \
-      wifi "Wi-Fi: on/off, country, networks, password" region "Region: world / United States (978 MHz UAT)" units "Units: metric / imperial" color "Colour: amber / green / red / white" radius "Detection radius" location "Antenna position (updates it everywhere)" cycle "Seconds per aircraft" photos "Aircraft photos on/off" routes "Flight origin/destination on/off" data "Monthly aircraft-data refresh on/off" logs "Logs: size limit, review, clean" back "Back") || return 0
+    c=$(wt_menu "Settings (applied immediately)\n\nWi-Fi: $(wifi_summary)   Look: $(cfg_get DISPLAY_MODE dots)\nRegion: $(cfg_get REGION world)   Units: $(cfg_get UNITS)   Radius: $(cfg_get RADIUS)   Position: $(cfg_get LAT), $(cfg_get LON)\nSeconds per aircraft: $(cfg_get CYCLE_SECONDS)   Photos: $(cfg_get SHOW_PHOTOS)   Routes: $(cfg_get SHOW_ROUTES 1)   Colour: $(cfg_get THEME amber)\nMonthly aircraft-data refresh: $( [ "$(cfg_get AUTO_DATA_REFRESH 1)" = 1 ] && echo ON || echo OFF )" \
+      wifi "Wi-Fi: on/off, country, networks, password" style "Look: dot matrix / split-flap airport board" region "Region: world / United States (978 MHz UAT)" units "Units: metric / imperial" color "Colour: amber / green / red / white" radius "Detection radius" location "Antenna position (updates it everywhere)" cycle "Seconds per aircraft" photos "Aircraft photos on/off" routes "Flight origin/destination on/off" data "Monthly aircraft-data refresh on/off" logs "Logs: size limit, review, clean" back "Back") || return 0
     case "$c" in
       wifi) wifi_menu ;;
+      style) local c; settings_style && restart_flightinfo && wt_msg "Look saved: $(cfg_get DISPLAY_MODE dots).\n\nThe wall reloads by itself. Tablets that chose their own look with ?mode=... or the gear keep it (gear > Reset)." 10 ;;
       region) settings_region && wt_msg "Region saved: $(cfg_get REGION world).\n\nIn menu 1 ADSB the 978 MHz UAT option appears for the United States." 10 ;;
       units) settings_units && restart_flightinfo ;;
       logs) logs_menu ;;
@@ -144,7 +152,7 @@ main_menu() {
       1 "ADSB        - decoder + share to ADSB Exchange, FlightAware, FR24..." \
       2 "FlightInfo  - dot-matrix wall for an old tablet" \
       3 "ACARS       - optional ACARS messages in Grafana (2nd dongle)$(weak_hw_tag)" \
-      4 "Settings    - Wi-Fi, region, units, radius, position, logs" \
+      4 "Settings    - Wi-Fi, look, region, units, radius, position, logs" \
       5 "Status      - what is running" \
       6 "Update      - upgrade ZenithBoard, decoder, feeders, ACARS" \
       7 "Uninstall everything" \
