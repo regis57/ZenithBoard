@@ -18,18 +18,19 @@ Inspired by [jprochazka/adsb-receiver](https://github.com/jprochazka/adsb-receiv
 
 ## See it
 
-<p align="center"><img src="docs/images/wall/zb-wall-green.gif" alt="The ZenithBoard wall cycling through aircraft in green" width="720"></p>
+**Watch:** [the 38-second Short](https://youtube.com/shorts/bhOSN4SAK3U) · [the short how-to (no installation details)](https://youtu.be/vuBje80VaZA) · [the whole playlist](https://www.youtube.com/channel/UCBlFORfQZ6XtUnpuG5fBd9Q/playlists)
 
-<p align="center"><img src="docs/images/wall/zb-three-colours.jpg" alt="The same flight, Lufthansa DLH4YK Munich to Sofia, in red, white and green" width="900"></p>
+<p align="center"><img src="docs/images/wall/zb-wall-green.gif" alt="The ZenithBoard wall cycling through aircraft in green" width="520"></p>
+
+<p align="center"><img src="docs/images/wall/zb-three-colours.jpg" alt="The same flight, Lufthansa DLH4YK Munich to Sofia, in red, white and green" width="720"></p>
 
 Real flights over the author's antenna, with the aircraft's own photo from Planespotters.net (credited on the wall):
 
 | | |
 |---|---|
-| <img src="docs/images/wall/zb-ezs71bm-white.jpg" alt="easyJet Switzerland EZS71BM, Keflavik to Basel-Mulhouse, white" width="420"> | <img src="docs/images/wall/zb-ryr65cn-amber.jpg" alt="Ryanair RYR65CN, Manchester to Milan Malpensa, amber" width="420"> |
-| <img src="docs/images/wall/zb-bel4sf-amber.jpg" alt="Brussels Airlines BEL4SF, Lyon to Brussels, amber" width="420"> | <img src="docs/images/wall/zb-sfs40-amber.jpg" alt="A Beechcraft King Air with its photo, amber" width="420"> |
+| <img src="docs/images/wall/zb-ezs71bm-white.jpg" alt="easyJet Switzerland EZS71BM, Keflavik to Basel-Mulhouse, white" width="300"> | <img src="docs/images/wall/zb-ryr65cn-amber.jpg" alt="Ryanair RYR65CN, Manchester to Milan Malpensa, amber" width="300"> |
 
-**Video:** a 37-second tour, [`docs/media/ZenithBoard-short.mp4`](docs/media/ZenithBoard-short.mp4) (opens in GitHub's player).
+The story behind the project: [ZenithBoard on regis-hennequin.info](https://regis-hennequin.info/beyond-the-desk/adsb/zenithboard/).
 
 ---
 
@@ -92,13 +93,13 @@ The first run asks, once:
 * **Antenna position** — latitude, longitude, altitude (needed by the decoder, MLAT and the wall's distance calculation). Tip: right-click your house in Google Maps to copy the coordinates.
 * **Default radius** — how close a plane must be to appear on the wall.
 
-<p align="center"><img src="docs/images/install-1-welcome.png" alt="The welcome screen lists the first questions (the region question was added later)" width="520"></p>
-<p align="center"><img src="docs/images/install-2-units.png" alt="Choosing metric or imperial units" width="520"></p>
+<p align="center"><img src="docs/images/install-1-welcome.png" alt="The welcome screen lists the first questions (the region question was added later)" width="400"></p>
+<p align="center"><img src="docs/images/install-2-units.png" alt="Choosing metric or imperial units" width="400"></p>
 
 ### 5. Use the menu
 After the questions, the installer shows its main menu. You can come back to it at any time with `sudo ./install.sh` (or `sudo zenithboard menu`) to add or remove things.
 
-<p align="center"><img src="docs/images/install-3-menu.png" alt="The ZenithBoard main menu: ADSB, FlightInfo, ACARS, Settings, Status, Update, Uninstall" width="640"></p>
+<p align="center"><img src="docs/images/install-3-menu.png" alt="The ZenithBoard main menu: ADSB, FlightInfo, ACARS, Settings, Status, Update, Uninstall" width="520"></p>
 
 **1 · ADSB** — pick the decoder (**readsb** is recommended; **dump1090-fa** is supported as an alternative; both feed the same local port so every feeder works with either). Then tick where to share. *ADSB Exchange is always on.* The ADSB Exchange script will ask for a station name and your position, and prints a link to see your feed. FlightAware prints a claim link; **Flightradar24** runs FR24's own sign-up after printing what to answer (paste your *sharing key* — flightradar24.com → account → *My data sharing* — if you already feed FR24; otherwise Enter); Beast, `127.0.0.1`, port `30005` and MLAT no are enforced afterwards; Plane Finder finishes setup on a small web page. Unticking an installed feeder removes it after a confirmation.
 
