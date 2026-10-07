@@ -109,8 +109,8 @@ gain_verdict() {
   if awk -v p="$pct" 'BEGIN{exit !(p>5)}'; then
     echo "TOO HIGH: $pct% of the messages are very strong (more than 5%). The receiver is overloaded. Lower the gain by ONE step ($(gain_step_move "$cur" down) dB), wait 15-30 minutes, check again."
   elif awk -v p="$pct" 'BEGIN{exit !(p<1)}'; then
-    if [ "$cur" = "$GAIN_MAX" ] || [ "$cur" = default ]; then echo "FINE: $pct% strong messages (under 1%) and the gain is already at its maximum. Nothing more to gain here."
-    else echo "ROOM TO RAISE: $pct% strong messages (under 1%). You may try ONE step higher ($(gain_step_move "$cur" up) dB), wait 15-30 minutes, then compare range and aircraft count."; fi
+    if [ "$cur" = "$GAIN_MAX" ] || [ "$cur" = default ]; then echo "FINE: $pct% strong messages (under 1%) and the gain is already at its maximum. Nothing more to gain here (the share is lower at night: judge it at a busy hour)."
+    else echo "LOW SHARE: $pct% strong messages (under 1%). On its own that is no reason to change anything: the share depends on traffic and is lower at night or when few aircraft are close. Check again at a BUSY hour. If it is still under 1% then, you may try ONE step higher ($(gain_step_move "$cur" up) dB), wait 15-30 minutes, then compare range and aircraft count."; fi
   else
     echo "GOOD: $pct% strong messages, in the usual 1-5% range. Leave the gain as it is."
   fi

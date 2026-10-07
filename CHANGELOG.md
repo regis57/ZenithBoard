@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.9.1
+- Gain check: an "under 1 % strong messages" reading no longer reads as an invitation to raise the gain. It now says the share depends on traffic (lower at night) and to check again at a busy hour first. README wording the same.
+
 ## 0.9.0
 - **Gain** (menu *4 Settings → 2 Receiver → 4 Gain*, or `zenithboard gain ...`): *Check* reads the decoder's statistics of the last 15 minutes and says whether the gain is too high (over 5 % very strong messages), good (1-5 %) or can be raised one step; *maximum*, *one step lower/higher*, *type a value* (rounded to the dongle's real steps) and *back to the default* change only the `--gain` part of the decoder options and restart the decoder. Nothing is automatic. A `--gain -10` (the dongle's own automatic gain, not the maximum) is recognised and explained.
 - README: new "Gain" section; chapter 4 is now "The receiver".
