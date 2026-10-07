@@ -13,6 +13,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$ROOT/lib/flightinfo.sh"
 . "$ROOT/lib/acars.sh"
 . "$ROOT/lib/logs.sh"
+. "$ROOT/lib/gain.sh"
 . "$ROOT/lib/uat.sh"
 . "$ROOT/lib/wifi.sh"
 . "$ROOT/lib/network.sh"
@@ -123,10 +124,12 @@ settings_receiver_menu() {
       region "1  Region: world / United States (978 MHz UAT)" \
       units "2  Units: metric / imperial" \
       location "3  Antenna position (updates it everywhere)" \
+      gain "4  Gain: check it and tune the dongle's sensitivity" \
       back "Return to the previous menu") || return 0
     case "$c" in
       region) settings_region && wt_msg "Region saved: $(cfg_get REGION world).\n\nIn menu 1 ADSB the 978 MHz UAT option appears for the United States." 10 ;;
       units) settings_units && restart_flightinfo ;;
+      gain) gain_menu ;;
       location)
         if settings_location; then
           clear; zb_apply_location "$(cfg_get LAT)" "$(cfg_get LON)" "$(cfg_get ALT_M 0)"

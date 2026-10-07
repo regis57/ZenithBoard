@@ -39,7 +39,7 @@ The story behind the project: [ZenithBoard on regis-hennequin.info](https://regi
 | **1. Get started** | [What you need](#what-you-need) · [Install, step by step](#install--step-by-step) |
 | **2. Network** | [Wi-Fi](#wi-fi) · [Fixed IP](#fixed-ip-address) · [A name for your wall](#a-name-for-your-wall) · [Ports](#network-ports-what-answers-where) |
 | **3. The wall** | [What it shows](#what-the-wall-shows) · [Look](#look-dot-matrix-or-airport-split-flap-board) · [Colours](#colours) · [Units, radius, position](#units-radius-and-position) · [Silhouettes](#aircraft-silhouettes) · [Routes and models](#flight-routes) · [Photos](#photos) · [Demo](#try-it-without-any-hardware) |
-| **4. More receivers** | [978 MHz UAT (US)](#978-mhz-uat-united-states) |
+| **4. The receiver** | [Gain](#gain-tune-the-dongle-optional) · [978 MHz UAT (US)](#978-mhz-uat-united-states) |
 | **5. Keep it running** | [Update](#updating-and-uninstalling) · [Logs](#logs-size-review-clean-optional) · [Troubleshooting](#troubleshooting) · [Known limits](#known-limits) |
 
 **Which defaults does what?** Everything in menu *4 Settings* (and `zenithboard ...`) sets the **default for every screen**. The gear icon on a tablet, or a link such as `?mode=flap`, only overrides it **for that tablet**; the gear's *Reset* returns the tablet to the Pi's default. So the two do not duplicate each other: one is the house rule, the other a personal choice.
@@ -111,7 +111,7 @@ The first run asks, once:
 <p align="center"><img src="docs/images/install-2-units.png" alt="Choosing metric or imperial units" width="400"></p>
 
 ### 5. Use the menu
-After the questions, the installer shows its main menu. *4 Settings* is organised in the order of a first setup, in four groups: **1 Network** (Wi-Fi, fixed IP, domain name), **2 Receiver** (region, units, antenna position: what the dongle and its antenna are used for), **3 ZenithBoard wall** (radius, look, colour, seconds per aircraft, photos, routes, monthly data refresh) and **4 Logs**. *6 Update* updates everything at once or lets you tick the components to update. You can come back to it at any time with `sudo ./install.sh` (or `sudo zenithboard menu`) to add or remove things.
+After the questions, the installer shows its main menu. *4 Settings* is organised in the order of a first setup, in four groups: **1 Network** (Wi-Fi, fixed IP, domain name), **2 Receiver** (region, units, antenna position, dongle gain: what the dongle and its antenna are used for), **3 ZenithBoard wall** (radius, look, colour, seconds per aircraft, photos, routes, monthly data refresh) and **4 Logs**. *6 Update* updates everything at once or lets you tick the components to update. You can come back to it at any time with `sudo ./install.sh` (or `sudo zenithboard menu`) to add or remove things.
 
 <p align="center"><img src="docs/images/install-3-menu.png" alt="The ZenithBoard main menu: ADSB, FlightInfo, ACARS, Settings, Status, Update, Uninstall" width="520"></p>
 
@@ -390,7 +390,24 @@ Then open **`http://<the-pi-address>:8081/`** (or `http://localhost:8081/` on th
 
 ---
 
-# 4. More receivers
+# 4. The receiver
+
+## Gain: tune the dongle (optional)
+
+The gain is how much the dongle amplifies the radio signal. Too low and distant aircraft are lost; too high and strong nearby ones overload it. The **maximum (49.6 dB) is the usual best start**, and for many setups it is also the end. Nothing here is automatic: you look, then you change one step if the advice says so.
+
+| | |
+|---|---|
+| **Menu** | `sudo zenithboard menu` → *4 Settings → 2 Receiver → 4 Gain* |
+| **Check** | `zenithboard gain check` reads the decoder's own statistics of the last 15 minutes (messages, farthest aircraft, **share of very strong messages**) and says *too high*, *good* or *room to raise* |
+| **Change** | `sudo zenithboard gain set max` · `gain set 40.2` · `gain down` · `gain up` · `gain set default` · the real steps: `zenithboard gain steps` |
+
+* **The rule of thumb:** 1 % to 5 % very strong messages is good. Above 5 % lower the gain by **one step**; under 1 % with a gain below the maximum, you may try one step up.
+* **Method:** change one step, wait 15 to 30 minutes (ideally at a busy time of day), run the check again, and keep what gives the most aircraft and the longest range. There is no universal best value: it depends on your dongle, antenna, any LNA or filter, and what transmits nearby.
+* **The dongle only has fixed steps** (0.0, 0.9, 1.4 … 48.0, 49.6 dB): a value such as 30 becomes 29.7.
+* **Careful with `-10`:** in the decoder options `--gain -10` does not mean "maximum", it switches the dongle's own automatic gain on, which is usually worse for aircraft. The check tells you when that is what you have. readsb's `--gain=auto` is a different, experimental feature and is left alone unless you replace it.
+* **What it edits:** only the `--gain` part of `RECEIVER_OPTIONS` in `/etc/default/readsb` or `/etc/default/dump1090-fa`; the dongle serial and other options stay. On the PiAware SD-card image the gain lives in `/boot/piaware-config.txt`: use `sudo piaware-config rtlsdr-gain 49.6` there.
+* **Honest status:** the tests cover the file editing, the rounding and the advice from sample statistics; the radio part was **not tried on a real Pi** here. Please say so in an issue if your decoder writes its statistics somewhere else.
 
 ## 978 MHz UAT (United States)
 
