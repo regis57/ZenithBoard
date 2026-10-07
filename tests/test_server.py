@@ -237,6 +237,68 @@ class RouteTests(unittest.TestCase):
         planes, _ = server.build_planes(data, 49.246, 6.223, 10, {}, None, False, None, lambda cs: {"from": ema, "to": dict(ema)})
         self.assertIsNone(planes[0]["route"])
 
+    def test_hexdb_route_parsing(self):
+        self.assertEqual(server.parse_hexdb_route("EGNX-ELLX-EGNX"), [("EGNX", "ELLX"), ("ELLX", "EGNX")])
+        self.assertEqual(server.parse_hexdb_route("EIDW-EGLL"), [("EIDW", "EGLL")])
+        for bad in ("", None, "EIDW", "EIDW-", "EIDW-EGLL-<script>", "EIDWX-EGLL", "EGNX-EGNX", "A-B-C-D-E-F-G-H"):
+            self.assertEqual(server.parse_hexdb_route(bad), [], bad)
+
+    def test_second_opinion_from_hexdb_is_cached_and_lean(self):
+        calls = []
+        airports = {"EGNX": (52.83, -1.33), "ELLX": (49.63, 6.20), "EGLL": (51.47, -0.46)}
+
+        def fake(path):
+            calls.append(path)
+            if path.startswith("/route/icao/"):
+                return {"flight": "LGL12", "route": "EGNX-ELLX-EGNX"}
+            code = path.rsplit("/", 1)[1]
+            lat, lon = airports[code]
+            return {"icao": code, "airport": code + " Airport", "location": code + " City", "country_code": "XX", "latitude": lat, "longitude": lon}
+        real, server._hexdb_json = server._hexdb_json, fake
+        server._airport_cache.clear()
+        try:
+            value, ok = server._route2_api("LGL12")
+            self.assertTrue(ok)
+            self.assertEqual([(r["from"]["icao"], r["to"]["icao"]) for r in value], [("EGNX", "ELLX"), ("ELLX", "EGNX")])
+            n = len(calls)
+            self.assertEqual(n, 1 + 2, "one route request and one per DISTINCT airport (2), not per leg end: %s" % calls)
+            server._route2_api("LGL12")
+            self.assertEqual(len(calls), n + 1, "the airports are remembered: only the route is asked again")
+            # an unreachable service is "no answer", never "not found"
+            def down(path):
+                raise OSError("no internet")
+            server._hexdb_json = down
+            server._airport_cache.clear()
+            self.assertEqual(server._route2_api("LGL12"), (None, False))
+        finally:
+            server._hexdb_json = real
+            server._airport_cache.clear()
+
+    def test_wall_takes_the_second_opinion_only_when_the_first_is_wrong(self):
+        ema = {"iata": "EMA", "icao": "EGNX", "name": "East Midlands", "city": "East Midlands", "country": "GB", "lat": 52.83, "lon": -1.33}
+        lux = {"iata": "LUX", "icao": "ELLX", "name": "Luxembourg", "city": "Luxembourg", "country": "LU", "lat": 49.63, "lon": 6.20}
+        data = {"aircraft": [{"hex": "4b0001", "flight": "LGL12", "lat": 50.6, "lon": 3.9, "seen_pos": 0, "track": 300, "gs": 250}]}
+        asked = []
+        def second(cs):
+            asked.append(cs)
+            return [{"from": ema, "to": lux}, {"from": lux, "to": ema}]
+        planes, _ = server.build_planes(data, 50.6, 3.9, 10, {}, None, False, None, lambda cs: {"from": ema, "to": dict(ema)}, None, second)
+        self.assertEqual(planes[0]["route"]["to"]["icao"], "EGNX", "the leg the aircraft is really on (LUX to EMA, heading west-north-west)")
+        self.assertEqual(planes[0]["route"]["from"]["icao"], "ELLX")
+        # the first answer is fine: the second service is not even asked
+        asked.clear()
+        good = {"from": lux, "to": ema}
+        planes, _ = server.build_planes(data, 50.6, 3.9, 10, {}, None, False, None, lambda cs: good, None, second)
+        self.assertEqual(asked, [])
+        self.assertIs(planes[0]["route"], good)
+        # nothing plausible from either: empty
+        planes, _ = server.build_planes(data, 50.6, 3.9, 10, {}, None, False, None, lambda cs: {"from": ema, "to": dict(ema)}, None, lambda cs: None)
+        self.assertIsNone(planes[0]["route"])
+        # a second opinion that cannot be checked (no airport positions) is not believed
+        unchecked = [{"from": {"city": "A"}, "to": {"city": "B"}}]
+        planes, _ = server.build_planes(data, 50.6, 3.9, 10, {}, None, False, None, lambda cs: {"from": ema, "to": dict(ema)}, None, lambda cs: unchecked)
+        self.assertIsNone(planes[0]["route"])
+
     def test_only_airline_callsigns_are_looked_up(self):
         asked = []
         real = server._routes
