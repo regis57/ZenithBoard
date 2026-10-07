@@ -22,7 +22,7 @@ Inspired by [jprochazka/adsb-receiver](https://github.com/jprochazka/adsb-receiv
 
 ## See it
 
-**Watch:** [the 38-second Short](https://youtube.com/shorts/bhOSN4SAK3U) · [the short how-to (no installation details)](https://youtu.be/vuBje80VaZA) · [the whole playlist](https://www.youtube.com/channel/UCBlFORfQZ6XtUnpuG5fBd9Q/playlists)
+**Watch:** [the 38-second Short](https://youtube.com/shorts/bhOSN4SAK3U) · [the split-flap Short](https://youtube.com/shorts/RpelTSHk6jo) · [the short how-to (no installation details)](https://youtu.be/vuBje80VaZA) · [the whole playlist](https://www.youtube.com/channel/UCBlFORfQZ6XtUnpuG5fBd9Q/playlists)
 
 <p align="center"><img src="docs/images/wall/zb-wall-green.gif" alt="The ZenithBoard wall cycling through aircraft in green" width="460">&nbsp;<img src="docs/images/wall/zb-flap-roll.gif" alt="The split-flap look, letters rolling to the next aircraft" width="460"></p>
 
