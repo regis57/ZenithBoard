@@ -13,6 +13,8 @@ HERE="$(dirname "$(readlink -f "$0")")"
 . "$HERE/../lib/acars.sh"
 # shellcheck source=lib/logs.sh
 . "$HERE/../lib/logs.sh"
+# shellcheck source=lib/gain.sh
+. "$HERE/../lib/gain.sh"
 # shellcheck source=lib/uat.sh
 . "$HERE/../lib/uat.sh"
 # shellcheck source=lib/wifi.sh
@@ -33,6 +35,8 @@ ZenithBoard $ZB_VERSION - ADSB Flight Info
   zenithboard net status                saved connections, their addresses, default route, DNS
   zenithboard net static IP MASK GATEWAY [cloudflare|google|router|"DNS DNS"] [PROFILE]   fixed address (MASK: 255.255.255.0 or 24)
   zenithboard net dhcp [PROFILE]        back to an automatic address
+  zenithboard gain check                is the dongle gain right? (reads the decoder statistics, gives advice)
+  zenithboard gain set DB|max|default|up|down   change the gain (one step at a time is best); steps: zenithboard gain steps
   zenithboard ddns status|update|test|off  domain name (DuckDNS / No-IP / FreeDNS): state, refresh now, stop
   zenithboard ddns set PROVIDER NAME    duckdns|noip|freedns, then asks for the token / key (never on the command line)
   zenithboard wifi status               Wi-Fi: radio, country, connection, and wired-vs-Wi-Fi priority
@@ -219,6 +223,14 @@ case "${1:-}" in
         [ -n "$u" ] || die "Which connection? Give its name (see: zenithboard net status)."
         net_apply_dhcp "$u" && echo "Automatic address restored." || die "Could not apply it." ;;
       *) die "Usage: zenithboard net status|static IP MASK GATEWAY [DNS]|dhcp" ;;
+    esac ;;
+  gain)
+    case "${2:-check}" in
+      check|status) gain_check ;;
+      set) root_or_die; [ -n "${3:-}" ] || die "Usage: sudo zenithboard gain set DB|max|default"; gain_set "$3" ;;
+      up|down) root_or_die; d=$(gain_decoder); gain_set "$(gain_step_move "$(gain_current "$d")" "$2")" ;;
+      steps) echo "$GAIN_STEPS" ;;
+      *) die "Usage: zenithboard gain check | set DB|max|default | up | down | steps" ;;
     esac ;;
   ddns)
     case "${2:-status}" in

@@ -19,6 +19,7 @@ jobs:
           bash tests/test_logs_uat.sh
           bash tests/test_wifi.sh
           bash tests/test_network.sh
+          bash tests/test_gain.sh
           bash tests/test_menus.sh
       - name: JavaScript tests
         run: |

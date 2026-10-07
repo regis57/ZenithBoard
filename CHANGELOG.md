@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.0
+- **Gain** (menu *4 Settings → 2 Receiver → 4 Gain*, or `zenithboard gain ...`): *Check* reads the decoder's statistics of the last 15 minutes and says whether the gain is too high (over 5 % very strong messages), good (1-5 %) or can be raised one step; *maximum*, *one step lower/higher*, *type a value* (rounded to the dongle's real steps) and *back to the default* change only the `--gain` part of the decoder options and restart the decoder. Nothing is automatic. A `--gain -10` (the dongle's own automatic gain, not the maximum) is recognised and explained.
+- README: new "Gain" section; chapter 4 is now "The receiver".
+
 ## 0.8.6
 - Domain name: a DuckDNS token must now look like a DuckDNS token (36 characters, 8-4-4-4-12), so a typo is caught at once instead of as a "KO" later. When DuckDNS does refuse, the status shows the sub-domain that was sent and the token length (never the token).
 - New **Test** (menu Network > Name, or `sudo zenithboard ddns test`): asks DuckDNS the same thing in four ways (as the timer does, without `ip=`, IPv4 only, with another user-agent) and explains the answers, to find out why a refusal happens. The token is never shown.
