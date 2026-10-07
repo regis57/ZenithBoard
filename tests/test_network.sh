@@ -75,12 +75,16 @@ check "host ok"                  'ddns_valid_host myplanes.duckdns.org'
 check "host: space refused"      '! ddns_valid_host "my planes.org"'
 check "host: injection refused"  '! ddns_valid_host "a.org&token=x"'
 check "token ok"                 'ddns_valid_token abcd1234-ef56'
+check "duckdns token: a UUID is accepted"   'ddns_valid_token_for duckdns 1a2b3c4d-1111-2222-3333-444455556666'
+check "duckdns token: one character missing is refused" '! ddns_valid_token_for duckdns 1a2b3c4d-1111-2222-3333-44445555666'
+check "duckdns token: one character too many is refused" '! ddns_valid_token_for duckdns 1a2b3c4d-1111-2222-3333-4444555566667'
+check "other providers keep the generic rule" 'ddns_valid_token_for freedns TokEN123abc456'
 check "token too short"          '! ddns_valid_token abc'
 check "token from direct URL"    '[ "$(ddns_token_from "https://freedns.afraid.org/dynamic/update.php?TokEN123abc456")" = TokEN123abc456 ]'
 check "token from sync URL"      '[ "$(ddns_token_from "https://sync.afraid.org/u/TokEN123abc456/")" = TokEN123abc456 ]'
 check "token bare"               '[ "$(ddns_token_from TokEN123abc456)" = TokEN123abc456 ]'
-c=$(ddns_curl_config duckdns myplanes.duckdns.org "" tok12345678)
-check "duckdns url: suffix stripped" 'printf "%s\n" "$c" | grep -q "domains=myplanes&token=tok12345678&ip=\""'
+c=$(ddns_curl_config duckdns myplanes.duckdns.org "" 1a2b3c4d-1111-2222-3333-444455556666)
+check "duckdns url: suffix stripped" 'printf "%s\n" "$c" | grep -q "domains=myplanes&token=1a2b3c4d-1111-2222-3333-444455556666&ip=\""'
 c=$(ddns_curl_config noip home.ddns.net 'us"er' 'pa\ss"w')
 check "noip: hostname in url"    'printf "%s\n" "$c" | grep -q "hostname=home.ddns.net"'
 check "noip: user escaped"       'printf "%s\n" "$c" | grep -qF "user = \"us\\\"er:pa\\\\ss\\\"w\""'
@@ -107,11 +111,11 @@ check "empty answer is a failure" '[ "$(ddns_interpret duckdns "")" = fail ]'
 ZB_ETC="$t/etc"; DDNS_CURL="$t/etc/ddns.curl"; DDNS_STATE="$t/run/zenithboard-ddns.status"
 printf '#!/bin/bash\necho OK\n' > "$t/bin/curl"; chmod +x "$t/bin/curl"
 ZB_HOME="$t/none"
-out=$(ddns_set duckdns myplanes.duckdns.org "" tok12345678)
+out=$(ddns_set duckdns myplanes.duckdns.org "" 1a2b3c4d-1111-2222-3333-444455556666)
 check "set: succeeds"            'printf "%s" "$out" | grep -q "^OK"'
 check "set: key file is mode 600" '[ "$(stat -c %a "$DDNS_CURL")" = 600 ]'
 check "set: provider saved"      '[ "$(cfg_get DDNS_PROVIDER)" = duckdns ] && [ "$(cfg_get DDNS_HOST)" = myplanes.duckdns.org ]'
-check "set: secret not in config" '! grep -q tok12345678 "$ZENITHBOARD_ETC/config.env"'
+check "set: secret not in config" '! grep -q 1a2b3c4d-1111-2222-3333-444455556666 "$ZENITHBOARD_ETC/config.env"'
 check "set: state written"       'grep -q "ok" "$DDNS_STATE"'
 printf '#!/bin/bash\necho KO\n' > "$t/bin/curl"
 check "update: a refusal is reported" '! ddns_update && grep -q FAILED "$DDNS_STATE"'
@@ -120,10 +124,17 @@ export ZB_DDNS_RETRY_SLEEP=0
 printf '#!/bin/bash\nn=$(cat %s/n 2>/dev/null || echo 0); echo $((n+1)) > %s/n\n[ "$n" -ge 1 ] && echo OK || echo KO\n' "$t" "$t" > "$t/bin/curl"; rm -f "$t/n"
 check "update: retry turns a first refusal into success" 'ddns_update 2 && grep -q " ok" "$DDNS_STATE"'
 printf '#!/bin/bash\necho KO\n' > "$t/bin/curl"
-ddns_update 1; check "update: the service answer is shown" 'grep -q "FAILED: .*(answer: KO)" "$DDNS_STATE"'
+ddns_update 1; check "update: the service answer is shown" 'grep -q "FAILED: .*(answer: KO; sub-domain sent: myplanes, token: 36 characters)" "$DDNS_STATE"'
+# the test asks several ways, shows each answer and never the token
+printf '#!/bin/bash\ncat >/dev/null 2>&1 <<<"" ; [ "$1" = -4 ] && echo OK || echo KO\n' > "$t/bin/curl"
+printf '#!/bin/bash\nif [ "$1" = -4 ]; then cat >/dev/null; echo OK; else cat >/dev/null; echo KO; fi\n' > "$t/bin/curl"
+res=$(ddns_test)
+check "test: prints the four ways"          '[ "$(printf "%s\n" "$res" | grep -cE "^[ABCD]  ")" = 4 ]'
+check "test: shows which way is accepted"   'printf "%s\n" "$res" | grep -qE "^C  .*OK" && printf "%s\n" "$res" | grep -qE "^A  .*KO"'
+check "test: the token is never printed"    '! printf "%s" "$res" | grep -q "1a2b3c4d-1111"'
 ddns_off
 check "off: key deleted"         '[ ! -e "$DDNS_CURL" ] && [ "$(cfg_get DDNS_PROVIDER)" = none ]'
 out=$(ddns_set noip a.ddns.net "" ""); check "noip without key refused" '[ $? -ne 0 ] || printf "%s" "$out" | grep -q needs'
-out=$(ddns_set duckdns a.duckdns.org "" "bad"); check "bad token refused" 'printf "%s" "$out" | grep -q "token"'
+out=$(ddns_set duckdns a.duckdns.org "" "bad"); check "bad token refused, with its length" 'printf "%s" "$out" | grep -q "36 characters.*has 3"'
 
 [ "$fail" = 0 ] && echo "ALL OK" || { echo "SOME FAILED"; exit 1; }

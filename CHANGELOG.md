@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.6
+- Domain name: a DuckDNS token must now look like a DuckDNS token (36 characters, 8-4-4-4-12), so a typo is caught at once instead of as a "KO" later. When DuckDNS does refuse, the status shows the sub-domain that was sent and the token length (never the token).
+- New **Test** (menu Network > Name, or `sudo zenithboard ddns test`): asks DuckDNS the same thing in four ways (as the timer does, without `ip=`, IPv4 only, with another user-agent) and explains the answers, to find out why a refusal happens. The token is never shown.
+
 ## 0.8.5
 - **Domain name timer fixed**: it only had a "60 s after boot" start, so when the name was set up long after boot the 5-minute refresh never started until the next reboot. It now starts 30 s after being switched on and repeats every 5 minutes.
 - Domain name status says plainly when the name points to your address ("it works"), whatever older line is shown.
