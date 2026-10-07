@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.8.3
+- Menu 6 Update: after an update (everything, or the components you ticked) the menu reopens by itself on the new version. Before, it stayed on the old code until you quit and came back.
+
 ## 0.8.2
 - Menus: the *Back* entry no longer repeats the word in both columns (`back  Back`); it now reads `back  Return to the previous menu`.
 

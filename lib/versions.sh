@@ -2,7 +2,7 @@
 # shellcheck disable=SC2034
 # shellcheck shell=bash
 # Third-party pins. Bump here when an upstream moves; everything else reads these.
-ZB_VERSION="0.8.2"
+ZB_VERSION="0.8.3"
 
 # FlightAware APT repository package (provides piaware and dump1090-fa). FlightAware renamed it from
 # piaware-repository (9.0.1) to flightaware-apt-repository; see https://www.flightaware.com/adsb/piaware/install
