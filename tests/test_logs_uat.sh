@@ -34,6 +34,25 @@ check "default removes the file"           '[ ! -e "$JOURNALD_CONF" ]'
 logs_clean abc >/dev/null 2>&1; rc=$?
 check "clean refuses nonsense"             '[ "$rc" -ne 0 ]'
 
+logs_clean 7 >/dev/null 2>&1; rc=$?
+check "clean no longer takes a number of days" '[ "$rc" -ne 0 ]'
+# ---- logs: automatic cleaning (opt-in, daily, keeps 7 days)
+export ZENITHBOARD_ETC="$t/etc"; mkdir -p "$ZENITHBOARD_ETC"; touch "$ZENITHBOARD_ETC/config.env"; ZB_CONFIG="$ZENITHBOARD_ETC/config.env"; ZB_ETC="$ZENITHBOARD_ETC"
+mkdir -p "$t/bin" "$t/home/systemd"; printf '#!/bin/bash\necho "$*" >> %s/sc.log\n' "$t" > "$t/bin/systemctl"; chmod +x "$t/bin/systemctl"
+printf '#!/bin/bash\necho "$*" >> %s/jc.log\n' "$t" > "$t/bin/journalctl"; chmod +x "$t/bin/journalctl"
+PATH="$t/bin:$PATH"
+check "auto cleaning is off by default"    '[ "$(logs_auto_state)" = OFF ]'
+ZB_HOME="$t/home"; : > "$ZB_HOME/systemd/zenithboard-logs-clean.service"; : > "$ZB_HOME/systemd/zenithboard-logs-clean.timer"
+check "unit files are shipped"             '[ -f systemd/zenithboard-logs-clean.service ] && [ -f systemd/zenithboard-logs-clean.timer ] && grep -q "OnCalendar=daily" systemd/zenithboard-logs-clean.timer && grep -q "auto-run" systemd/zenithboard-logs-clean.service'
+logs_auto_on 2>/dev/null
+check "auto on is remembered"              '[ "$(cfg_get LOG_AUTOCLEAN)" = 1 ] && logs_auto_state | grep -q "^ON"'
+check "auto on enables the timer"          'grep -q "enable --now zenithboard-logs-clean.timer" "$t/sc.log"'
+logs_auto_run
+check "the run keeps 7 days"               'grep -qx -- "--vacuum-time=7d" "$t/jc.log"'
+logs_auto_off 2>/dev/null
+check "auto off is remembered"             '[ "$(cfg_get LOG_AUTOCLEAN)" = 0 ] && [ "$(logs_auto_state)" = OFF ]'
+check "auto off disables the timer"        'grep -q "disable --now zenithboard-logs-clean.timer" "$t/sc.log"'
+
 # ---- 978 MHz: dongle option in /etc/default/dump978-fa
 f="$t/dump978-fa"
 printf 'ENABLED=yes\nRECEIVER_OPTIONS="--sdr driver=rtlsdr --sdr-gain 48"\nDECODER_OPTIONS="--raw-port 30978"\n' > "$f"

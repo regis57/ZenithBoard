@@ -1,0 +1,6 @@
+[Unit]
+Description=ZenithBoard log clean-up (removes log messages older than 7 days)
+
+[Service]
+Type=oneshot
+ExecStart=/opt/zenithboard/bin/zenithboard logs auto-run

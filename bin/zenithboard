@@ -56,11 +56,14 @@ ZenithBoard $ZB_VERSION - ADSB Flight Info
   zenithboard data auto on|off          monthly automatic refresh of that list (default: on)
   zenithboard data status               when it was last refreshed
   zenithboard update                    upgrade ZenithBoard + decoder + feeders + ACARS + Grafana
+  zenithboard update list               what is installed and can be updated one by one
+  zenithboard update only NAME...       update just those (e.g. readsb flightinfo)
   zenithboard mlat-guard                re-enforce a single MLAT client
   zenithboard logs [flightinfo|acars|decoder|uat]   show the last 100 lines of a service
   zenithboard logs usage|review         size of the system logs / size + recent warnings
   zenithboard logs limit MB|default     cap the size of the system logs (10-2000 MB)
-  zenithboard logs clean [DAYS|all]     delete old logs (default: keep the last 7 days)
+  zenithboard logs clean                delete ALL logs now
+  zenithboard logs auto on|off|status   automatic daily clean-up that keeps the last 7 days (off by default)
   zenithboard menu                      open the installer menu (add / remove components)
 USAGE
 }
@@ -188,8 +191,13 @@ case "${1:-}" in
       *) die "Usage: zenithboard routes on|off|test [CALLSIGN]" ;;
     esac ;;
   mlat-guard) root_or_die; zb_mlat_guard ;;
-  update) root_or_die; zb_update "${2:-}" ;;
-  update-components) root_or_die; zb_update_components ;;
+  update)
+    case "${2:-}" in
+      list) zb_update_list ;;
+      only) root_or_die; [ -n "${3:-}" ] || die "Usage: sudo zenithboard update only NAME...   (names: zenithboard readsb dump1090 adsbx piaware fr24 planefinder flightinfo acars; see: zenithboard update list)"; shift 2; zb_update --only "$@" ;;
+      *) root_or_die; zb_update "${2:-}" ;;
+    esac ;;
+  update-components) root_or_die; shift; zb_update_components "$@" ;;
   net)
     case "${2:-status}" in
       status) net_status ;;
@@ -262,7 +270,9 @@ case "${1:-}" in
       usage) logs_usage ;;
       review) logs_review ;;
       limit) root_or_die; logs_set_limit "${3:-}" ;;
-      clean) root_or_die; logs_clean "${3:-7}" ;;
+      clean) root_or_die; logs_clean "${3:-all}" ;;
+      auto) root_or_die; case "${3:-status}" in on) logs_auto_on; echo "Automatic cleaning is ON: every day, logs older than 7 days are removed." ;; off) logs_auto_off; echo "Automatic cleaning is OFF." ;; status) echo "Automatic cleaning: $(logs_auto_state)" ;; *) die "Usage: zenithboard logs auto on|off|status" ;; esac ;;
+      auto-run) root_or_die; logs_auto_run ;;
       uat) journalctl -u dump978-fa -u skyaware978 -n 100 --no-pager ;;
       flightinfo) journalctl -u zenithboard-flightinfo -n 100 --no-pager ;;
       acars) journalctl -u zenithboard-acarsdec -u zenithboard-acars-ingest -n 100 --no-pager ;;

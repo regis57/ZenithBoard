@@ -116,37 +116,44 @@ network_menu() {
   done
 }
 
-settings_menu() {
+settings_receiver_menu() {
   local c
   while true; do
-    c=$(wt_menu "Settings (applied immediately), in the order of a first setup\n\nNetwork: Wi-Fi $(wifi_summary)\nPlace: $(cfg_get REGION world), $(cfg_get UNITS), radius $(cfg_get RADIUS), $(cfg_get LAT), $(cfg_get LON)\nLook: $(cfg_get DISPLAY_MODE dots), $(cfg_get THEME amber), $(cfg_get CYCLE_SECONDS) s per aircraft\nData: photos $(cfg_get SHOW_PHOTOS), routes $(cfg_get SHOW_ROUTES 1), monthly refresh $( [ "$(cfg_get AUTO_DATA_REFRESH 1)" = 1 ] && echo ON || echo OFF )\n\nThese are the defaults for every screen; a tablet can override them for itself (gear icon)." \
-      network "1  Network: Wi-Fi, fixed IP, domain name" \
-      region "2  Region: world / United States (978 MHz UAT)" \
-      units "3  Units: metric / imperial" \
-      location "4  Antenna position (updates it everywhere)" \
-      radius "5  Detection radius" \
-      style "6  Look: dot matrix / split-flap airport board" \
-      color "7  Colour: amber / green / red / white" \
-      cycle "8  Seconds per aircraft" \
-      photos "9  Aircraft photos on/off" \
-      routes "10 Flight origin/destination on/off" \
-      data "11 Monthly aircraft-data refresh on/off" \
-      logs "12 Logs: size limit, review, clean" \
+    c=$(wt_menu "Receiver settings (what the RTL-SDR dongle and its antenna are used for)\n\nRegion: $(cfg_get REGION world)    Units: $(cfg_get UNITS)\nAntenna position: $(cfg_get LAT), $(cfg_get LON), $(cfg_get ALT_M 0) m" \
+      region "1  Region: world / United States (978 MHz UAT)" \
+      units "2  Units: metric / imperial" \
+      location "3  Antenna position (updates it everywhere)" \
       back "Back") || return 0
     case "$c" in
-      network) network_menu ;;
-      style) settings_style && restart_flightinfo && wt_msg "Look saved: $(cfg_get DISPLAY_MODE dots).\n\nThis is the default for every screen. A tablet that chose its own look (?mode=... or the gear icon) keeps it until you press Reset in its gear panel." 11 ;;
       region) settings_region && wt_msg "Region saved: $(cfg_get REGION world).\n\nIn menu 1 ADSB the 978 MHz UAT option appears for the United States." 10 ;;
       units) settings_units && restart_flightinfo ;;
-      logs) logs_menu ;;
-      color) settings_color && restart_flightinfo ;;
-      radius) change_radius ;;
       location)
         if settings_location; then
           clear; zb_apply_location "$(cfg_get LAT)" "$(cfg_get LON)" "$(cfg_get ALT_M 0)"
           echo; echo "Lines marked MANUAL can only be changed on the provider's website."
           read -rp "Press Enter to continue..." _
         fi ;;
+      *) return 0 ;;
+    esac
+  done
+}
+
+settings_wall_menu() {
+  local c
+  while true; do
+    c=$(wt_menu "ZenithBoard wall settings (defaults for every screen; a tablet can override them with its gear icon)\n\nRadius: $(cfg_get RADIUS)    Look: $(cfg_get DISPLAY_MODE dots)    Colour: $(cfg_get THEME amber)    Seconds per aircraft: $(cfg_get CYCLE_SECONDS)\nPhotos: $(cfg_get SHOW_PHOTOS)    Routes: $(cfg_get SHOW_ROUTES 1)    Monthly data refresh: $( [ "$(cfg_get AUTO_DATA_REFRESH 1)" = 1 ] && echo ON || echo OFF )" \
+      radius "1  Detection radius" \
+      style "2  Look: dot matrix / split-flap airport board" \
+      color "3  Colour: amber / green / red / white" \
+      cycle "4  Seconds per aircraft" \
+      photos "5  Aircraft photos on/off" \
+      routes "6  Flight origin/destination on/off" \
+      data "7  Monthly aircraft-data refresh on/off" \
+      back "Back") || return 0
+    case "$c" in
+      style) settings_style && restart_flightinfo && wt_msg "Look saved: $(cfg_get DISPLAY_MODE dots).\n\nThis is the default for every screen. A tablet that chose its own look (?mode=... or the gear icon) keeps it until you press Reset in its gear panel." 11 ;;
+      color) settings_color && restart_flightinfo ;;
+      radius) change_radius ;;
       cycle) local s; s=$(wt_input "Seconds each aircraft stays on the wall (2-60)." "$(cfg_get CYCLE_SECONDS 6)") && is_number "$s" && cfg_set CYCLE_SECONDS "$s" && restart_flightinfo ;;
       photos) if wt_yesno "Show aircraft photos (Planespotters) on the wall? Needs internet on the Pi." 8; then cfg_set SHOW_PHOTOS 1; else cfg_set SHOW_PHOTOS 0; fi ;;
       routes) if wt_yesno "Show where each flight comes from and goes to?\n\nThe callsign (for example DLH4YK) is looked up on the free adsbdb.com database. When your decoder does not know an aircraft, its address is also used to find the model name. Needs internet on the Pi." 13; then cfg_set SHOW_ROUTES 1; else cfg_set SHOW_ROUTES 0; fi ;;
@@ -158,11 +165,31 @@ settings_menu() {
   done
 }
 
+settings_menu() {
+  local c
+  while true; do
+    c=$(wt_menu "Settings (applied immediately), in the order of a first setup\n\nNetwork: Wi-Fi $(wifi_summary)\nReceiver: $(cfg_get REGION world), $(cfg_get UNITS), $(cfg_get LAT), $(cfg_get LON)\nWall: radius $(cfg_get RADIUS), $(cfg_get DISPLAY_MODE dots), $(cfg_get THEME amber)\nLogs: automatic cleaning $(logs_auto_state | cut -d' ' -f1)" \
+      network "1  Network: Wi-Fi, fixed IP, domain name" \
+      receiver "2  Receiver: region, units, antenna position" \
+      wall "3  ZenithBoard wall: radius, look, colour, photos, routes..." \
+      logs "4  Logs: size limit, review, automatic cleaning" \
+      back "Back") || return 0
+    case "$c" in
+      network) network_menu ;;
+      receiver) settings_receiver_menu ;;
+      wall) settings_wall_menu ;;
+      logs) logs_menu ;;
+      *) return 0 ;;
+    esac
+  done
+}
+
 uninstall_all() {
   wt_yesno "UNINSTALL EVERYTHING?\n\nThis removes FlightInfo, ACARS, all feeders and the decoder installed through this menu." 12 || return 0
   clear
   wifi_remove_unit
   ddns_remove_units
+  logs_auto_off
   is_acars && remove_acars
   is_flightinfo && remove_flightinfo
   is_planefinder && remove_planefinder
@@ -186,9 +213,9 @@ main_menu() {
       1 "ADSB        - decoder + share to ADSB Exchange, FlightAware, FR24..." \
       2 "FlightInfo  - dot-matrix wall for an old tablet" \
       3 "ACARS       - optional ACARS messages in Grafana (2nd dongle)$(weak_hw_tag)" \
-      4 "Settings    - network (Wi-Fi, IP, domain), place, look, data, logs" \
+      4 "Settings    - network (Wi-Fi, IP, domain), receiver, wall, logs" \
       5 "Status      - what is running" \
-      6 "Update      - upgrade ZenithBoard, decoder, feeders, ACARS" \
+      6 "Update      - everything at once, or pick components" \
       7 "Uninstall everything" \
       0 "Exit") || exit 0
     case "$c" in
@@ -197,7 +224,7 @@ main_menu() {
       3) acars_menu ;;
       4) settings_menu ;;
       5) clear; "$ROOT/bin/zenithboard" status; read -rp "Press Enter..." _ ;;
-      6) clear; "$ZB_HOME/bin/zenithboard" update; read -rp "Press Enter..." _ ;;
+      6) update_menu ;;
       7) uninstall_all ;;
       *) exit 0 ;;
     esac

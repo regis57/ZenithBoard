@@ -107,7 +107,7 @@ The first run asks, once:
 <p align="center"><img src="docs/images/install-2-units.png" alt="Choosing metric or imperial units" width="400"></p>
 
 ### 5. Use the menu
-After the questions, the installer shows its main menu. *4 Settings* is organised in the order of a first setup: **network** (Wi-Fi, fixed IP, domain name), then **place** (region, units, position, radius), **look** (style, colour, seconds), **data** (photos, routes, refresh) and **logs**. You can come back to it at any time with `sudo ./install.sh` (or `sudo zenithboard menu`) to add or remove things.
+After the questions, the installer shows its main menu. *4 Settings* is organised in the order of a first setup, in four groups: **1 Network** (Wi-Fi, fixed IP, domain name), **2 Receiver** (region, units, antenna position: what the dongle and its antenna are used for), **3 ZenithBoard wall** (radius, look, colour, seconds per aircraft, photos, routes, monthly data refresh) and **4 Logs**. *6 Update* updates everything at once or lets you tick the components to update. You can come back to it at any time with `sudo ./install.sh` (or `sudo zenithboard menu`) to add or remove things.
 
 <p align="center"><img src="docs/images/install-3-menu.png" alt="The ZenithBoard main menu: ADSB, FlightInfo, ACARS, Settings, Status, Update, Uninstall" width="520"></p>
 
@@ -255,7 +255,7 @@ Two looks, same data. **Dot matrix** (default) is the amber dot display above. *
 | **Try it on one tablet only** | add `?mode=flap` to the address, e.g. `http://PI-IP:8080/?mode=flap` (back: `?mode=dots`) |
 | **On the tablet** | gear icon → *Style* → *Split-flap* (gear → *Reset* returns to the Pi's default) |
 | **Every screen** | `sudo zenithboard mode flap` (back to the default: `sudo zenithboard mode dots`) |
-| **Menu** | `sudo zenithboard menu` → *4 Settings → 6 Look* |
+| **Menu** | `sudo zenithboard menu` → *4 Settings → 3 Wall → Look* |
 | **Without a Pi** | `./bin/zenithboard-demo`, then open `http://localhost:8081/?mode=flap` |
 
 Not convincing? Nothing to undo: the dot matrix stays the default until you change it, and any of the ways above switches back at once. Colours work in both looks. Devices that ask for reduced motion get the final text without the rolling.
@@ -267,7 +267,7 @@ The dots are **amber by default**. Pick amber, green, red or white:
 | Where | How |
 |---|---|
 | **Every screen** | `sudo zenithboard color green` (back to the default: `sudo zenithboard color amber`) |
-| **Menu** | `sudo zenithboard menu` → *4 Settings → 7 Colour* |
+| **Menu** | `sudo zenithboard menu` → *4 Settings → 3 Wall → Colour* |
 | **One tablet only** | Tap the faint gear in the top-right corner → *Colour*. Or open `http://<pi>:8080/?theme=red`. The gear's **Reset** returns that tablet to the Pi's colour. |
 
 ## Units, radius and position
@@ -277,7 +277,7 @@ Three ways, pick the one that suits you.
 | Where | How |
 |---|---|
 | **Command line** (affects every screen) | `sudo zenithboard units imperial` · `sudo zenithboard units metric` · `sudo zenithboard radius 5` · `sudo zenithboard cycle 8` |
-| **Menu** | `sudo zenithboard menu` → *4 Settings* (network, region, units, position, radius, look, colour, seconds, photos, routes, logs) |
+| **Menu** | `sudo zenithboard menu` → *4 Settings* (network, receiver, wall, logs) |
 | **On the tablet** (that tablet only) | Tap the faint gear in the top-right corner: units, radius, seconds per plane, colour (amber / green / red / white). Or use a link, see [Tablet links](#tablet-links-one-address-per-look) below. |
 
 Radius presets are **1, 2, 5, 10, 15, 30, 50** — read as kilometres in metric mode and miles in imperial mode. Changes apply immediately, no restart or reinstall.
@@ -305,7 +305,7 @@ Each tablet can have its own look through the link you open. The settings are re
 sudo zenithboard location 49.1193 6.1757 180      # latitude, longitude, altitude in metres
 ```
 
-(or menu *4 Settings → Antenna position*). The position is updated **everywhere ZenithBoard can reach**: the wall, readsb / dump1090-fa, ADSB Exchange (including its MLAT) and Plane Finder. A summary then lists anything only the provider's website can change (FlightAware and Flightradar24 hold your position in your online account) with the page to open.
+(or menu *4 Settings → 2 Receiver → Antenna position*). The position is updated **everywhere ZenithBoard can reach**: the wall, readsb / dump1090-fa, ADSB Exchange (including its MLAT) and Plane Finder. A summary then lists anything only the provider's website can change (FlightAware and Flightradar24 hold your position in your online account) with the page to open.
 
 All settings live in one readable file: `/etc/zenithboard/config.env`.
 
@@ -346,7 +346,7 @@ Military aircraft are drawn in grey and labelled `MILITARY` when they have no ai
 To show full model names and to recognise newly registered type codes, ZenithBoard can download a free list of about 2,800 aircraft types from the [tar1090-db](https://github.com/wiedehopf/tar1090-db) project (itself derived from the Mictronics aircraft database). The list is downloaded **to your Pi only** and is never part of this repository.
 
 * **On by default** when FlightInfo is installed: downloaded once at install, then refreshed **once a month** (it also catches up after the Pi was switched off).
-* Turn it off or on: **`sudo zenithboard data auto off`** / **`on`**, or the menu *4 Settings → Monthly aircraft-data refresh*.
+* Turn it off or on: **`sudo zenithboard data auto off`** / **`on`**, or the menu *4 Settings → 3 Wall → Monthly aircraft-data refresh*.
 * Refresh now: `sudo zenithboard data update`. Check: `zenithboard data status`.
 * A failed download (no internet, broken file) changes nothing: the previous list stays in use, and the wall works without the list at all.
 
@@ -357,7 +357,7 @@ ADS-B only carries the aircraft's identity, position, altitude and speed: **it n
 * **Aircraft model fallback:** when your receiver does not know an aircraft's type or registration, the model row (`A320 F-ZZAA`, or the model name) is completed from adsbdb using the aircraft's 24-bit address. This is part of the same setting: with routes off, nothing is sent. Unknown aircraft keep an empty model row.
 * **No route is shown** for aircraft whose callsign is not an airline callsign (private planes, helicopters, military) or that are not in the database: the two rows stay empty.
 * **It is an indication, not a guarantee.** A callsign can be reused for another route, and the database is maintained by volunteers.
-* **Privacy:** only the callsign of an aircraft in your radius is sent to adsbdb.com, never your position. Requests are spaced out (one every 1.5 s) and answers are kept for 12 hours. Turn it off if you prefer nothing to leave the Pi: `sudo zenithboard routes off` (or menu *4 Settings → 10 Flight origin/destination*).
+* **Privacy:** only the callsign of an aircraft in your radius is sent to adsbdb.com, never your position. Requests are spaced out (one every 1.5 s) and answers are kept for 12 hours. Turn it off if you prefer nothing to leave the Pi: `sudo zenithboard routes off` (or menu *4 Settings → 3 Wall → Flight origin/destination*).
 * Needs internet on the Pi; the wall works without it. If a lookup fails (network hiccup) it is retried after one minute.
 * **Route missing on a flight you know?** Run `zenithboard routes test TRA913C` (use your callsign): it asks adsbdb from your Pi and prints what it knows, or why it could not. `zenithboard logs flightinfo` lists failed lookups.
 
@@ -365,7 +365,7 @@ ADS-B only carries the aircraft's identity, position, altitude and speed: **it n
 
 Photos come from the [Planespotters.net photo API](https://www.planespotters.net/photo/api), looked up by the aircraft's hex address. They belong to their photographers: the wall shows each photo unmodified, with the photographer's name and a link to the page on Planespotters, and keeps nothing on disk (a small memory cache only). The Pi fetches the photos, so **the tablet does not need internet**. Please read Planespotters' API terms for your own use.
 
-* Turn photos off or on: `sudo zenithboard photos off` / `on` (or menu *4 Settings → 9 Photos*). With photos off, the animated sky scene is shown for every aircraft.
+* Turn photos off or on: `sudo zenithboard photos off` / `on` (or menu *4 Settings → 3 Wall → Photos*). With photos off, the animated sky scene is shown for every aircraft.
 * Not every aircraft has a photo; those show the animated scene.
 * Planespotters limits how fast it can be asked and answers `403 Forbidden` to bursts, so the wall queues its lookups and makes **at most one request every 2 seconds**. With a busy sky the first aircraft of a cycle may show the animated scene and get its photo on the next pass. A refused lookup is retried ten minutes later, never remembered as "no photo".
 * Check that your Pi can really reach the service, without waiting for an aircraft: `zenithboard photos test`. It asks Planespotters about a few well-photographed airliners and downloads one image. Add a hex address to test one aircraft: `zenithboard photos test 3c6444`.
@@ -390,7 +390,7 @@ Then open **`http://<the-pi-address>:8081/`** (or `http://localhost:8081/` on th
 
 ## 978 MHz UAT (United States)
 
-In the United States many general-aviation aircraft transmit on **978 MHz (UAT)** instead of 1090 MHz; the rest of the world uses 1090 MHz only. ZenithBoard therefore asks for your **region** at the first run (change it any time: `sudo zenithboard region us|world`, or menu *4 Settings → 2 Region*). Only with `us` the optional UAT step appears: menu *1 ADSB* → tick **978 MHz UAT**.
+In the United States many general-aviation aircraft transmit on **978 MHz (UAT)** instead of 1090 MHz; the rest of the world uses 1090 MHz only. ZenithBoard therefore asks for your **region** at the first run (change it any time: `sudo zenithboard region us|world`, or menu *4 Settings → 2 Receiver → Region*). Only with `us` the optional UAT step appears: menu *1 ADSB* → tick **978 MHz UAT**.
 
 * **What you need:** a **second SDR dongle** with its own serial number (`rtl_eeprom -d 1 -s 00000978`) and, for real range, a **978 MHz antenna** (a 1090 MHz antenna is poor at 978 MHz). The installer asks for that dongle's serial and refuses the serial already used for 1090 MHz ADS-B or ACARS.
 * **What gets installed:** FlightAware's `dump978-fa` and `skyaware978` (from the FlightAware package repository). UAT aircraft are written to `/run/skyaware978/aircraft.json`; the **wall merges them with the 1090 MHz aircraft** (an aircraft heard on both appears once). If PiAware is installed it is pointed at the 978 MHz receiver as well (check your FlightAware stats page).
@@ -404,11 +404,20 @@ In the United States many general-aviation aircraft transmit on **978 MHz (UAT)*
 
 ## Updating and uninstalling
 
-**One command updates everything** (ZenithBoard itself from GitHub, readsb / dump1090-fa, ADSB Exchange, FlightAware, Flightradar24, Plane Finder, acarsdec, Grafana). Your settings are kept:
+**One command updates everything** (ZenithBoard itself from GitHub, readsb / dump1090-fa, ADSB Exchange, FlightAware, Flightradar24, Plane Finder, FlightInfo, acarsdec, Grafana). Your settings are kept:
 
 ```bash
 sudo zenithboard update
 ```
+
+**Or update only some components.** Menu *6 Update → Choose what to update* shows the installed components as a list: tick the ones you want (Space), Enter to go. The same from the command line:
+
+```bash
+zenithboard update list                        # what is installed (and its version when known)
+sudo zenithboard update only readsb flightinfo # just those two
+```
+
+Names: `zenithboard` (the ZenithBoard code itself), `readsb`, `dump1090`, `adsbx`, `piaware`, `fr24`, `planefinder`, `flightinfo`, `acars`. Only what is installed is offered.
 
 **Which version do I have?** `zenithboard version` (also shown at the top of the menu and in `zenithboard status`). After an update it should show the newest version listed in the [changelog](CHANGELOG.md); if the update could not fetch the code it prints `NOT updated: staying on version ...`.
 
@@ -431,11 +440,12 @@ sudo /opt/zenithboard/install.sh --uninstall-all      # remove everything
 
 Every service writes to the system journal, which already limits itself (up to 10 % of the disk, at most 4 GB, and it is kept in memory on many Pi setups). On a small SD card you may want less. Nothing changes unless you ask.
 
-| Menu *4 Settings → 12 Logs* | Command |
+| Menu *4 Settings → 4 Logs* | Command |
 |---|---|
 | **Review** (size, limit, recent warnings) | `zenithboard logs usage` · `zenithboard logs review` |
 | **Size**: set a maximum | `sudo zenithboard logs limit 50` (10-2000 MB) · `sudo zenithboard logs limit default` |
-| **Clean**: keep the last 7 days / delete everything | `sudo zenithboard logs clean 7` · `sudo zenithboard logs clean all` |
+| **Automatic cleaning** (off by default): every day, messages older than 7 days are removed, so the last 7 days are always there | `sudo zenithboard logs auto on` · `off` · `status` |
+| **Delete everything now** | `sudo zenithboard logs clean` |
 
 The limit applies to all system logs (it is a journald setting, written to `/etc/systemd/journald.conf.d/zenithboard.conf`). To read a service's log: `zenithboard logs flightinfo|decoder|acars|uat`.
 
