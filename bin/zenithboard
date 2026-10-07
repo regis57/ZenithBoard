@@ -15,6 +15,8 @@ HERE="$(dirname "$(readlink -f "$0")")"
 . "$HERE/../lib/logs.sh"
 # shellcheck source=lib/uat.sh
 . "$HERE/../lib/uat.sh"
+# shellcheck source=lib/wifi.sh
+. "$HERE/../lib/wifi.sh"
 # shellcheck source=lib/update.sh
 . "$HERE/../lib/update.sh"
 
@@ -24,7 +26,12 @@ ZenithBoard $ZB_VERSION - ADSB Flight Info
 
   zenithboard status                    what is installed / running, MLAT check
   zenithboard config                    show the current settings
-  zenithboard region world|us          where the antenna is (us adds the optional 978 MHz UAT step in the menu)
+  zenithboard wifi status               Wi-Fi: radio, country, connection, and wired-vs-Wi-Fi priority
+  zenithboard wifi on|off               turn Wi-Fi on or off (kept after a reboot)
+  zenithboard wifi country XX           Wi-Fi country code, e.g. FR BE CH DE GB US (kept after a reboot)
+  zenithboard wifi scan                 networks in range with signal strength
+  zenithboard wifi connect SSID         save and join a network (asks for the password; hidden: add --hidden)
+  zenithboard wifi list|forget SSID     saved networks / forget one
   zenithboard region world|us           where the antenna is (us adds the optional 978 MHz UAT step in the menu)
   zenithboard units metric|imperial     km, km/h, m   |   mi, knots, ft
   zenithboard radius 1|2|5|10|15|30|50  wall detection radius (in your unit: km or miles)
@@ -58,6 +65,7 @@ show_state() { # show_state "Label" check_fn service
 cmd_status() {
   local dec; dec=$(installed_decoder)
   echo "${C_B}ZenithBoard $ZB_VERSION${C_0}   units: $(cfg_get UNITS metric)   position: $(cfg_get LAT ?) , $(cfg_get LON ?)"
+  if wifi_has_nm && [ -n "$(wifi_iface)" ]; then echo "Wi-Fi: $(wifi_summary)   (details: zenithboard wifi status)"; fi
   echo "Hardware: $(pi_model || true)  RAM: $(mem_avail_mb) / $(mem_total_mb) MB free$(is_low_mem && echo '  (low-memory board: skip ACARS/Grafana)')"
   echo "Decoder / feeders:"
   if [ -n "$dec" ]; then show_state "Decoder ($dec)" true "$dec"; else echo "  Decoder                    not installed"; fi
@@ -163,6 +171,32 @@ case "${1:-}" in
   mlat-guard) root_or_die; zb_mlat_guard ;;
   update) root_or_die; zb_update "${2:-}" ;;
   update-components) root_or_die; zb_update_components ;;
+  wifi)
+    case "${2:-status}" in
+      status) wifi_status ;;
+      on|off) root_or_die; wifi_has_nm || die "Wi-Fi needs NetworkManager (Raspberry Pi OS Bookworm or newer)."; [ "$2" = off ] && wifi_session_on_wifi && warn "You seem to be connected through Wi-Fi: turning it off will cut this session."
+              [ "$2" = on ] && [ -z "$(wifi_country_now)" ] && die "Set the country first:  sudo zenithboard wifi country FR"
+              wifi_set_radio "$2" && echo "Wi-Fi is $2 (kept after a reboot)." ;;
+      country) root_or_die; wifi_set_country "${3:-}" && echo "Wi-Fi country: $3 (kept after a reboot)." ;;
+      scan) wifi_has_nm || die "Wi-Fi needs NetworkManager."; wifi_radio_on || die "Wi-Fi is off: sudo zenithboard wifi on"
+            wifi_scan | while IFS=$'\t' read -r ssid sig sec; do printf '%-6s %3s%%  %-32s %s\n' "$(wifi_bars "$sig")" "$sig" "$ssid" "$sec"; done ;;
+      connect)
+        root_or_die; wifi_has_nm || die "Wi-Fi needs NetworkManager."; [ -n "${3:-}" ] || die "Usage: zenithboard wifi connect SSID [--hidden]   (the password is asked, never typed on the command line)"
+        [ -n "$(wifi_country_now)" ] || die "Set the country first:  sudo zenithboard wifi country FR"
+        wifi_session_on_wifi && warn "You seem to be connected through Wi-Fi: this may cut your session."
+        psk="${ZB_WIFI_PSK:-}"
+        [ -n "$psk" ] || { read -rsp "Password for \"$3\" (empty = open network): " psk; echo; }
+        hid=0; [ "${4:-}" = --hidden ] && hid=1
+        wifi_connect "$3" "$psk" "$hid" wpa-psk ;;
+      list) wifi_saved | cut -f2 ;;
+      forget)
+        root_or_die; [ -n "${3:-}" ] || die "Usage: zenithboard wifi forget SSID"
+        u=$(wifi_saved | awk -F'\t' -v n="$3" '$2==n || $2 ~ ("^zenithboard-wifi-" n "-") {print $1; exit}')
+        [ -n "$u" ] || die "No saved network called $3 (see: zenithboard wifi list)"
+        wifi_forget "$u" && echo "Forgotten: $3" ;;
+      apply) root_or_die; wifi_apply ;;
+      *) die "Usage: zenithboard wifi status|on|off|country XX|scan|connect SSID|list|forget SSID" ;;
+    esac ;;
   region)
     case "${2:-}" in
       world|us) root_or_die; cfg_set REGION "$2"; echo "Region: $2. $( [ "$2" = us ] && echo "Menu 1 ADSB now offers the 978 MHz UAT step (needs a 2nd dongle)." || echo "1090 MHz only." )" ;;

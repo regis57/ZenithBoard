@@ -1,0 +1,12 @@
+[Unit]
+Description=ZenithBoard Wi-Fi settings (re-applies the country and the on/off choice at boot)
+After=NetworkManager.service
+Wants=NetworkManager.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/opt/zenithboard/bin/zenithboard wifi apply
+
+[Install]
+WantedBy=multi-user.target
