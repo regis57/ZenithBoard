@@ -32,4 +32,6 @@ for f in install.sh lib/*.sh; do
 done
 # the left column shows the tag and the right column the label: they must not say the same word twice ("back  Back")
 check "no entry repeats its own tag as its label" '! grep -rniE "(^|[ \\])(back|exit) \"(back|exit)\"" install.sh lib/*.sh'
+# after an update the menu starts again, otherwise the screens stay on the old code until you quit and come back
+check "the update menu reloads itself after an update" '[ "$(grep -c "update_menu_reload" lib/update.sh)" -ge 3 ] && grep -q "exec \"\$me\"" lib/update.sh'
 [ "$fail" = 0 ] && echo "ALL OK" || exit 1

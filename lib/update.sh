@@ -147,6 +147,15 @@ zb_update_components() {
   log "Update finished. Check:  zenithboard status"
 }
 
+# This menu is a running script: after an update it still holds the OLD code in memory. Start it again so the very next
+# screen is the new version (the same menu, freshly loaded). Starting again is only possible from the real installer.
+update_menu_reload() {
+  read -rp "Press Enter to reopen the menu on the new version..." _
+  local me="${ROOT:-$ZB_HOME}/install.sh"
+  [ -x "$me" ] && exec "$me"
+  return 0
+}
+
 # Menu 6: update everything, or pick components from a list (space = tick).
 update_menu() {
   local c items=() sel x names=()
@@ -157,7 +166,7 @@ update_menu() {
       list "What is installed" \
       back "Return to the previous menu") || return 0
     case "$c" in
-      all) clear; "$ZB_HOME/bin/zenithboard" update; read -rp "Press Enter..." _; return 0 ;;
+      all) clear; "$ZB_HOME/bin/zenithboard" update; update_menu_reload ;;
       list) clear; zb_update_list; echo; read -rp "Press Enter..." _ ;;
       pick)
         items=(); for x in $ZB_COMPONENTS; do
@@ -167,7 +176,7 @@ update_menu() {
         sel=$(whiptail --title "$WT_TITLE" --checklist "Tick what to update (Space = tick, Enter = go).\nNothing ticked = nothing happens." 20 76 10 "${items[@]}" 3>&1 1>&2 2>&3) || continue
         eval "names=($sel)"
         [ "${#names[@]}" -gt 0 ] || { wt_msg "Nothing ticked, nothing updated." 7; continue; }
-        clear; "$ZB_HOME/bin/zenithboard" update only "${names[@]}"; read -rp "Press Enter..." _; return 0 ;;
+        clear; "$ZB_HOME/bin/zenithboard" update only "${names[@]}"; update_menu_reload ;;
       *) return 0 ;;
     esac
   done
