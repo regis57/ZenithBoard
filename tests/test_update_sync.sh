@@ -43,11 +43,11 @@ else
 fi
 
 # 5. updating components one by one: names are checked before anything is downloaded or changed
-out=$(zb_update --only nonsense 2>&1); rc=$?
-check "unknown component refused" "$rc:$(printf '%s' "$out" | grep -c 'Unknown component')" "1:1"
+res=$(zb_update --only nonsense 2>&1); rc=$?
+check "unknown component refused" "$rc:$(printf '%s' "$res" | grep -c 'Unknown component')" "1:1"
 is_flightinfo() { return 1; }
-out=$(zb_update --only flightinfo 2>&1); rc=$?
-check "not-installed component refused" "$rc:$(printf '%s' "$out" | grep -c 'not installed')" "1:1"
+res=$(zb_update --only flightinfo 2>&1); rc=$?
+check "not-installed component refused" "$rc:$(printf '%s' "$res" | grep -c 'not installed')" "1:1"
 check "list always offers ZenithBoard itself" "$(zb_update_list | grep -c '^  zenithboard ')" "1"
 check "every component has a label" "$(for c in $ZB_COMPONENTS; do zb_component_label "$c"; done | grep -c .)" "$(echo $ZB_COMPONENTS | wc -w)"
 exit $fail
