@@ -1,0 +1,7 @@
+[Unit]
+Description=ZenithBoard network watchdog (checks the Pi can reach its router)
+
+[Service]
+Type=oneshot
+ExecStart=/opt/zenithboard/bin/zenithboard netwatch run
+TimeoutStartSec=60
