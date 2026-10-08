@@ -73,6 +73,7 @@ cfg_set DECODER readsb; printf 'RECEIVER_OPTIONS="--gain 40.2"\n' > "$r"
 stats readsb 10000 800 250000
 out=$(gain_check 2>&1)
 check "8% strong -> too high, says the step"  'echo "$out" | grep -q "TOO HIGH" && echo "$out" | grep -q "38.6 dB"'
+check "shows the time of the check (so a pasted result can be placed in the day)" 'echo "$out" | grep -qE "Checked: [0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}"'
 check "shows messages, range"                 'echo "$out" | grep -q "10000 messages" && echo "$out" | grep -q "250 km"'
 stats readsb 10000 30 250000
 check "0.3% strong, not at max -> judge at a busy hour, then one step up" 'gain_check 2>&1 | grep -q "LOW SHARE.*BUSY hour.*42.1 dB"'

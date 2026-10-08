@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.10.1
+- Gain check: the first line now shows the date and time of the check (`Checked: 2026-10-08 20:18`), so a result copied somewhere can be placed in the day (the share of strong messages changes a lot between night and rush hour).
+
 ## 0.10.0
 - **Reliability** (menu *4 Settings → 5 Reliability*, and `zenithboard health|watchdog|netwatch|keeplogs`), all off until turned on: a **health check** screen (power, temperature, memory, card, how the previous boot ended, problems in the logs); **saved logs** (the system log survives a restart, capped at 50 MB); the **hardware watchdog** (restarts a frozen Pi after about 10 s); a **network watchdog** (checks the router every 2 minutes, restarts the network after about 6 minutes of failure and the Pi after about 12, never more than once every 3 hours, never in the first 10 minutes after a start). It looks at the router only, so an internet outage alone changes nothing.
 
