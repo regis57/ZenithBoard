@@ -40,7 +40,7 @@ The story behind the project: [ZenithBoard on regis-hennequin.info](https://regi
 | **2. Network** | [Wi-Fi](#wi-fi) · [Fixed IP](#fixed-ip-address) · [A name for your wall](#a-name-for-your-wall) · [Ports](#network-ports-what-answers-where) |
 | **3. The wall** | [What it shows](#what-the-wall-shows) · [Look](#look-dot-matrix-or-airport-split-flap-board) · [Colours](#colours) · [Units, radius, position](#units-radius-and-position) · [Silhouettes](#aircraft-silhouettes) · [Routes and models](#flight-routes) · [Photos](#photos) · [Demo](#try-it-without-any-hardware) |
 | **4. The receiver** | [Gain](#gain-tune-the-dongle-optional) · [978 MHz UAT (US)](#978-mhz-uat-united-states) |
-| **5. Keep it running** | [Update](#updating-and-uninstalling) · [Logs](#logs-size-review-clean-optional) · [Troubleshooting](#troubleshooting) · [Known limits](#known-limits) |
+| **5. Keep it running** | [Update](#updating-and-uninstalling) · [Logs](#logs-size-review-clean-optional) · [Reliability](#reliability-when-the-pi-freezes-or-loses-its-network-optional) · [Troubleshooting](#troubleshooting) · [Known limits](#known-limits) |
 
 **Which defaults does what?** Everything in menu *4 Settings* (and `zenithboard ...`) sets the **default for every screen**. The gear icon on a tablet, or a link such as `?mode=flap`, only overrides it **for that tablet**; the gear's *Reset* returns the tablet to the Pi's default. So the two do not duplicate each other: one is the house rule, the other a personal choice.
 
@@ -111,7 +111,7 @@ The first run asks, once:
 <p align="center"><img src="docs/images/install-2-units.png" alt="Choosing metric or imperial units" width="400"></p>
 
 ### 5. Use the menu
-After the questions, the installer shows its main menu. *4 Settings* is organised in the order of a first setup, in four groups: **1 Network** (Wi-Fi, fixed IP, domain name), **2 Receiver** (region, units, antenna position, dongle gain: what the dongle and its antenna are used for), **3 ZenithBoard wall** (radius, look, colour, seconds per aircraft, photos, routes, monthly data refresh) and **4 Logs**. *6 Update* updates everything at once or lets you tick the components to update. You can come back to it at any time with `sudo ./install.sh` (or `sudo zenithboard menu`) to add or remove things.
+After the questions, the installer shows its main menu. *4 Settings* is organised in the order of a first setup, in four groups: **1 Network** (Wi-Fi, fixed IP, domain name), **2 Receiver** (region, units, antenna position, dongle gain: what the dongle and its antenna are used for), **3 ZenithBoard wall** (radius, look, colour, seconds per aircraft, photos, routes, monthly data refresh) and **4 Logs** and **5 Reliability** (watchdogs, saved logs, health check). *6 Update* updates everything at once or lets you tick the components to update. You can come back to it at any time with `sudo ./install.sh` (or `sudo zenithboard menu`) to add or remove things.
 
 <p align="center"><img src="docs/images/install-3-menu.png" alt="The ZenithBoard main menu: ADSB, FlightInfo, ACARS, Settings, Status, Update, Uninstall" width="520"></p>
 
@@ -472,6 +472,22 @@ Every service writes to the system journal, which already limits itself (up to 1
 The limit applies to all system logs (it is a journald setting, written to `/etc/systemd/journald.conf.d/zenithboard.conf`). To read a service's log: `zenithboard logs flightinfo|decoder|acars|uat`.
 
 ---
+
+## Reliability: when the Pi freezes or loses its network (optional)
+
+A Pi that runs for months can freeze or lose its network at night. Everything here is **off until you turn it on**: menu *4 Settings → 5 Reliability*, or commands.
+
+| What | What it does | Menu / command |
+|---|---|---|
+| **Health check** | One screen: power (under-voltage), temperature, free memory, card space, **whether the previous boot ended normally or abruptly** (freeze, crash, power cut), and problems seen in the system logs (power, card, USB, out of memory) | `zenithboard health` |
+| **Saved logs** | The system log normally lives in memory and is **lost at every restart**, so after a freeze there is nothing to read. This keeps it on the card, capped at 50 MB (a size limit set in the Logs menu still applies) | `sudo zenithboard keeplogs on\|off` |
+| **Hardware watchdog** | The Pi's own chip restarts it about 10 seconds after a **complete freeze** | `sudo zenithboard watchdog on\|off` |
+| **Network watchdog** | Every 2 minutes the Pi checks that it can reach **your router**. After about 6 minutes without it the network is restarted; after about 12 minutes the Pi restarts. Never more than one restart every 3 hours (no restart loop if the router is simply off), and never in the first 10 minutes after a start | `sudo zenithboard netwatch on\|off\|status` |
+
+* **Why two watchdogs?** The hardware one only helps when the whole Pi is frozen. On a Raspberry Pi 3 (and 3B+) the Ethernet port sits on the same internal USB hub as the USB ports, so a weak power supply or a misbehaving dongle can take the network down while the Pi itself keeps running: only the network watchdog catches that.
+* **It only looks at your router.** An internet outage alone (your provider) restarts nothing, since a restart would not fix it. Each decision is written to the system log (`journalctl -t zenithboard-netwatch`).
+* **Find the cause after a freeze:** with *Saved logs* on, run `zenithboard health` after the restart. "Previous boot: ended ABRUPTLY" with an *under-voltage* line points to the power supply or cable (official 5 V supply, short cable; a powered USB hub for the dongle). Errors about the card (`mmc`, `ext4`) point to a worn SD card.
+* **Honest status:** the tests cover the decisions (when it restarts the network, when it restarts the Pi and when it refuses to), the files written and the health screen with sample data. They do not freeze a real Pi.
 
 ## How it fits together
 

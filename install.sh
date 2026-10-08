@@ -14,6 +14,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$ROOT/lib/acars.sh"
 . "$ROOT/lib/logs.sh"
 . "$ROOT/lib/gain.sh"
+. "$ROOT/lib/reliability.sh"
 . "$ROOT/lib/uat.sh"
 . "$ROOT/lib/wifi.sh"
 . "$ROOT/lib/network.sh"
@@ -171,17 +172,19 @@ settings_wall_menu() {
 settings_menu() {
   local c
   while true; do
-    c=$(wt_menu "Settings (applied immediately), in the order of a first setup\n\nNetwork: Wi-Fi $(wifi_summary)\nReceiver: $(cfg_get REGION world), $(cfg_get UNITS), $(cfg_get LAT), $(cfg_get LON)\nWall: radius $(cfg_get RADIUS), $(cfg_get DISPLAY_MODE dots), $(cfg_get THEME amber)\nLogs: automatic cleaning $(logs_auto_state | cut -d' ' -f1)" \
+    c=$(wt_menu "Settings (applied immediately), in the order of a first setup\n\nNetwork: Wi-Fi $(wifi_summary)\nReceiver: $(cfg_get REGION world), $(cfg_get UNITS), $(cfg_get LAT), $(cfg_get LON)\nWall: radius $(cfg_get RADIUS), $(cfg_get DISPLAY_MODE dots), $(cfg_get THEME amber)\nLogs: automatic cleaning $(logs_auto_state | cut -d' ' -f1)\nReliability: watchdog $(watchdog_state), network watchdog $(netwatch_state), saved logs $(keeplogs_state)" \
       network "1  Network: Wi-Fi, fixed IP, domain name" \
       receiver "2  Receiver: region, units, antenna position" \
       wall "3  ZenithBoard wall: radius, look, colour, photos, routes..." \
       logs "4  Logs: size limit, review, automatic cleaning" \
+      reliability "5  Reliability: watchdogs, saved logs, health check" \
       back "Return to the previous menu") || return 0
     case "$c" in
       network) network_menu ;;
       receiver) settings_receiver_menu ;;
       wall) settings_wall_menu ;;
       logs) logs_menu ;;
+      reliability) reliability_menu ;;
       *) return 0 ;;
     esac
   done
@@ -193,6 +196,7 @@ uninstall_all() {
   wifi_remove_unit
   ddns_remove_units
   logs_auto_off
+  netwatch_remove_units
   is_acars && remove_acars
   is_flightinfo && remove_flightinfo
   is_planefinder && remove_planefinder
