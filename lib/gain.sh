@@ -120,7 +120,7 @@ gain_check() {
   local d cur n acc strong km sig peak pct
   d=$(gain_decoder); [ -n "$d" ] || { echo "No decoder installed yet: use menu 1 ADSB first."; return 1; }
   cur=$(gain_current "$d")
-  echo "Decoder: $d     Gain: $(gain_label "$cur")"
+  echo "Decoder: $d     Gain: $(gain_label "$cur")     Checked: $(date '+%Y-%m-%d %H:%M')"
   if ! n=$(gain_numbers "$d") || [ -z "$n" ]; then echo "No statistics yet ($(gain_stats "$d") missing). Wait a minute after (re)starting the decoder."; return 1; fi
   read -r acc strong km sig peak <<<"$n"
   pct=$(awk -v s="$strong" -v a="$acc" 'BEGIN{if(a>0)printf "%.1f",100*s/a; else print "0.0"}')
