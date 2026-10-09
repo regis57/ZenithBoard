@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.10.4
+- **A wiki**: the [roadmap](https://github.com/regis57/ZenithBoard/wiki/Roadmap), what is [proven on real hardware and what is not](https://github.com/regis57/ZenithBoard/wiki/Project-status), and thirteen pages documenting the software — architecture, every setting, every command, the wall's layout, the outside services, the watchdogs, gain, a code tour, the tests and the release process. The pages are kept in `docs/wiki/` so they are reviewed like any other change, and copied to the wiki with `tools/publish-wiki.sh`.
+- The README now points at those pages instead of repeating them: *Known limits* and *Contributing & tests* are shorter, and the stale "not yet validated on a real Raspberry Pi" note is replaced by the status page.
+
 ## 0.10.3
 - The settings gear is now in the **bottom-right corner** (it was top-right, where a TV browser's bar slides down and hides it). It sits below the plane photo and the aircraft drawing and never covers them; the settings panel opens upward from it and scrolls on short screens. A new layout test checks this on 15 screen sizes.
 
