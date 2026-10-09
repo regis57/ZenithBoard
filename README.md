@@ -122,7 +122,7 @@ After the questions, the installer shows its main menu. *4 Settings* is organise
 **3 · ACARS** *(optional)* — asks for the second dongle's serial number and your frequencies, builds `acarsdec`, installs Grafana and a ready-made dashboard at `http://<pi-address>:3000/` (first login `admin` / `admin`, you are asked to change it).
 
 ### 6. Put the wall on the tablet
-Open the address from step 2 in the tablet's browser. Tap the browser's *Add to Home Screen* for a full-screen app look, or tap the faint gear in the top-right corner → **Full screen**. The screen stays awake and the page reloads itself if the Pi restarts.
+Open the address from step 2 in the tablet's browser. Tap the browser's *Add to Home Screen* for a full-screen app look, or tap the faint gear in the bottom-right corner → **Full screen**. The screen stays awake and the page reloads itself if the Pi restarts.
 
 Check that everything is healthy at any time:
 
@@ -272,7 +272,7 @@ The dots are **amber by default**. Pick amber, green, red or white:
 |---|---|
 | **Every screen** | `sudo zenithboard color green` (back to the default: `sudo zenithboard color amber`) |
 | **Menu** | `sudo zenithboard menu` → *4 Settings → 3 Wall → Colour* |
-| **One tablet only** | Tap the faint gear in the top-right corner → *Colour*. Or open `http://<pi>:8080/?theme=red`. The gear's **Reset** returns that tablet to the Pi's colour. |
+| **One tablet only** | Tap the faint gear in the bottom-right corner → *Colour*. Or open `http://<pi>:8080/?theme=red`. The gear's **Reset** returns that tablet to the Pi's colour. |
 
 ## Units, radius and position
 
@@ -282,7 +282,7 @@ Three ways, pick the one that suits you.
 |---|---|
 | **Command line** (affects every screen) | `sudo zenithboard units imperial` · `sudo zenithboard units metric` · `sudo zenithboard radius 5` · `sudo zenithboard cycle 8` |
 | **Menu** | `sudo zenithboard menu` → *4 Settings* (network, receiver, wall, logs) |
-| **On the tablet** (that tablet only) | Tap the faint gear in the top-right corner: units, radius, seconds per plane, colour (amber / green / red / white). Or use a link, see [Tablet links](#tablet-links-one-address-per-look) below. |
+| **On the tablet** (that tablet only) | Tap the faint gear in the bottom-right corner: units, radius, seconds per plane, colour (amber / green / red / white). Or use a link, see [Tablet links](#tablet-links-one-address-per-look) below. |
 
 Radius presets are **1, 2, 5, 10, 15, 30, 50** — read as kilometres in metric mode and miles in imperial mode. Changes apply immediately, no restart or reinstall.
 
