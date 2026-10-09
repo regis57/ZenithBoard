@@ -20,6 +20,7 @@ NETWATCH_REBOOTED="${ZB_VAR_DIR:-/var/lib/zenithboard}/netwatch-reboot"    # whe
 NETWATCH_UPTIME_FILE="${ZB_UPTIME_FILE:-/proc/uptime}"
 NETWATCH_GRACE_S=600           # not judged during the first 10 minutes after a start (the router may still be starting too)
 NETWATCH_RESTART_AT=3          # 3 checks in a row failed (about 6 minutes): restart the network
+NETWATCH_WIFI_RESET_AT=4       # 4 in a row (about 8 minutes) on Wi-Fi: switch the Wi-Fi radio off and on and reconnect
 NETWATCH_REBOOT_AT=6           # 6 in a row (about 12 minutes): reboot
 NETWATCH_REBOOT_GAP_S=10800    # but never more than one reboot every 3 hours (no reboot loop when the router is simply off)
 
@@ -69,6 +70,43 @@ netwatch_off() { cfg_set NETWATCH 0; netwatch_remove_units; rm -f "$NETWATCH_FAI
 netwatch_gateway() { ip -4 route show default 2>/dev/null | awk '{for(i=1;i<NF;i++) if($i=="via"){print $(i+1); exit}}'; }
 netwatch_log()     { logger -t zenithboard-netwatch "$*" 2>/dev/null || true; }
 
+# What the Wi-Fi sees, written to the log when a check fails, so the cause can be read afterwards: is the saved network
+# visible (and how strongly), how many other networks are around, what state is wlan0 in. Only for a Pi using Wi-Fi.
+netwatch_wifi_dev() { nmcli -t -f DEVICE,TYPE device status 2>/dev/null | awk -F: '$2=="wifi"{print $1; exit}'; }
+netwatch_wifi_diag() {
+  local dev state seen name ssid sig count=0 known=0
+  command -v nmcli >/dev/null 2>&1 || return 0
+  dev=$(netwatch_wifi_dev); [ -n "$dev" ] || return 0
+  state=$(nmcli -g GENERAL.STATE device show "$dev" 2>/dev/null | head -1)
+  seen=$(timeout 20 nmcli -t -f SSID,SIGNAL device wifi list ifname "$dev" --rescan yes 2>/dev/null)
+  count=$(grep -c . <<<"$seen")
+  while IFS= read -r name; do
+    [ -n "$name" ] || continue
+    ssid=$(nmcli -g 802-11-wireless.ssid connection show "$name" 2>/dev/null | head -1)
+    [ -n "$ssid" ] || continue
+    sig=$(awk -F: -v want="$ssid" '{s=$NF; sub(/:[^:]*$/, ""); gsub(/\\:/, ":"); if ($0 == want) {print s; exit}}' <<<"$seen")
+    if [ -n "$sig" ]; then netwatch_log "Wi-Fi $dev ($state): saved network '$ssid' IS visible, signal $sig%, $count networks in range"
+    else netwatch_log "Wi-Fi $dev ($state): saved network '$ssid' is NOT visible, $count other networks in range"; fi
+    known=1
+  done < <(nmcli -t -f NAME,TYPE connection show 2>/dev/null | awk -F: '$NF=="802-11-wireless"{print $1}' | head -3)
+  [ "$known" = 1 ] || netwatch_log "Wi-Fi $dev ($state): no saved Wi-Fi network, $count networks in range"
+  return 0
+}
+# Switch the Wi-Fi radio off and on and ask for the saved connection again (a stuck radio often needs only that).
+netwatch_wifi_reset() {
+  local dev name
+  command -v nmcli >/dev/null 2>&1 || return 0
+  dev=$(netwatch_wifi_dev); [ -n "$dev" ] || return 0
+  netwatch_log "resetting the Wi-Fi radio ($dev)"
+  nmcli radio wifi off >/dev/null 2>&1 || true
+  sleep "${ZB_NETWATCH_SLEEP:-3}"
+  nmcli radio wifi on >/dev/null 2>&1 || true
+  sleep "${ZB_NETWATCH_SLEEP:-3}"
+  name=$(nmcli -t -f NAME,TYPE connection show 2>/dev/null | awk -F: '$NF=="802-11-wireless"{print $1; exit}')
+  [ -z "$name" ] || timeout 40 nmcli connection up "$name" ifname "$dev" >/dev/null 2>&1 || true
+  return 0
+}
+
 # One check, called by the timer. Never blocks for more than a few seconds and never fails the unit.
 netwatch_run() {
   local up gw n now last
@@ -83,10 +121,14 @@ netwatch_run() {
   n=$(cat "$NETWATCH_FAILS" 2>/dev/null || echo 0); [[ "$n" =~ ^[0-9]+$ ]] || n=0
   n=$((n + 1)); mkdir -p "$(dirname "$NETWATCH_FAILS")"; echo "$n" > "$NETWATCH_FAILS"
   netwatch_log "router ${gw:-(no default route)} not reachable, failed check $n"
+  # the Wi-Fi picture is logged on the 1st, 3rd and 5th failed check, then every 30 minutes (not every 2 minutes)
+  if [ "$n" -eq 1 ] || [ "$n" -eq 3 ] || [ "$n" -eq 5 ] || [ $((n % 15)) -eq 0 ]; then netwatch_wifi_diag; fi
   if [ "$n" -eq "$NETWATCH_RESTART_AT" ]; then
     netwatch_log "restarting the network"
     if systemctl is-active --quiet NetworkManager 2>/dev/null; then systemctl restart NetworkManager || true
     else systemctl restart dhcpcd 2>/dev/null || systemctl restart networking 2>/dev/null || true; fi
+  elif [ "$n" -eq "$NETWATCH_WIFI_RESET_AT" ]; then
+    netwatch_wifi_reset
   elif [ "$n" -ge "$NETWATCH_REBOOT_AT" ]; then
     now=$(date +%s); last=$(cat "$NETWATCH_REBOOTED" 2>/dev/null || echo 0); [[ "$last" =~ ^[0-9]+$ ]] || last=0
     if [ $((now - last)) -lt "$NETWATCH_REBOOT_GAP_S" ]; then
@@ -145,6 +187,10 @@ health_check() {
     if [ "$used" -ge 90 ]; then echo "Card:         ${used}% full: free some space"; else echo "Card:         ${used}% full"; fi
   fi
   echo "Watchdogs:    hardware $(watchdog_state), network $(netwatch_state)"
+  if [ "$(netwatch_state)" = on ]; then
+    lines=$(journalctl -t zenithboard-netwatch -n 6 --no-pager -o short 2>/dev/null | grep -v '^-- ' || true)
+    if [ -n "$lines" ]; then echo "Network watchdog, its last lines:"; sed 's/^/    /' <<<"$lines"; else echo "Network watchdog: has never needed to act (no lines in the logs)"; fi
+  fi
   echo "Saved logs:   $(keeplogs_state) $( [ "$(keeplogs_state)" = on ] || echo '(logs are lost at every restart: turn it on to find the cause of the next freeze)')"
   boots=$(journalctl --list-boots 2>/dev/null | grep -c . || true)
   if [ "${boots:-0}" -ge 2 ]; then
