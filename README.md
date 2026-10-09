@@ -14,7 +14,7 @@ ZenithBoard turns a Raspberry Pi (4 or newer recommended) and a cheap USB radio 
 
 Everything is installed from one menu, and you can come back at any time to add or remove parts.
 
-> **Status:** running every day on the author's Raspberry Pi (Raspberry Pi OS, Debian 13) with readsb, ADSB Exchange and Flightradar24. Parts that could not be tried on real hardware yet (978 MHz UAT for the US, ACARS) are marked as such. Please open an issue with anything that breaks. See [Known limits](#known-limits).
+> **Status:** running every day on the author's Raspberry Pi (Raspberry Pi OS, Debian 13) with readsb, ADSB Exchange and Flightradar24. Parts that could not be tried on real hardware yet (978 MHz UAT for the US, ACARS) are marked as such. Please open an issue with anything that breaks. The full picture of what is proven and what is not is in the wiki: **[Project status](https://github.com/regis57/ZenithBoard/wiki/Project-status)**.
 
 Inspired by [jprochazka/adsb-receiver](https://github.com/jprochazka/adsb-receiver). ZenithBoard is an independent project with a smaller scope, not a fork.
 
@@ -41,6 +41,7 @@ The story behind the project: [ZenithBoard on regis-hennequin.info](https://regi
 | **3. The wall** | [What it shows](#what-the-wall-shows) · [Look](#look-dot-matrix-or-airport-split-flap-board) · [Colours](#colours) · [Units, radius, position](#units-radius-and-position) · [Silhouettes](#aircraft-silhouettes) · [Routes and models](#flight-routes) · [Photos](#photos) · [Demo](#try-it-without-any-hardware) |
 | **4. The receiver** | [Gain](#gain-tune-the-dongle-optional) · [978 MHz UAT (US)](#978-mhz-uat-united-states) |
 | **5. Keep it running** | [Update](#updating-and-uninstalling) · [Logs](#logs-size-review-clean-optional) · [Reliability](#reliability-when-the-pi-freezes-or-loses-its-network-optional) · [Troubleshooting](#troubleshooting) · [Known limits](#known-limits) |
+| **The wiki** | [Roadmap](https://github.com/regis57/ZenithBoard/wiki/Roadmap) · [Project status](https://github.com/regis57/ZenithBoard/wiki/Project-status) · [Architecture](https://github.com/regis57/ZenithBoard/wiki/Architecture) · [Settings](https://github.com/regis57/ZenithBoard/wiki/Configuration-reference) · [Commands](https://github.com/regis57/ZenithBoard/wiki/Command-reference) · [Testing](https://github.com/regis57/ZenithBoard/wiki/Testing) |
 
 **Which defaults does what?** Everything in menu *4 Settings* (and `zenithboard ...`) sets the **default for every screen**. The gear icon on a tablet, or a link such as `?mode=flap`, only overrides it **for that tablet**; the gear's *Reset* returns the tablet to the Pi's default. So the two do not duplicate each other: one is the house rule, the other a personal choice.
 
@@ -510,6 +511,8 @@ readsb (or dump1090-fa) --- aircraft.json ---> FlightInfo server ---> tablet (do
 
 **ACARS retention:** the ingester drops acknowledgements, link tests and empty messages (configurable in `config.env`) and deletes everything older than `ACARS_RETENTION_DAYS` (default 7) every hour.
 
+The processes, the files each one reads and writes, and the timers are set out in the wiki: **[Architecture](https://github.com/regis57/ZenithBoard/wiki/Architecture)**.
+
 ## Troubleshooting
 
 | Symptom | Try |
@@ -526,28 +529,27 @@ readsb (or dump1090-fa) --- aircraft.json ---> FlightInfo server ---> tablet (do
 
 ## Known limits
 
-* **Not yet validated on a real Raspberry Pi** — third-party installers (readsb, ADSB Exchange, Flightradar24, Plane Finder, `acarsdec`) change over time. Version pins and URLs are all in [`lib/versions.sh`](lib/versions.sh).
-* Feeder download addresses (FlightAware, Plane Finder, ...) are pinned in [`lib/versions.sh`](lib/versions.sh) and were copied from each provider's own page on 6 October 2026. Providers do rename and move files from time to time; if an install stops with a 404, that file is the one to update (and a pull request or issue is welcome).
-* FlightAware and Flightradar24 store your antenna position on their websites: after `zenithboard location`, update it there too (the command tells you where).
-* ACARS legality differs per country — check your local rules before collecting ACARS messages.
-* Photos come from Planespotters and need internet on the Pi. The live photo lookup has not yet been checked against the real service on a Raspberry Pi; the demo and the tests exercise the same code with stand-ins. Run `zenithboard photos test` on your own Pi to confirm it works there.
-* Routes come from adsbdb.com by callsign. The answer format is checked against the real service and covered by tests, but the live lookup has not yet been run on a Raspberry Pi: `REAL_PHOTOS=1 ./bin/zenithboard-demo` shows the real route of the demo's two airliners.
-* The airline name list is built in (about 90 major airlines); other airlines show the callsign only.
-* The fixed-IP and domain-name menus were written and unit-tested without a Raspberry Pi in hand (the exact `nmcli` calls and the dynamic-DNS answers are covered by tests; a real address change and a real update were not run). Try them with a keyboard and screen at hand, and report anything odd.
-* The Wi-Fi menu was written and unit-tested without a Raspberry Pi in hand (it relies on NetworkManager's `nmcli` and profile files). Try it with the Ethernet cable plugged in, and report anything odd.
+* **Feeder download addresses** are pinned in [`lib/versions.sh`](lib/versions.sh) and were copied from each provider's own page on 6 October 2026. Providers rename and move files; if an install stops with a 404, that file is the one to update (a pull request or issue is welcome).
+* **FlightAware and Flightradar24 store your antenna position on their websites**: after `zenithboard location`, update it there too (the command tells you where).
+* **The airline name list is built in** (about 90 major airlines); other airlines show the callsign only.
+* **Routes are looked up by callsign, not by flight.** A callsign can be reused for the other direction, so impossible answers are dropped rather than shown — a blank route row is better than a wrong one.
+* **ACARS legality differs per country** — check your local rules before collecting ACARS messages.
+* **Some parts have never run on real hardware**, among them the 978 MHz UAT receiver, the fixed-IP and Wi-Fi menus, the live photo lookup and ACARS. They are written and unit-tested against stand-in programs, which proves the logic and nothing about the hardware.
+
+Which is which, what has been proven on a real Pi, and the field log of what has actually gone wrong: **[Project status](https://github.com/regis57/ZenithBoard/wiki/Project-status)** in the wiki.
 
 ## Contributing & tests
 
+The whole suite, what each test covers, and the two patterns it is built on are in the wiki: **[Testing](https://github.com/regis57/ZenithBoard/wiki/Testing)** and **[Contributing](https://github.com/regis57/ZenithBoard/wiki/Contributing)**. The short version — run this before opening a pull request, it is exactly what CI runs:
+
 ```bash
-python3 -m unittest discover -s tests -v     # server + ACARS
-node tests/test_format.js                    # wall formatting / units
-node tests/test_flap.js                      # split-flap board
-bash tests/test_network.sh                   # fixed IP and domain name
-node tests/test_shapes.js                    # silhouettes seen from above
-node tests/test_scene.js                     # side views / animated scene
-node tools/make_demo_photos.js               # rebuild the demo's mock photos
-shellcheck -x install.sh bin/* lib/*.sh      # installer
+shellcheck -x -S warning install.sh bin/zenithboard bin/run-acarsdec bin/zenithboard-demo lib/*.sh tests/*.sh
+python3 -m unittest discover -s tests -v
+for t in tests/test_*.sh; do bash "$t" || echo "FAIL $t"; done
+for t in tests/test_*.js; do node "$t" || echo "FAIL $t"; done
 ```
+
+Two standing rules: **no airline logos** (they are trademarks), and **package signature checking is never turned off**.
 
 ## Support the project
 
