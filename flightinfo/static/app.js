@@ -2,7 +2,7 @@
 // ZenithBoard dot-matrix wall: polls the local API, renders aircraft on a canvas dot matrix,
 // auto-cycles through the aircraft inside the chosen radius and refreshes itself.
 //
-// Layout (128 x 80 dots, 16:10):  text on the left | aircraft silhouette (dots) top-right | photo bottom-right.
+// Layout (128 x 80 dots, 16:10):  text on the left | aircraft silhouette (dots) top-right | photo right, above the settings gear (bottom-right corner).
 // The photo corner is a real picture (Planespotters) with credit; without a photo it shows an animated sky scene
 // with a side view of the matching aircraft model (see scene.js).
 (function () {

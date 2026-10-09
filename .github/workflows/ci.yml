@@ -28,3 +28,4 @@ jobs:
           node tests/test_shapes.js
           node tests/test_scene.js
           node tests/test_flap.js
+          node tests/test_layout.js

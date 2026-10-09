@@ -13,10 +13,12 @@ body[data-theme="white"] { --dot: #e8e8e8; }
 #photobox img { width: 100%; height: auto; display: block; }          /* the whole photo, never cropped: app.js sizes the box to it */
 #photocap { padding: .15em .5em; font-size: inherit; line-height: 1.3; color: #fff;
             background: #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: .03em; pointer-events: none; }
-#gear { position: fixed; top: 6px; right: 6px; width: 44px; height: 44px; font-size: 24px; color: var(--dot);
+/* bottom-right: a TV browser shows its bar over the top edge, which hides a gear up there. The dot grid keeps the 12 rows under the photo free,
+   so the gear never covers the photo or the aircraft drawing (tests/test_layout.js checks it for common screens). */
+#gear { position: fixed; bottom: 6px; right: 6px; width: 44px; height: 44px; font-size: 24px; color: var(--dot);
         background: transparent; border: 0; opacity: .12; cursor: pointer; }
 #gear:hover, #gear:focus { opacity: .8; }
-#settings { position: fixed; top: 50px; right: 8px; width: min(92vw, 320px); padding: 14px; background: #111; color: #ddd;
+#settings { position: fixed; bottom: 56px; right: 8px; width: min(92vw, 320px); max-height: calc(100vh - 68px); max-height: calc(100dvh - 68px); overflow-y: auto; padding: 14px; background: #111; color: #ddd;
             border: 1px solid #333; border-radius: 10px; font-size: 15px; z-index: 10; }
 #settings h2 { margin: 0 0 10px; font-size: 16px; color: var(--dot); }
 #settings label { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin: 8px 0; }
