@@ -14,6 +14,10 @@ One Raspberry Pi 3B, outdoors, on Wi-Fi, with an R820T dongle.
 | readsb + the wall | Running continuously; the split-flap look is the one in daily use |
 | Feeding ADSB Exchange | Feed received and confirmed |
 | Gain tuning | `zenithboard gain check` reads real statistics; settled at **48.0 dB**, 4–5 % strong messages at rush hour |
+| Aircraft photos | Real photos from Planespotters on the wall |
+| The Wi-Fi menu | The Pi is on Wi-Fi, joined through the menu |
+| Feeding FlightAware and Flightradar24 | Both feeding; FlightAware's coverage chart confirms it |
+| Domain name (DuckDNS) | Set up and updating |
 | Route lookups | Working against adsbdb. The wrong answers it produced are what led to the plausibility filter and the hexdb second opinion in 0.9.2 |
 | Reliability menu | All four options turned on and left on |
 | Hardware watchdog | Installed and surviving reboots |
@@ -27,11 +31,9 @@ Treat these as likely-working rather than known-working, and please report what 
 
 | Part | What is missing |
 |---|---|
-| Aircraft photos | The Planespotters request has only been exercised with stand-ins. Run `zenithboard photos test` on your Pi |
 | 978 MHz UAT (United States) | No US hardware has run it |
-| Fixed IP address and dynamic DNS | The `nmcli` calls and the provider answers are tested; a real address change and a real update were not run. Keep a keyboard and screen at hand |
-| The Wi-Fi menu | Same: tested against a stand-in `nmcli`. Try it with the cable plugged in |
-| FlightAware, Flightradar24, Plane Finder | The installers run; long-term feeding has not been watched |
+| Fixed IP address | The `nmcli` calls are tested; a real address change was not run. Keep a keyboard and screen at hand |
+| Plane Finder | The installer runs; no feed has been watched |
 | ACARS and Grafana | Built and tested; no long run on real traffic |
 
 ## Known rough edges
