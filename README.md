@@ -534,7 +534,7 @@ The processes, the files each one reads and writes, and the timers are set out i
 * **The airline name list is built in** (about 90 major airlines); other airlines show the callsign only.
 * **Routes are looked up by callsign, not by flight.** A callsign can be reused for the other direction, so impossible answers are dropped rather than shown — a blank route row is better than a wrong one.
 * **ACARS legality differs per country** — check your local rules before collecting ACARS messages.
-* **Some parts have never run on real hardware**, among them the 978 MHz UAT receiver, the fixed-IP and Wi-Fi menus, the live photo lookup and ACARS. They are written and unit-tested against stand-in programs, which proves the logic and nothing about the hardware.
+* **Some parts have never run on real hardware**, among them the 978 MHz UAT receiver, the fixed-IP menu, Plane Finder and ACARS. They are written and unit-tested against stand-in programs, which proves the logic and nothing about the hardware.
 
 Which is which, what has been proven on a real Pi, and the field log of what has actually gone wrong: **[Project status](https://github.com/regis57/ZenithBoard/wiki/Project-status)** in the wiki.
 

@@ -8,8 +8,7 @@ The code is complete enough. What it lacks is proof.
 
 | Item | Why it is here | How it ends |
 |---|---|---|
-| Confirm the live photo lookup on a Pi | Planespotters has only ever been exercised with stand-ins in the tests | `zenithboard photos test` works on a real Pi, and the note leaves [Project status](Project-status) |
-| Confirm the live route lookup on a Pi | Same: the answer format is tested, the real request is not | A demo run shows the true route of a real flight |
+| Try Plane Finder | The fourth feeder is installed by the menu and has never been fed | It feeds, or the menu entry gets a caveat |
 | Finish the night Wi-Fi investigation | A Pi outdoors lost its network at 01:00 and came back by itself | The cause is known: the router's schedule, the signal, or the Pi's radio |
 | Leave the gain alone | Settled at 48.0 dB, 4–5 % strong messages at rush hour | Nothing to do. Recorded so it is not re-opened |
 
