@@ -27,7 +27,17 @@ mk ip 'echo "default via 192.168.1.1 dev eth0"'
 mk systemctl 'echo "systemctl $*" >> '"$t"'/calls; [ "$1" != is-active ] || exit 0'
 mk logger 'echo "logger $*" >> '"$t"'/calls'
 mk vcgencmd 'case "$1" in get_throttled) echo "throttled=$(cat '"$t"'/throttled)";; measure_temp) echo "temp=$(cat '"$t"'/temp)'"'"'C";; esac'
-mk journalctl 'echo "journalctl $*" >> '"$t"'/calls; case "$*" in *list-boots*) cat '"$t"'/boots;; *"-b -1 -n 40"*) cat '"$t"'/prevtail;; *"-b -1 -n 8"*) cat '"$t"'/prevtail;; *"-k -b 0"*) cat '"$t"'/kern0;; *"-k -b -1"*) cat '"$t"'/kern1;; esac'
+mk journalctl 'echo "journalctl $*" >> '"$t"'/calls; case "$*" in *list-boots*) cat '"$t"'/boots;; *"-t zenithboard-netwatch"*) cat '"$t"'/nwlog;; *"-b -1 -n 40"*) cat '"$t"'/prevtail;; *"-b -1 -n 8"*) cat '"$t"'/prevtail;; *"-k -b 0"*) cat '"$t"'/kern0;; *"-k -b -1"*) cat '"$t"'/kern1;; esac'
+mk nmcli 'echo "nmcli $*" >> '"$t"'/calls
+case "$*" in
+  "-t -f DEVICE,TYPE device status") [ -f '"$t"'/nowifi ] || printf "eth0:ethernet\nwlan0:wifi\n" ;;
+  "-g GENERAL.STATE device show wlan0") echo "30 (disconnected)" ;;
+  "-t -f SSID,SIGNAL device wifi list ifname wlan0 --rescan yes") cat '"$t"'/scan 2>/dev/null ;;
+  "-t -f NAME,TYPE connection show") printf "Home:802-11-wireless\nWired:802-3-ethernet\n" ;;
+  "-g 802-11-wireless.ssid connection show Home") cat '"$t"'/ssid ;;
+esac
+exit 0'
+export ZB_NETWATCH_SLEEP=0
 PATH="$t/bin:$PATH"
 touch "$t/watchdog"
 
@@ -82,6 +92,27 @@ check "status shows on"                              'netwatch_status | grep -q 
 netwatch_off >/dev/null
 check "off: setting cleared, counter removed"       '[ "$(cfg_get NETWATCH 0)" = 0 ] && [ ! -e "$NETWATCH_FAILS" ]'
 
+# ---- the Wi-Fi picture in the log (a Pi on Wi-Fi), and the radio reset before a restart
+echo "Home Net" > "$t/ssid"
+printf 'Neighbour:62\nHome Net:41\n:0\n' > "$t/scan"
+rm -f "$NETWATCH_FAILS" "$t/router_up" "$t/nowifi"; : > "$t/calls"
+netwatch_run
+check "1st failed check: the saved network is seen, with its signal" 'grep -q "saved network .Home Net. IS visible, signal 41%" "$t/calls" && grep -q "wlan0 (30 (disconnected))" "$t/calls"'
+: > "$t/calls"; netwatch_run
+check "2nd failed check: no Wi-Fi scan (not every 2 minutes)"        '! grep -q "nmcli.*--rescan" "$t/calls"'
+: > "$t/calls"; printf 'Neighbour:62\nOther:55\n' > "$t/scan"; netwatch_run
+check "3rd: network not visible, says so with the number around"      'grep -q "NOT visible, 2 other networks in range" "$t/calls" && grep -q "systemctl restart NetworkManager" "$t/calls"'
+: > "$t/calls"; netwatch_run
+check "4th: Wi-Fi radio off, on, connection asked again, no reboot"    'grep -q "nmcli radio wifi off" "$t/calls" && grep -q "nmcli radio wifi on" "$t/calls" && grep -q "nmcli connection up Home ifname wlan0" "$t/calls" && ! grep -q "systemctl reboot" "$t/calls"'
+rm -f "$NETWATCH_FAILS"; touch "$t/nowifi"; : > "$t/calls"; runs 4
+check "Ethernet-only Pi: no Wi-Fi scan, no radio reset"                '! grep -q "rescan\|radio wifi" "$t/calls"'
+rm -f "$t/nowifi" "$NETWATCH_FAILS"
+printf 'Weird\\:Name:77\n' > "$t/scan"; echo "Weird:Name" > "$t/ssid"; : > "$t/calls"; netwatch_run
+check "a network name containing a colon is found"                      'grep -q "IS visible, signal 77%" "$t/calls"'
+rm -f "$NETWATCH_FAILS"; mk nmcli 'exit 0'; : > "$t/calls"
+check "a broken nmcli never makes the check fail"                      'netwatch_run'
+rm -f "$NETWATCH_FAILS"
+
 # ---- the units
 check "service runs the check as a one-shot"  'grep -q "ExecStart=/opt/zenithboard/bin/zenithboard netwatch run" systemd/zenithboard-netwatch.service && grep -q "Type=oneshot" systemd/zenithboard-netwatch.service'
 check "timer starts 2 min after being enabled and repeats (OnBootSec alone would never fire)" 'grep -q "OnActiveSec=2min" systemd/zenithboard-netwatch.timer && grep -q "OnUnitInactiveSec=2min" systemd/zenithboard-netwatch.timer'
@@ -108,6 +139,11 @@ check "kernel lines about power and USB are listed" 'grep -q "Under-voltage dete
 echo 0x80000 > "$t/throttled"
 check "soft temperature limit happened" 'health_check 2>&1 | grep -q "temperature limit"'
 printf '  0 bbb Thu 2026-10-08 08:43:00 CEST Thu 2026-10-08 09:00:00 CEST\n' > "$t/boots"
+printf 'Oct 09 01:14:00 rp3 zenithboard-netwatch[1]: router not reachable, failed check 1\n' > "$t/nwlog"; cfg_set NETWATCH 1
+check "health shows the watchdog's last lines when it is on"  'health_check 2>&1 | grep -q "its last lines" && health_check 2>&1 | grep -q "failed check 1"'
+: > "$t/nwlog"
+check "health says when the watchdog never had to act"       'health_check 2>&1 | grep -q "never needed to act"'
+cfg_set NETWATCH 0
 check "only one boot in the logs"      'health_check 2>&1 | grep -q "no earlier boot"'
 mk vcgencmd 'exit 1'
 check "no vcgencmd: the screen still works" 'health_check >/dev/null 2>&1'

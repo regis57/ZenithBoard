@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.10.2
+- Network watchdog, for a Pi on Wi-Fi: when a check fails it now writes what the Wi-Fi sees to the log (is your saved network visible and at what signal, how many other networks are in range, the state of the Wi-Fi), on the 1st, 3rd and 5th failed check and then every 30 minutes, so the next night tells whether the router's Wi-Fi was off, the signal too weak or the Pi at fault. After about 8 minutes it also switches the Wi-Fi radio off and on and asks for the saved connection again, before the Pi is restarted (an Ethernet-only Pi is not affected).
+- `zenithboard health` shows the last lines of the network watchdog when it is on.
+
 ## 0.10.1
 - Gain check: the first line now shows the date and time of the check (`Checked: 2026-10-08 20:18`), so a result copied somewhere can be placed in the day (the share of strong messages changes a lot between night and rush hour).
 
