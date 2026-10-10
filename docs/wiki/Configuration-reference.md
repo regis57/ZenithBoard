@@ -59,6 +59,7 @@ The dynamic-DNS **token is not stored here.** It is asked for interactively and 
 | `AUTO_DATA_REFRESH` | `1` | `zenithboard data auto on\|off` | Monthly refresh of the aircraft-type list |
 | `LOG_AUTOCLEAN` | `0` | `zenithboard logs auto on\|off` | Daily clean-up keeping the last 7 days |
 | `NETWATCH` | `0` | `zenithboard netwatch on\|off` | The network watchdog. See [Reliability](Reliability-and-diagnostics) |
+| `GAINLOG` | `0` | `zenithboard gain log on\|off` | The 24-hour gain log. See [Gain tuning](Gain-tuning) |
 | `HW_NOTICE_SEEN` | unset | set by the installer | Remembers that the "this Pi model is tight for this" notice has been shown once |
 
 The hardware watchdog and the persistent logs are **not** keys: they are system files, and `zenithboard watchdog status` / `keeplogs status` read the real state rather than a remembered one.

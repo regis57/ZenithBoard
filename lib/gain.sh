@@ -135,6 +135,89 @@ gain_check() {
   echo "Method: change one step at a time and wait 15-30 minutes. Keep what gives the most aircraft and the longest range, with 1-5% strong messages."
 }
 
+# ------------------------------------------------------------------ 24-hour log
+# One line every 15 minutes in a CSV file, keeping the last 24 hours and nothing more, so the gain can be
+# judged over a whole day (quiet night, busy evening) instead of from a single check. Off until turned on.
+GAIN_LOG_UNIT=zenithboard-gain-log
+GAIN_LOG_UNIT_DIR="${ZB_SYSTEMD_DIR:-/etc/systemd/system}"
+GAIN_LOG_FILE="${ZB_VAR_DIR:-/var/lib/zenithboard}/gain-log.csv"
+GAIN_LOG_HEADER="when,gain_db,decoder,accepted,strong,strong_pct,farthest_km,avg_dbfs,peak_dbfs"
+GAIN_LOG_HOURS=24
+GAIN_LOG_MAX_ROWS=96          # 24 h at one line every 15 minutes
+
+gain_log_state() { [ "$(cfg_get GAINLOG 0)" = 1 ] && echo on || echo off; }
+gain_log_path()  { echo "$GAIN_LOG_FILE"; }
+
+gain_log_install_units() {
+  [ -f "$ZB_HOME/systemd/$GAIN_LOG_UNIT.service" ] || return 0
+  install -d -m 755 "$GAIN_LOG_UNIT_DIR"
+  install -m 644 "$ZB_HOME/systemd/$GAIN_LOG_UNIT.service" "$ZB_HOME/systemd/$GAIN_LOG_UNIT.timer" "$GAIN_LOG_UNIT_DIR/"
+  systemctl daemon-reload; systemctl enable --now "$GAIN_LOG_UNIT.timer" >/dev/null 2>&1 || true
+}
+gain_log_remove_units() {
+  systemctl disable --now "$GAIN_LOG_UNIT.timer" >/dev/null 2>&1 || true
+  rm -f "$GAIN_LOG_UNIT_DIR/$GAIN_LOG_UNIT.service" "$GAIN_LOG_UNIT_DIR/$GAIN_LOG_UNIT.timer"; systemctl daemon-reload 2>/dev/null || true
+}
+
+gain_log_start() {
+  install -d -m 755 "$(dirname "$GAIN_LOG_FILE")" 2>/dev/null || true
+  [ -f "$GAIN_LOG_FILE" ] || echo "$GAIN_LOG_HEADER" > "$GAIN_LOG_FILE"
+  cfg_set GAINLOG 1; gain_log_install_units
+  echo "Gain log is ON: one line every 15 minutes in $GAIN_LOG_FILE, keeping the last $GAIN_LOG_HOURS hours."
+  echo "Read it with 'zenithboard gain log show', empty it with 'zenithboard gain log clear'."
+}
+gain_log_stop() { cfg_set GAINLOG 0; gain_log_remove_units; echo "Gain log is OFF. The file is kept: $GAIN_LOG_FILE"; }
+gain_log_clear() {
+  install -d -m 755 "$(dirname "$GAIN_LOG_FILE")" 2>/dev/null || true
+  echo "$GAIN_LOG_HEADER" > "$GAIN_LOG_FILE"; echo "Gain log emptied ($GAIN_LOG_FILE)."
+}
+
+# Drop anything older than 24 hours. Timestamps are written YYYY-MM-DD HH:MM, which compares correctly as text.
+gain_log_prune() {
+  local cut tmp
+  [ -f "$GAIN_LOG_FILE" ] || return 0
+  cut=$(date -d "$GAIN_LOG_HOURS hours ago" '+%Y-%m-%d %H:%M' 2>/dev/null) || return 0
+  tmp="$GAIN_LOG_FILE.tmp"
+  { echo "$GAIN_LOG_HEADER"
+    awk -F, -v c="$cut" 'NR>1 && $1 >= c' "$GAIN_LOG_FILE" | tail -n "$GAIN_LOG_MAX_ROWS"
+  } > "$tmp" && mv "$tmp" "$GAIN_LOG_FILE"
+}
+
+# One measurement appended. Called by the timer; safe to run by hand.
+gain_log_run() {
+  local d cur n acc strong km sig peak pct
+  [ -f "$GAIN_LOG_FILE" ] || { install -d -m 755 "$(dirname "$GAIN_LOG_FILE")" 2>/dev/null || true; echo "$GAIN_LOG_HEADER" > "$GAIN_LOG_FILE"; }
+  d=$(gain_decoder); [ -n "$d" ] || return 0
+  n=$(gain_numbers "$d") || return 0
+  [ -n "$n" ] || return 0
+  read -r acc strong km sig peak <<<"$n"
+  pct=$(awk -v s="$strong" -v a="$acc" 'BEGIN{if(a>0)printf "%.2f",100*s/a; else print "0.00"}')
+  cur=$(gain_current "$d")
+  printf '%s,%s,%s,%s,%s,%s,%s,%s,%s\n' "$(date '+%Y-%m-%d %H:%M')" "$cur" "$d" "$acc" "$strong" "$pct" "$km" "$sig" "$peak" >> "$GAIN_LOG_FILE"
+  gain_log_prune
+}
+
+gain_log_show() {
+  [ -f "$GAIN_LOG_FILE" ] || { echo "No gain log yet. Turn it on with 'sudo zenithboard gain log on'."; return 1; }
+  cat "$GAIN_LOG_FILE"
+}
+
+gain_log_status() {
+  local rows first last
+  echo "Gain log: $(gain_log_state)     File: $GAIN_LOG_FILE"
+  if [ -f "$GAIN_LOG_FILE" ]; then
+    rows=$(awk 'NR>1' "$GAIN_LOG_FILE" | grep -c . || true)
+    first=$(awk -F, 'NR==2{print $1}' "$GAIN_LOG_FILE")
+    last=$(awk -F, 'END{if(NR>1)print $1}' "$GAIN_LOG_FILE")
+    echo "Measurements: $rows (of $GAIN_LOG_MAX_ROWS for a full $GAIN_LOG_HOURS hours)"
+    [ -n "$first" ] && echo "From $first to $last"
+  else
+    echo "Measurements: none yet"
+  fi
+  [ "$(gain_log_state)" = on ] && systemctl list-timers "$GAIN_LOG_UNIT.timer" --no-pager 2>/dev/null | sed -n '2p'
+  return 0
+}
+
 gain_menu() {
   local c d cur v
   d=$(gain_decoder)
@@ -148,6 +231,7 @@ gain_menu() {
       up "One step higher" \
       value "Type a value in dB" \
       default "Remove the setting (the decoder's default)" \
+      log "24-hour log: a measurement every 15 min, as a CSV table ($(gain_log_state))" \
       back "Return to the previous menu") || return 0
     case "$c" in
       check) clear; gain_check; echo; read -rp "Press Enter to continue..." _ ;;
@@ -158,6 +242,28 @@ gain_menu() {
         v=$(wt_input "Gain in dB. The dongle has fixed steps, so the nearest one is used:\n$GAIN_STEPS" "$GAIN_MAX") || continue
         clear; gain_set "$v" || true; echo; read -rp "Press Enter to continue..." _ ;;
       default) clear; gain_set default; echo; read -rp "Press Enter to continue..." _ ;;
+      log) gain_log_menu ;;
+      *) return 0 ;;
+    esac
+  done
+}
+
+gain_log_menu() {
+  local c
+  while true; do
+    c=$(wt_menu "24-hour gain log ($(gain_log_state)).\n\nOne measurement every 15 minutes, kept for 24 hours and no longer, in a CSV file you can open in a spreadsheet:\n$GAIN_LOG_FILE\n\nUseful to see the quiet night and the busy evening before deciding on a gain." \
+      on "Start recording" \
+      off "Stop recording (the file is kept)" \
+      show "Show what has been recorded" \
+      status "How many measurements so far" \
+      clear "Empty the file and start again" \
+      back "Return to the previous menu") || return 0
+    case "$c" in
+      on) clear; gain_log_start; echo; read -rp "Press Enter to continue..." _ ;;
+      off) clear; gain_log_stop; echo; read -rp "Press Enter to continue..." _ ;;
+      show) clear; gain_log_show | head -120; echo; read -rp "Press Enter to continue..." _ ;;
+      status) clear; gain_log_status; echo; read -rp "Press Enter to continue..." _ ;;
+      clear) clear; gain_log_clear; echo; read -rp "Press Enter to continue..." _ ;;
       *) return 0 ;;
     esac
   done

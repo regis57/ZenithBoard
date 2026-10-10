@@ -6,11 +6,18 @@ set -u
 cd "$(dirname "$0")/.." || exit 1
 t=$(mktemp -d); trap 'rm -rf "$t"' EXIT
 export ZENITHBOARD_ETC="$t/etc"; mkdir -p "$ZENITHBOARD_ETC" "$t/default" "$t/run/readsb" "$t/run/dump1090-fa"; touch "$ZENITHBOARD_ETC/config.env"
-export ZB_SKIP_SERVICES=1 ZB_DEFAULT_DIR="$t/default" ZB_STATS_DIR="$t/run"
+export ZB_SKIP_SERVICES=1 ZB_DEFAULT_DIR="$t/default" ZB_STATS_DIR="$t/run" ZB_VAR_DIR="$t/var"
+mkdir -p "$t/var" "$t/bin"
+# stubs for the two checks that would otherwise install a systemd unit; put on PATH only there,
+# because a fake systemctl also changes which decoder the code believes is installed
+printf '#!/bin/bash\nexit 0\n' > "$t/bin/systemctl"; chmod +x "$t/bin/systemctl"
+export ZB_SYSTEMD_DIR="$t/units"
+REAL_PATH="$PATH"
 # shellcheck source=lib/common.sh
 . lib/common.sh
 # shellcheck source=lib/gain.sh
 . lib/gain.sh
+ZB_HOME="$PWD"          # common.sh points it at /opt; the units are read from the checkout here
 fail=0
 ok()  { echo "ok   $1"; }
 bad() { echo "FAIL $1"; fail=1; }
@@ -89,5 +96,51 @@ printf '{"last15min":{"local":{"accepted":[9000,1000],"strong_signals":300}}}\n'
 check "accepted list is summed (10000)"       'gain_check 2>&1 | grep -q "10000 messages"'
 printf 'RECEIVER_OPTIONS="--gain=auto"\n' > "$r"; stats readsb 10000 300 1000
 check "automatic gain: tells nothing to lower by hand" 'gain_check 2>&1 | grep -q "automatic, so there is nothing"'
+
+# ---- the 24-hour log
+printf 'RECEIVER_OPTIONS="--gain 48.0"\n' > "$r"; stats readsb 800000 18000 318000
+log="$t/var/gain-log.csv"
+gain_log_clear >/dev/null
+check "log starts with just the header"   '[ "$(wc -l < "$log")" = 1 ] && head -1 "$log" | grep -q "^when,gain_db,decoder"'
+gain_log_run
+check "one run adds one line"             '[ "$(wc -l < "$log")" = 2 ]'
+check "the line has the gain and the counts" 'tail -1 "$log" | grep -qE "^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2},48.0,readsb,800000,18000,2.25,318,"'
+check "nine columns, as in the header"    '[ "$(tail -1 "$log" | awk -F, "{print NF}")" = 9 ]'
+gain_log_run; gain_log_run
+check "runs keep appending"               '[ "$(wc -l < "$log")" = 4 ]'
+
+# rows older than 24 hours are dropped, newer ones kept
+{ echo "$GAIN_LOG_HEADER"
+  echo "$(date -d '30 hours ago' '+%Y-%m-%d %H:%M'),48.0,readsb,1,0,0.00,10,-10,-1"
+  echo "$(date -d '25 hours ago' '+%Y-%m-%d %H:%M'),48.0,readsb,2,0,0.00,10,-10,-1"
+  echo "$(date -d '23 hours ago' '+%Y-%m-%d %H:%M'),48.0,readsb,3,0,0.00,10,-10,-1"
+  echo "$(date -d '1 hour ago'  '+%Y-%m-%d %H:%M'),48.0,readsb,4,0,0.00,10,-10,-1"
+} > "$log"
+gain_log_prune
+check "older than 24 h is dropped"        '! grep -q ",1,0,0.00," "$log" && ! grep -q ",2,0,0.00," "$log"'
+check "inside 24 h is kept"               'grep -q ",3,0,0.00," "$log" && grep -q ",4,0,0.00," "$log"'
+check "the header survives pruning"       'head -1 "$log" | grep -q "^when,gain_db"'
+
+# never more than 96 measurements, whatever happens
+{ echo "$GAIN_LOG_HEADER"; for i in $(seq 1 200); do echo "$(date '+%Y-%m-%d %H:%M'),48.0,readsb,$i,0,0.00,10,-10,-1"; done; } > "$log"
+gain_log_prune
+check "capped at 96 measurements"         '[ "$(awk "NR>1" "$log" | grep -c .)" = 96 ]'
+
+gain_log_clear >/dev/null
+check "clear empties it"                  '[ "$(wc -l < "$log")" = 1 ]'
+check "status says off and counts none"   'gain_log_status | grep -q "Gain log: off" && gain_log_status | grep -q "Measurements: 0"'
+PATH="$t/bin:$REAL_PATH"
+gain_log_start >/dev/null
+check "on is remembered"                  '[ "$(gain_log_state)" = on ] && [ "$(cfg_get GAINLOG 0)" = 1 ]'
+check "the 15-minute timer is installed"  '[ -f "$t/units/$GAIN_LOG_UNIT.timer" ] && grep -q "00/15" "$t/units/$GAIN_LOG_UNIT.timer"'
+gain_log_stop >/dev/null
+check "off is remembered, file kept"      '[ "$(gain_log_state)" = off ] && [ -f "$log" ]'
+check "the timer is removed again"        '[ ! -f "$t/units/$GAIN_LOG_UNIT.timer" ]'
+PATH="$REAL_PATH"
+rm -f "$log"
+check "show without a file explains how to start" 'gain_log_show 2>&1 | grep -q "Turn it on"'
+# a decoder with no statistics must not write a broken line
+rm -f "$t/run/readsb/stats.json"; gain_log_clear >/dev/null; gain_log_run
+check "no statistics: nothing is appended" '[ "$(wc -l < "$log")" = 1 ]'
 
 [ "$fail" = 0 ] && echo "ALL OK" || { echo "SOME FAILED"; exit 1; }

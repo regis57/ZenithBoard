@@ -39,6 +39,7 @@ Everything ZenithBoard installs lives in `/opt/zenithboard`. Nothing else is tou
 | `/run/readsb/aircraft.json` (or `/run/dump1090-fa/`) | The decoder, about once a second | The server, every refresh |
 | `/run/readsb/stats.json` | The decoder | `zenithboard gain check` |
 | `/var/lib/zenithboard/data/types.json` | The monthly refresh timer | The server, for silhouette names |
+| `/var/lib/zenithboard/gain-log.csv` | The gain log timer, every 15 min | You, in a spreadsheet. Holds 24 h, rolling |
 | `/var/lib/zenithboard/netwatch-reboot` | The network watchdog | Itself, to honour the three-hour gap |
 | `/run/zenithboard-netwatch.fails` | The network watchdog | Itself. In memory on purpose: nothing writes to the SD card every two minutes |
 | `/etc/default/readsb` → `RECEIVER_OPTIONS` | `zenithboard gain set` | The decoder at start |
@@ -72,5 +73,6 @@ The Pi runs nothing on a schedule that you have not turned on, except the monthl
 | `zenithboard-ddns.timer` | 30 s after boot, then every 5 min | Tells your dynamic-DNS provider the current address |
 | `zenithboard-netwatch.timer` | Every 2 min | The network watchdog. Off by default |
 | `zenithboard-logs-clean.timer` | Daily | Deletes log messages older than 7 days. Off by default |
+| `zenithboard-gain-log.timer` | Every 15 min, on the quarter hour | Appends one gain measurement. Off by default |
 
 `zenithboard-wifi.service` is not a timer: it runs once at boot to re-apply the Wi-Fi country and the on/off choice.

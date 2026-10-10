@@ -1,0 +1,7 @@
+[Unit]
+Description=ZenithBoard gain log (one measurement of the receiver gain, appended to a 24-hour CSV)
+
+[Service]
+Type=oneshot
+ExecStart=/opt/zenithboard/bin/zenithboard gain log run
+TimeoutStartSec=60
