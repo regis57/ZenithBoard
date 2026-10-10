@@ -83,7 +83,8 @@ Read the netwatch lines as a story rather than a count. Three restarts spaced ex
 
 Two patterns worth recognising:
 
-* **Your network not visible, other networks visible** — the router's radio stopped, or it has a nightly schedule. Check the router before touching the Pi.
+* **Your network not visible, other networks visible** — the access point's radio stopped, or it is on a timer. Check it before touching the Pi. This is not theoretical: the outage this feature was built for turned out to be a Wi-Fi extender with a schedule switching it off from 02:00 to 06:00. The Pi was blameless, and the only thing that said so was this line.
+* **Nothing visible at all** — the Pi's own radio, or an aerial that has come loose.
 * **Your network visible but weak, or the device stuck in `disconnected`** — signal, interference, or the Pi's radio. On a Pi 3B, remember that Ethernet and the USB dongles share one internal hub.
 
 ## A note for the Pi 3B
