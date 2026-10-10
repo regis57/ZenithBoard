@@ -25,7 +25,7 @@ Run the whole set before pushing. It takes well under a minute, and the shell te
 | `test_aircraft.py` | Reading `aircraft.json`, merging 1090 MHz with UAT |
 | `test_acars.py` | The ingester: filtering, storing, retention |
 | `test_update_types.py` | The monthly aircraft-type refresh |
-| `test_gain.sh` | The real gain steps, editing `RECEIVER_OPTIONS`, reading `stats.json`, the advice |
+| `test_gain.sh` | The real gain steps, editing `RECEIVER_OPTIONS`, reading `stats.json`, the advice, the 24-hour log and its pruning |
 | `test_reliability.sh` | Both watchdogs, the netwatch decisions, the Wi-Fi diagnosis and reset, the health screen |
 | `test_network.sh` | Fixed address and DHCP |
 | `test_wifi.sh` | Radio, country, scan, connect, forget |

@@ -197,6 +197,7 @@ uninstall_all() {
   ddns_remove_units
   logs_auto_off
   netwatch_remove_units
+  gain_log_remove_units
   is_acars && remove_acars
   is_flightinfo && remove_flightinfo
   is_planefinder && remove_planefinder

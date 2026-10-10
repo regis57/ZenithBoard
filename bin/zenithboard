@@ -41,6 +41,7 @@ ZenithBoard $ZB_VERSION - ADSB Flight Info
   zenithboard watchdog|netwatch|keeplogs on|off|status   hardware watchdog / network watchdog / logs kept after a restart (all off by default)
   zenithboard gain check                is the dongle gain right? (reads the decoder statistics, gives advice)
   zenithboard gain set DB|max|default|up|down   change the gain (one step at a time is best); steps: zenithboard gain steps
+  zenithboard gain log on|off|status|show|clear   record one measurement every 15 min for 24 h, as a CSV table you can open in a spreadsheet
   zenithboard ddns status|update|test|off  domain name (DuckDNS / No-IP / FreeDNS): state, refresh now, stop
   zenithboard ddns set PROVIDER NAME    duckdns|noip|freedns, then asks for the token / key (never on the command line)
   zenithboard wifi status               Wi-Fi: radio, country, connection, and wired-vs-Wi-Fi priority
@@ -238,7 +239,18 @@ case "${1:-}" in
       set) root_or_die; [ -n "${3:-}" ] || die "Usage: sudo zenithboard gain set DB|max|default"; gain_set "$3" ;;
       up|down) root_or_die; d=$(gain_decoder); gain_set "$(gain_step_move "$(gain_current "$d")" "$2")" ;;
       steps) echo "$GAIN_STEPS" ;;
-      *) die "Usage: zenithboard gain check | set DB|max|default | up | down | steps" ;;
+      log)
+        case "${3:-status}" in
+          on)     root_or_die; gain_log_start ;;
+          off)    root_or_die; gain_log_stop ;;
+          run)    root_or_die; gain_log_run ;;
+          show)   gain_log_show ;;
+          clear)  root_or_die; gain_log_clear ;;
+          path)   gain_log_path ;;
+          status) gain_log_status ;;
+          *) die "Usage: zenithboard gain log on|off|status|show|clear|path" ;;
+        esac ;;
+      *) die "Usage: zenithboard gain check | set DB|max|default | up | down | steps | log on|off|status|show|clear" ;;
     esac ;;
   ddns)
     case "${2:-status}" in

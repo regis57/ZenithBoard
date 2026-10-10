@@ -37,6 +37,11 @@ sudo zenithboard config-set PORT 8090
 zenithboard gain check                 # is the gain right? reads the decoder statistics
 zenithboard gain steps                 # the real steps this dongle has
 sudo zenithboard gain set 44.5         # or: max | default | up | down
+sudo zenithboard gain log on           # record a measurement every 15 min for 24 h
+zenithboard gain log show              # the CSV table
+zenithboard gain log status
+sudo zenithboard gain log clear        # empty it
+sudo zenithboard gain log off
 sudo zenithboard mlat-guard            # put the single-MLAT rule back
 sudo zenithboard region us             # offer the 978 MHz UAT step in the menu
 ```

@@ -1,0 +1,9 @@
+[Unit]
+Description=ZenithBoard gain log, every 15 minutes on the quarter hour
+
+[Timer]
+OnCalendar=*:00/15
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target

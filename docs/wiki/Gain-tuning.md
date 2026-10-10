@@ -57,6 +57,36 @@ Not in `config.env`. The gain is part of `RECEIVER_OPTIONS` in:
 
 depending on your decoder, because that is the file the decoder reads at start. `zenithboard gain set` edits only the `--gain` part of that line and leaves your other options alone, then restarts the decoder.
 
+## The 24-hour log
+
+One check is one moment. The share of strong messages changes with the traffic, so a decision taken at 03:00 and a decision taken at 18:00 will not agree. The log settles that by measuring all day, by itself:
+
+```bash
+sudo zenithboard gain log on      # a measurement every 15 minutes
+zenithboard gain log status       # how many so far
+zenithboard gain log show         # the table
+sudo zenithboard gain log clear   # empty it and start again
+sudo zenithboard gain log off     # stop (the file is kept)
+```
+
+It keeps **24 hours and nothing older**: 96 lines, the oldest dropped as a new one arrives. Nothing to prune by hand, and nothing that quietly fills the SD card. It is off until you turn it on.
+
+The file is `/var/lib/zenithboard/gain-log.csv`:
+
+```
+when,gain_db,decoder,accepted,strong,strong_pct,farthest_km,avg_dbfs,peak_dbfs
+2026-10-10 07:45,48.0,readsb,810956,18386,2.27,318,-10.8,-1.6
+2026-10-10 08:00,48.0,readsb,845112,19902,2.36,322,-10.6,-1.5
+```
+
+Every 15 minutes on the quarter hour, which matches the window the decoder itself reports, so two consecutive lines do not describe the same messages twice.
+
+**How to read a day of it.** Sort or chart `strong_pct` against `when`. What you are looking for is not an average but the **peak**: the busiest hour is the one that decides whether the gain is too high, because that is when the receiver is closest to overloading. A day that stays under 5 % at its worst hour is a gain you can leave alone. Then look at `farthest_km` and `accepted` at the *same* hours across two different gains — comparing a quiet night at one setting with a busy evening at another proves nothing.
+
+**Tuning with it.** Record a day at your current gain. Change one step. Record another day. Compare the two at matching hours. It is slower than guessing and it is the only way to know, because the difference between two neighbouring steps is smaller than the difference between Tuesday and Sunday.
+
+*Opening it in a French Excel: use Données → À partir d'un fichier texte/CSV and pick the comma as separator; double-clicking puts everything in one column, because a French Excel expects semicolons.*
+
 ## A worked example
 
 From the Pi this project is developed against: 48.0 dB gives 4–5 % strong messages at rush hour. That is inside the guideline, near the top of it, and one step down would be 44.5 — a big drop for little gain. Left at 48.0. Settled is better than optimal.

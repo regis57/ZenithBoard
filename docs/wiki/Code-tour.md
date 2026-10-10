@@ -30,7 +30,7 @@ docs/wiki/              the source of this wiki
 | `versions.sh` | **Every pinned version and download URL**, plus `ZB_VERSION`. The one file to edit when a provider moves a file |
 | `adsb.sh` | The decoder and the sharing services, the single-MLAT rule |
 | `flightinfo.sh` | Installing and configuring the wall |
-| `gain.sh` | The gain steps, reading `stats.json`, the advice, the menu |
+| `gain.sh` | The gain steps, reading `stats.json`, the advice, the 24-hour log, the menu |
 | `reliability.sh` | Both watchdogs, persistent logs, the health screen |
 | `network.sh` | Fixed address, DHCP, `net status` |
 | `wifi.sh` | Radio, country, scan, connect, forget, the boot-time re-apply |
@@ -75,6 +75,7 @@ The constants at the top of `app.js` — `GW`, `GH`, `SIL_BOX`, `PHOTO_BOX` — 
 | `zenithboard-ddns.service` + `.timer` | Updates your dynamic-DNS host | 30 s after boot, then every 5 min |
 | `zenithboard-netwatch.service` + `.timer` | The network watchdog | Every 2 min, if on |
 | `zenithboard-logs-clean.service` + `.timer` | Deletes log messages older than 7 days | Daily, if on |
+| `zenithboard-gain-log.service` + `.timer` | One gain measurement into the 24-hour CSV | Every 15 min, if on |
 | `zenithboard-acarsdec.service` | The ACARS decoder | With ACARS |
 | `zenithboard-acars-ingest.service` | ACARS into SQLite | With ACARS |
 
