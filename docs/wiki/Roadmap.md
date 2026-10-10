@@ -9,14 +9,12 @@ The code is complete enough. What it lacks is proof.
 | Item | Why it is here | How it ends |
 |---|---|---|
 | Try Plane Finder | The fourth feeder is installed by the menu and has never been fed | It feeds, or the menu entry gets a caveat |
-| Finish the night Wi-Fi investigation | A Pi outdoors lost its network at 01:00 and came back by itself | The cause is known: the router's schedule, the signal, or the Pi's radio |
 | Leave the gain alone | Settled at 48.0 dB, 4–5 % strong messages at rush hour | Nothing to do. Recorded so it is not re-opened |
 
 ## Next — once the above is proven
 
 * **A decision on AirNav RadarBox.** A fifth feeder is only worth it if its MLAT does not fight the single-MLAT rule. Waiting on a few nights of data first.
-* **Wi-Fi hardening**, depending on what the night investigation finds: `autoconnect-retries` and turning the radio's power saving off are two `nmcli` settings that cost nothing and may remove the whole problem.
-* **The outdoor power question.** Six degrees and damp air, outside, on a shared USB bus. If the night losses turn out to be electrical rather than radio, the answer is a hardware note, not code.
+* **Wi-Fi hardening**: `autoconnect-retries` and turning the radio's power saving off are two `nmcli` settings that cost nothing. No longer urgent — the night losses turned out to be an access point on a timer, not the Pi — but they would shorten the recovery when a network does come back.
 
 ## Later — good ideas, no urgency
 

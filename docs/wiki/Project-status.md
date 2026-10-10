@@ -21,7 +21,7 @@ One Raspberry Pi 3B, outdoors, on Wi-Fi, with an R820T dongle.
 | Route lookups | Working against adsbdb. The wrong answers it produced are what led to the plausibility filter and the hexdb second opinion in 0.9.2 |
 | Reliability menu | All four options turned on and left on |
 | Hardware watchdog | Installed and surviving reboots |
-| Network watchdog | Did real work: three network restarts, each about three hours apart, no reboot loop |
+| Network watchdog | Did real work on a real outage and diagnosed it: three network restarts three hours apart, no reboot loop, and its log named the cause |
 | Persistent logs | Working, after one `sudo journalctl --flush` the first time |
 | `zenithboard health` | Reports power, temperature, memory, card and the previous boot correctly |
 
@@ -50,6 +50,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
-| 9 October 2026, 01:00 | Wi-Fi lost. The network watchdog restarted the network; the Pi recovered on its own without anyone touching it. Three restarts that night, three hours apart. Cause still open: the router's own schedule, a weak signal, or cold and damp on an outdoor install (about 6 °C). This is what added the Wi-Fi diagnostic lines in 0.10.2 |
+| 10 October 2026 | **Cause found: the Wi-Fi extender had a schedule turning it off from 02:00 to 06:00.** Nothing wrong with the Pi, the signal or the weather. Schedule removed; the night of the 10th is clean from end to end |
+| 9 October 2026, 01:00 | Wi-Fi lost. The network watchdog restarted the network and the Pi recovered on its own, nobody touching it. Three restarts that night, three hours apart — the gap rule working, not three faults. The diagnostic lines added in 0.10.2 are what identified it: the saved network invisible while other networks were still in range, which points at the access point rather than at the Pi |
 | 8 October 2026 | Gain walked up and down the real R820T steps. 48.0 dB gives 4–5 % strong messages at rush hour, inside the 1–5 % guideline. Left there |
 | October 2026 | A TV browser's top bar covered the settings gear. Moved to the bottom-right corner in 0.10.3 |
