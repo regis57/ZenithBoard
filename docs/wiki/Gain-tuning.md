@@ -87,6 +87,36 @@ Every 15 minutes on the quarter hour, which matches the window the decoder itsel
 
 *Opening it in a French Excel: use Données → À partir d'un fichier texte/CSV and pick the comma as separator; double-clicking puts everything in one column, because a French Excel expects semicolons.*
 
-## A worked example
+## A real 24-hour day
 
-From the Pi this project is developed against: 48.0 dB gives 4–5 % strong messages at rush hour. That is inside the guideline, near the top of it, and one step down would be 44.5 — a big drop for little gain. Left at 48.0. Settled is better than optimal.
+The first full day recorded on the Pi this project is developed against, 11 October 2026: 96 measurements, gain fixed at 48.0 dB, 65 million messages accepted. It is worth reading in full, because it shows something a single check cannot.
+
+| Over the day | |
+|---|---|
+| Share of strong messages | median **2.83 %**, lowest 0.0 %, highest 6.34 % |
+| Farthest aircraft | 271 to 336 km, median 304 km |
+| Messages per quarter hour | 86,000 at 04:00, over 1,000,000 at 18:00 |
+| Strongest signal of the day | −0.8 dBFS |
+
+The shape is the one to expect: under 1 % through the night, climbing from 06:00, and between 3 % and 4 % from mid-morning until late evening.
+
+**Four quarter hours went over 5 %, and only two of them were real.**
+
+| Quarter hour | Strong | Messages | What it was |
+|---|---|---|---|
+| 05:15 | 6.34 % | 123,000 | An artefact |
+| 04:45 | 5.44 % | 253,000 | An artefact |
+| 19:30 | 5.75 % | 937,000 | Real |
+| 20:45 | 5.17 % | 860,000 | Real |
+
+**This is the trap the log exists to avoid.** The share is a fraction, and before dawn the denominator collapses: with 123,000 messages in a quarter hour instead of a million, a single airliner passing overhead is enough to push the share past 6 %. The peak signal in that very sample was −1.8 dBFS, nowhere near overload. A `gain check` run at 05:15 would have said *TOO HIGH* and a step would have been thrown away for nothing.
+
+So: **never judge the gain on a quiet hour, in either direction.** Under 1 % at 03:00 means nothing, and over 5 % at 05:00 means nothing either. Only the busy hours carry information, and the log is what lets you find them afterwards instead of guessing when they were.
+
+**Two things said the receiver was not overloading.** The strongest signal of the whole day stopped at −0.8 dBFS, close to the 0 dBFS ceiling but never at it. And the range held through every peak — 336 km in the morning, 326 km mid-afternoon. A receiver that is genuinely saturating loses distant aircraft during those minutes, and nothing of the sort appears.
+
+## Why this Pi stays at 48.0 dB
+
+Everything above says the gain is right, and the arithmetic of the steps says leave it alone: the step below 48.0 is 44.5, a 3.5 dB drop, the widest gap at the top of the scale. Paying that across the whole day to shave two genuine peaks — and two false ones — is a bad trade.
+
+The honest way to settle it, if you want proof rather than reasoning: record a day at your gain, `gain log clear`, change one step, record another day, and compare the same hours. That is the only comparison that means anything, because the difference between two neighbouring steps is smaller than the difference between a Tuesday and a Sunday.
