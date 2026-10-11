@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **10 October 2026**, version **0.11.0**.
+Last updated: **12 October 2026**, version **0.11.0**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -13,7 +13,8 @@ One Raspberry Pi 3B, outdoors, on Wi-Fi, with an R820T dongle.
 | Install and the menus | Run end to end on a Pi 3B |
 | readsb + the wall | Running continuously; the split-flap look is the one in daily use |
 | Feeding ADSB Exchange | Feed received and confirmed |
-| Gain tuning | `zenithboard gain check` reads real statistics; settled at **48.0 dB**, 4–5 % strong messages at rush hour |
+| Gain tuning | `zenithboard gain check` reads real statistics; settled at **48.0 dB** |
+| The 24-hour gain log | A full day recorded, 96 measurements, nothing lost and nothing overrun. See [Gain tuning](Gain-tuning) |
 | Aircraft photos | Real photos from Planespotters on the wall |
 | The Wi-Fi menu | The Pi is on Wi-Fi, joined through the menu |
 | Feeding FlightAware and Flightradar24 | Both feeding; FlightAware's coverage chart confirms it |
@@ -50,6 +51,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 11 October 2026 | First full day of the gain log: 96 measurements at 48.0 dB, median 2.83 % strong messages, range 271–336 km, 65 million messages. Four quarter hours went over 5 %, and the two before dawn turned out to be an artefact of low traffic rather than overload — the finding that a quiet hour cannot judge the gain in either direction |
 | 10 October 2026 | **Cause found: the Wi-Fi extender had a schedule turning it off from 02:00 to 06:00.** Nothing wrong with the Pi, the signal or the weather. Schedule removed; the night of the 10th is clean from end to end |
 | 9 October 2026, 01:00 | Wi-Fi lost. The network watchdog restarted the network and the Pi recovered on its own, nobody touching it. Three restarts that night, three hours apart — the gap rule working, not three faults. The diagnostic lines added in 0.10.2 are what identified it: the saved network invisible while other networks were still in range, which points at the access point rather than at the Pi |
 | 8 October 2026 | Gain walked up and down the real R820T steps. 48.0 dB gives 4–5 % strong messages at rush hour, inside the 1–5 % guideline. Left there |
