@@ -474,7 +474,24 @@ class ResponseHeaderTest(unittest.TestCase):
                       "image/jpeg\nLocation: https://evil.example"):
             self.assertEqual(server.photo_type_allowed(ctype), "image/jpeg")
 
-    def test_no_header_can_carry_a_line_break(self):
-        self.assertEqual(server.Handler._header_safe("text/plain\r\nX-Evil: 1"), "text/plainX-Evil: 1")
-        self.assertEqual(server.Handler._header_safe("no-store"), "no-store")
-        self.assertLessEqual(len(server.Handler._header_safe("x" * 5000)), 200)
+    def test_header_values_only_ever_come_from_our_tables(self):
+        hv = server.Handler._header_values
+        self.assertEqual(hv("application/json", "no-store"), ("application/json", "no-store"))
+        self.assertEqual(hv("image/png", "max-age=3600"), ("image/png", "max-age=3600"))
+        # anything we did not write ourselves gets the safe default, line break or not
+        self.assertEqual(hv("text/plain\r\nX-Evil: 1", "no-store\r\nSet-Cookie: a=b"),
+                         ("application/octet-stream", "no-store"))
+        self.assertEqual(hv("text/html; x=y", "public"), ("application/octet-stream", "no-store"))
+
+    def test_files_are_typed_by_their_extension(self):
+        for ext, want in ((".html", "text/html; charset=utf-8"), (".js", "text/javascript; charset=utf-8"),
+                          (".css", "text/css; charset=utf-8"), (".svg", "image/svg+xml"), (".json", "application/json")):
+            self.assertEqual(server.FILE_TYPES[ext], want)
+            self.assertIn(want, server.HEADER_TYPES)       # and every one of them is allowed through _send
+
+    def test_every_file_the_wall_serves_has_a_known_type(self):
+        for folder in ("static", "demo"):
+            root = os.path.join(os.path.dirname(__file__), "..", "flightinfo", folder)
+            for dirpath, _, files in os.walk(root):
+                for f in files:
+                    self.assertIn(os.path.splitext(f)[1].lower(), server.FILE_TYPES, os.path.join(dirpath, f))
