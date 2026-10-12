@@ -60,7 +60,7 @@ def write_atomic(path, payload):
         try:
             os.unlink(tmp)
         except OSError:
-            pass
+            pass        # the half-written file is already gone, or was never created: the raise below is what matters
         raise
 
 

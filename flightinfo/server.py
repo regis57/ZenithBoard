@@ -26,7 +26,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.12.0"
+VERSION = "0.12.1"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -419,6 +419,14 @@ PHOTO_NOPHOTO_RETRY_S = 86400       # no photo published today: look again tomor
 # compromise at the other end, a spoofed name on the way) could make the Pi fetch any address, your own router
 # included, and hand what came back to the tablet. Nothing else in the project follows an address it was given.
 PHOTO_HOST_SUFFIX = ".planespotters.net"
+# The image type is also somebody else's answer, and it ends up in one of our response headers. Only these are
+# passed on; anything else (including a value carrying a line break, which would let a header be injected into
+# our answer) becomes image/jpeg.
+PHOTO_TYPES = ("image/jpeg", "image/png", "image/webp", "image/gif")
+
+def photo_type_allowed(ctype):
+    base = (ctype or "").split(";")[0].strip().lower()
+    return base if base in PHOTO_TYPES else "image/jpeg"
 
 def photo_url_allowed(url):
     try:
@@ -453,7 +461,7 @@ def _photo_api(hex_code):
     return parse_photo_answer(data)
 
 
-_photos = ThrottledLookup(lambda k: _photo_api(k), PHOTO_GAP_S, PHOTO_RETRY_S, PHOTO_NOPHOTO_RETRY_S)
+_photos = ThrottledLookup(_photo_api, PHOTO_GAP_S, PHOTO_RETRY_S, PHOTO_NOPHOTO_RETRY_S)
 
 
 def lookup_photo(hex_code):
@@ -474,7 +482,7 @@ def fetch_photo_bytes(hex_code):
         req = urllib.request.Request(meta["url"], headers={"User-Agent": "ZenithBoard/%s" % VERSION})
         with urllib.request.urlopen(req, timeout=6) as resp:
             body = resp.read(2_000_000)
-            ctype = resp.headers.get("Content-Type", "image/jpeg")
+            ctype = photo_type_allowed(resp.headers.get("Content-Type"))
     except Exception:
         return None
     with _photo_lock:
@@ -586,7 +594,7 @@ def _route_api(callsign):
         return None, False
 
 
-_routes = ThrottledLookup(lambda k: _route_api(k), ROUTE_GAP_S, ROUTE_RETRY_S, ROUTE_MISS_RETRY_S, found_ttl=ROUTE_TTL_S)
+_routes = ThrottledLookup(_route_api, ROUTE_GAP_S, ROUTE_RETRY_S, ROUTE_MISS_RETRY_S, found_ttl=ROUTE_TTL_S)
 
 
 def lookup_route(callsign):
@@ -660,7 +668,7 @@ def _route2_api(callsign):
         return None, False
 
 
-_routes2 = ThrottledLookup(lambda k: _route2_api(k), ROUTE_GAP_S, ROUTE_RETRY_S, ROUTE_MISS_RETRY_S, found_ttl=ROUTE_TTL_S, max_queue=20)
+_routes2 = ThrottledLookup(_route2_api, ROUTE_GAP_S, ROUTE_RETRY_S, ROUTE_MISS_RETRY_S, found_ttl=ROUTE_TTL_S, max_queue=20)
 
 
 def lookup_route_fallback(callsign):
@@ -705,7 +713,7 @@ def _aircraft_api(hex_code):
         return None, False
 
 
-_aircraft = ThrottledLookup(lambda k: _aircraft_api(k), AIRCRAFT_GAP_S, AIRCRAFT_RETRY_S, AIRCRAFT_MISS_RETRY_S, found_ttl=AIRCRAFT_TTL_S)
+_aircraft = ThrottledLookup(_aircraft_api, AIRCRAFT_GAP_S, AIRCRAFT_RETRY_S, AIRCRAFT_MISS_RETRY_S, found_ttl=AIRCRAFT_TTL_S)
 
 
 def lookup_aircraft(hex_code):
@@ -740,13 +748,18 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):  # keep journald quiet
         pass
 
+    @staticmethod
+    def _header_safe(value):
+        """No header we send may carry a line break: that would let a reply be split in two."""
+        return re.sub(r"[\r\n]", "", str(value))[:200]
+
     def _send(self, code, body, ctype="application/json", cache="no-store"):
         if isinstance(body, (dict, list)):
             body = json.dumps(body).encode("utf-8")
         self.send_response(code)
-        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Type", self._header_safe(ctype))
         self.send_header("Content-Length", str(len(body)))
-        self.send_header("Cache-Control", cache)
+        self.send_header("Cache-Control", self._header_safe(cache))
         self.end_headers()
         self.wfile.write(body)
 

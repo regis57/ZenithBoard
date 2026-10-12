@@ -21,6 +21,8 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$ROOT/lib/ddns.sh"
 . "$ROOT/lib/update.sh"
 
+zb_tmp_init   # the private folder for downloads, made here in the main shell (see zb_tmp in lib/common.sh)
+
 usage() { echo "Usage: sudo ./install.sh [--deploy] [--uninstall-all] [--version]      (to upgrade: sudo zenithboard update)"; }
 
 preflight() {

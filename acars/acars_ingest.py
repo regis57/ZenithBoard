@@ -46,7 +46,7 @@ def load_config(path=CONFIG_FILE):
                     k, _, v = line.partition("=")
                     cfg[k.strip()] = v.strip().strip("\"'")
     except OSError:
-        pass
+        pass        # no config file yet: the defaults above are the answer
     return cfg
 
 

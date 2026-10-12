@@ -325,7 +325,8 @@ class RouteTests(unittest.TestCase):
         self.assertIsNone({p["hex"]: p for p in planes}["3c6444"]["route"], "no lookup configured -> no route")
 
     def test_demo_has_routes_for_some_aircraft_only(self):
-        data = json.load(open(os.path.join(os.path.dirname(__file__), "..", "flightinfo", "demo", "aircraft.json"), encoding="utf-8"))
+        with open(os.path.join(os.path.dirname(__file__), "..", "flightinfo", "demo", "aircraft.json"), encoding="utf-8") as fh:
+            data = json.load(fh)
         planes, _ = server.build_planes(data, 49.246, 6.223, 10, {}, None, True, None, None)
         with_route = [p["hex"] for p in planes if p["route"]]
         self.assertGreaterEqual(len(with_route), 5)
@@ -457,3 +458,23 @@ class PhotoUrlTest(unittest.TestCase):
         self.assertEqual(meta["url"], "https://cdn.planespotters.net/x.jpg")
         self.assertEqual(meta["photographer"], "Jane Doe")
         self.assertTrue(ok)
+
+
+class ResponseHeaderTest(unittest.TestCase):
+    """A photo's type is somebody else's answer and ends up in one of our headers."""
+
+    def test_only_known_image_types_are_passed_on(self):
+        self.assertEqual(server.photo_type_allowed("image/png"), "image/png")
+        self.assertEqual(server.photo_type_allowed("image/jpeg; charset=binary"), "image/jpeg")
+        self.assertEqual(server.photo_type_allowed("IMAGE/WEBP"), "image/webp")
+
+    def test_anything_else_becomes_jpeg(self):
+        for ctype in ("text/html", "application/javascript", "", None,
+                      "image/jpeg\r\nSet-Cookie: a=b",          # a reply split in two
+                      "image/jpeg\nLocation: https://evil.example"):
+            self.assertEqual(server.photo_type_allowed(ctype), "image/jpeg")
+
+    def test_no_header_can_carry_a_line_break(self):
+        self.assertEqual(server.Handler._header_safe("text/plain\r\nX-Evil: 1"), "text/plainX-Evil: 1")
+        self.assertEqual(server.Handler._header_safe("no-store"), "no-store")
+        self.assertLessEqual(len(server.Handler._header_safe("x" * 5000)), 200)

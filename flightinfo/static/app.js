@@ -183,7 +183,7 @@
     ctx.restore(); void dpr;
   }
   function renderFlap(now) {
-    var f = flapGeom(), W = canvas.width, H = canvas.height, dpr = W / canvas.clientWidth;
+    var f = flapGeom(), dpr = canvas.width / canvas.clientWidth;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
     ctx.shadowBlur = 0; ctx.globalAlpha = 1;
     for (var r = 0; r < FLAP_ROWS; r++) for (var c = 0; c < FLAP_COLS; c++) {

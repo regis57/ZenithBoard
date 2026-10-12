@@ -49,6 +49,7 @@ On a fork, or your own branch, your commits will not match. Set `UPDATE_VERIFY=0
 ## What is checked in the code
 
 * **Files served from the wall.** Both file handlers resolve the real path and refuse anything that leaves the folder, so `../../etc/shadow` and its symlink cousins get a 404.
+* **The photo's type.** It arrives with somebody else's answer and ends up in one of the wall's response headers, so only known image types are passed on and no header the wall sends can contain a line break — otherwise a value with a line break in it could have split one reply into two. CodeQL found this on its first run.
 * **The photo address.** Photos are found at Planespotters and then fetched *by the Pi*. Since 0.11.1 that address must be `https` and inside `planespotters.net` before the Pi will follow it. Without the check, an answer that had been tampered with could have pointed the Pi at anything — your router's admin page, for instance — and handed the result to the tablet.
 * **The dynamic-DNS token.** Never on a command line, never in `zenithboard config`, never in the logs. It lives in a root-only curl configuration file, which is why `zenithboard config` is safe to paste into an issue.
 * **Downloads that are about to be run as root** land in a private directory (`mktemp -d`, mode 700), never on a fixed name in `/tmp` that somebody could create first.

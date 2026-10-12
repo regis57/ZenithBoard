@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Pure formatting helpers (units, compass, text lines). No DOM -> unit-testable with node.
 (function (root) {
-  var KM_PER_MI = 1.609344, KMH_PER_KT = 1.852, M_PER_FT = 0.3048, MS_PER_FPM = 0.00508;
+  var KM_PER_MI = 1.609344, KMH_PER_KT = 1.852, M_PER_FT = 0.3048;
   var PTS = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
 
   function compass(deg) {

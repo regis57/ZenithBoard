@@ -107,12 +107,22 @@ apt_install() { DEBIAN_FRONTEND=noninteractive apt-get install -y "$@"; }
 apt_remove()  { DEBIAN_FRONTEND=noninteractive apt-get purge -y "$@"; }
 
 # A download that is about to be run as root never lands on a name somebody could have created first.
-# zb_tmp NAME gives a path inside a private directory (mode 700, random name), made once per run.
+# zb_tmp NAME gives a path inside a private folder (mode 700, random name), made once per run.
+#
+# zb_tmp_init MUST be called from the main shell (bin/zenithboard, install.sh). It is almost always used as
+# f=$(zb_tmp x), which runs in a SUBSHELL: a folder made there would be removed by that subshell's own EXIT
+# trap before the caller could write to it. Hence the split, and hence no trap inside zb_tmp itself.
+zb_tmp_init() {
+  [ -n "${ZB_TMPDIR:-}" ] && return 0
+  ZB_TMPDIR=$(mktemp -d "${TMPDIR:-/tmp}/zenithboard.XXXXXXXX") || { err "Could not make a temporary folder"; return 1; }
+  chmod 700 "$ZB_TMPDIR"
+  trap 'zb_tmp_clean' EXIT
+}
 zb_tmp() {
   if [ -z "${ZB_TMPDIR:-}" ]; then
+    # no init (a library used on its own): make one that nobody will remove under our feet
     ZB_TMPDIR=$(mktemp -d "${TMPDIR:-/tmp}/zenithboard.XXXXXXXX") || { err "Could not make a temporary folder"; return 1; }
     chmod 700 "$ZB_TMPDIR"
-    trap 'zb_tmp_clean' EXIT
   fi
   printf '%s/%s' "$ZB_TMPDIR" "$1"
 }

@@ -59,4 +59,16 @@ check "UPDATE_VERIFY=0 skips the whole check"  'zb_verify_source "$t" origin/mai
 cfg_set UPDATE_VERIFY 1
 check "and turning it back on restores it"     '! zb_verify_source "$t" origin/main >/dev/null 2>&1'
 
+# ---- the download folder outlives the subshell that asked for it
+# (regression: zb_tmp made the folder inside $( ), whose EXIT trap removed it before curl could write)
+zb_tmp_init
+f=$(zb_tmp thing.sh)
+check "zb_tmp gives a path in a private folder" '[ -d "$(dirname "$f")" ] && [ "$(stat -c %a "$(dirname "$f")")" = 700 ]'
+check "the folder is STILL there after the subshell ended" 'echo hello > "$f" && [ "$(cat "$f")" = hello ]'
+second=$(zb_tmp other.sh)
+check "a second call uses the same folder"     '[ "$(dirname "$second")" = "$(dirname "$f")" ]'
+check "and the first file survived it"         '[ -f "$f" ]'
+zb_tmp_clean
+check "cleaning removes the whole folder"      '[ ! -d "$(dirname "$f")" ]'
+
 [ "$fail" = 0 ] && echo "ALL OK" || { echo "SOME FAILED"; exit 1; }
