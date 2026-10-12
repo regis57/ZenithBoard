@@ -33,6 +33,8 @@ fresh() { rm -rf "$t/apt"; mkdir -p "$t/apt/sources.list.d"; export ZB_APT_DIR="
 fpr_of() { gpg --batch --show-keys --with-colons "$1" 2>/dev/null | awk -F: '$1=="fpr"{print $10; exit}'; }
 
 FR24_KEY_FPR="$FPR"; FR24_KEY_URL="file://$t/good.pub"
+# the real fetch() is https-only now (on purpose), so the test hands it the local key itself
+fetch() { cp "${1#file://}" "$2"; }
 
 # 1. one-line source with [signed-by=...]
 fresh

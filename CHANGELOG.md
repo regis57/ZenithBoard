@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.12.0
+- **The services can now only do their own job.** The wall server and the ACARS ingester run inside a full systemd sandbox: no devices, no kernel tuning or modules, no namespaces, an empty capability set and a system-call filter. The wall server can write nowhere — it only reads. Check it with `systemd-analyze security zenithboard-flightinfo`. `acarsdec` is deliberately less restricted because it drives a USB dongle.
+- **The code is checked before an update installs it.** `zenithboard update` runs `install.sh` as root, so the commit it is about to run must carry a good signature from the key you trusted. The first time it shows you GitHub's signing key and asks; after that it is silent unless something changes. A **bad** signature stops the update outright. Unsigned, or a different key, is explained and you decide — and with nobody there to answer, nothing is installed. On a fork, set `UPDATE_VERIFY=0`.
+- **Downloads that are about to be run as root** no longer land on a fixed name in `/tmp`, where another user on the Pi could have created the file first. They go to a private folder made for the run. Downloads are also https-only now, and a redirection cannot drop them to plain http.
+- A `SECURITY.md` so a problem can be reported privately, through GitHub, rather than in a public issue.
+
 ## 0.11.2
 - **Removing readsb now says it cannot be done, instead of appearing to work.** It fetched an uninstaller that has not existed for some time, so the download failed and nothing happened. readsb is built from source by somebody else's installer and there is no way back, so ZenithBoard refuses this one out loud and prints the commands to do it by hand, rather than deleting system files it did not put there. Everything else is still removed normally. Found by the new monthly check of the download addresses, on its first run.
 

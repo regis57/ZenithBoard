@@ -16,11 +16,43 @@ ZenithBoard runs as root on a machine in your home, listens on your network, and
 
 **Do not forward any of these from the internet.** Nothing here expects a hostile visitor: there is no login on the wall, no rate limit, and no audit trail. If you want to see your wall from outside, use a VPN to your home network. The dynamic-DNS feature exists so *you* can find your Pi, not so the world can.
 
+## The services can only do their own job
+
+The wall server and the ACARS ingester run as a system user with `nologin`, and since 0.12.0 they run inside a full systemd sandbox: no devices, no kernel tuning, no modules, no namespaces, no new privileges, an empty capability set, and a system-call filter. The wall server can write **nowhere at all** — it only ever reads.
+
+What that buys: a hole in the wall server stays a hole in a read-only program that can reach aircraft.json, its own files, and the internet. It cannot become a foothold on the Pi.
+
+Measure it yourself:
+
+```bash
+systemd-analyze security zenithboard-flightinfo
+```
+
+`acarsdec` is deliberately less restricted, because it drives a USB dongle. The short root tasks — the watchdogs, the Wi-Fi and domain-name timers — are not sandboxed either: their whole job is to restart the network or reboot the Pi.
+
+## The code is checked before it is run
+
+`zenithboard update` pulls from GitHub and then runs `install.sh` as root, so since 0.12.0 the commit is verified first.
+
+The first time, ZenithBoard fetches GitHub's signing key, **shows you its fingerprint and asks** whether to trust it — compare it with the key shown beside a Verified commit in the repository. What you confirm is recorded on the Pi. After that the check is silent, and it speaks only when something changes:
+
+| What it finds | What it does |
+|---|---|
+| Good signature, same key as recorded | Installs, says nothing |
+| **Bad** signature | Refuses, and does not offer to continue |
+| Not signed, or another key | Explains why, and asks. With nobody to answer, it does not install |
+
+No fingerprint is written into the project's own files, on purpose: a fingerprint recorded in the file you are deciding whether to trust proves nothing. Trust starts with you looking at it once.
+
+On a fork, or your own branch, your commits will not match. Set `UPDATE_VERIFY=0` in `/etc/zenithboard/config.env`.
+
 ## What is checked in the code
 
 * **Files served from the wall.** Both file handlers resolve the real path and refuse anything that leaves the folder, so `../../etc/shadow` and its symlink cousins get a 404.
 * **The photo address.** Photos are found at Planespotters and then fetched *by the Pi*. Since 0.11.1 that address must be `https` and inside `planespotters.net` before the Pi will follow it. Without the check, an answer that had been tampered with could have pointed the Pi at anything — your router's admin page, for instance — and handed the result to the tablet.
 * **The dynamic-DNS token.** Never on a command line, never in `zenithboard config`, never in the logs. It lives in a root-only curl configuration file, which is why `zenithboard config` is safe to paste into an issue.
+* **Downloads that are about to be run as root** land in a private directory (`mktemp -d`, mode 700), never on a fixed name in `/tmp` that somebody could create first.
+* **Every download is https**, and a redirection cannot drop it to plain http on the way.
 * **The Flightradar24 signing key** is installed only when its fingerprint matches the one recorded in `lib/versions.sh`. Package signature checking is never turned off, for any reason — see [Contributing](Contributing).
 
 ## What is trusted, and cannot be checked

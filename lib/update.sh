@@ -6,6 +6,94 @@
 # Bring the download folder in line with GitHub. A normal update is a fast-forward; if the history was rewritten
 # upstream (e.g. the author re-signed the commits) the folder is simply reset to GitHub's version, as long as you
 # have not edited any tracked file in it.
+# ------------------------------------------------------------------ trusting the code before running it
+# `zenithboard update` pulls from GitHub and then runs install.sh as root. So the commit it is about to run is
+# checked first: it must carry a good signature from the same key as last time. The first time, the key is shown
+# and you say yes or no; after that it is silent unless something changes. Turn it off with UPDATE_VERIFY=0.
+ZB_TRUST_DIR="${ZB_VAR_DIR:-/var/lib/zenithboard}/trust"
+ZB_TRUST_FPR="$ZB_TRUST_DIR/signer.fpr"
+ZB_TRUST_GPG="$ZB_TRUST_DIR/gnupg"
+
+zb_trust_stored() { cat "$ZB_TRUST_FPR" 2>/dev/null; }
+
+# zb_verify_decide STATUS SIGNER STORED -> ok | bad | unknown     (STATUS is git's %G?)
+# "ok" only when the signature is good AND made by the key we recorded. Separated out so it can be tested.
+zb_verify_decide() {
+  local st="$1" signer="$2" stored="$3"
+  case "$st" in
+    B) echo bad; return ;;                                     # a bad signature is never a question
+    G|U|X|Y)
+      if [ -n "$stored" ] && [ "${signer^^}" = "${stored^^}" ]; then echo ok; else echo unknown; fi ;;
+    *) echo unknown ;;                                         # N: not signed at all, E: could not be checked
+  esac
+}
+
+# zb_signature STATUS: "LETTER FINGERPRINT" of the commit REF in DIR
+zb_signature() {
+  local dir="$1" ref="$2"
+  GNUPGHOME="$ZB_TRUST_GPG" git -c "safe.directory=$dir" -C "$dir" log -1 --format='%G? %GF' "$ref" 2>/dev/null
+}
+
+# First time: fetch the key, show it, ask. Records the fingerprint only if you say yes.
+zb_trust_setup() {
+  local tmp fpr uid
+  command -v gpg >/dev/null 2>&1 || { warn "gpg is not installed: the update cannot be checked."; return 1; }
+  tmp=$(zb_tmp github-signing.gpg) || return 1
+  fetch "$GITHUB_SIGNING_KEY_URL" "$tmp" || return 1
+  install -d -m 700 "$ZB_TRUST_DIR" "$ZB_TRUST_GPG"
+  fpr=$(GNUPGHOME="$ZB_TRUST_GPG" gpg --batch --show-keys --with-colons "$tmp" 2>/dev/null | awk -F: '$1=="fpr"{print $10; exit}')
+  uid=$(GNUPGHOME="$ZB_TRUST_GPG" gpg --batch --show-keys --with-colons "$tmp" 2>/dev/null | awk -F: '$1=="uid"{print $10; exit}')
+  [ -n "$fpr" ] || { warn "That key could not be read."; return 1; }
+  echo
+  echo "ZenithBoard is about to trust the key that signs its releases on GitHub:"
+  echo "    $uid"
+  echo "    $fpr"
+  echo "Compare it with the key shown beside a Verified commit at"
+  echo "    https://github.com/regis57/ZenithBoard/commits/main"
+  if [ -t 0 ]; then
+    read -rp "Trust this key for future updates? [y/N] " a
+    case "$a" in y|Y|o|O) ;; *) echo "Not trusted. The update will ask again."; return 1 ;; esac
+  else
+    warn "Nothing to answer here (not a terminal): run the update by hand once to confirm the key."
+    return 1
+  fi
+  GNUPGHOME="$ZB_TRUST_GPG" gpg --batch --quiet --import "$tmp" || return 1
+  printf '%s\n' "$fpr" > "$ZB_TRUST_FPR"; chmod 600 "$ZB_TRUST_FPR"
+  log "Key recorded. Future updates are checked against it."
+}
+
+# -> 0 continue, 1 stop
+zb_verify_source() {
+  local dir="$1" ref="$2" st signer stored verdict a
+  [ "$(cfg_get UPDATE_VERIFY 1)" = 1 ] || return 0
+  stored=$(zb_trust_stored)
+  [ -n "$stored" ] || zb_trust_setup || true
+  stored=$(zb_trust_stored)
+  read -r st signer <<<"$(zb_signature "$dir" "$ref")"
+  verdict=$(zb_verify_decide "${st:-N}" "${signer:-}" "$stored")
+  case "$verdict" in
+    ok) return 0 ;;
+    bad)
+      err "The signature on the code GitHub just sent is BAD. Nothing was installed."
+      err "This is not a normal failure. Do not force it: ask on the project page first."
+      return 1 ;;
+    *)
+      warn "This update could not be shown to come from the usual signing key."
+      case "${st:-N}" in
+        N) warn "Reason: the commit is not signed." ;;
+        E) warn "Reason: the signature could not be checked (the key is missing here)." ;;
+        *) warn "Reason: signed by $signer, which is not the key recorded on this Pi ($stored)." ;;
+      esac
+      warn "That happens for an honest reason too: your own commits, a fork, or a new signing key."
+      if [ -t 0 ]; then
+        read -rp "Install it anyway? [y/N] " a
+        case "$a" in y|Y|o|O) return 0 ;; *) echo "Stopped. Nothing was installed."; return 1 ;; esac
+      fi
+      warn "Nothing to answer here (not a terminal), so it was NOT installed. Run the update by hand to decide."
+      return 1 ;;
+  esac
+}
+
 zb_sync_source() {  # zb_sync_source DIR
   local dir="$1" owner rc=0
   owner=$(stat -c '%u:%g' "$dir" 2>/dev/null)
@@ -20,6 +108,7 @@ _zb_sync_source() {
   local -a g=(git -c "safe.directory=$dir" -C "$dir")
   branch=$("${g[@]}" rev-parse --abbrev-ref HEAD 2>/dev/null) || return 1
   "${g[@]}" fetch -q origin "$branch" || { warn "Could not reach GitHub."; return 1; }
+  zb_verify_source "$dir" "origin/$branch" || return 1      # checked before anything is merged or run
   "${g[@]}" merge --ff-only -q "origin/$branch" >/dev/null 2>&1 && return 0
   if [ -n "$("${g[@]}" status --porcelain --untracked-files=no)" ]; then
     warn "You changed files in $dir, so it was not updated. Undo with: git -C $dir checkout . (then update again)"
@@ -109,18 +198,18 @@ zb_update() {
 
 # zb_update_components [--only NAME...]   (no arguments = every installed component)
 zb_update_components() {
-  local only=0; [ "${1:-}" = "--only" ] && { only=1; shift; }
+  local only=0 rb ax; [ "${1:-}" = "--only" ] && { only=1; shift; }
   local sel=("$@")
   want_c() { if [ "$only" = 0 ]; then return 0; fi; local x; for x in "${sel[@]}"; do [ "$x" = "$1" ] && return 0; done; return 1; }
   log "ZenithBoard $ZB_VERSION: updating installed components"
   ! want_c fr24 || [ -z "$(fr24_source_file)" ] || fr24_repair_key || warn "Flightradar24 signing key not refreshed (see above)."
   apt-get update -qq
   if want_c readsb && is_readsb; then
-    log "readsb"; fetch "$READSB_INSTALL_URL" /tmp/readsb-install.sh && bash /tmp/readsb-install.sh || warn "readsb update failed"
+    log "readsb"; rb=$(zb_tmp readsb-install.sh) && fetch "$READSB_INSTALL_URL" "$rb" && bash "$rb" || warn "readsb update failed"
   fi
   want_c dump1090 && is_dump1090 && { log "dump1090-fa"; apt_install --only-upgrade dump1090-fa || warn "dump1090-fa update failed"; }
   if want_c adsbx && is_adsbx; then
-    log "ADSB Exchange"; fetch "$ADSBX_UPDATE_URL" /tmp/axupdate.sh && bash /tmp/axupdate.sh || warn "ADSB Exchange update failed"
+    log "ADSB Exchange"; ax=$(zb_tmp axupdate.sh) && fetch "$ADSBX_UPDATE_URL" "$ax" && bash "$ax" || warn "ADSB Exchange update failed"
   fi
   want_c piaware && is_piaware && { log "piaware"; apt_install --only-upgrade piaware || warn "piaware update failed"; }
   want_c fr24 && is_fr24 && { log "fr24feed"; apt_install --only-upgrade fr24feed || warn "fr24feed update failed"; }
