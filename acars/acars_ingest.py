@@ -86,7 +86,7 @@ def open_db(path):
     try:
         os.chmod(path, 0o640)   # group "zenithboard" (Grafana is a member) can read
     except OSError:
-        pass
+        pass        # not the file's owner (an older install): it keeps working, Grafana may just not see it
     return conn
 
 
