@@ -24,6 +24,8 @@ One Raspberry Pi 3B, outdoors, on Wi-Fi, with an R820T dongle.
 | Hardware watchdog | Installed and surviving reboots |
 | Network watchdog | Did real work on a real outage and diagnosed it: three network restarts three hours apart, no reboot loop, and its log named the cause |
 | Persistent logs | Working, after one `sudo journalctl --flush` the first time |
+| The systemd sandbox | The wall server runs inside it; `systemd-analyze security` gives 1.3 (OK) |
+| Signed updates | Checked against GitHub's current key, silent once confirmed |
 | `zenithboard health` | Reports power, temperature, memory, card and the previous boot correctly |
 
 ## Written and unit-tested, not yet run for real
@@ -51,6 +53,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 12 October 2026, evening | Security pass, all on the real Pi: the wall server's sandbox scores **1.3** in `systemd-analyze security` and the service runs normally inside it. The first signed-update checks found two bugs of their own — a download folder deleted before use (`curl: (23)`, fixed in 0.12.1) and only GitHub's expired key being recorded, so every update asked again (fixed in 0.12.3). After that, updates install silently. CodeQL's first run found a real header-injection path (fixed in 0.12.1/0.12.2); two deliberate file permissions were dismissed as *Won't fix* with the reason written down |
 | 12 October 2026 | The new monthly link check found, on its first run, that `readsb-uninstall.sh` has not existed upstream for some time: removing readsb had been doing nothing at all. It now refuses out loud and prints the manual commands (0.11.2) |
 | 11 October 2026 | First full day of the gain log: 96 measurements at 48.0 dB, median 2.83 % strong messages, range 271–336 km, 65 million messages. Four quarter hours went over 5 %, and the two before dawn turned out to be an artefact of low traffic rather than overload — the finding that a quiet hour cannot judge the gain in either direction |
 | 10 October 2026 | **Cause found: the Wi-Fi extender had a schedule turning it off from 02:00 to 06:00.** Nothing wrong with the Pi, the signal or the weather. Schedule removed; the night of the 10th is clean from end to end |

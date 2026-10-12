@@ -40,8 +40,9 @@ The story behind the project: [ZenithBoard on regis-hennequin.info](https://regi
 | **2. Network** | [Wi-Fi](#wi-fi) · [Fixed IP](#fixed-ip-address) · [A name for your wall](#a-name-for-your-wall) · [Ports](#network-ports-what-answers-where) |
 | **3. The wall** | [What it shows](#what-the-wall-shows) · [Look](#look-dot-matrix-or-airport-split-flap-board) · [Colours](#colours) · [Units, radius, position](#units-radius-and-position) · [Silhouettes](#aircraft-silhouettes) · [Routes and models](#flight-routes) · [Photos](#photos) · [Demo](#try-it-without-any-hardware) |
 | **4. The receiver** | [Gain](#gain-tune-the-dongle-optional) · [978 MHz UAT (US)](#978-mhz-uat-united-states) |
-| **5. Keep it running** | [Update](#updating-and-uninstalling) · [Logs](#logs-size-review-clean-optional) · [Reliability](#reliability-when-the-pi-freezes-or-loses-its-network-optional) · [Troubleshooting](#troubleshooting) · [Known limits](#known-limits) |
-| **The wiki** | [Roadmap](https://github.com/regis57/ZenithBoard/wiki/Roadmap) · [Project status](https://github.com/regis57/ZenithBoard/wiki/Project-status) · [Architecture](https://github.com/regis57/ZenithBoard/wiki/Architecture) · [Settings](https://github.com/regis57/ZenithBoard/wiki/Configuration-reference) · [Commands](https://github.com/regis57/ZenithBoard/wiki/Command-reference) · [Testing](https://github.com/regis57/ZenithBoard/wiki/Testing) |
+| **5. Keep it running** | [Update](#updating-and-uninstalling) · [Logs](#logs-size-review-clean-optional) · [Reliability](#reliability-when-the-pi-freezes-or-loses-its-network-optional) · [Security](#security) · [Troubleshooting](#troubleshooting) · [Known limits](#known-limits) |
+| **Every command** | One table per subject, with what each one is for: **[Command reference](https://github.com/regis57/ZenithBoard/wiki/Command-reference)** (wiki) |
+| **The wiki** | [Roadmap](https://github.com/regis57/ZenithBoard/wiki/Roadmap) · [Project status](https://github.com/regis57/ZenithBoard/wiki/Project-status) · [Architecture](https://github.com/regis57/ZenithBoard/wiki/Architecture) · [Settings](https://github.com/regis57/ZenithBoard/wiki/Configuration-reference) · [Commands](https://github.com/regis57/ZenithBoard/wiki/Command-reference) · [Testing](https://github.com/regis57/ZenithBoard/wiki/Testing) · [Security](https://github.com/regis57/ZenithBoard/wiki/Security) |
 
 **Which defaults does what?** Everything in menu *4 Settings* (and `zenithboard ...`) sets the **default for every screen**. The gear icon on a tablet, or a link such as `?mode=flap`, only overrides it **for that tablet**; the gear's *Reset* returns the tablet to the Pi's default. So the two do not duplicate each other: one is the house rule, the other a personal choice.
 
@@ -113,6 +114,8 @@ The first run asks, once:
 
 ### 5. Use the menu
 After the questions, the installer shows its main menu. *4 Settings* is organised in the order of a first setup, in four groups: **1 Network** (Wi-Fi, fixed IP, domain name), **2 Receiver** (region, units, antenna position, dongle gain: what the dongle and its antenna are used for), **3 ZenithBoard wall** (radius, look, colour, seconds per aircraft, photos, routes, monthly data refresh) and **4 Logs** and **5 Reliability** (watchdogs, saved logs, health check). *6 Update* updates everything at once or lets you tick the components to update. You can come back to it at any time with `sudo ./install.sh` (or `sudo zenithboard menu`) to add or remove things.
+
+Everything in the menus also exists as a command, which is quicker once you know what you want: `zenithboard status`, `sudo zenithboard update`, `zenithboard gain check`… The full list, grouped by subject with what each command is for, is the **[Command reference](https://github.com/regis57/ZenithBoard/wiki/Command-reference)** in the wiki.
 
 <p align="center"><img src="docs/images/install-3-menu.png" alt="The ZenithBoard main menu: ADSB, FlightInfo, ACARS, Settings, Status, Update, Uninstall" width="520"></p>
 
@@ -495,6 +498,27 @@ A Pi that runs for months can freeze or lose its network at night. Everything he
 * **Find the cause after a freeze:** with *Saved logs* on, run `zenithboard health` after the restart. "Previous boot: ended ABRUPTLY" with an *under-voltage* line points to the power supply or cable (official 5 V supply, short cable; a powered USB hub for the dongle). Errors about the card (`mmc`, `ext4`) point to a worn SD card.
 * **Honest status:** the tests cover the decisions (when it restarts the network, when it restarts the Pi and when it refuses to), the files written and the health screen with sample data. They do not freeze a real Pi.
 
+## Security
+
+ZenithBoard runs as root, listens on your network and installs other people's software, so it is built to limit what can go wrong. The essentials:
+
+* **Never forward the wall from the internet.** It has no login, by design: it is meant for a tablet on your home network. To see it from outside, use a VPN into your home.
+* **The services can only do their own job.** The wall server and the ACARS ingester run as a system user that cannot log in, inside a systemd sandbox; the wall server cannot write anywhere. Check it with `systemd-analyze security zenithboard-flightinfo` (about 1.3 on a Pi 3B: 0 is locked down, 10 is open).
+* **Updates are checked before they run.** `sudo zenithboard update` verifies the signature on the new code before `install.sh` runs as root. The first time, it lists GitHub's signing keys and asks you to confirm — compare with the key ID behind the **Verified** badge on GitHub. After that it is silent; a bad signature stops it outright. On a fork, `sudo zenithboard config-set UPDATE_VERIFY 0`.
+* **Nothing from outside steers the Pi.** Photo addresses must be `https` inside `planespotters.net`, every header the wall sends comes from a fixed table in the program, downloads run as root go to a private folder over https only, and the dynamic-DNS token never appears on a command line or in a log.
+* **Some things are trusted, and written down.** The installers of readsb, ADSB Exchange and Flightradar24 run as root and cannot be checked; their addresses are pinned in [`lib/versions.sh`](lib/versions.sh), and a monthly check opens an issue when one stops answering. readsb has no uninstaller, so removing it prints the commands instead.
+* **The repository is checked on every change**: CodeQL, shellcheck, the test suite, and Dependabot for the CI actions, which are pinned to a commit.
+
+| To | Do |
+|---|---|
+| Measure the sandbox | `systemd-analyze security zenithboard-flightinfo` |
+| See the trusted signing keys | `sudo cat /var/lib/zenithboard/trust/signer.fpr` |
+| Confirm the keys again from scratch | `sudo rm /var/lib/zenithboard/trust/signer.fpr` (the next update asks) |
+| See which commit an update is about to install | `git -C ~/ZenithBoard rev-parse --short origin/main` |
+| Report a problem privately | GitHub → *Security* → *Report a vulnerability* ([SECURITY.md](SECURITY.md)) |
+
+The whole picture — what is exposed, every check, every trust decision, the tools deliberately not used, and a record of what was found and fixed — is on the wiki's **[Security](https://github.com/regis57/ZenithBoard/wiki/Security)** page.
+
 ## How it fits together
 
 ```
@@ -554,10 +578,6 @@ for t in tests/test_*.js; do node "$t" || echo "FAIL $t"; done
 ```
 
 Two standing rules: **no airline logos** (they are trademarks), and **package signature checking is never turned off**.
-
-What is exposed on your network, what the code checks and what it trusts because it cannot check it: **[Security](https://github.com/regis57/ZenithBoard/wiki/Security)** in the wiki, and [SECURITY.md](SECURITY.md) to report something privately. **Do not forward the wall to the internet** — it has no login by design.
-
-Since 0.12.0 the wall server and the ACARS ingester run inside a systemd sandbox (`systemd-analyze security zenithboard-flightinfo` to see it), and `zenithboard update` checks the signature on the code before installing it: the first update shows you GitHub's signing key and asks, then stays silent unless something changes. On a fork, set `UPDATE_VERIFY=0` in `config.env`.
 
 ## Support the project
 
