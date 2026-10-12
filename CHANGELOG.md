@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.11.1
+- **The Pi no longer follows a photo address it was given without checking it.** Photos are found at Planespotters and then fetched by the Pi itself; that address must now be `https` and inside `planespotters.net`. Before, an answer that had been tampered with could have pointed the Pi at any address on your own network and handed the result to the tablet. Nothing changes for a normal photo.
+- The project's security choices are now written down: what is exposed on your network, what is checked in the code, and what is trusted because it cannot be checked (the installers from readsb, ADSB Exchange and Flightradar24, run as root). See the wiki's Security page.
+- CI additions: CodeQL on every pull request, the GitHub Actions pinned to a commit instead of a tag, and a **monthly check that the pinned download addresses still answer**, which opens an issue when a provider moves a file — the 404 that otherwise only shows up during somebody's install.
+
 ## 0.11.0
 - **A 24-hour gain log** (menu *4 Settings → 2 Receiver → 4 Gain → 24-hour log*, or `zenithboard gain log on|off|status|show|clear`), off until you turn it on. One measurement every 15 minutes — gain, messages, share of very strong ones, farthest aircraft, signal levels — written to `/var/lib/zenithboard/gain-log.csv` as a table a spreadsheet can open. It keeps the **last 24 hours and nothing older** (96 lines, the oldest dropped as a new one arrives), so it cannot fill the card, and `gain log clear` empties it. A single check is one moment of one day; this is what lets a gain be chosen on a full day of evidence, quiet night and busy evening side by side.
 

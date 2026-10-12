@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **12 October 2026**, version **0.11.0**.
+Last updated: **12 October 2026**, version **0.11.1**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 

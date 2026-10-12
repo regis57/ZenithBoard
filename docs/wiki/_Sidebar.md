@@ -20,6 +20,7 @@
 * [Testing](Testing)
 * [Release process](Release-process)
 * [Contributing](Contributing)
+* [Security](Security)
 
 ---
 [Install guide (README)](https://github.com/regis57/ZenithBoard#readme)

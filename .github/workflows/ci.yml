@@ -1,12 +1,17 @@
 name: CI
 on: [push, pull_request]
+
+# Actions are pinned to a commit, not a tag: a tag can be moved to other code, and these run with a token.
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262   # v4
       - name: shellcheck
-        run: shellcheck -x -S warning install.sh bin/zenithboard bin/run-acarsdec bin/zenithboard-demo lib/*.sh tests/*.sh
+        run: shellcheck -x -S warning install.sh bin/zenithboard bin/run-acarsdec bin/zenithboard-demo lib/*.sh tests/*.sh tools/*.sh
       - name: Python tests
         run: |
           python3 -m unittest discover -s tests -v

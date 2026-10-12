@@ -1,0 +1,10 @@
+# Keeps the pinned action commits current: Dependabot opens a pull request when one of them has a new release,
+# with the new commit and its version comment. Nothing else in this project has dependencies to follow.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: "CI"
