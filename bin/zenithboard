@@ -28,6 +28,8 @@ HERE="$(dirname "$(readlink -f "$0")")"
 # shellcheck source=lib/update.sh
 . "$HERE/../lib/update.sh"
 
+zb_tmp_init   # the private folder for downloads, made here in the main shell (see zb_tmp in lib/common.sh)
+
 usage() {
   cat <<USAGE
 ZenithBoard $ZB_VERSION - ADSB Flight Info

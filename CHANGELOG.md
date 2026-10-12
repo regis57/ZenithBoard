@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.12.1
+- **Fixes an update broken by 0.12.0.** Downloads moved to a private folder in 0.12.0, but that folder was made inside a sub-shell that deleted it again before the download could be written: `zenithboard update` then failed for readsb and ADSB Exchange with `curl: (23)`. The folder is now made once, by the command itself. Everything else in 0.12.0 was unaffected.
+- **A photo's type can no longer inject anything into the wall's answers.** The image type came straight from the photo service and went into one of our response headers; a value carrying a line break could have split the reply in two. Only known image types are passed on now, anything else becomes `image/jpeg`, and no header the wall sends can contain a line break. Found by CodeQL on its first run.
+- Smaller cleanups CodeQL pointed at: three silent `except` blocks now say why they are silent, four wrappers that only called another function were removed, two computed-and-never-used values are gone, and a test file is closed properly.
+
 ## 0.12.0
 - **The services can now only do their own job.** The wall server and the ACARS ingester run inside a full systemd sandbox: no devices, no kernel tuning or modules, no namespaces, an empty capability set and a system-call filter. The wall server can write nowhere — it only reads. Check it with `systemd-analyze security zenithboard-flightinfo`. `acarsdec` is deliberately less restricted because it drives a USB dongle.
 - **The code is checked before an update installs it.** `zenithboard update` runs `install.sh` as root, so the commit it is about to run must carry a good signature from the key you trusted. The first time it shows you GitHub's signing key and asks; after that it is silent unless something changes. A **bad** signature stops the update outright. Unsigned, or a different key, is explained and you decide — and with nobody there to answer, nothing is installed. On a fork, set `UPDATE_VERIFY=0`.
