@@ -531,7 +531,7 @@ The processes, the files each one reads and writes, and the timers are set out i
 
 ## Known limits
 
-* **Feeder download addresses** are pinned in [`lib/versions.sh`](lib/versions.sh) and were copied from each provider's own page on 6 October 2026. Providers rename and move files; if an install stops with a 404, that file is the one to update (a pull request or issue is welcome).
+* **Feeder download addresses** are pinned in [`lib/versions.sh`](lib/versions.sh) and were copied from each provider's own page on 6 October 2026. Providers rename and move files; a monthly check now opens an issue when one stops answering, and the fix is one line in that file (a pull request is welcome).
 * **FlightAware and Flightradar24 store your antenna position on their websites**: after `zenithboard location`, update it there too (the command tells you where).
 * **The airline name list is built in** (about 90 major airlines); other airlines show the callsign only.
 * **Routes are looked up by callsign, not by flight.** A callsign can be reused for the other direction, so impossible answers are dropped rather than shown — a blank route row is better than a wrong one.
@@ -552,6 +552,8 @@ for t in tests/test_*.js; do node "$t" || echo "FAIL $t"; done
 ```
 
 Two standing rules: **no airline logos** (they are trademarks), and **package signature checking is never turned off**.
+
+What is exposed on your network, what the code checks and what it trusts because it cannot check it: **[Security](https://github.com/regis57/ZenithBoard/wiki/Security)** in the wiki. **Do not forward the wall to the internet** — it has no login by design.
 
 ## Support the project
 

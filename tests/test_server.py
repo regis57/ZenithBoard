@@ -422,3 +422,38 @@ class DisplayModeTests(unittest.TestCase):
         self.assertEqual(server.public_config({"DISPLAY_MODE": "flap"})["display_mode"], "flap")
         self.assertEqual(server.public_config({"DISPLAY_MODE": "FLAP"})["display_mode"], "flap")
         self.assertEqual(server.public_config({"DISPLAY_MODE": "weird"})["display_mode"], "dots")
+
+
+class PhotoUrlTest(unittest.TestCase):
+    """The photo address is somebody else's answer, and the Pi fetches it itself: it has to be checked first."""
+
+    def test_planespotters_addresses_are_allowed(self):
+        for url in ("https://t.plnspttrs.net/x.jpg".replace("t.plnspttrs.net", "cdn.planespotters.net"),
+                    "https://planespotters.net/photo.jpg",
+                    "https://api.planespotters.net/pub/photos/hex/abc"):
+            self.assertTrue(server.photo_url_allowed(url), url)
+
+    def test_anything_else_is_refused(self):
+        for url in ("http://cdn.planespotters.net/x.jpg",          # not https
+                    "https://192.168.1.1/admin",                   # the home network
+                    "https://127.0.0.1:8080/api/config",
+                    "http://169.254.169.254/latest/meta-data/",
+                    "file:///etc/zenithboard/config.env",
+                    "https://evil.example/x.jpg",
+                    "https://planespotters.net.evil.example/x.jpg",  # suffix that only looks right
+                    "https://notplanespotters.net/x.jpg",
+                    "", None):
+            self.assertFalse(server.photo_url_allowed(url), url)
+
+    def test_an_answer_with_a_foreign_address_is_dropped(self):
+        meta, ok = server.parse_photo_answer({"photos": [{"thumbnail_large": {"src": "https://evil.example/x.jpg"},
+                                                          "photographer": "x", "link": "y"}]})
+        self.assertIsNone(meta)
+        self.assertTrue(ok)        # a complete answer, just not one to follow: do not keep asking
+
+    def test_a_normal_answer_is_kept(self):
+        meta, ok = server.parse_photo_answer({"photos": [{"thumbnail_large": {"src": "https://cdn.planespotters.net/x.jpg"},
+                                                          "photographer": "Jane Doe", "link": "https://www.planespotters.net/photo/1"}]})
+        self.assertEqual(meta["url"], "https://cdn.planespotters.net/x.jpg")
+        self.assertEqual(meta["photographer"], "Jane Doe")
+        self.assertTrue(ok)

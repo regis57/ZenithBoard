@@ -61,6 +61,10 @@ Copy the nearest existing file; they all share a shape. A shell test sets up a t
 
 Then add the file to `.github/workflows/ci.yml`. It is a list, not a glob, on purpose: a new test is visible in the diff.
 
+## What else runs in CI
+
+Beyond the suite: **CodeQL** (Python and JavaScript, on every pull request and weekly), and a **monthly check of the pinned download addresses** (`tools/check-links.sh`, which you can also run by hand) that opens an issue when a provider moves a file. The reasoning behind those, and the tools deliberately not used, is on the [Security](Security) page.
+
 ## A note on shellcheck
 
 It runs at `-S warning` with `-x` so it follows `source`. Two codes come up often when a shell array and a plain variable share a name, SC2178 and SC2128. The fix is a different name, not a suppression comment.

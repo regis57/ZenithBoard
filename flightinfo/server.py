@@ -26,7 +26,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.11.0"
+VERSION = "0.11.1"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -414,22 +414,43 @@ PHOTO_RETRY_S = 600                 # refused / failed: try again after 10 min
 PHOTO_NOPHOTO_RETRY_S = 86400       # no photo published today: look again tomorrow
 
 
+# The photo address comes from somebody else's answer, and the Pi then fetches it itself. So it is checked before
+# it is used: https only, and a host inside planespotters.net. Without this, an answer that was tampered with (a
+# compromise at the other end, a spoofed name on the way) could make the Pi fetch any address, your own router
+# included, and hand what came back to the tablet. Nothing else in the project follows an address it was given.
+PHOTO_HOST_SUFFIX = ".planespotters.net"
+
+def photo_url_allowed(url):
+    try:
+        u = urlparse(url or "")
+    except Exception:
+        return False
+    host = (u.hostname or "").lower()
+    return u.scheme == "https" and (host == "planespotters.net" or host.endswith(PHOTO_HOST_SUFFIX))
+
+
+def parse_photo_answer(data):
+    """-> (meta|None, ok). Split out of the request so the checks can be tested without the network."""
+    photos = (data or {}).get("photos") or []
+    if not photos:
+        return None, True
+    p = photos[0]
+    url = (p.get("thumbnail_large") or {}).get("src")
+    if not url or not photo_url_allowed(url):
+        return None, True
+    return {"url": url, "photographer": p.get("photographer"), "link": p.get("link")}, True
+
+
 def _photo_api(hex_code):
     """-> (meta|None, ok). ok is False when we could not get an answer (403, timeout, no internet)."""
     url = "https://api.planespotters.net/pub/photos/hex/%s" % hex_code
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "ZenithBoard/%s (+https://github.com/regis57/ZenithBoard)" % VERSION})
         with urllib.request.urlopen(req, timeout=6) as resp:
-            photos = json.load(resp).get("photos") or []
+            data = json.load(resp)
     except Exception:       # network is optional: never break the wall because of photos
         return None, False
-    if not photos:
-        return None, True
-    p = photos[0]
-    url = (p.get("thumbnail_large") or {}).get("src")
-    if not url:
-        return None, True
-    return {"url": url, "photographer": p.get("photographer"), "link": p.get("link")}, True
+    return parse_photo_answer(data)
 
 
 _photos = ThrottledLookup(lambda k: _photo_api(k), PHOTO_GAP_S, PHOTO_RETRY_S, PHOTO_NOPHOTO_RETRY_S)
@@ -446,6 +467,8 @@ def fetch_photo_bytes(hex_code):
             return _photo_bytes[hex_code]
     meta = _photos.peek(hex_code)
     if not meta:
+        return None
+    if not photo_url_allowed(meta.get("url")):      # also checked here: the cache may predate the check above
         return None
     try:
         req = urllib.request.Request(meta["url"], headers={"User-Agent": "ZenithBoard/%s" % VERSION})
