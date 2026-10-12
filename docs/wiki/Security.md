@@ -34,6 +34,8 @@ The installer runs other people's installers, as root, straight from the network
 | `install_fr24_rpi.sh` | repo-feed.flightradar24.com |
 | `.deb` packages | FlightAware, Plane Finder, Grafana |
 
+One consequence worth knowing: **readsb cannot be uninstalled by ZenithBoard.** That installer builds it from source and ships no way back, so removing readsb prints the commands to run by hand instead of guessing which system files to delete. Everything ZenithBoard itself installed is removed normally.
+
 **This is a real trust decision and it is not hidden.** Installing ZenithBoard means trusting those four projects as much as you trust this one. Pinning a checksum for each would break on every release they make — their scripts change far more often than this project does — so what is pinned instead is the *address*, in `lib/versions.sh`, where you can read it before running anything.
 
 If that trust is more than you want: install readsb yourself, by hand, and use only the wall. The wall needs nothing but `aircraft.json`.

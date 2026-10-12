@@ -1,6 +1,7 @@
 #!/bin/bash
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Run: bash tests/test_logs_uat.sh   Log limit file, 978 MHz dongle configuration and region logic, on throw-away files.
+# shellcheck disable=SC2034  # variables are used inside the eval-ed check strings
 set -u
 cd "$(dirname "$0")/.." || exit 1
 # shellcheck source=lib/common.sh
@@ -78,4 +79,16 @@ cfg_set REGION world
 check "back to world"                      '! is_region_us'
 check "defaults carry REGION and UAT978"   'cfg_defaults; [ "$(cfg_get REGION)" = world ] && [ "$(cfg_get UAT978)" = 0 ]'
 check "cfg_defaults does not overwrite the region" 'cfg_set REGION us; cfg_defaults; [ "$(cfg_get REGION)" = us ]'
+
+# ---- readsb cannot be uninstalled: say it, do not pretend
+is_readsb()   { return 0; }     # pretend readsb is installed
+is_dump1090() { return 1; }
+out=$(remove_decoder 2>&1)
+check "removing readsb warns instead of failing silently" 'grep -qi "NOT removed" <<<"$out"'
+check "it says why"                                       'grep -qi "no uninstaller" <<<"$out"'
+check "it prints the commands to do it by hand"           'grep -q "systemctl disable --now readsb" <<<"$out" && grep -q "deluser --system readsb" <<<"$out"'
+check "it points at the tar1090 uninstaller"              'grep -q "tar1090" <<<"$out"'
+check "it never downloads a page that does not exist"     '! grep -qi "readsb-uninstall" <<<"$out"'
+unset -f is_readsb is_dump1090
+
 exit "$fail"

@@ -2,7 +2,7 @@
 # shellcheck disable=SC2034
 # shellcheck shell=bash
 # Third-party pins. Bump here when an upstream moves; everything else reads these.
-ZB_VERSION="0.11.1"
+ZB_VERSION="0.11.2"
 
 # FlightAware APT repository package (provides piaware and dump1090-fa). FlightAware renamed it from
 # piaware-repository (9.0.1) to flightaware-apt-repository; see https://www.flightaware.com/adsb/piaware/install
@@ -11,7 +11,10 @@ FA_REPO_URL="https://www.flightaware.com/adsb/piaware/files/packages/pool/piawar
 
 # readsb (wiedehopf) - maintained installer/uninstaller scripts
 READSB_INSTALL_URL="https://github.com/wiedehopf/adsb-scripts/raw/master/readsb-install.sh"
-READSB_UNINSTALL_URL="https://github.com/wiedehopf/adsb-scripts/raw/master/readsb-uninstall.sh"
+# There is no readsb uninstaller: wiedehopf's scripts install readsb by building it, and provide no way back.
+# ZenithBoard used to fetch a readsb-uninstall.sh that does not exist, so removing readsb quietly did nothing.
+# It now says so and prints the commands instead of pretending (readsb_removal_help in lib/adsb.sh).
+TAR1090_UNINSTALL_URL="https://github.com/wiedehopf/tar1090/raw/master/uninstall.sh"   # printed, never run by us
 
 # ADSB Exchange feeder (installs adsbexchange-feed + the ONE mlat client)
 ADSBX_FEED_URL="https://adsbexchange.com/feed.sh"
