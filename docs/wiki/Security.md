@@ -34,7 +34,7 @@ systemd-analyze security zenithboard-flightinfo
 
 `zenithboard update` pulls from GitHub and then runs `install.sh` as root, so since 0.12.0 the commit is verified first.
 
-The first time, ZenithBoard fetches GitHub's signing key, **shows you its fingerprint and asks** whether to trust it — compare it with the key shown beside a Verified commit in the repository. What you confirm is recorded on the Pi. After that the check is silent, and it speaks only when something changes:
+The first time, ZenithBoard fetches GitHub's signing keys, **shows you their fingerprints and asks** whether to trust them. GitHub's file holds more than one key — it rotated its key in 2024 and still publishes the expired one — so every key is listed, the expired or revoked ones are marked and never trusted, and the rest are recorded. To check: click the *Verified* badge beside a commit on GitHub; the key ID it shows must be the last 16 characters of one of the fingerprints. After that the check is silent, and it speaks only when something changes:
 
 | What it finds | What it does |
 |---|---|

@@ -14,18 +14,29 @@ ZB_TRUST_DIR="${ZB_VAR_DIR:-/var/lib/zenithboard}/trust"
 ZB_TRUST_FPR="$ZB_TRUST_DIR/signer.fpr"
 ZB_TRUST_GPG="$ZB_TRUST_DIR/gnupg"
 
-zb_trust_stored() { cat "$ZB_TRUST_FPR" 2>/dev/null; }
+zb_trust_stored() { cat "$ZB_TRUST_FPR" 2>/dev/null; }      # one fingerprint per line
 
-# zb_verify_decide STATUS SIGNER STORED -> ok | bad | unknown     (STATUS is git's %G?)
-# "ok" only when the signature is good AND made by the key we recorded. Separated out so it can be tested.
+# zb_verify_decide STATUS SIGNER STORED -> ok | bad | unknown     (STATUS is git's %G?; STORED: one per line)
+# "ok" only for a good signature made by one of the keys we recorded. Separated out so it can be tested.
+# GitHub's key file holds more than one key (it rotated its key in 2024 and still publishes the old one), so
+# what is recorded is a list, not one fingerprint.
 zb_verify_decide() {
   local st="$1" signer="$2" stored="$3"
   case "$st" in
     B) echo bad; return ;;                                     # a bad signature is never a question
-    G|U|X|Y)
-      if [ -n "$stored" ] && [ "${signer^^}" = "${stored^^}" ]; then echo ok; else echo unknown; fi ;;
+    G|U)                                                        # good now (X/Y = expired: not good enough)
+      if [ -n "$signer" ] && grep -qixF -- "$signer" <<<"$stored"; then echo ok; else echo unknown; fi ;;
     *) echo unknown ;;                                         # N: not signed at all, E: could not be checked
   esac
+}
+
+# The keys in a key file: "FINGERPRINT STATE EXPIRY UID" per key. STATE is gpg's validity letter: e = expired,
+# r = revoked. Only keys that are neither are offered for trust.
+zb_keys_in() {
+  GNUPGHOME="$ZB_TRUST_GPG" gpg --batch --show-keys --with-colons "$1" 2>/dev/null | awk -F: '
+    $1=="pub" { st=$2; ex=$7; fpr=""; uid=""; want=1; next }
+    $1=="fpr" && want { fpr=$10; want=0; next }
+    $1=="uid" && fpr!="" && uid=="" { uid=$10; print fpr, (st==""?"-":st), (ex==""?"never":ex), uid }'
 }
 
 # zb_signature STATUS: "LETTER FINGERPRINT" of the commit REF in DIR
@@ -36,30 +47,38 @@ zb_signature() {
 
 # First time: fetch the key, show it, ask. Records the fingerprint only if you say yes.
 zb_trust_setup() {
-  local tmp fpr uid
+  local tmp
   command -v gpg >/dev/null 2>&1 || { warn "gpg is not installed: the update cannot be checked."; return 1; }
   tmp=$(zb_tmp github-signing.gpg) || return 1
   fetch "$GITHUB_SIGNING_KEY_URL" "$tmp" || return 1
   install -d -m 700 "$ZB_TRUST_DIR" "$ZB_TRUST_GPG"
-  fpr=$(GNUPGHOME="$ZB_TRUST_GPG" gpg --batch --show-keys --with-colons "$tmp" 2>/dev/null | awk -F: '$1=="fpr"{print $10; exit}')
-  uid=$(GNUPGHOME="$ZB_TRUST_GPG" gpg --batch --show-keys --with-colons "$tmp" 2>/dev/null | awk -F: '$1=="uid"{print $10; exit}')
-  [ -n "$fpr" ] || { warn "That key could not be read."; return 1; }
+  local keys usable fpr st uid
+  keys=$(zb_keys_in "$tmp")
+  [ -n "$keys" ] || { warn "That key file could not be read."; return 1; }
+  usable=""
   echo
-  echo "ZenithBoard is about to trust the key that signs its releases on GitHub:"
-  echo "    $uid"
-  echo "    $fpr"
-  echo "Compare it with the key shown beside a Verified commit at"
+  echo "ZenithBoard is about to trust the keys GitHub signs its releases with:"
+  while read -r fpr st _ uid; do
+    case "$st" in
+      e) echo "    $fpr   (expired, will NOT be trusted)   $uid" ;;
+      r) echo "    $fpr   (revoked, will NOT be trusted)   $uid" ;;
+      *) echo "    $fpr   $uid"; usable="$usable$fpr"$'\n' ;;
+    esac
+  done <<<"$keys"
+  [ -n "$usable" ] || { warn "None of those keys can be used."; return 1; }
+  echo "On GitHub, click the Verified badge beside a commit at"
   echo "    https://github.com/regis57/ZenithBoard/commits/main"
+  echo "It shows a key ID: it must be the LAST 16 characters of one of the lines above."
   if [ -t 0 ]; then
-    read -rp "Trust this key for future updates? [y/N] " a
+    read -rp "Trust these keys for future updates? [y/N] " a
     case "$a" in y|Y|o|O) ;; *) echo "Not trusted. The update will ask again."; return 1 ;; esac
   else
     warn "Nothing to answer here (not a terminal): run the update by hand once to confirm the key."
     return 1
   fi
   GNUPGHOME="$ZB_TRUST_GPG" gpg --batch --quiet --import "$tmp" || return 1
-  printf '%s\n' "$fpr" > "$ZB_TRUST_FPR"; chmod 600 "$ZB_TRUST_FPR"
-  log "Key recorded. Future updates are checked against it."
+  printf '%s' "$usable" > "$ZB_TRUST_FPR"; chmod 600 "$ZB_TRUST_FPR"
+  log "Keys recorded. Future updates are checked against them."
 }
 
 # -> 0 continue, 1 stop
@@ -71,6 +90,21 @@ zb_verify_source() {
   stored=$(zb_trust_stored)
   read -r st signer <<<"$(zb_signature "$dir" "$ref")"
   verdict=$(zb_verify_decide "${st:-N}" "${signer:-}" "$stored")
+  # 0.12.0 and 0.12.1 recorded only the FIRST key of GitHub's file, which is its old, expired key. The current
+  # one was imported in the same step you approved, but not recorded. Offer it once, and only that case.
+  if [ "$verdict" = unknown ] && [ -n "$stored" ] && { [ "$st" = G ] || [ "$st" = U ]; } && [ -n "$signer" ] \
+     && GNUPGHOME="$ZB_TRUST_GPG" gpg --batch --list-keys "$signer" >/dev/null 2>&1; then
+    warn "This update is signed by $signer."
+    warn "That key came in the same file from GitHub you approved earlier, but only the first key of that file"
+    warn "was recorded (a mistake in ZenithBoard 0.12.0 and 0.12.1). Check: GitHub's Verified badge shows its"
+    warn "key ID, which must be the last 16 characters above."
+    if [ -t 0 ]; then
+      read -rp "Trust this key too, from now on? [y/N] " a
+      case "$a" in
+        y|Y|o|O) printf '%s\n' "$signer" >> "$ZB_TRUST_FPR"; log "Key added. Future updates are checked silently."; return 0 ;;
+      esac
+    fi
+  fi
   case "$verdict" in
     ok) return 0 ;;
     bad)

@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.12.3
+- **The update check stops asking every time.** GitHub's key file holds two keys: its old one, which expired in 2024, and the one it signs with today. 0.12.0 and 0.12.1 recorded only the first — the old one — so every update was signed by a key "not recorded on this Pi" and asked again. Now every key in the file is shown, with expired or revoked ones marked and never trusted, and all the usable ones are recorded. A Pi that recorded only the old key is asked **once** about the current one (it was in the same file you already approved), then never again. A signature from an expired key no longer counts as good either.
+
 ## 0.12.2
 - Every header the wall sends now comes from a fixed table inside the program: the file type is chosen by extension from a short list, the cache rule from two allowed values, and anything else gets a safe default. 0.12.1 already removed line breaks from those values; this goes one step further, so nothing that arrives with a request or with somebody else's answer can reach a header at all. It also closes the two CodeQL alerts that the 0.12.1 fix still raised, since CodeQL could not recognise a line-break filter as a protection. Nothing changes on screen.
 
