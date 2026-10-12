@@ -2,7 +2,7 @@
 
 [![License: GPL v3+](https://img.shields.io/badge/license-GPL--3.0--or--later-blue.svg)](LICENSE)
 [![CI](https://github.com/regis57/ZenithBoard/actions/workflows/ci.yml/badge.svg)](https://github.com/regis57/ZenithBoard/actions/workflows/ci.yml)
-[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-regis57-FFDD00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/regis57)
+[![Buy me a beer](https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20beer&emoji=%F0%9F%8D%BA&slug=regis57&button_colour=FFDD00&font_colour=000000&font_family=Cookie&outline_colour=000000&coffee_colour=ffffff)](https://buymeacoffee.com/regis57)
 
 **See the planes flying right above your house, on an old tablet, in glowing dot-matrix lights — and share the same antenna with the big flight-tracking networks.**
 
@@ -581,7 +581,7 @@ Two standing rules: **no airline logos** (they are trademarks), and **package si
 
 ## Support the project
 
-ZenithBoard is free and stays free. If it gives you pleasure and you would like to say thanks, you can [buy me a coffee](https://buymeacoffee.com/regis57). It is never expected: a star, a bug report or a pull request helps just as much.
+ZenithBoard is free and stays free. If it gives you pleasure and you would like to say thanks, you can [buy me a beer](https://buymeacoffee.com/regis57). It is never expected: a star, a bug report or a pull request helps just as much.
 
 ## License
 
