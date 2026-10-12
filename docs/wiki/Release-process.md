@@ -54,7 +54,8 @@ A display-only change needs one more thing: **reload the page on the tablet or t
 
 * [ ] Both version numbers bumped and equal
 * [ ] `CHANGELOG.md` entry, in user language
-* [ ] README updated if a command, a menu or a setting changed
+* [ ] README updated if a menu or a setting changed
+* [ ] A new or changed command is in the [Command reference](Command-reference) — `test_docs.sh` fails otherwise
 * [ ] The wiki updated if behaviour or internals changed — [Project status](Project-status) especially, since it is the page that goes stale first
 * [ ] New tests added to `.github/workflows/ci.yml`
 * [ ] The whole suite green locally

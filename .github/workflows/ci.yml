@@ -20,6 +20,7 @@ jobs:
           bash tests/test_hardware.sh
           bash tests/test_update_sync.sh
           bash tests/test_update_verify.sh
+          bash tests/test_docs.sh
           bash tests/test_versions.sh
           bash tests/test_fr24_key.sh
           bash tests/test_logs_uat.sh
