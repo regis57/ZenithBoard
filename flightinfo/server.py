@@ -14,7 +14,6 @@ restart.
 """
 import json
 import math
-import mimetypes
 import os
 import queue
 import re
@@ -26,7 +25,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.12.1"
+VERSION = "0.12.2"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -426,7 +425,28 @@ PHOTO_TYPES = ("image/jpeg", "image/png", "image/webp", "image/gif")
 
 def photo_type_allowed(ctype):
     base = (ctype or "").split(";")[0].strip().lower()
-    return base if base in PHOTO_TYPES else "image/jpeg"
+    return HEADER_TYPES.get(base, "image/jpeg") if base in PHOTO_TYPES else "image/jpeg"
+
+
+# Every header value the wall sends comes out of these tables, never from a request or from somebody else's
+# answer: the lookup returns OUR string, so whatever arrives cannot end up in a header (no line break, no
+# second header smuggled in). Files are typed by their extension here too, rather than by the system's MIME list.
+FILE_TYPES = {
+    ".html": "text/html; charset=utf-8",
+    ".js": "text/javascript; charset=utf-8",
+    ".css": "text/css; charset=utf-8",
+    ".json": "application/json",
+    ".svg": "image/svg+xml",
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".webp": "image/webp",
+    ".gif": "image/gif",
+    ".ico": "image/x-icon",
+    ".txt": "text/plain; charset=utf-8",
+}
+HEADER_TYPES = {t: t for t in set(FILE_TYPES.values()) | set(PHOTO_TYPES) | {"text/plain", "application/octet-stream"}}
+CACHE_RULES = {"no-store": "no-store", "max-age=3600": "max-age=3600"}
 
 def photo_url_allowed(url):
     try:
@@ -749,17 +769,18 @@ class Handler(BaseHTTPRequestHandler):
         pass
 
     @staticmethod
-    def _header_safe(value):
-        """No header we send may carry a line break: that would let a reply be split in two."""
-        return re.sub(r"[\r\n]", "", str(value))[:200]
+    def _header_values(ctype, cache):
+        """-> (content type, cache rule), both taken from our own tables; anything unknown gets the safe default."""
+        return HEADER_TYPES.get(ctype, "application/octet-stream"), CACHE_RULES.get(cache, "no-store")
 
     def _send(self, code, body, ctype="application/json", cache="no-store"):
         if isinstance(body, (dict, list)):
             body = json.dumps(body).encode("utf-8")
+        ctype, cache = self._header_values(ctype, cache)
         self.send_response(code)
-        self.send_header("Content-Type", self._header_safe(ctype))
+        self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(body)))
-        self.send_header("Cache-Control", self._header_safe(cache))
+        self.send_header("Cache-Control", cache)
         self.end_headers()
         self.wfile.write(body)
 
@@ -820,11 +841,10 @@ class Handler(BaseHTTPRequestHandler):
         full = os.path.realpath(os.path.join(root, rel))
         if not full.startswith(os.path.realpath(root) + os.sep) or not os.path.isfile(full):
             return self._send(404, b"not found", "text/plain")
-        ctype = mimetypes.guess_type(full)[0] or "application/octet-stream"
+        ctype = FILE_TYPES.get(os.path.splitext(full)[1].lower(), "application/octet-stream")
         with open(full, "rb") as fh:
             body = fh.read()
-        text_like = ctype.startswith("text/") or ctype.endswith("javascript")
-        return self._send(200, body, ctype + ("; charset=utf-8" if text_like else ""))
+        return self._send(200, body, ctype)
 
 
 def main():
