@@ -31,11 +31,12 @@ ensure_fa_repo() {
   pkg_installed flightaware-apt-repository && return 0
   pkg_installed piaware-repository && return 0
   log "Adding the FlightAware package repository"
-  fetch "$FA_REPO_URL" /tmp/flightaware-apt-repository.deb || {
+  local fa_deb; fa_deb=$(zb_tmp flightaware-apt-repository.deb) || return 1
+  fetch "$FA_REPO_URL" "$fa_deb" || {
     warn "FlightAware may have moved its repository package: check lib/versions.sh against https://www.flightaware.com/adsb/piaware/install"
     return 1
   }
-  dpkg -i /tmp/flightaware-apt-repository.deb && apt-get update
+  dpkg -i "$fa_deb" && apt-get update
 }
 
 set_sdr_serial_readsb() {  # set_sdr_serial_readsb SERIAL_OR_INDEX
@@ -53,8 +54,9 @@ install_decoder() {  # install_decoder readsb|dump1090-fa
   case "$d" in
     readsb)
       log "Installing readsb"
-      fetch "$READSB_INSTALL_URL" /tmp/readsb-install.sh || return 1
-      bash /tmp/readsb-install.sh || return 1
+      local rb; rb=$(zb_tmp readsb-install.sh) || return 1
+      fetch "$READSB_INSTALL_URL" "$rb" || return 1
+      bash "$rb" || return 1
       command -v readsb-set-location >/dev/null && readsb-set-location "$lat" "$lon"
       set_sdr_serial_readsb "$dev"
       systemctl enable readsb; systemctl restart readsb
@@ -96,7 +98,7 @@ To remove it yourself, as root:
   deluser --system readsb
 
   Its map (tar1090, on port 80) has its own uninstaller:
-  wget -O /tmp/tar1090-uninstall.sh $TAR1090_UNINSTALL_URL && bash /tmp/tar1090-uninstall.sh
+  d=\$(mktemp -d) && wget -O "\$d/u.sh" $TAR1090_UNINSTALL_URL && bash "\$d/u.sh"; rm -rf "\$d"
 
   Read each line before running it. Check /etc/default/readsb first if you want to keep your gain setting.
 HELP
@@ -115,8 +117,9 @@ install_adsbx() {
   log "Installing ADSB Exchange feeder (mandatory base layer, owns the single MLAT client)"
   echo "    The ADSB Exchange script will now ask for a station name and your position."
   echo "    Latitude/longitude: $(cfg_get LAT) / $(cfg_get LON)   Altitude: $(cfg_get ALT_M 0) m"
-  fetch "$ADSBX_FEED_URL" /tmp/axfeed.sh || return 1
-  bash /tmp/axfeed.sh
+  local ax; ax=$(zb_tmp axfeed.sh) || return 1
+  fetch "$ADSBX_FEED_URL" "$ax" || return 1
+  bash "$ax"
 }
 remove_adsbx() {
   if [ -x "$ADSBX_UNINSTALL" ] || [ -f "$ADSBX_UNINSTALL" ]; then bash "$ADSBX_UNINSTALL"
@@ -206,9 +209,10 @@ install_fr24() {
   log "Installing Flightradar24 feeder"
   # a repository left by an earlier attempt: give it the new key first
   [ -z "$(fr24_source_file)" ] || fr24_repair_key || true
-  fetch "$FR24_INSTALL_URL" /tmp/install_fr24.sh || return 1
+  local fr; fr=$(zb_tmp install_fr24.sh) || return 1
+  fetch "$FR24_INSTALL_URL" "$fr" || return 1
   fr24_signup_help
-  if ! bash /tmp/install_fr24.sh && ! command -v fr24feed >/dev/null 2>&1; then
+  if ! bash "$fr" && ! command -v fr24feed >/dev/null 2>&1; then
     # the installer adds the repository and then stops when apt refuses it: repair the key, then finish the job
     [ -n "$(fr24_source_file)" ] || { err "The Flightradar24 installer failed before adding its repository."; return 1; }
     fr24_repair_key || return 1
@@ -227,7 +231,7 @@ install_fr24() {
 remove_fr24() { systemctl disable --now fr24feed 2>/dev/null || true; apt_remove fr24feed; }
 
 install_planefinder() {
-  local url deb=/tmp/pfclient.deb
+  local url deb; deb=$(zb_tmp pfclient.deb) || return 1
   case "$(arch)" in arm64) url="$PF_URL_ARM64" ;; armhf) url="$PF_URL_ARMHF" ;; *) err "Plane Finder: unsupported architecture $(arch)"; return 1 ;; esac
   log "Installing Plane Finder client"
   fetch "$url" "$deb" || { warn "Check lib/versions.sh: the Plane Finder package URL may have changed."; return 1; }

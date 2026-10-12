@@ -9,6 +9,8 @@ ZENITHBOARD_ETC="$(mktemp -d)"; export ZENITHBOARD_ETC
 # shellcheck source=lib/update.sh
 . "$HERE/lib/update.sh"
 T="$(mktemp -d)"; trap 'rm -rf "$T" "$ZENITHBOARD_ETC"' EXIT
+# this file tests the syncing itself; the signature check before it has tests of its own (test_update_verify.sh)
+cfg_set UPDATE_VERIFY 0
 fail=0; check() { if [ "$2" = "$3" ]; then echo "ok   $1"; else echo "FAIL $1: got '$2' expected '$3'"; fail=1; fi; }
 G() { git -c user.name=t -c user.email=t@example.com "$@"; }
 

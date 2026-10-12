@@ -12,6 +12,22 @@ ExecStart=/opt/zenithboard/bin/run-acarsdec
 Restart=always
 RestartSec=5
 Nice=5
+# Lighter sandbox on purpose: this one drives a USB dongle, so PrivateDevices and a system-call filter
+# are left out. What remains costs it nothing.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+UMask=0027
 
 [Install]
 WantedBy=multi-user.target

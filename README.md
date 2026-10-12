@@ -555,7 +555,9 @@ for t in tests/test_*.js; do node "$t" || echo "FAIL $t"; done
 
 Two standing rules: **no airline logos** (they are trademarks), and **package signature checking is never turned off**.
 
-What is exposed on your network, what the code checks and what it trusts because it cannot check it: **[Security](https://github.com/regis57/ZenithBoard/wiki/Security)** in the wiki. **Do not forward the wall to the internet** — it has no login by design.
+What is exposed on your network, what the code checks and what it trusts because it cannot check it: **[Security](https://github.com/regis57/ZenithBoard/wiki/Security)** in the wiki, and [SECURITY.md](SECURITY.md) to report something privately. **Do not forward the wall to the internet** — it has no login by design.
+
+Since 0.12.0 the wall server and the ACARS ingester run inside a systemd sandbox (`systemd-analyze security zenithboard-flightinfo` to see it), and `zenithboard update` checks the signature on the code before installing it: the first update shows you GitHub's signing key and asks, then stays silent unless something changes. On a fork, set `UPDATE_VERIFY=0` in `config.env`.
 
 ## Support the project
 

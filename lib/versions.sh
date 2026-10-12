@@ -2,7 +2,7 @@
 # shellcheck disable=SC2034
 # shellcheck shell=bash
 # Third-party pins. Bump here when an upstream moves; everything else reads these.
-ZB_VERSION="0.11.2"
+ZB_VERSION="0.12.0"
 
 # FlightAware APT repository package (provides piaware and dump1090-fa). FlightAware renamed it from
 # piaware-repository (9.0.1) to flightaware-apt-repository; see https://www.flightaware.com/adsb/piaware/install
@@ -14,6 +14,11 @@ READSB_INSTALL_URL="https://github.com/wiedehopf/adsb-scripts/raw/master/readsb-
 # There is no readsb uninstaller: wiedehopf's scripts install readsb by building it, and provide no way back.
 # ZenithBoard used to fetch a readsb-uninstall.sh that does not exist, so removing readsb quietly did nothing.
 # It now says so and prints the commands instead of pretending (readsb_removal_help in lib/adsb.sh).
+# The key GitHub signs merge commits with. Its fingerprint is deliberately NOT written here: ZenithBoard shows
+# you the key the first time and records what you confirm (see zb_trust_setup in lib/update.sh). A fingerprint
+# copied from somewhere into a file you then trust proves nothing about the file it is in.
+GITHUB_SIGNING_KEY_URL="https://github.com/web-flow.gpg"
+
 TAR1090_UNINSTALL_URL="https://github.com/wiedehopf/tar1090/raw/master/uninstall.sh"   # printed, never run by us
 
 # ADSB Exchange feeder (installs adsbexchange-feed + the ONE mlat client)

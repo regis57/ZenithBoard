@@ -57,6 +57,7 @@ SHOW_PHOTOS=1
 SHOW_ROUTES=1
 AUTO_DATA_REFRESH=1
 GAINLOG=0
+UPDATE_VERIFY=1
 REGION=world
 UAT978=0
 UAT_SDR=
@@ -105,8 +106,22 @@ decoder_json()   { echo "/run/$(cfg_get DECODER readsb)/aircraft.json"; }
 apt_install() { DEBIAN_FRONTEND=noninteractive apt-get install -y "$@"; }
 apt_remove()  { DEBIAN_FRONTEND=noninteractive apt-get purge -y "$@"; }
 
+# A download that is about to be run as root never lands on a name somebody could have created first.
+# zb_tmp NAME gives a path inside a private directory (mode 700, random name), made once per run.
+zb_tmp() {
+  if [ -z "${ZB_TMPDIR:-}" ]; then
+    ZB_TMPDIR=$(mktemp -d "${TMPDIR:-/tmp}/zenithboard.XXXXXXXX") || { err "Could not make a temporary folder"; return 1; }
+    chmod 700 "$ZB_TMPDIR"
+    trap 'zb_tmp_clean' EXIT
+  fi
+  printf '%s/%s' "$ZB_TMPDIR" "$1"
+}
+zb_tmp_clean() { [ -z "${ZB_TMPDIR:-}" ] || rm -rf "$ZB_TMPDIR"; ZB_TMPDIR=""; }
+
 fetch() {  # fetch URL DEST   (fails loudly)
-  curl -fsSL --retry 3 --connect-timeout 15 -o "$2" "$1" || { err "Download failed: $1"; return 1; }
+  # https only, and a redirection cannot drop to plain http on the way
+  curl -fsSL --proto '=https' --proto-redir '=https' --tlsv1.2 --retry 3 --connect-timeout 15 --max-time 900 \
+       -o "$2" "$1" || { err "Download failed: $1"; return 1; }
 }
 
 ini_set() {  # ini_set FILE KEY VALUE  -> KEY="VALUE" (replace or append)
