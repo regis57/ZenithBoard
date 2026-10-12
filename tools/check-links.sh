@@ -18,7 +18,7 @@ here=$(cd "$(dirname "$0")/.." && pwd)
 urls=(
   "$FA_REPO_URL"
   "$READSB_INSTALL_URL"
-  "$READSB_UNINSTALL_URL"
+  "$TAR1090_UNINSTALL_URL"
   "$ADSBX_FEED_URL"
   "$ADSBX_UPDATE_URL"
   "$FR24_INSTALL_URL"

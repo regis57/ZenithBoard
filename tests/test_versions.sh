@@ -9,7 +9,7 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 fail=0
 check() { if eval "$2"; then echo "ok   $1"; else echo "FAIL $1"; fail=1; fi; }
 
-for v in FA_REPO_URL READSB_INSTALL_URL READSB_UNINSTALL_URL ADSBX_FEED_URL ADSBX_UPDATE_URL FR24_INSTALL_URL PF_URL_ARMHF PF_URL_ARM64; do
+for v in FA_REPO_URL READSB_INSTALL_URL TAR1090_UNINSTALL_URL ADSBX_FEED_URL ADSBX_UPDATE_URL FR24_INSTALL_URL PF_URL_ARMHF PF_URL_ARM64; do
   check "$v is an https address" '[[ "${!v:-}" == https://* ]]'
 done
 check "FlightAware repo package is flightaware-apt-repository_<version>_all.deb" '[[ "$FA_REPO_URL" == *"/flightaware-apt-repository_${FA_REPO_VERSION}_all.deb" ]]'

@@ -454,12 +454,14 @@ cd ~/ZenithBoard && git fetch origin && git reset --hard origin/main && sudo ./i
 sudo zenithboard update
 ```
 
-The same is available in the menu (*6 Update*). Run it whenever a provider releases a new version, or once a month. If a provider changes a download link, edit it in [`lib/versions.sh`](lib/versions.sh) and run the update again.
+The same is available in the menu (*6 Update*). Run it whenever a provider releases a new version, or once a month. If a provider changes a download link, edit it in [`lib/versions.sh`](lib/versions.sh) and run the update again — a monthly check in the project opens an issue when one of those links stops answering, so you usually hear about it before an install does.
 
 ```bash
 sudo zenithboard menu                                 # add or remove any component at any time
 sudo /opt/zenithboard/install.sh --uninstall-all      # remove everything
 ```
+
+**One exception: readsb is never removed automatically.** Its installer builds it from source and provides no way back, so ZenithBoard says so and prints the commands to run by hand rather than deleting system files it did not put there. Everything else is removed normally.
 
 ## Logs: size, review, clean (optional)
 

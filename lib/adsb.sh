@@ -75,10 +75,37 @@ install_decoder() {  # install_decoder readsb|dump1090-fa
   restart_flightinfo
 }
 
+# readsb is built from source by somebody else's installer, which provides no way to undo it. Rather than delete
+# files on your Pi from guesswork, ZenithBoard refuses this one out loud and hands you the commands. Everything
+# else ZenithBoard installed is removed normally; only readsb itself is left running.
+readsb_removal_help() {
+  cat <<HELP
+readsb cannot be removed automatically.
+
+  It is built and installed by wiedehopf's script, which ships no uninstaller, so there is
+  nothing to run and ZenithBoard will not delete system files it did not put there.
+
+  Everything else has been removed. readsb is still installed and still running.
+
+To remove it yourself, as root:
+
+  systemctl disable --now readsb
+  rm -f /usr/bin/readsb /usr/bin/viewadsb /usr/local/bin/readsb-gain /usr/local/bin/readsb-set-location
+  rm -f /lib/systemd/system/readsb.service /etc/default/readsb
+  systemctl daemon-reload
+  deluser --system readsb
+
+  Its map (tar1090, on port 80) has its own uninstaller:
+  wget -O /tmp/tar1090-uninstall.sh $TAR1090_UNINSTALL_URL && bash /tmp/tar1090-uninstall.sh
+
+  Read each line before running it. Check /etc/default/readsb first if you want to keep your gain setting.
+HELP
+}
+
 remove_decoder() {
   if is_readsb; then
-    log "Removing readsb"
-    fetch "$READSB_UNINSTALL_URL" /tmp/readsb-uninstall.sh && bash /tmp/readsb-uninstall.sh
+    warn "readsb is NOT removed: there is no uninstaller for it (see below)."
+    readsb_removal_help
   fi
   if is_dump1090; then log "Removing dump1090-fa"; apt_remove dump1090-fa; fi
 }
