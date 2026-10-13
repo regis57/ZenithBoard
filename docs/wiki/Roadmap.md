@@ -34,7 +34,7 @@ Saying no here saves answering the same question twice.
 | **A cloud account, a hosted dashboard, telemetry** | The Pi is yours. Nothing should need to phone home for the wall to work. |
 | **Turning off package signature checking** | It has been the quick fix for two different installer problems. It stays off the table: a signature that is not checked is not a signature. |
 | **Supporting hardware other than a Raspberry Pi** | It probably works on other Debian machines; it will not be tested there, so it will not be claimed. |
-| **A paid tier** | It is GPL and it stays free. There is a coffee link in the README and that is the whole business model. |
+| **A paid tier** | It is GPL and it stays free. There is a beer link in the README and that is the whole business model. |
 
 ## Suggesting something
 
