@@ -12,7 +12,7 @@ ZenithBoard runs as root on a machine in your home, listens on your network, and
 | The wall server | Runs as a `nologin` system user inside a full systemd sandbox; can write nowhere | 0.12.0 |
 | The ACARS ingester | Same sandbox; listens on `127.0.0.1` only; parameterised SQL | 0.12.0 |
 | Its HTTP answers | Every header value comes from a fixed table inside the program | 0.12.2 |
-| Photos | The address must be `https` inside `planespotters.net`; the type must be a known image type | 0.11.1 |
+| Photos | The address must be `https` inside `planespotters.net` or `plnspttrs.net`; the type must be a known image type | 0.11.1, 0.12.4 |
 | Files it serves | Real-path check: nothing outside its own folders, symlinks included | always |
 | Updates of ZenithBoard | The commit is signature-checked before `install.sh` runs as root | 0.12.0, fixed in 0.12.3 |
 | Downloads run as root | Private `mktemp` folder (mode 700), https only, no downgrade on redirect | 0.12.0, fixed in 0.12.1 |
@@ -88,7 +88,7 @@ Housekeeping:
 ## What is checked in the code
 
 * **Files served by the wall.** Both file handlers resolve the real path and refuse anything outside their folder, so `../../etc/shadow` and its symlink cousins get a 404.
-* **The photo address.** Photos are found at Planespotters and then fetched *by the Pi itself*. The address must be `https` and inside `planespotters.net`, checked when the answer arrives and again just before the fetch. Without it, a tampered answer could have pointed the Pi at your router's admin page and handed the result to the tablet.
+* **The photo address.** Photos are found at Planespotters and then fetched *by the Pi itself*. The address must be `https` and inside `planespotters.net` or `plnspttrs.net`, checked when the answer arrives and again just before the fetch. Without it, a tampered answer could have pointed the Pi at your router's admin page and handed the result to the tablet.
 * **Every response header.** The content type is chosen by file extension from a short list written in the program, the cache rule from two allowed values, and anything else gets a safe default. Nothing that arrives with a request or with somebody else's answer can reach a header — which closes header injection (a line break that splits one reply into two) for good.
 * **Downloads that are about to be run as root** land in a private folder made for the run (`mktemp -d`, mode 700), never on a fixed name in `/tmp` that somebody else could have created first.
 * **Every download is https**, TLS 1.2 or later, and a redirection cannot drop it to plain http on the way.
@@ -150,6 +150,7 @@ Kept as a record, because a security page that only lists what is fine is not be
 | 0.12.1 | CodeQL, first run | A photo's type went into a response header: a line break could have split the reply | Known image types only |
 | 0.12.2 | CodeQL | The 0.12.1 line-break filter was not recognisable as a protection | Every header from a fixed table |
 | 0.12.3 | A real Pi asking at every update | GitHub's key file has its expired key first; only that one was recorded | All usable keys recorded, expired ones never |
+| 0.12.4 | The wall itself | The host check left out `plnspttrs.net`, where the pictures actually are, so every photo was refused in silence | Both domains allowed; the test uses the real answer |
 
 ## Running it more tightly, if you want to
 

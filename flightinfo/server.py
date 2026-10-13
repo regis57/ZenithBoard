@@ -25,7 +25,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.12.3"
+VERSION = "0.12.4"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -407,6 +407,11 @@ class ThrottledLookup(object):
 # --------------------------------------------------------------------------- photos (Planespotters, optional, proxied so the tablet needs no internet)
 _photo_bytes = {}     # hex -> (content_type, bytes)
 _photo_lock = threading.Lock()
+# Every request this server makes to somebody else carries this. Planespotters refuses a plain library or
+# product name and asks for one that names the application and a contact address, so all five requests send the
+# same descriptive line rather than each inventing its own.
+USER_AGENT = "ZenithBoard/%s (+https://github.com/regis57/ZenithBoard)" % VERSION
+
 MAX_PHOTO_CACHE = 200
 PHOTO_GAP_S = 2.0                   # Planespotters answers 403 to bursts: at most one request every 2 s
 PHOTO_RETRY_S = 600                 # refused / failed: try again after 10 min
@@ -414,10 +419,12 @@ PHOTO_NOPHOTO_RETRY_S = 86400       # no photo published today: look again tomor
 
 
 # The photo address comes from somebody else's answer, and the Pi then fetches it itself. So it is checked before
-# it is used: https only, and a host inside planespotters.net. Without this, an answer that was tampered with (a
-# compromise at the other end, a spoofed name on the way) could make the Pi fetch any address, your own router
-# included, and hand what came back to the tablet. Nothing else in the project follows an address it was given.
-PHOTO_HOST_SUFFIX = ".planespotters.net"
+# it is used: https only, and a host inside one of the domains below. Without this, an answer that was tampered
+# with (a compromise at the other end, a spoofed name on the way) could make the Pi fetch any address, your own
+# router included, and hand what came back to the tablet. Nothing else in the project follows an address it was
+# given. Planespotters serves its pictures from plnspttrs.net, a different domain from the one its API answers
+# on: leaving it out silently refused every photo, which is what 0.12.4 fixes.
+PHOTO_HOSTS = ("planespotters.net", "plnspttrs.net")
 # The image type is also somebody else's answer, and it ends up in one of our response headers. Only these are
 # passed on; anything else (including a value carrying a line break, which would let a header be injected into
 # our answer) becomes image/jpeg.
@@ -454,7 +461,9 @@ def photo_url_allowed(url):
     except Exception:
         return False
     host = (u.hostname or "").lower()
-    return u.scheme == "https" and (host == "planespotters.net" or host.endswith(PHOTO_HOST_SUFFIX))
+    if u.scheme != "https":
+        return False
+    return any(host == d or host.endswith("." + d) for d in PHOTO_HOSTS)
 
 
 def parse_photo_answer(data):
@@ -473,7 +482,7 @@ def _photo_api(hex_code):
     """-> (meta|None, ok). ok is False when we could not get an answer (403, timeout, no internet)."""
     url = "https://api.planespotters.net/pub/photos/hex/%s" % hex_code
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "ZenithBoard/%s (+https://github.com/regis57/ZenithBoard)" % VERSION})
+        req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
         with urllib.request.urlopen(req, timeout=6) as resp:
             data = json.load(resp)
     except Exception:       # network is optional: never break the wall because of photos
@@ -499,7 +508,7 @@ def fetch_photo_bytes(hex_code):
     if not photo_url_allowed(meta.get("url")):      # also checked here: the cache may predate the check above
         return None
     try:
-        req = urllib.request.Request(meta["url"], headers={"User-Agent": "ZenithBoard/%s" % VERSION})
+        req = urllib.request.Request(meta["url"], headers={"User-Agent": USER_AGENT})
         with urllib.request.urlopen(req, timeout=6) as resp:
             body = resp.read(2_000_000)
             ctype = photo_type_allowed(resp.headers.get("Content-Type"))
@@ -602,7 +611,7 @@ def _route_api(callsign):
     """-> (route|None, ok). ok is False when we could not get an answer."""
     url = "https://api.adsbdb.com/v0/callsign/%s" % callsign
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "ZenithBoard/%s (+https://github.com/regis57/ZenithBoard)" % VERSION})
+        req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
         with urllib.request.urlopen(req, timeout=10) as resp:
             return parse_route(json.load(resp)), True
     except urllib.error.HTTPError as exc:
@@ -634,7 +643,7 @@ _airport_lock = threading.Lock()
 
 
 def _hexdb_json(path):
-    req = urllib.request.Request(HEXDB_URL + path, headers={"User-Agent": "ZenithBoard/%s (+https://github.com/regis57/ZenithBoard)" % VERSION})
+    req = urllib.request.Request(HEXDB_URL + path, headers={"User-Agent": USER_AGENT})
     with urllib.request.urlopen(req, timeout=10) as resp:
         return json.load(resp)
 
@@ -721,7 +730,7 @@ def _aircraft_api(hex_code):
     """-> (info|None, ok). ok is False when we could not get an answer."""
     url = "https://api.adsbdb.com/v0/aircraft/%s" % hex_code
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "ZenithBoard/%s (+https://github.com/regis57/ZenithBoard)" % VERSION})
+        req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
         with urllib.request.urlopen(req, timeout=10) as resp:
             return parse_aircraft(json.load(resp)), True
     except urllib.error.HTTPError as exc:

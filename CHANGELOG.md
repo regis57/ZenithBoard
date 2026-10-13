@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.12.4
+- **Aircraft photos are back.** 0.11.1 added a check on the photo address, because the Pi fetches that address itself and it comes from somebody else's answer. The check allowed only hosts inside `planespotters.net` — but Planespotters serves its pictures from `plnspttrs.net`, a different domain from the one its API answers on. Every photo was therefore refused in silence and the wall drew its generic plane instead. Both domains are allowed now, still over https only, and the test no longer invents an address: it uses the exact one Planespotters answered with, so a check written from a guess cannot pass again.
+- Every request the wall makes to an outside service now sends the same descriptive identification, naming the project, its version and the repository. One of the five (the photo download itself) sent a short form; Planespotters has started refusing requests that do not say who is asking and how to reach them.
+- Running `tests/test_server.py` directly ran only the first 30 of its 49 checks: a `unittest.main()` had ended up in the middle of the file. It is at the end now. CI was unaffected — it collects the tests another way and ran all of them.
+
 ## 0.12.3
 - **The update check stops asking every time.** GitHub's key file holds two keys: its old one, which expired in 2024, and the one it signs with today. 0.12.0 and 0.12.1 recorded only the first — the old one — so every update was signed by a key "not recorded on this Pi" and asked again. Now every key in the file is shown, with expired or revoked ones marked and never trusted, and all the usable ones are recorded. A Pi that recorded only the old key is asked **once** about the current one (it was in the same file you already approved), then never again. A signature from an expired key no longer counts as good either.
 
