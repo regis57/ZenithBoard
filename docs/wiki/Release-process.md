@@ -15,8 +15,8 @@ Most releases are patches. When in doubt it is a patch.
 ## The version lives in two files
 
 ```
-lib/versions.sh        ZB_VERSION="0.10.3"
-flightinfo/server.py   VERSION = "0.10.3"
+lib/versions.sh        ZB_VERSION="0.12.3"
+flightinfo/server.py   VERSION = "0.12.3"
 ```
 
 Both, always, identical. `tests/test_versions.sh` fails if they drift — the server prints its own version to the wall, and a wall claiming a version it is not makes every bug report misleading.
