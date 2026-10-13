@@ -367,8 +367,6 @@ class UatMergeTests(unittest.TestCase):
         self.assertIsNone(server.read_json("/nonexistent/file.json"))
 
 
-if __name__ == "__main__":
-    unittest.main()
 
 class AircraftLookupTests(unittest.TestCase):
     SAMPLE = {"response": {"aircraft": {"type": "C Series 300", "icao_type": "BCS3", "manufacturer": "Bombardier",
@@ -428,8 +426,22 @@ class DisplayModeTests(unittest.TestCase):
 class PhotoUrlTest(unittest.TestCase):
     """The photo address is somebody else's answer, and the Pi fetches it itself: it has to be checked first."""
 
+    # The exact address Planespotters answered with on 13 October 2026. The pictures are on plnspttrs.net, not on
+    # the planespotters.net the API itself answers on. 0.11.1 allowed only the latter, so every photo was refused
+    # in silence and the wall drew its generic plane instead. The real address is pinned here so that a check
+    # written from a guess cannot pass again.
+    REAL_ANSWER = {"photos": [{"id": "1982059",
+                               "thumbnail_large": {"src": "https://t.plnspttrs.net/36434/1982059_2d5d48e9d8_280.jpg"},
+                               "link": "https://www.planespotters.net/photo/1982059/hb-jcn-swiss",
+                               "photographer": "Mehrad Watson"}]}
+
+    def test_the_address_planespotters_really_answers_is_allowed(self):
+        self.assertTrue(server.photo_url_allowed(self.REAL_ANSWER["photos"][0]["thumbnail_large"]["src"]))
+
     def test_planespotters_addresses_are_allowed(self):
-        for url in ("https://t.plnspttrs.net/x.jpg".replace("t.plnspttrs.net", "cdn.planespotters.net"),
+        for url in ("https://t.plnspttrs.net/36434/1982059_2d5d48e9d8_280.jpg",
+                    "https://plnspttrs.net/x.jpg",
+                    "https://cdn.planespotters.net/x.jpg",
                     "https://planespotters.net/photo.jpg",
                     "https://api.planespotters.net/pub/photos/hex/abc"):
             self.assertTrue(server.photo_url_allowed(url), url)
@@ -443,6 +455,9 @@ class PhotoUrlTest(unittest.TestCase):
                     "https://evil.example/x.jpg",
                     "https://planespotters.net.evil.example/x.jpg",  # suffix that only looks right
                     "https://notplanespotters.net/x.jpg",
+                    "https://plnspttrs.net.evil.example/x.jpg",     # the picture domain, as a prefix only
+                    "https://notplnspttrs.net/x.jpg",
+                    "http://t.plnspttrs.net/x.jpg",                 # the right host, but not https
                     "", None):
             self.assertFalse(server.photo_url_allowed(url), url)
 
@@ -452,12 +467,32 @@ class PhotoUrlTest(unittest.TestCase):
         self.assertIsNone(meta)
         self.assertTrue(ok)        # a complete answer, just not one to follow: do not keep asking
 
+    def test_the_real_answer_is_kept_whole(self):
+        meta, ok = server.parse_photo_answer(self.REAL_ANSWER)
+        self.assertEqual(meta["url"], "https://t.plnspttrs.net/36434/1982059_2d5d48e9d8_280.jpg")
+        self.assertEqual(meta["photographer"], "Mehrad Watson")
+        self.assertTrue(ok)
+
     def test_a_normal_answer_is_kept(self):
         meta, ok = server.parse_photo_answer({"photos": [{"thumbnail_large": {"src": "https://cdn.planespotters.net/x.jpg"},
                                                           "photographer": "Jane Doe", "link": "https://www.planespotters.net/photo/1"}]})
         self.assertEqual(meta["url"], "https://cdn.planespotters.net/x.jpg")
         self.assertEqual(meta["photographer"], "Jane Doe")
         self.assertTrue(ok)
+
+
+class UserAgentTest(unittest.TestCase):
+    """Planespotters refuses a request that does not say who is asking and how to reach them."""
+
+    def test_it_names_the_project_the_version_and_a_contact_address(self):
+        self.assertTrue(server.USER_AGENT.startswith("ZenithBoard/" + server.VERSION))
+        self.assertIn("https://github.com/regis57/ZenithBoard", server.USER_AGENT)
+
+    def test_every_outside_request_uses_it(self):
+        with open(os.path.join(os.path.dirname(__file__), "..", "flightinfo", "server.py")) as fh:
+            source = fh.read()
+        self.assertNotIn('"User-Agent": "ZenithBoard/%s"', source)   # the short form Planespotters refuses
+        self.assertEqual(source.count('"User-Agent": USER_AGENT'), source.count('"User-Agent"'))
 
 
 class ResponseHeaderTest(unittest.TestCase):
@@ -495,3 +530,7 @@ class ResponseHeaderTest(unittest.TestCase):
             for dirpath, _, files in os.walk(root):
                 for f in files:
                     self.assertIn(os.path.splitext(f)[1].lower(), server.FILE_TYPES, os.path.join(dirpath, f))
+
+
+if __name__ == "__main__":
+    unittest.main()
