@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.14.4
+- README: a Beluga XL on the split-flap board, in the section about the two looks. Documentation only; nothing on the Pi changes.
+
 ## 0.14.3
 - **No more bright frame around a scrolling row.** A lit dot's glow is wider than the dot itself. Repainting only the scrolling row's own rectangle left that glow outside the cleared area, and every step added more of it, until a rectangle was drawn around whichever row was moving. The repaint is now clipped to a rectangle three dots larger and redraws the dots around it, so the glow is rebuilt rather than piled up. Checked in a real browser against the real page: the frame appears in 0.14.2 and is gone here.
 
