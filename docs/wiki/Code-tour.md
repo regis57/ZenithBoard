@@ -61,6 +61,7 @@ One file, read top to bottom in four parts:
 | `flap.js` | The split-flap board: the letter drum and the rolling animation |
 | `scene.js` | The animated sky scene and the side views, used when there is no photo |
 | `shapes.js` | Aircraft seen from above, drawn as dots |
+| `flags.js` | Registration prefix to country, maker to country, and the flags themselves at 11 x 7 dots. No manufacturer mark is ever drawn |
 | `font5x7.js`, `format.js` | The dot font, and formatting numbers in metric or imperial units |
 
 The constants at the top of `app.js` — `GW`, `GH`, `SIL_BOX`, `PHOTO_BOX` — are the layout. Change one and `tests/test_layout.js` will tell you whether the settings gear still fits. See [The wall](The-wall).

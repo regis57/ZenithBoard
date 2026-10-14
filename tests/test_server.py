@@ -449,6 +449,23 @@ class ThemeTest(unittest.TestCase):
         self.assertEqual(server.public_config({"THEME": "turquoise"})["theme"], "turquoise")
 
 
+class FlagsAndCycleTest(unittest.TestCase):
+    """The flags are on unless a Pi says otherwise, and an aircraft stays on screen for 14 seconds."""
+
+    def test_flags_are_on_even_on_a_pi_installed_before_they_existed(self):
+        self.assertTrue(server.public_config({})["flags"])            # no FLAGS line in an older config.env
+        self.assertTrue(server.public_config({"FLAGS": "1"})["flags"])
+        self.assertFalse(server.public_config({"FLAGS": "0"})["flags"])
+
+    def test_an_aircraft_stays_fourteen_seconds(self):
+        self.assertEqual(server.public_config({})["cycle_seconds"], 14)
+        self.assertEqual(server.DEFAULTS["CYCLE_SECONDS"], "14")
+        self.assertEqual(server.public_config({"CYCLE_SECONDS": "6"})["cycle_seconds"], 6)
+
+    def test_a_setting_that_starts_off_still_starts_off(self):
+        self.assertFalse(server.public_config({})["demo"])            # cfg_bool's own default is unchanged
+
+
 class PhotoUrlTest(unittest.TestCase):
     """The photo address is somebody else's answer, and the Pi fetches it itself: it has to be checked first."""
 
