@@ -60,6 +60,8 @@ ZenithBoard $ZB_VERSION - ADSB Flight Info
   zenithboard color amber|green|red|white|turquoise|blue   dot colour of every wall (amber is the default)
   zenithboard mode dots|flap            look of the wall: dot matrix (default) or split-flap airport board
   zenithboard cycle SECONDS             seconds each aircraft stays on the wall
+  zenithboard sound on|off              hall ambience on the tablets (each tablet can still decide for itself)
+  zenithboard sound volume 0-100        how loud that ambience is
   zenithboard photos on|off             aircraft photos on the wall (needs internet on the Pi)
   zenithboard photos test [HEX]         check that this Pi can fetch photos from Planespotters
   zenithboard routes on|off             show where each flight comes from / goes to (looked up by callsign, needs internet)
@@ -186,6 +188,17 @@ case "${1:-}" in
     esac ;;
   cycle)
     root_or_die; is_number "${2:-x}" || die "Usage: zenithboard cycle SECONDS"; cfg_set CYCLE_SECONDS "$2"; restart_flightinfo ;;
+  sound)
+    case "${2:-}" in
+      on)  root_or_die; cfg_set SOUND 1; restart_flightinfo
+           echo "Hall sound is ON by default. A browser will not make a sound until the screen is touched once: tap anywhere, or the note next to the gear." ;;
+      off) root_or_die; cfg_set SOUND 0; restart_flightinfo
+           echo "Hall sound is OFF. A tablet that switched it on with the note next to the gear keeps it: use the gear's Reset there." ;;
+      volume) root_or_die; case "${3:-}" in ''|*[!0-9]*) die "Usage: zenithboard sound volume 0-100" ;; esac
+           [ "$3" -le 100 ] || die "Usage: zenithboard sound volume 0-100"
+           cfg_set SOUND_VOLUME "$3"; restart_flightinfo; echo "Hall sound volume: $3 %" ;;
+      *) die "Usage: zenithboard sound on|off|volume 0-100" ;;
+    esac ;;
   photos)
     case "${2:-}" in
       on)  root_or_die; cfg_set SHOW_PHOTOS 1; restart_flightinfo; echo "Aircraft photos are ON. The wall reloads by itself within a few seconds." ;;

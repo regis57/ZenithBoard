@@ -25,7 +25,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.12.5"
+VERSION = "0.13.0"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -45,6 +45,8 @@ MAX_POSITION_AGE_S = 30  # ignore aircraft whose position is older than this
 DEFAULTS = {
     "UNITS": "metric",          # metric | imperial
     "THEME": "amber",           # amber | green | red | white | turquoise | blue
+    "SOUND": "0",               # hall ambience on the tablet: off unless asked for
+    "SOUND_VOLUME": "35",       # 0-100, and 100 is still a background
     "LAT": "0",
     "LON": "0",
     "DECODER": "readsb",        # readsb | dump1090-fa
@@ -766,6 +768,8 @@ def public_config(cfg):
         "radius_presets": RADIUS_PRESETS,
         "cycle_seconds": max(2, cfg_float(cfg, "CYCLE_SECONDS", 6)),
         "show_photos": cfg_bool(cfg, "SHOW_PHOTOS"),
+        "sound": cfg_bool(cfg, "SOUND"),
+        "sound_volume": min(100, max(0, cfg_float(cfg, "SOUND_VOLUME", 35))),
         "display_mode": "flap" if str(cfg.get("DISPLAY_MODE", "dots")).lower() == "flap" else "dots",
         "demo": cfg_bool(cfg, "DEMO"),
     }
