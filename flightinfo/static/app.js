@@ -8,6 +8,9 @@
 (function () {
   "use strict";
   var COLS = 14;                                   // characters per text row on the left
+  var COLS_FLAGS = 12;                             // ... and with the two flags, which take the last two
+  var FLAG_X = 75, FLAG_Y1 = 16, FLAG_Y2 = 25;     // the flags: registration beside the airline, maker beside the model
+  var TEXT_MAX_X = 74;                             // text stops here when the flags are shown (the outline starts at 74)
   var GW = 128, GH = 80;
   var RX = 90, RW = 38;                            // right-hand column
   var SIL_BOX = { x: RX, y: 0, w: RW, h: 34 };
@@ -16,8 +19,8 @@
   var FLAP_COLS = 16, FLAP_ROWS = 8, FLAP_W = 84;  // split-flap style: 16 letters x 8 rows on the left 84 dots (the photo keeps the right-hand column)
 
   var canvas = document.getElementById("wall"), ctx = canvas.getContext("2d");
-  var server = { units: "metric", theme: "amber", radius: 10, radius_presets: [1, 2, 5, 10, 15, 30, 50], cycle_seconds: 6,
-                 show_photos: true };
+  var server = { units: "metric", theme: "amber", radius: 10, radius_presets: [1, 2, 5, 10, 15, 30, 50], cycle_seconds: 14,
+                 show_photos: true, flags: true };
   var prefs = {};            // local overrides (units, radius, cycle, theme), kept in localStorage
   var planes = [], total = 0, error = null, curHex = null, serverId = null, failures = 0;
   var grid = blank(), lastSig = "", anim = null;
@@ -31,7 +34,7 @@
   function loadPrefs() {
     try { prefs = JSON.parse(localStorage.getItem("zenithboard") || "{}") || {}; } catch (e) { prefs = {}; }
     var q = new URLSearchParams(location.search);       // ?units=imperial&radius=5&cycle=8&theme=green&mode=flap
-    ["units", "radius", "cycle", "theme", "mode"].forEach(function (k) { if (q.has(k)) prefs[k] = q.get(k); });
+    ["units", "radius", "cycle", "theme", "mode", "flags"].forEach(function (k) { if (q.has(k)) prefs[k] = q.get(k); });
     savePrefs();
   }
   function savePrefs() { try { localStorage.setItem("zenithboard", JSON.stringify(prefs)); } catch (e) {} }
@@ -40,11 +43,29 @@
   function cycleMs() { var c = parseFloat(prefs.cycle); return Math.max(2, c > 0 ? c : server.cycle_seconds) * 1000; }
   function theme() { return prefs.theme || server.theme || "amber"; }
   function mode() { return prefs.mode === "flap" || prefs.mode === "dots" ? prefs.mode : (server.display_mode === "flap" ? "flap" : "dots"); }
+  function flagsOn() { return prefs.flags !== undefined ? (prefs.flags === "1" || prefs.flags === true) : server.flags !== false; }
+  function cols() { return flagsOn() ? COLS_FLAGS : COLS; }
   function applyTheme() { document.body.setAttribute("data-theme", theme()); }
 
   // ------------------------------------------------------------------ dot grid
   function blank() { return new Uint32Array(GW * GH); }
   function put(g, x, y, v) { if (x >= 0 && x < GW && y >= 0 && y < GH) g[y * GW + x] = v; }
+  // One row of text, drawn from an offset and clipped before the flag column: this is what scrolls when a name
+  // is longer than the row. offset is in dots, so the movement is one dot at a time rather than one letter.
+  function textRow(g, s, y, offset, maxX) {
+    s = String(s).toUpperCase();
+    for (var i = 0; i < s.length; i++) {
+      var gl = Font5x7.GLYPHS[s[i]] || Font5x7.GLYPHS["?"], x0 = i * 6 - offset;
+      if (x0 > maxX) break;
+      for (var r = 0; r < 7; r++) for (var c = 0; c < 5; c++) {
+        if (gl[r][c] !== "#") continue;
+        var x = x0 + c;
+        if (x >= 0 && x < maxX) put(g, x, y + r, ON);
+      }
+    }
+  }
+  function rowWidth(s) { return Math.max(0, String(s).length * 6 - 1); }
+
   function text(g, s, x, y, scale) {
     s = String(s).toUpperCase();
     for (var i = 0; i < s.length; i++) {
@@ -106,9 +127,22 @@
     }
   }
 
+  // The two flags: where the aircraft is registered, beside the airline, and where it was built, beside the
+  // model. A country we have no flag for falls back to its two letters, which is still better than a hole.
+  function badges(g, p) {
+    var reg = window.Flags ? Flags.country(p.registration) : null;
+    var made = window.Flags ? Flags.origin(p.type_name) : null;
+    function at(code, y) {
+      if (!code) return;
+      if (!Flags.draw(code, FLAG_X, y, function (x, yy, v) { put(g, x, yy, v); })) text(g, code, FLAG_X, y, 1);
+    }
+    at(reg, FLAG_Y1); at(made, FLAG_Y2);
+  }
+
   function centered(str) { str = String(str); var n = Math.max(0, Math.floor((FLAP_COLS - str.length) / 2)); return new Array(n + 1).join(" ") + str; }
   function buildScreen() {
     var g = blank(), u = units();
+    if (error || !planes.length) scroll.stop();            // nothing with a long name on screen: stop moving
     if (error) {
       textCenter(g, "NO DATA", 8, 2); textCenter(g, "RECEIVER NOT RESPONDING", 36, 1); textCenter(g, "CHECK THE DECODER", 48, 1);
       return { g: g, sig: "error", plane: null, lines: ["", centered("NO DATA"), "", centered("RECEIVER NOT"), centered("RESPONDING"), "", centered("CHECK THE"), centered("DECODER")] };
@@ -123,15 +157,61 @@
       return { g: g, sig: "empty" + total + clock() + radius() + u, plane: null,
                lines: ["", centered("NO FLIGHTS"), "", centered(within), centered("SEEN " + total + " AIRCRAFT"), "", centered(clock()), ""] };
     }
-    var L = Fmt.planeLines(p, u, planes.indexOf(p), planes.length, COLS);
+    var on = flagsOn(), maxX = on ? TEXT_MAX_X : GW;
+    var L = Fmt.planeLines(p, u, planes.indexOf(p), planes.length, cols());
+    scroll.prepare(p.hex + "|" + L.airlineFull + "|" + L.typeFull + "|" + maxX,
+                   [{ y: 16, text: L.airlineFull }, { y: 25, text: L.typeFull }], maxX);
     text(g, L.callsign, 0, 0, 2);
-    text(g, L.airline, 0, 16, 1); text(g, L.type, 0, 25, 1);
+    textRow(g, L.airlineFull, 16, scroll.off(0), maxX); textRow(g, L.typeFull, 25, scroll.off(1), maxX);
     text(g, L.alt, 0, 34, 1); text(g, L.spd, 0, 43, 1); text(g, L.from, 0, 52, 1); text(g, L.to, 0, 61, 1);       // where the flight comes from / goes to (blank when unknown)
     text(g, L.footer, 0, 72, 1);
+    if (on) badges(g, p);
     silhouette(g, p.shape || "generic", SIL_BOX);
-    return { g: g, sig: "p" + p.hex + L.callsign + L.footer + L.alt + L.spd + L.type + L.from + L.to + (p.photo || ""), plane: p,
+    return { g: g, sig: "p" + p.hex + L.callsign + L.footer + L.alt + L.spd + L.type + L.from + L.to + (p.photo || "") + (on ? "f" : ""), plane: p,
              lines: [L.callsign, L.airline, L.type, L.alt, L.spd, L.from, L.to, L.footer] };
   }
+
+  // ------------------------------------------------------------------ scrolling rows
+  // A name longer than the row scrolls, one dot at a time, with a pause at each end: with the flags in place a
+  // row holds twelve characters, and ROYAL AIR MAROC does not. Only the two rows that scroll are repainted,
+  // never the whole wall, so an old tablet is not asked to redraw ten thousand dots nine times a second.
+  var scroll = (function () {
+    var STEP_MS = 110, HOLD = 18;                 // one dot every 110 ms, and two seconds at each end
+    var rows = [], key = "", maxX = GW, timer = 0;
+    function need() { return mode() === "dots" && rows.some(function (r) { return r.max > 0; }); }
+    function tick() {
+      var moved = [];
+      rows.forEach(function (r) {
+        if (r.max <= 0) return;
+        if (r.wait > 0) { r.wait--; return; }
+        if (r.off >= r.max) { r.off = 0; r.wait = HOLD; } else r.off++;
+        moved.push(r);
+      });
+      moved.forEach(function (r) {
+        for (var y = r.y; y < r.y + 7; y++) for (var x = 0; x < maxX; x++) put(grid, x, y, 0);
+        textRow(grid, r.text, r.y, r.off, maxX);
+        drawRect(0, r.y, maxX, r.y + 7);
+      });
+    }
+    function sync() {
+      if (timer) { clearInterval(timer); timer = 0; }
+      if (need()) timer = setInterval(tick, STEP_MS);
+    }
+    return {
+      prepare: function (k, items, mx) {
+        maxX = mx;
+        if (k !== key) {
+          key = k;
+          rows = items.map(function (it) {
+            return { y: it.y, text: it.text, off: 0, wait: HOLD, max: Math.max(0, rowWidth(it.text) - maxX) };
+          });
+        }
+        sync();
+      },
+      off: function (i) { return rows[i] ? rows[i].off : 0; },
+      stop: function () { key = ""; rows = []; sync(); }
+    };
+  })();
 
   // ------------------------------------------------------------------ rendering
   var dotColor = "#ffb000";
@@ -144,6 +224,25 @@
     placeCorner();
   }
   function hex6(v) { return "#" + ("000000" + (v & 0xffffff).toString(16)).slice(-6); }
+  function geomPx() {
+    var W = canvas.width, H = canvas.height, pitch = Math.min(W / (GW + 3), H / (GH + 3));
+    return { pitch: pitch, ox: (W - pitch * GW) / 2, oy: (H - pitch * GH) / 2 };
+  }
+  // Repaint the dots of one rectangle of the grid. Used by the scrolling rows.
+  function drawRect(x0, y0, x1, y1) {
+    var m = geomPx(), r = m.pitch * 0.42;
+    ctx.clearRect(m.ox + x0 * m.pitch, m.oy + y0 * m.pitch, (x1 - x0) * m.pitch, (y1 - y0) * m.pitch);
+    var off = new Path2D(), lit = {};
+    for (var y = y0; y < y1; y++) for (var x = x0; x < x1; x++) {
+      var v = grid[y * GW + x], cx = m.ox + (x + 0.5) * m.pitch, cy = m.oy + (y + 0.5) * m.pitch, path;
+      if (!v) path = off; else { var k = v === ON ? "t" : hex6(v); path = lit[k] || (lit[k] = new Path2D()); }
+      path.moveTo(cx + r, cy); path.arc(cx, cy, r, 0, 6.2832);
+    }
+    ctx.shadowBlur = 0; ctx.globalAlpha = 0.09; ctx.fillStyle = dotColor; ctx.fill(off);
+    ctx.globalAlpha = 1; ctx.shadowBlur = m.pitch * 1.2;
+    Object.keys(lit).forEach(function (k) { var col = k === "t" ? dotColor : k; ctx.fillStyle = col; ctx.shadowColor = col; ctx.fill(lit[k]); });
+    ctx.shadowBlur = 0;
+  }
   function draw(a, b, progress) {
     var W = canvas.width, H = canvas.height, pitch = Math.min(W / (GW + 3), H / (GH + 3));
     var ox = (W - pitch * GW) / 2, oy = (H - pitch * GH) / 2, r = pitch * 0.42;
@@ -226,7 +325,7 @@
   }
   var firstFlap = true;
   function applyMode() {                                      // switching style on a running wall
-    flapStop(); lastSig = ""; grid = blank(); hideCorner(); firstFlap = true;
+    flapStop(); scroll.stop(); lastSig = ""; grid = blank(); hideCorner(); firstFlap = true;
     ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, canvas.width, canvas.height);
     if (mode() === "flap") { board = new FlapKit.Board(FLAP_COLS, FLAP_ROWS); }
     resize(); poll();
@@ -296,6 +395,7 @@
     document.getElementById("s-cycle").value = cycleMs() / 1000;
     document.getElementById("s-theme").value = theme();
     document.getElementById("s-mode").value = mode();
+    document.getElementById("s-flags").value = flagsOn() ? "1" : "0";
   }
   function bindPanel() {
     document.getElementById("gear").onclick = function () { fillPanel(); panel.hidden = !panel.hidden; };
@@ -304,6 +404,7 @@
     document.getElementById("s-cycle").onchange = function () { prefs.cycle = this.value; savePrefs(); startCycle(); };
     document.getElementById("s-theme").onchange = function () { prefs.theme = this.value; savePrefs(); applyTheme(); resize(); };
     document.getElementById("s-mode").onchange = function () { prefs.mode = this.value; savePrefs(); applyMode(); };
+    document.getElementById("s-flags").onchange = function () { prefs.flags = this.value; savePrefs(); scroll.stop(); lastSig = ""; poll(); };
     document.getElementById("s-reset").onclick = function () { var m = mode(); prefs = {}; savePrefs(); applyTheme(); fillPanel(); startCycle(); if (mode() !== m) applyMode(); else { lastSig = ""; poll(); resize(); } };
     document.getElementById("s-full").onclick = function () {
       var el = document.documentElement; (el.requestFullscreen || el.webkitRequestFullscreen || function () {}).call(el); keepAwake();

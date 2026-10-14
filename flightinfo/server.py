@@ -25,7 +25,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.13.1"
+VERSION = "0.14.0"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -49,8 +49,9 @@ DEFAULTS = {
     "LON": "0",
     "DECODER": "readsb",        # readsb | dump1090-fa
     "RADIUS": "10",             # in km (metric) or miles (imperial)
-    "CYCLE_SECONDS": "6",
+    "CYCLE_SECONDS": "14",
     "SHOW_PHOTOS": "1",
+    "FLAGS": "1",               # the registration and maker flags on the dot-matrix wall
     "DISPLAY_MODE": "dots",     # dots (dot matrix) | flap (split-flap airport board)
     "SHOW_ROUTES": "1",         # where the flight comes from / goes to (looked up by callsign on adsbdb.com)
     "PORT": "8080",
@@ -103,8 +104,10 @@ def cfg_float(cfg, key, default):
         return float(default)
 
 
-def cfg_bool(cfg, key):
-    return str(cfg.get(key, "0")).lower() in ("1", "true", "yes", "on")
+def cfg_bool(cfg, key, default="0"):
+    # A Pi installed before a setting existed has no line for it, so a setting that should start life switched
+    # on passes its own default here rather than inheriting "off" from an older config file.
+    return str(cfg.get(key, default)).lower() in ("1", "true", "yes", "on")
 
 
 def radius_to_km(radius, units):
@@ -764,8 +767,9 @@ def public_config(cfg):
         "theme": theme if theme in THEMES else "amber",
         "radius": cfg_float(cfg, "RADIUS", 10),
         "radius_presets": RADIUS_PRESETS,
-        "cycle_seconds": max(2, cfg_float(cfg, "CYCLE_SECONDS", 6)),
+        "cycle_seconds": max(2, cfg_float(cfg, "CYCLE_SECONDS", 14)),
         "show_photos": cfg_bool(cfg, "SHOW_PHOTOS"),
+        "flags": cfg_bool(cfg, "FLAGS", "1"),
         "display_mode": "flap" if str(cfg.get("DISPLAY_MODE", "dots")).lower() == "flap" else "dots",
         "demo": cfg_bool(cfg, "DEMO"),
     }

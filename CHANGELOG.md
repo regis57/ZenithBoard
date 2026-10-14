@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.14.0
+- **Two flags on the dot-matrix wall.** Where the aircraft is registered, beside the airline, and where it was built, beside the model. The country is read from the registration the wall already has — `OE-LMP` is Austria, `CN-` is Morocco and not Canada, longest prefix first — so there is no lookup and nothing to fetch. Eleven dots by seven, drawn into the same grid as the text, so they scale with the wall.
+- **No manufacturer's logo**, in dots or otherwise: those marks are protected and a dotted copy is still a copy. The second flag shows the country the airframe is built in instead, which is not protected.
+- A flag with black at its edge (Germany, Belgium, Estonia, Egypt) gets a one-dot white outline, or the black band is indistinguishable from the unlit wall.
+- **Long names scroll.** The flags cost the airline and model rows two characters, twelve instead of fourteen, so a row that no longer fits moves sideways one dot at a time with a pause at each end. Only those two rows are repainted, never the whole wall.
+- **An aircraft now stays on screen for fourteen seconds** instead of six, which is time enough to read a long name as it goes by. A Pi that already has `CYCLE_SECONDS` in its configuration keeps its own value.
+- Flags can be switched off per tablet from the gear, or for every screen with `FLAGS=0`. The split-flap board is unchanged: it is sixteen letter drums, and a flag is not a letter.
+
 ## 0.13.1
 - **The hall sound of 0.13.0 is removed.** It did not sound good enough to keep. The note beside the gear, the `zenithboard sound` command and the `SOUND` / `SOUND_VOLUME` settings are gone with it; a Pi that had them keeps the two unused lines in `/etc/zenithboard/config.env`, where they do nothing. Nothing else in 0.13.0 existed, so the wall is exactly as it was in 0.12.5.
 

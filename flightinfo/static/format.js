@@ -84,6 +84,9 @@
       callsign: callsign,
       airline: fit((p.airline || "").toUpperCase()),
       type: modelLine(p, W),
+      // The same two rows uncut. The dot-matrix wall scrolls them when the flag has taken the last characters.
+      airlineFull: (p.airline || "").toUpperCase(),
+      typeFull: modelLine(p, 99),
       alt: fit("ALT  " + alt),
       spd: fit("SPD  " + spd),
       from: r.from,

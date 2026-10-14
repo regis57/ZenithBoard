@@ -56,6 +56,27 @@ A link beats the gear when you are setting up a screen you will not touch again 
 
 Six themes: amber (the default), green, red, white, turquoise (`#00d6d7`) and blue (`#0404e2`). One dot colour at a time, because the point is a lit sign rather than a screenshot of a map. Blue is the deepest of the six: on a dark wall at a distance it reads as a quiet navigation light rather than as text, so try turquoise first if the board is meant to be read from the sofa.
 
+## The two flags
+
+On the dot-matrix wall, a small flag sits at the right of the airline row and another at the right of the model row. The first is where the aircraft is registered, the second is where it was built. Both are drawn into the same dot grid as everything else, eleven dots by seven, so they scale with the wall rather than needing a size of their own.
+
+The country comes from the registration the wall already receives: `OE-LMP` is Austria, `HB-` Switzerland, `N` the United States, `CN-` Morocco and not Canada, because the longest prefix wins. It is a published allocation table held in `flags.js`, so there is no lookup and nothing to reach over the network. A registration whose prefix is not in the table shows no flag rather than a wrong one.
+
+The second flag is the country the airframe comes from: European for Airbus and ATR, American for Boeing, Brazilian for Embraer, Canadian for De Havilland. **No manufacturer's logo is drawn, in dots or otherwise.** Those marks are protected, and redrawing one in dots is still redrawing it. A country is not protected, which is why the badge shows one.
+
+At eleven dots a flag is its bands of colour. Flags carrying an emblem keep the colours and lose the emblem: Portugal has no armillary sphere, the United Kingdom's crosses do not have their true widths, Morocco's star is five dots. They are made to be recognised across a room.
+
+A flag with black at its edge — Germany, Belgium, Estonia, Egypt — is given a one-dot white outline. Without it the black band is simply the unlit wall, and the flag looks cut off.
+
+The two flags cost the airline and model rows two characters each, twelve instead of fourteen. A name that no longer fits scrolls sideways, one dot at a time, with a pause at each end, and only those rows are repainted rather than the whole wall. An aircraft stays on screen for fourteen seconds by default, which is time enough for a long name to go by once.
+
+Flags are a dot-matrix matter. The split-flap board is sixteen letter drums and a flag is not a letter, so it shows none.
+
+| | |
+|---|---|
+| For every screen | `FLAGS` in `/etc/zenithboard/config.env`, then `zenithboard config` |
+| For this tablet only | the gear, **Flags**, or `?flags=0` in the address |
+
 ## Staying up
 
 The page refreshes itself. It polls `/api/planes` for the aircraft inside the radius, cycles through them at `CYCLE_SECONDS` each, keeps the screen awake, and reloads itself if the Pi restarts — so a power cut ends with the wall back on screen and nobody touching the tablet. If the decoder stops answering it says **NO DATA – RECEIVER NOT RESPONDING** instead of showing stale aircraft.
