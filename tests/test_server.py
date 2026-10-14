@@ -423,6 +423,32 @@ class DisplayModeTests(unittest.TestCase):
         self.assertEqual(server.public_config({"DISPLAY_MODE": "weird"})["display_mode"], "dots")
 
 
+class ThemeTest(unittest.TestCase):
+    """A colour lives in four places at once. When they drift, a theme silently falls back to amber."""
+
+    def _read(self, *parts):
+        with open(os.path.join(os.path.dirname(__file__), "..", *parts)) as fh:
+            return fh.read()
+
+    def test_every_theme_is_known_everywhere(self):
+        css, html, shell = self._read("flightinfo", "static", "style.css"), \
+            self._read("flightinfo", "static", "index.html"), self._read("lib", "common.sh")
+        for name in server.THEMES:
+            if name != "amber":                        # amber is the default, it has no rule of its own
+                self.assertIn('body[data-theme="%s"]' % name, css, name)
+            self.assertIn('<option value="%s">' % name, html, name)
+            self.assertIn(name, shell.split("valid_theme()")[1].split("\n")[0], name)
+
+    def test_the_two_new_colours_are_the_ones_asked_for(self):
+        css = self._read("flightinfo", "static", "style.css")
+        self.assertIn("--dot: #00d6d7", css)           # turquoise
+        self.assertIn("--dot: #0404e2", css)           # blue
+
+    def test_an_unknown_colour_falls_back_on_amber(self):
+        self.assertEqual(server.public_config({"THEME": "mauve"})["theme"], "amber")
+        self.assertEqual(server.public_config({"THEME": "turquoise"})["theme"], "turquoise")
+
+
 class PhotoUrlTest(unittest.TestCase):
     """The photo address is somebody else's answer, and the Pi fetches it itself: it has to be checked first."""
 

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.12.5
+- **Two more wall colours: turquoise (`#00d6d7`) and blue (`#0404e2`).** Both work in either display, the dot-matrix one and the split-flap one, since a wall uses one colour throughout. `zenithboard color turquoise`, or the gear on the tablet. Blue is much deeper than the other five: it reads well up close and turns into a faint navigation light from across a room, so turquoise is the safer choice for a wall meant to be read from the sofa.
+- A test now checks that every colour is declared in all four places that have to agree — the shell, the server, the stylesheet and the settings menu — because a colour missing from one of them falls back to amber without saying anything.
+
 ## 0.12.4
 - **Aircraft photos are back.** 0.11.1 added a check on the photo address, because the Pi fetches that address itself and it comes from somebody else's answer. The check allowed only hosts inside `planespotters.net` — but Planespotters serves its pictures from `plnspttrs.net`, a different domain from the one its API answers on. Every photo was therefore refused in silence and the wall drew its generic plane instead. Both domains are allowed now, still over https only, and the test no longer invents an address: it uses the exact one Planespotters answered with, so a check written from a guess cannot pass again.
 - Every request the wall makes to an outside service now sends the same descriptive identification, naming the project, its version and the repository. One of the five (the photo download itself) sent a short form; Planespotters has started refusing requests that do not say who is asking and how to reach them.

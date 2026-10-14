@@ -54,7 +54,7 @@ A link beats the gear when you are setting up a screen you will not touch again 
 
 ## Colours
 
-Four themes: amber (the default), green, red, white. One dot colour at a time, because the point is a lit sign rather than a screenshot of a map.
+Six themes: amber (the default), green, red, white, turquoise (`#00d6d7`) and blue (`#0404e2`). One dot colour at a time, because the point is a lit sign rather than a screenshot of a map. Blue is the deepest of the six: on a dark wall at a distance it reads as a quiet navigation light rather than as text, so try turquoise first if the board is meant to be read from the sofa.
 
 ## Staying up
 

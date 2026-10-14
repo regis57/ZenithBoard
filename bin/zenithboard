@@ -57,7 +57,7 @@ ZenithBoard $ZB_VERSION - ADSB Flight Info
   zenithboard units metric|imperial     km, km/h, m   |   mi, knots, ft
   zenithboard radius 1|2|5|10|15|30|50  wall detection radius (in your unit: km or miles)
   zenithboard location LAT LON [ALT_M]  set the antenna position EVERYWHERE it is stored
-  zenithboard color amber|green|red|white   dot colour of every wall (amber is the default)
+  zenithboard color amber|green|red|white|turquoise|blue   dot colour of every wall (amber is the default)
   zenithboard mode dots|flap            look of the wall: dot matrix (default) or split-flap airport board
   zenithboard cycle SECONDS             seconds each aircraft stays on the wall
   zenithboard photos on|off             aircraft photos on the wall (needs internet on the Pi)
@@ -161,7 +161,7 @@ case "${1:-}" in
     root_or_die; valid_lat "${2:-x}" && valid_lon "${3:-x}" || die "Usage: zenithboard location LAT LON [ALT_M]   e.g. 49.1193 6.1757 180"
     zb_apply_location "$2" "$3" "${4:-}" ;;
   color|colour)
-    root_or_die; valid_theme "${2:-}" || die "Usage: zenithboard color amber|green|red|white"
+    root_or_die; valid_theme "${2:-}" || die "Usage: zenithboard color amber|green|red|white|turquoise|blue"
     cfg_set THEME "$2"; restart_flightinfo
     echo "Wall colour is now $2 (tablets that picked their own colour with the gear keep it: use the gear's Reset)." ;;
   data)

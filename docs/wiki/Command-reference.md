@@ -24,7 +24,7 @@ Every `zenithboard` command, grouped by what you are trying to do. `zenithboard`
 | `zenithboard units metric` · `imperial` | yes | km, km/h, m — or miles, knots, feet |
 | `zenithboard radius N` | yes | How far around the antenna aircraft are shown: 1, 2, 5, 10, 15, 30 or 50, in your unit |
 | `zenithboard location LAT LON [ALT_M]` | yes | Move the antenna. Writes the position **everywhere** it is stored (ZenithBoard, the decoder, the feeders) and tells you which websites to update by hand |
-| `zenithboard color amber` · `green` · `red` · `white` | yes | Dot colour of every wall |
+| `zenithboard color amber` · `green` · `red` · `white` · `turquoise` · `blue` | yes | Dot colour of every wall |
 | `zenithboard mode dots` · `flap` | yes | Dot matrix, or the airport split-flap board. Without an argument: shows the current one |
 | `zenithboard cycle SECONDS` | yes | How long each aircraft stays on screen |
 | `zenithboard photos on` · `off` | yes | Aircraft photos from Planespotters. Off: the animated sky scene instead |
