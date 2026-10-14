@@ -16,6 +16,8 @@ Read the whole file with `zenithboard config`.
 | `RADIUS` | `10` | `zenithboard radius N` | Detection radius in your unit. Allowed: 1, 2, 5, 10, 15, 30, 50 |
 | `CYCLE_SECONDS` | `6` | `zenithboard cycle N` | How long each aircraft stays on screen |
 | `SHOW_PHOTOS` | `1` | `zenithboard photos on\|off` | Aircraft photos from Planespotters. Needs internet on the Pi |
+| `SOUND` | `0` | `zenithboard sound on\|off` | Hall ambience on the tablets. A browser makes no sound until the screen is touched once; each tablet can still decide for itself |
+| `SOUND_VOLUME` | `35` | `zenithboard sound volume 0-100` | How loud that ambience is, for every screen |
 | `SHOW_ROUTES` | `1` | `zenithboard routes on\|off` | Where the flight comes from and goes to. Needs internet |
 | `PORT` | `8080` | `zenithboard config-set PORT 8090` | The wall's port. Needs a restart of the service |
 

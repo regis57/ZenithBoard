@@ -50,6 +50,8 @@ cfg_defaults() {  # write any missing keys with defaults (never overwrites)
   done <<'DEF'
 UNITS=metric
 THEME=amber
+SOUND=0
+SOUND_VOLUME=35
 DISPLAY_MODE=dots
 RADIUS=10
 CYCLE_SECONDS=6

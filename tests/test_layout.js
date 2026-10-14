@@ -12,9 +12,15 @@ const [RX, RW] = num(/var RX = (\d+), RW = (\d+);/, js, "right column");
 const sil = num(/SIL_BOX = \{ x: RX, y: (\d+), w: RW, h: (\d+) \}/, js, "SIL_BOX");
 const ph = num(/PHOTO_BOX = \{ x: (\d+), y: (\d+), w: (\d+), h: (\d+) \}/, js, "PHOTO_BOX");
 const gearCss = css.match(/#gear \{([^}]*)\}/)[1];
+const soundCss = css.match(/#sound \{([^}]*)\}/)[1];
 assert.ok(/bottom:\s*\d+px/.test(gearCss) && /right:\s*\d+px/.test(gearCss), "the gear must be positioned from the bottom-right corner");
 assert.ok(!/(^|[;\s])top:/.test(gearCss), "the gear must not be positioned from the top");
 const [gb] = num(/bottom:\s*(\d+)px/, gearCss, "gear bottom"), [gr] = num(/right:\s*(\d+)px/, gearCss, "gear right"), [gw] = num(/width:\s*(\d+)px/, gearCss, "gear width"), [gh] = num(/height:\s*(\d+)px/, gearCss, "gear height");
+// the hall-sound note sits beside the gear and has to clear the same things, and the gear itself
+assert.ok(/bottom:\s*\d+px/.test(soundCss) && /right:\s*\d+px/.test(soundCss), "the sound button must be positioned from the bottom-right corner");
+assert.ok(!/(^|[;\s])top:/.test(soundCss), "the sound button must not be positioned from the top");
+const [sb] = num(/bottom:\s*(\d+)px/, soundCss, "sound bottom"), [sr] = num(/right:\s*(\d+)px/, soundCss, "sound right"), [sw] = num(/width:\s*(\d+)px/, soundCss, "sound width"), [sh] = num(/height:\s*(\d+)px/, soundCss, "sound height");
+assert.ok(sr >= gr + gw, "the sound button must sit clear of the gear, not on top of it");
 
 // the same maths as geom() in app.js
 const geom = (cw, ch) => { const pitch = Math.min(cw / (GW + 3), ch / (GH + 3)); return { pitch, ox: (cw - pitch * GW) / 2, oy: (ch - pitch * GH) / 2 }; };
@@ -28,10 +34,15 @@ let worst = Infinity;
 for (const [cw, ch] of screens) {
   const g = geom(cw, ch);
   const gear = { l: cw - gr - gw, t: ch - gb - gh, r: cw - gr, b: ch - gb };
+  const sound = { l: cw - sr - sw, t: ch - sb - sh, r: cw - sr, b: ch - sb };
   const photo = rect(g, ph[0], ph[1], ph[2], ph[3]), drawing = rect(g, RX, sil[0], RW, sil[1]);
   assert.ok(!hit(gear, photo), cw + "x" + ch + ": the gear covers the photo");
   assert.ok(!hit(gear, drawing), cw + "x" + ch + ": the gear covers the aircraft drawing");
   assert.ok(gear.l >= 0 && gear.t >= 0, cw + "x" + ch + ": the gear is off screen");
+  assert.ok(!hit(sound, photo), cw + "x" + ch + ": the sound button covers the photo");
+  assert.ok(!hit(sound, drawing), cw + "x" + ch + ": the sound button covers the aircraft drawing");
+  assert.ok(!hit(sound, gear), cw + "x" + ch + ": the sound button covers the gear");
+  assert.ok(sound.l >= 0 && sound.t >= 0, cw + "x" + ch + ": the sound button is off screen");
   worst = Math.min(worst, gear.t - photo.b);
 }
 assert.ok(worst >= 0, "the gear must stay clear of the photo");
@@ -40,4 +51,4 @@ assert.ok(worst >= 0, "the gear must stay clear of the photo");
 const panel = css.match(/#settings \{([^}]*)\}/)[1];
 assert.ok(/bottom:\s*\d+px/.test(panel) && !/(^|[;\s])top:/.test(panel), "the settings panel must open upward from the gear");
 assert.ok(/max-height:/.test(panel) && /overflow-y:\s*auto/.test(panel), "a tall panel must scroll on a short screen");
-console.log("layout ok: gear bottom-right clear of photo and drawing on " + screens.length + " screens (smallest gap " + Math.round(worst) + " px)");
+console.log("layout ok: gear and sound button bottom-right, clear of photo and drawing on " + screens.length + " screens (smallest gap " + Math.round(worst) + " px)");

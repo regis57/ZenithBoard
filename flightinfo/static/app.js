@@ -16,7 +16,7 @@
   var FLAP_COLS = 16, FLAP_ROWS = 8, FLAP_W = 84;  // split-flap style: 16 letters x 8 rows on the left 84 dots (the photo keeps the right-hand column)
 
   var canvas = document.getElementById("wall"), ctx = canvas.getContext("2d");
-  var server = { units: "metric", theme: "amber", radius: 10, radius_presets: [1, 2, 5, 10, 15, 30, 50], cycle_seconds: 6,
+  var server = { units: "metric", theme: "amber", sound: false, sound_volume: 35, radius: 10, radius_presets: [1, 2, 5, 10, 15, 30, 50], cycle_seconds: 6,
                  show_photos: true };
   var prefs = {};            // local overrides (units, radius, cycle, theme), kept in localStorage
   var planes = [], total = 0, error = null, curHex = null, serverId = null, failures = 0;
@@ -31,7 +31,7 @@
   function loadPrefs() {
     try { prefs = JSON.parse(localStorage.getItem("zenithboard") || "{}") || {}; } catch (e) { prefs = {}; }
     var q = new URLSearchParams(location.search);       // ?units=imperial&radius=5&cycle=8&theme=green&mode=flap
-    ["units", "radius", "cycle", "theme", "mode"].forEach(function (k) { if (q.has(k)) prefs[k] = q.get(k); });
+    ["units", "radius", "cycle", "theme", "mode", "sound"].forEach(function (k) { if (q.has(k)) prefs[k] = q.get(k); });
     savePrefs();
   }
   function savePrefs() { try { localStorage.setItem("zenithboard", JSON.stringify(prefs)); } catch (e) {} }
@@ -41,6 +41,27 @@
   function theme() { return prefs.theme || server.theme || "amber"; }
   function mode() { return prefs.mode === "flap" || prefs.mode === "dots" ? prefs.mode : (server.display_mode === "flap" ? "flap" : "dots"); }
   function applyTheme() { document.body.setAttribute("data-theme", theme()); }
+
+  // The hall sound. Off unless this tablet says otherwise, so a screen never starts making a noise by itself;
+  // what the Pi sets is only the starting point, and each tablet keeps its own answer. A browser will not let a
+  // page make a sound before it has been touched, so the button is both the switch and that first touch.
+  function soundWanted() { return prefs.sound !== undefined ? prefs.sound === "1" || prefs.sound === true : !!server.sound; }
+  function applySound(fromTap) {
+    var on = soundWanted(), btn = document.getElementById("sound");
+    if (window.ZBSound) {
+      window.ZBSound.setVolume(server.sound_volume);
+      if (on && fromTap) { if (!window.ZBSound.start()) on = false; }
+      else if (!on) window.ZBSound.stop();
+    }
+    if (btn) {
+      var started = !!(window.ZBSound && window.ZBSound.playing());
+      btn.textContent = started ? "\u266B" : "\u266A";
+      btn.classList.toggle("on", started);
+      btn.setAttribute("aria-pressed", started ? "true" : "false");
+      btn.title = started ? "Hall sound on" : (on ? "Hall sound: tap to start" : "Hall sound off");
+      btn.setAttribute("aria-label", btn.title);
+    }
+  }
 
   // ------------------------------------------------------------------ dot grid
   function blank() { return new Uint32Array(GW * GH); }
@@ -299,17 +320,31 @@
   }
   function bindPanel() {
     document.getElementById("gear").onclick = function () { fillPanel(); panel.hidden = !panel.hidden; };
+    document.getElementById("sound").onclick = function () {
+      prefs.sound = soundWanted() ? "0" : "1"; savePrefs(); applySound(true);
+    };
     document.getElementById("s-units").onchange = function () { prefs.units = this.value; savePrefs(); fillPanel(); lastSig = ""; poll(); };
     document.getElementById("s-radius").onchange = function () { prefs.radius = this.value; savePrefs(); lastSig = ""; poll(); };
     document.getElementById("s-cycle").onchange = function () { prefs.cycle = this.value; savePrefs(); startCycle(); };
     document.getElementById("s-theme").onchange = function () { prefs.theme = this.value; savePrefs(); applyTheme(); resize(); };
     document.getElementById("s-mode").onchange = function () { prefs.mode = this.value; savePrefs(); applyMode(); };
-    document.getElementById("s-reset").onclick = function () { var m = mode(); prefs = {}; savePrefs(); applyTheme(); fillPanel(); startCycle(); if (mode() !== m) applyMode(); else { lastSig = ""; poll(); resize(); } };
+    document.getElementById("s-reset").onclick = function () { var m = mode(); prefs = {}; savePrefs(); applyTheme(); applySound(false); fillPanel(); startCycle(); if (mode() !== m) applyMode(); else { lastSig = ""; poll(); resize(); } };
     document.getElementById("s-full").onclick = function () {
       var el = document.documentElement; (el.requestFullscreen || el.webkitRequestFullscreen || function () {}).call(el); keepAwake();
     };
     document.getElementById("s-close").onclick = function () { panel.hidden = true; };
   }
+  // Wanted but not started yet: the next touch anywhere starts it, so the sound survives a reboot without
+  // anyone having to find the little button again. Still a touch, because no browser will have it otherwise.
+  function armFirstTap() {
+    if (!soundWanted()) return;
+    var go = function () {
+      ["pointerdown", "keydown", "touchend"].forEach(function (e) { document.removeEventListener(e, go, true); });
+      applySound(true);
+    };
+    ["pointerdown", "keydown", "touchend"].forEach(function (e) { document.addEventListener(e, go, true); });
+  }
+
   var wake = null;
   function keepAwake() { try { if (navigator.wakeLock) navigator.wakeLock.request("screen").then(function (l) { wake = l; }).catch(function () {}); } catch (e) {} }
   document.addEventListener("visibilitychange", function () { if (!document.hidden) keepAwake(); });
@@ -320,7 +355,7 @@
   // ------------------------------------------------------------------ boot
   loadPrefs();
   loadServerConfig().then(function () {
-    applyTheme(); bindPanel(); resize(); poll(); startCycle(); setInterval(poll, 2000); keepAwake();
+    applyTheme(); bindPanel(); applySound(false); armFirstTap(); resize(); poll(); startCycle(); setInterval(poll, 2000); keepAwake();
   });
   window.addEventListener("resize", resize);
 })();
