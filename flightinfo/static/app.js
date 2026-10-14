@@ -232,20 +232,30 @@
     var W = canvas.width, H = canvas.height, pitch = Math.min(W / (GW + 3), H / (GH + 3));
     return { pitch: pitch, ox: (W - pitch * GW) / 2, oy: (H - pitch * GH) / 2 };
   }
-  // Repaint the dots of one rectangle of the grid. Used by the scrolling rows.
+  // Repaint the dots of one rectangle of the grid, used by the scrolling rows. A lit dot carries a glow wider
+  // than itself, so the painting is clipped to a rectangle three dots larger than the one asked for and the
+  // dots just outside are drawn too. Without the clip the glow landed outside the cleared area and was added
+  // again on every step, which drew a bright frame around whichever row was scrolling.
+  var GLOW_PAD = 3;
   function drawRect(x0, y0, x1, y1) {
-    var m = geomPx(), r = m.pitch * 0.42;
-    ctx.clearRect(m.ox + x0 * m.pitch, m.oy + y0 * m.pitch, (x1 - x0) * m.pitch, (y1 - y0) * m.pitch);
+    var m = geomPx(), r = m.pitch * 0.42, p = GLOW_PAD;
+    var px = m.ox + (x0 - p) * m.pitch, py = m.oy + (y0 - p) * m.pitch;
+    var pw = (x1 - x0 + 2 * p) * m.pitch, ph = (y1 - y0 + 2 * p) * m.pitch;
+    ctx.save();
+    ctx.beginPath(); ctx.rect(px, py, pw, ph); ctx.clip();
+    ctx.clearRect(px, py, pw, ph);
     var off = new Path2D(), lit = {};
-    for (var y = y0; y < y1; y++) for (var x = x0; x < x1; x++) {
-      var v = grid[y * GW + x], cx = m.ox + (x + 0.5) * m.pitch, cy = m.oy + (y + 0.5) * m.pitch, path;
-      if (!v) path = off; else { var k = v === ON ? "t" : hex6(v); path = lit[k] || (lit[k] = new Path2D()); }
-      path.moveTo(cx + r, cy); path.arc(cx, cy, r, 0, 6.2832);
-    }
+    for (var y = Math.max(0, y0 - 2 * p); y < Math.min(GH, y1 + 2 * p); y++)
+      for (var x = Math.max(0, x0 - 2 * p); x < Math.min(GW, x1 + 2 * p); x++) {
+        var v = grid[y * GW + x], cx = m.ox + (x + 0.5) * m.pitch, cy = m.oy + (y + 0.5) * m.pitch, path;
+        if (!v) path = off; else { var k = v === ON ? "t" : hex6(v); path = lit[k] || (lit[k] = new Path2D()); }
+        path.moveTo(cx + r, cy); path.arc(cx, cy, r, 0, 6.2832);
+      }
     ctx.shadowBlur = 0; ctx.globalAlpha = 0.09; ctx.fillStyle = dotColor; ctx.fill(off);
     ctx.globalAlpha = 1; ctx.shadowBlur = m.pitch * 1.2;
     Object.keys(lit).forEach(function (k) { var col = k === "t" ? dotColor : k; ctx.fillStyle = col; ctx.shadowColor = col; ctx.fill(lit[k]); });
     ctx.shadowBlur = 0;
+    ctx.restore();
   }
   function draw(a, b, progress) {
     var W = canvas.width, H = canvas.height, pitch = Math.min(W / (GW + 3), H / (GH + 3));
