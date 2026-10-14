@@ -1,9 +1,7 @@
 # Changelog
 
-## 0.13.0
-- **The hall.** A calm airport-concourse ambience on the tablets, off unless you ask for it: a low drone that drifts, a filtered rumble that swells and falls over about a minute, and every 80 seconds a soft three-note chime of the kind that precedes an announcement — with no announcement after it. `zenithboard sound on`, `zenithboard sound volume 0-100`, or the note beside the gear in the bottom-right corner, which each tablet decides for itself.
-- Nothing is played from a file: the sound is built in the browser from a few oscillators and one loop of noise. No audio file ships with the project, nothing to license, and the chime was written for ZenithBoard rather than copied from any real airport's or railway's signature.
-- A browser makes no sound until the screen has been touched once, which is the browser's rule and not a setting. With the sound on, a tablet that has just rebooted waits silently and starts at the first touch anywhere. The wall itself is unchanged, and a screen with the sound off behaves exactly as before.
+## 0.13.1
+- **The hall sound of 0.13.0 is removed.** It did not sound good enough to keep. The note beside the gear, the `zenithboard sound` command and the `SOUND` / `SOUND_VOLUME` settings are gone with it; a Pi that had them keeps the two unused lines in `/etc/zenithboard/config.env`, where they do nothing. Nothing else in 0.13.0 existed, so the wall is exactly as it was in 0.12.5.
 
 ## 0.12.5
 - **Two more wall colours: turquoise (`#00d6d7`) and blue (`#0404e2`).** Both work in either display, the dot-matrix one and the split-flap one, since a wall uses one colour throughout. `zenithboard color turquoise`, or the gear on the tablet. Blue is much deeper than the other five: it reads well up close and turns into a faint navigation light from across a room, so turquoise is the safer choice for a wall meant to be read from the sofa.

@@ -20,11 +20,6 @@ body[data-theme="blue"]  { --dot: #0404e2; }
 #gear { position: fixed; bottom: 6px; right: 6px; width: 44px; height: 44px; font-size: 24px; color: var(--dot);
         background: transparent; border: 0; opacity: .12; cursor: pointer; }
 #gear:hover, #gear:focus { opacity: .8; }
-/* the hall sound, immediately left of the gear: same size, same faintness, so the corner stays two quiet marks */
-#sound { position: fixed; bottom: 6px; right: 56px; width: 44px; height: 44px; font-size: 24px; color: var(--dot);
-         background: transparent; border: 0; opacity: .12; cursor: pointer; }
-#sound:hover, #sound:focus { opacity: .8; }
-#sound.on { opacity: .45; }
 #settings { position: fixed; bottom: 56px; right: 8px; width: min(92vw, 320px); max-height: calc(100vh - 68px); max-height: calc(100dvh - 68px); overflow-y: auto; padding: 14px; background: #111; color: #ddd;
             border: 1px solid #333; border-radius: 10px; font-size: 15px; z-index: 10; }
 #settings h2 { margin: 0 0 10px; font-size: 16px; color: var(--dot); }

@@ -56,22 +56,6 @@ A link beats the gear when you are setting up a screen you will not touch again 
 
 Six themes: amber (the default), green, red, white, turquoise (`#00d6d7`) and blue (`#0404e2`). One dot colour at a time, because the point is a lit sign rather than a screenshot of a map. Blue is the deepest of the six: on a dark wall at a distance it reads as a quiet navigation light rather than as text, so try turquoise first if the board is meant to be read from the sofa.
 
-## The hall sound
-
-Off unless you ask for it. Turned on, the wall makes the sound of a large quiet building: a low drone that drifts, a filtered rumble that swells and falls over about a minute, and every 80 seconds a soft three-note chime, the kind that comes before an announcement — but no announcement ever follows.
-
-Nothing is played from a file. The sound is built in the tablet's browser out of a few oscillators and one loop of noise, so no audio file ships with the project and there is no licence to carry around. The chime was written for ZenithBoard and imitates no real airport's or railway's signature.
-
-A browser will not let a page make a sound until someone has touched the screen. That is the browser's own rule, not a setting, and it cannot be worked around. So with `SOUND=1`, a tablet that has just rebooted waits silently until the first touch anywhere on the screen, and then starts. The note beside the gear in the bottom-right corner is the switch, and tapping it is also that first touch.
-
-| | |
-|---|---|
-| For every screen | `zenithboard sound on` · `off`, and `zenithboard sound volume 0-100` |
-| For this tablet only | the note in the bottom-right corner, or `?sound=1` in the address |
-| Back to the Pi's setting | the gear, then **Reset** |
-
-The note is lit at about a third of full brightness while the sound plays, faint like the gear when it is silent. A tablet remembers its own answer, so the television in one room can have the sound while the tablet in another stays quiet.
-
 ## Staying up
 
 The page refreshes itself. It polls `/api/planes` for the aircraft inside the radius, cycles through them at `CYCLE_SECONDS` each, keeps the screen awake, and reloads itself if the Pi restarts — so a power cut ends with the wall back on screen and nobody touching the tablet. If the decoder stops answering it says **NO DATA – RECEIVER NOT RESPONDING** instead of showing stale aircraft.

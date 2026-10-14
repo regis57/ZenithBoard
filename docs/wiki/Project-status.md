@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **14 October 2026**, version **0.13.0**.
+Last updated: **14 October 2026**, version **0.13.1**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -53,6 +53,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 14 October 2026, evening | A generated airport-hall ambience was added (0.13.0) and removed again an hour later (0.13.1): it did not sound good enough to keep. Turquoise and blue joined the wall colours the same evening and stayed |
 | 13 October 2026, morning | No aircraft photos on the wall, only the drawn plane. The address check added in 0.11.1 allowed `planespotters.net`, but the pictures are served from `plnspttrs.net`: every photo had been refused in silence since. Fixed in 0.12.4. The test that should have caught it had been written from a guessed address instead of the real one |
 | 13 October 2026, morning | `main` is now protected by a branch ruleset: no deletion, no force push, signed commits only, changes go through a pull request merged by squash, and the checks `test`, `analyze (python)` and `analyze (javascript)` must pass. The first attempt named the checks `analyse` with an *s*, which do not exist, so GitHub refused every merge until the spelling was fixed |
 | 12 October 2026, evening | Security pass, all on the real Pi: the wall server's sandbox scores **1.3** in `systemd-analyze security` and the service runs normally inside it. The first signed-update checks found two bugs of their own — a download folder deleted before use (`curl: (23)`, fixed in 0.12.1) and only GitHub's expired key being recorded, so every update asked again (fixed in 0.12.3). After that, updates install silently. CodeQL's first run found a real header-injection path (fixed in 0.12.1/0.12.2); two deliberate file permissions were dismissed as *Won't fix* with the reason written down |
