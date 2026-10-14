@@ -258,6 +258,9 @@ Two looks, same data. **Dot matrix** (default) is the amber dot display above. *
 
 <p align="center"><img src="docs/images/wall/zb-flap-roll.gif" alt="The split-flap look: the letters roll one by one when the wall moves to the next aircraft" width="560"></p>
 
+<p align="center"><img src="docs/images/wall/zb-beluga-flap.jpg" alt="The split-flap board showing an Airbus Beluga XL overhead: callsign BGA113J, A-330-700, 9750 m, 687 km/h, 32 km NNW" width="760"></p>
+<p align="center"><em>A Beluga XL passing 32 km north-north-west, carrying wings to an assembly line. Its callsign has no airline name behind it, so that row stays blank — the board shows what it knows and nothing else.</em></p>
+
 | Where | How |
 |---|---|
 | **Try it on one tablet only** | add `?mode=flap` to the address, e.g. `http://PI-IP:8080/?mode=flap` (back: `?mode=dots`) |
