@@ -78,7 +78,10 @@
     VN: { plain: "#da251d", star: "#ffff00" },          ZA: { za: 1 }
   };
 
-  function hex(c) { return Math.max(1, parseInt(c.slice(1), 16)); }   // 0 means "unlit", so never return it
+  var BLACK = "#000000";
+  // A dot is either a colour or nothing. Black is nothing: the wall is black, so a black band must be left
+  // unlit, exactly as it is on the real flag. It must never be turned into the wall's colour to make it show.
+  function value(c) { return c === BLACK ? 0 : Math.max(1, parseInt(c.slice(1), 16)); }
 
   // Draw the flag into a 11 x 7 scratch of colours, then hand it back. The caller places it and outlines it.
   function pixels(code) {
@@ -111,15 +114,13 @@
     if (f.hoist) fill(0, 0, 2, FH, f.hoist);
     if (f.disc) { fill(4, 2, 3, 3, f.disc); fill(5, 1, 1, 5, f.disc); }
     if (f.star) { fill(5, 2, 1, 1, f.star); fill(4, 3, 3, 1, f.star); fill(4, 4, 1, 1, f.star); fill(6, 4, 1, 1, f.star); }
-    for (i = 0; i < px.length; i++) if (!px[i]) px[i] = "#000000";
+    for (i = 0; i < px.length; i++) if (!px[i]) px[i] = BLACK;     // a design that leaves a gap is a bug; a test checks it
     return px;
   }
 
-  // Is this colour lost against a black wall? Only true black and its neighbours: a navy blue is dim but still
-  // visible, and outlining every flag with a dark blue band would put a white box around most of Europe.
-  function dark(c) {
-    var v = parseInt(c.slice(1), 16);
-    return (((v >> 16 & 255) * 299 + (v >> 8 & 255) * 587 + (v & 255) * 114) / 1000) < 20;
+  function hasBlack(px) {
+    for (var i = 0; i < px.length; i++) if (px[i] === BLACK) return true;
+    return false;
   }
 
   root.Flags = {
@@ -149,19 +150,18 @@
 
     known: function (code) { return !!F[code]; },
 
-    // Draws the flag with put(x, y, value). A flag holding a dark colour at its edge gets a white outline,
-    // or the black band of Germany and Belgium would simply be a hole in the wall.
+    // Draws the flag with put(x, y, value). The black of a flag stays black, because that is what the flag is.
+    // A flag that has black in it gets a white outline instead, so its edge is visible against a black wall;
+    // every other flag is drawn bare, with nothing around it.
     draw: function (code, x, y, put) {
       var px = pixels(code);
       if (!px) return false;
-      var needsOutline = false, i, j;
-      for (i = 0; i < FW; i++) if (dark(px[i]) || dark(px[(FH - 1) * FW + i])) needsOutline = true;
-      for (j = 0; j < FH; j++) if (dark(px[j * FW]) || dark(px[j * FW + FW - 1])) needsOutline = true;
-      if (needsOutline) {
+      var i, j;
+      if (hasBlack(px)) {
         for (i = -1; i <= FW; i++) { put(x + i, y - 1, 0xffffff); put(x + i, y + FH, 0xffffff); }
         for (j = 0; j < FH; j++) { put(x - 1, y + j, 0xffffff); put(x + FW, y + j, 0xffffff); }
       }
-      for (j = 0; j < FH; j++) for (i = 0; i < FW; i++) put(x + i, y + j, hex(px[j * FW + i]));
+      for (j = 0; j < FH; j++) for (i = 0; i < FW; i++) put(x + i, y + j, value(px[j * FW + i]));
       return true;
     }
   };

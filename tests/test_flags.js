@@ -48,10 +48,10 @@ for (const code of codes) {
     assert.ok(x >= 9 && x <= 10 + Flags.W, code + " draws outside its box at x " + x);
     assert.ok(y >= 9 && y <= 10 + Flags.H, code + " draws outside its box at y " + y);
   }
-  // the flag itself is always complete: 11 x 7 dots, none of them unlit
+  // every dot of the 11 x 7 box is drawn: a colour, or 0 where the flag itself is black
   for (let y = 0; y < Flags.H; y++) for (let x = 0; x < Flags.W; x++) {
     const v = px.get((10 + x) + "," + (10 + y));
-    assert.ok(v > 0, code + " leaves a hole at " + x + "," + y);
+    assert.ok(v !== undefined, code + " leaves a hole at " + x + "," + y);
   }
   const key = codes.map(() => 0) && JSON.stringify([...Array(Flags.H).keys()].map(y =>
     [...Array(Flags.W).keys()].map(x => px.get((10 + x) + "," + (10 + y))).join(",")));
@@ -59,12 +59,29 @@ for (const code of codes) {
   shapes.set(key, code);
 }
 
-// ---- a black band at the edge gets a white outline, or it is a hole in the wall
+// ---- black stays black, and only a flag that has black in it is outlined
 function outlined(code) { return render(code).has("9,9"); }
-for (const code of ["DE", "BE", "EE", "EG", "AE", "ZA"]) assert.ok(outlined(code), code + " has black at its edge and needs the white outline");
-for (const code of ["FR", "AT", "CH", "IT", "SE", "US", "EU", "MA"]) assert.ok(!outlined(code), code + " has no black at its edge and must not be boxed in");
-const white = [...render("DE").entries()].filter(([k]) => k === "9,9").map(([, v]) => v)[0];
+function blackDots(code) {
+  const px = render(code);
+  let n = 0;
+  for (let y = 0; y < Flags.H; y++) for (let x = 0; x < Flags.W; x++) if (px.get((10 + x) + "," + (10 + y)) === 0) n++;
+  return n;
+}
+// The black of a flag is the unlit wall, exactly as it is on the real flag. It is never turned into the wall's
+// colour to make it show: that would be a different flag. The white outline is what makes the edge visible.
+const BLACK = { DE: 22, BE: 28, EE: 33, EG: 22, AE: 18, ZA: 1, AL: 6 };
+for (const code of Object.keys(BLACK)) {
+  assert.strictEqual(blackDots(code), BLACK[code], code + " must keep exactly its own black dots unlit");
+  assert.ok(outlined(code), code + " has black in it and needs the white outline");
+}
+for (const code of codes) {
+  if (BLACK[code]) continue;
+  assert.strictEqual(blackDots(code), 0, code + " has no black: an unlit dot there is a hole in the drawing");
+  assert.ok(!outlined(code), code + " has no black and must not be boxed in");
+}
+const white = render("DE").get("9,9");
 assert.strictEqual(white, 0xffffff, "the outline is white, not the wall colour");
+assert.ok(!render("DE").get("10,10") && render("DE").get("10,12") > 0, "Germany: black band unlit, red band lit");
 
 // ---- the flags fit the wall: the text column, the silhouette and the photo are all clear of them
 const app = fs.readFileSync(path.join(dir, "app.js"), "utf8");
@@ -79,4 +96,4 @@ assert.ok(Y2 + Flags.H < PH[1], "the flags must stay above the photo");
 assert.ok(Y1 + Flags.H <= Y2 - 1, "the two flags must not touch each other");
 
 console.log("flags ok: " + REG.length + " registrations, " + MADE.length + " makers, " + codes.length +
-            " flags all distinct and inside the grid, outlines only where black would be invisible");
+            " flags all distinct and inside the grid, black left black, outlines only where there is black");

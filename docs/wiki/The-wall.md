@@ -66,7 +66,7 @@ The second flag is the country the airframe comes from: European for Airbus and 
 
 At eleven dots a flag is its bands of colour. Flags carrying an emblem keep the colours and lose the emblem: Portugal has no armillary sphere, the United Kingdom's crosses do not have their true widths, Morocco's star is five dots. They are made to be recognised across a room.
 
-A flag with black at its edge — Germany, Belgium, Estonia, Egypt — is given a one-dot white outline. Without it the black band is simply the unlit wall, and the flag looks cut off.
+The black of a flag stays black. The wall is black too, so a flag that has black in it — Germany, Belgium, Estonia, Egypt — is given a one-dot white outline, and its edge is visible while the band itself remains what it is. The black is never lit in the wall's colour to make it show: that would be a different flag. Flags without black are drawn bare, with nothing around them.
 
 The two flags cost the airline and model rows two characters each, twelve instead of fourteen. A name that no longer fits scrolls sideways, one dot at a time, with a pause at each end, and only those rows are repainted rather than the whole wall. An aircraft stays on screen for fourteen seconds by default, which is time enough for a long name to go by once.
 
