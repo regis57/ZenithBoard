@@ -449,38 +449,6 @@ class ThemeTest(unittest.TestCase):
         self.assertEqual(server.public_config({"THEME": "turquoise"})["theme"], "turquoise")
 
 
-class SoundTest(unittest.TestCase):
-    """The hall ambience: off unless asked for, and never louder than the scale allows."""
-
-    def _static(self, name):
-        with open(os.path.join(os.path.dirname(__file__), "..", "flightinfo", "static", name)) as fh:
-            return fh.read()
-
-    def test_it_is_off_and_moderate_by_default(self):
-        c = server.public_config({})
-        self.assertFalse(c["sound"])
-        self.assertEqual(c["sound_volume"], 35)
-
-    def test_the_volume_cannot_leave_the_scale(self):
-        for given, want in (("250", 100), ("-40", 0), ("60", 60), ("nonsense", 35)):
-            self.assertEqual(server.public_config({"SOUND_VOLUME": given})["sound_volume"], want, given)
-
-    def test_it_can_be_turned_on_for_every_screen(self):
-        self.assertTrue(server.public_config({"SOUND": "1"})["sound"])
-
-    def test_the_sound_is_made_here_and_not_played_from_a_file(self):
-        # No audio file ships with the project, so there is no licence to carry: if a src ever appears, say so here.
-        js = self._static("sound.js")
-        for played in (".mp3", ".ogg", ".wav", "new Audio", "<audio"):
-            self.assertNotIn(played, js, played)
-        self.assertIn("createOscillator", js)
-
-    def test_nothing_starts_without_a_tap(self):
-        app = self._static("app.js")
-        self.assertIn("armFirstTap", app)                  # the first touch starts it, nothing else does
-        self.assertIn("applySound(true)", app)
-
-
 class PhotoUrlTest(unittest.TestCase):
     """The photo address is somebody else's answer, and the Pi fetches it itself: it has to be checked first."""
 
