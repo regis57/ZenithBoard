@@ -66,4 +66,14 @@ for (const name of ["ROYAL AIR MAROC", "BRUSSELS AIRLINES", "AIRBUS A319-100", "
             name + ": a hole wider than the gap opened at the right-hand edge");
 }
 
-console.log("scroll ok: a name that fits stays still; a longer one turns one dot at a time with no jump back");
+// ---- the repaint of a scrolling row must not let its glow escape
+// A lit dot's glow is wider than the dot. Repainting only the row's own rectangle left that glow outside the
+// cleared area, where every step added more of it until a bright frame was drawn around the scrolling row.
+// The repaint is therefore clipped to a padded rectangle, and the dots around it are drawn too.
+const rect = app.slice(app.indexOf("function drawRect("), app.indexOf("function drawRect(") + 1400);
+assert.ok(/GLOW_PAD/.test(app), "the repaint needs a padding constant for the glow");
+assert.ok(/ctx\.clip\(\)/.test(rect), "the repaint must be clipped, or the glow lands outside the cleared area");
+assert.ok(/clearRect\(px, py, pw, ph\)/.test(rect), "the cleared area must be the padded rectangle, not the bare row");
+assert.ok(/ctx\.save\(\)/.test(rect) && /ctx\.restore\(\)/.test(rect), "the clip must be undone afterwards");
+
+console.log("scroll ok: a name that fits stays still; a longer one turns one dot at a time with no jump back, and its glow stays inside the repaint");
