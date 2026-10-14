@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.14.2
+- **A long name now turns continuously instead of jumping back.** 0.14.0 scrolled to the end of the name, paused, then snapped to the start, which read as a stutter. The row now holds the name, a three-space gap, then the name again, and the window walks one length before starting over: what leaves on the left is already arriving on the right. `tests/test_scroll.js` takes the real drawing code out of `app.js` and walks every step of a full turn, checking each one is the previous moved exactly one dot; the old jumping version fails it.
+
 ## 0.14.1
 - **Fixes the flags of 0.14.0: black was being lit.** A black band came out in the wall's colour, so Germany appeared as three bright bands instead of black, red and gold. Black is now left unlit, which is what it is on the wall and on the flag. The white outline is what makes the edge visible, and it is drawn only around a flag that actually has black in it — Germany, Belgium, Estonia, Egypt, the United Arab Emirates, South Africa, Albania. Every other flag is drawn bare. 0.14.0 outlined by brightness instead, which was the wrong rule and the wrong fix.
 
