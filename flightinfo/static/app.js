@@ -162,7 +162,8 @@
     scroll.prepare(p.hex + "|" + L.airlineFull + "|" + L.typeFull + "|" + maxX,
                    [{ y: 16, text: L.airlineFull }, { y: 25, text: L.typeFull }], maxX);
     text(g, L.callsign, 0, 0, 2);
-    textRow(g, L.airlineFull, 16, scroll.off(0), maxX); textRow(g, L.typeFull, 25, scroll.off(1), maxX);
+    textRow(g, scroll.text(0, L.airlineFull), 16, scroll.off(0), maxX);
+    textRow(g, scroll.text(1, L.typeFull), 25, scroll.off(1), maxX);
     text(g, L.alt, 0, 34, 1); text(g, L.spd, 0, 43, 1); text(g, L.from, 0, 52, 1); text(g, L.to, 0, 61, 1);       // where the flight comes from / goes to (blank when unknown)
     text(g, L.footer, 0, 72, 1);
     if (on) badges(g, p);
@@ -176,20 +177,19 @@
   // row holds twelve characters, and ROYAL AIR MAROC does not. Only the two rows that scroll are repainted,
   // never the whole wall, so an old tablet is not asked to redraw ten thousand dots nine times a second.
   var scroll = (function () {
-    var STEP_MS = 110, HOLD = 18;                 // one dot every 110 ms, and two seconds at each end
+    var STEP_MS = 110, GAP = "   ";                // one dot every 110 ms, three spaces between the two passes
     var rows = [], key = "", maxX = GW, timer = 0;
-    function need() { return mode() === "dots" && rows.some(function (r) { return r.max > 0; }); }
+    function need() { return mode() === "dots" && rows.some(function (r) { return r.cycle > 0; }); }
     function tick() {
       var moved = [];
       rows.forEach(function (r) {
-        if (r.max <= 0) return;
-        if (r.wait > 0) { r.wait--; return; }
-        if (r.off >= r.max) { r.off = 0; r.wait = HOLD; } else r.off++;
+        if (r.cycle <= 0) return;
+        r.off = (r.off + 1) % r.cycle;             // the name comes round again; it never jumps back
         moved.push(r);
       });
       moved.forEach(function (r) {
         for (var y = r.y; y < r.y + 7; y++) for (var x = 0; x < maxX; x++) put(grid, x, y, 0);
-        textRow(grid, r.text, r.y, r.off, maxX);
+        textRow(grid, r.draw, r.y, r.off, maxX);
         drawRect(0, r.y, maxX, r.y + 7);
       });
     }
@@ -197,18 +197,22 @@
       if (timer) { clearInterval(timer); timer = 0; }
       if (need()) timer = setInterval(tick, STEP_MS);
     }
+    function row(y, text) {
+      // A name that does not fit turns continuously: the row holds the name, a gap, then the name again, and
+      // the window walks one length before starting over. What leaves on the left is already arriving on the
+      // right, so there is nothing to jump back from.
+      var scrolls = rowWidth(text) > maxX;
+      return { y: y, off: 0, cycle: scrolls ? (text.length + GAP.length) * 6 : 0,
+               draw: scrolls ? text + GAP + text : text };
+    }
     return {
       prepare: function (k, items, mx) {
         maxX = mx;
-        if (k !== key) {
-          key = k;
-          rows = items.map(function (it) {
-            return { y: it.y, text: it.text, off: 0, wait: HOLD, max: Math.max(0, rowWidth(it.text) - maxX) };
-          });
-        }
+        if (k !== key) { key = k; rows = items.map(function (it) { return row(it.y, it.text); }); }
         sync();
       },
       off: function (i) { return rows[i] ? rows[i].off : 0; },
+      text: function (i, fallback) { return rows[i] ? rows[i].draw : fallback; },
       stop: function () { key = ""; rows = []; sync(); }
     };
   })();

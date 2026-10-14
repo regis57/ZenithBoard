@@ -68,7 +68,7 @@ At eleven dots a flag is its bands of colour. Flags carrying an emblem keep the 
 
 The black of a flag stays black. The wall is black too, so a flag that has black in it — Germany, Belgium, Estonia, Egypt — is given a one-dot white outline, and its edge is visible while the band itself remains what it is. The black is never lit in the wall's colour to make it show: that would be a different flag. Flags without black are drawn bare, with nothing around them.
 
-The two flags cost the airline and model rows two characters each, twelve instead of fourteen. A name that no longer fits scrolls sideways, one dot at a time, with a pause at each end, and only those rows are repainted rather than the whole wall. An aircraft stays on screen for fourteen seconds by default, which is time enough for a long name to go by once.
+The two flags cost the airline and model rows two characters each, twelve instead of fourteen. A name that no longer fits turns continuously: the row holds the name, three spaces, then the name again, and the window walks one length before starting over, so what leaves on the left is already arriving on the right. One dot every 110 milliseconds, and only those two rows are repainted rather than the whole wall. An aircraft stays on screen for fourteen seconds by default, which is time enough for a long name to come round.
 
 Flags are a dot-matrix matter. The split-flap board is sixteen letter drums and a flag is not a letter, so it shows none.
 

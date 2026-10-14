@@ -37,3 +37,4 @@ jobs:
           node tests/test_flap.js
           node tests/test_layout.js
           node tests/test_flags.js
+          node tests/test_scroll.js
