@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.16.2
+- `zenithboard security` recognises ports 8504 and 8978: FlightAware's SkyAware map, which `dump1090-fa` also serves there. Found on a real Pi.
+
 ## 0.16.1
 Three things the first real `zenithboard security` run on a Pi showed.
 - **An update now refreshes every ZenithBoard unit file the Pi has**, whatever component is being updated. The audit found `zenithboard-data-refresh` at 9.6: the unit from before the sandboxes was still in place, because only a full FlightInfo update rewrote it. Now any update replaces every unit that differs from the repository's copy, and tells systemd once.

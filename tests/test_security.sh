@@ -68,6 +68,7 @@ check "ssh passwords: WARN, says to get a key first"     'line WARN "SSH accepts
 check "ports: wall, ssh, grafana, decoder named"         'line OK "8080(wall)" && line OK "22(ssh)" && line OK "3000(grafana)" && line OK "30005(decoder/feeder)"'
 check "ports: 127.0.0.1 and ::1 ignored, 9000 noted as not ours" '! printf "%s" "$out" | grep -q "500[01]" && line INFO "9000"'
 check "ports: each port once, not once per address family" '[ "$(printf "%s" "$out" | grep -o "22(ssh)" | wc -l)" = 1 ] && [ "$(printf "%s" "$out" | grep -o "8080(wall)" | wc -l)" = 1 ]'
+check "ports: SkyAware's second port is FlightAware's map"  'line OK "8504(skyaware)" && ! line INFO "8504"'
 check "ports: MLAT returns, feed ports and FR24 page are the feeders" 'line OK "30104(decoder/feeder)" && line OK "30154(decoder/feeder)" && line OK "31003(decoder/feeder)" && line OK "8754(decoder/feeder)" && ! line INFO "30104"'
 check "old unit outside the sandbox: WARN, fix is update" 'line WARN "zenithboard-ddns(9.4)" && printf "%s" "$out" | grep -q "zenithboard update"'
 check "ddns key readable by others: WARN with chmod"     'line WARN "ddns.curl is mode 644" && printf "%s" "$out" | grep -q "chmod 600"'
