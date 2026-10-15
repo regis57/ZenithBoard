@@ -527,6 +527,94 @@ class WhoMayReadTest(unittest.TestCase):
             os.unlink(cfgpath)
 
 
+class StatsTest(unittest.TestCase):
+    """What the stats timer wrote, turned into what the page shows. Written against a folder made here."""
+
+    def _dir(self):
+        import tempfile
+        d = tempfile.mkdtemp()
+        self.addCleanup(lambda: __import__("shutil").rmtree(d, ignore_errors=True))
+        return d
+
+    def test_no_folder_means_none(self):
+        self.assertIsNone(server.read_stats(self._dir() + "/missing"))
+
+    def test_rows_become_hours_days_and_today(self):
+        import datetime
+        d = self._dir()
+        now = datetime.datetime(2026, 10, 15, 14, 7)
+        lines = ["when,messages,farthest_km,aircraft_pos,aircraft_seen"]
+        # yesterday: two samples; today: 13:00, 13:15, 13:30 and one at 02:00 (inside the 24 h window) and one 30 h ago (outside)
+        lines += ["2026-10-14 09:00,1000,290,20,120", "2026-10-14 09:15,1100,301,22,130",
+                  "2026-10-15 02:00,200,150,3,40", "2026-10-15 13:00,800,312,18,200", "2026-10-15 13:15,900,300,19,230",
+                  "2026-10-15 13:30,700,280,17,260", "2026-10-14 07:30,50,100,1,10", "garbage,line", "2026-10-13 25:99,1,1,1,1"]
+        with open(os.path.join(d, "stats.csv"), "w") as fh:
+            fh.write("\n".join(lines) + "\n")
+        with open(os.path.join(d, "seen-2026-10-15"), "w") as fh:
+            fh.write("3c6444\n4ca123\na1b2c3\n\nff0001\n")       # four aircraft, one blank line
+        r = server.read_stats(d, now)
+        self.assertTrue(r["enabled"])
+        self.assertEqual(r["samples"], 7)                         # the two broken lines are skipped
+        self.assertEqual(r["since"], "2026-10-14 07:30")
+        self.assertEqual(r["hours"][13]["messages"], 2400)        # 800 + 900 + 700
+        self.assertEqual(r["hours"][13]["samples"], 3)
+        self.assertEqual(r["hours"][2]["messages"], 200)
+        self.assertEqual(r["hours"][9]["messages"], 0)            # yesterday 09:00 is more than 24 h before 14:07? no: 29 h ago -> outside
+        self.assertEqual(r["hours"][7]["messages"], 0)            # 30 h ago: outside the window
+        t = r["today"]
+        self.assertEqual(t["day"], "2026-10-15")
+        self.assertEqual(t["aircraft"], 4)                        # from the day file, not the CSV's running 260
+        self.assertEqual(t["messages"], 2600)
+        self.assertEqual(t["farthest_km"], 312)
+        self.assertEqual(t["busiest_hour"], 13)
+        self.assertEqual(t["busiest_messages"], 2400)
+        days = {x["day"]: x for x in r["days"]}
+        self.assertEqual(sorted(days), ["2026-10-14", "2026-10-15"])
+        self.assertEqual(days["2026-10-14"]["farthest_km"], 301)
+        self.assertEqual(days["2026-10-14"]["aircraft"], 130)     # no day file: the CSV's running count
+        self.assertEqual(days["2026-10-14"]["messages"], 2150)
+        self.assertEqual(r["best"], {"day": "2026-10-15", "farthest_km": 312})
+
+    def test_empty_file_is_on_but_empty(self):
+        d = self._dir()
+        with open(os.path.join(d, "stats.csv"), "w") as fh:
+            fh.write("when,messages,farthest_km,aircraft_pos,aircraft_seen\n")
+        r = server.read_stats(d)
+        self.assertEqual(r["samples"], 0)
+        self.assertIsNone(r["best"])
+        self.assertEqual(r["today"]["aircraft"], 0)
+
+    def test_the_api_says_off_when_the_setting_is_off(self):
+        import http.client, tempfile, threading
+        with tempfile.NamedTemporaryFile("w", suffix=".env", delete=False) as fh:
+            fh.write("STATS=0\n"); cfgpath = fh.name
+        old_cfg, old_dir = server.CONFIG_FILE, server.STATS_DIR
+        server.CONFIG_FILE = cfgpath; server._cfg_cache.update(mtime=None)
+        httpd = server.WallServer(("127.0.0.1", 0), server.Handler); port = httpd.server_address[1]
+        threading.Thread(target=httpd.serve_forever, daemon=True).start()
+        try:
+            def get(path):
+                c = http.client.HTTPConnection("127.0.0.1", port, timeout=5); c.request("GET", path); r = c.getresponse(); b = r.read(); c.close(); return r.status, b
+            st, body = get("/api/stats")
+            self.assertEqual(st, 200); self.assertEqual(json.loads(body), {"enabled": False})
+            st, body = get("/stats")
+            self.assertEqual(st, 200); self.assertIn(b"ZenithBoard statistics", body)
+            d = self._dir()
+            with open(os.path.join(d, "stats.csv"), "w") as fh:
+                fh.write("when,messages,farthest_km,aircraft_pos,aircraft_seen\n2026-10-15 13:00,800,312,18,200\n")
+            server.STATS_DIR = d
+            with open(cfgpath, "w") as fh:
+                fh.write("STATS=1\n")
+            os.utime(cfgpath, (time.time() + 5, time.time() + 5))
+            st, body = get("/api/stats")
+            j = json.loads(body)
+            self.assertTrue(j["enabled"]); self.assertEqual(j["samples"], 1); self.assertEqual(j["days"][0]["farthest_km"], 312)
+        finally:
+            httpd.shutdown(); httpd.server_close()
+            server.CONFIG_FILE, server.STATS_DIR = old_cfg, old_dir
+            server._cfg_cache.update(mtime=None); os.unlink(cfgpath)
+
+
 class PhotoUrlTest(unittest.TestCase):
     """The photo address is somebody else's answer, and the Pi fetches it itself: it has to be checked first."""
 

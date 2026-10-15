@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.16.0
+- **Statistics, off by default.** `sudo zenithboard stats on`, or menu 4 → Receiver → 5, starts a timer that takes one sample every fifteen minutes: messages decoded, the farthest aircraft, aircraft with a position, and the distinct aircraft seen that day. Thirty days are kept, about 6 KB a day. It runs as the `zenithboard` user inside the same sandbox as the wall (1.0 on systemd's scale).
+- **`http://PI:8080/stats`**: four numbers for today and three charts — messages per hour over 24 hours, the farthest aircraft per day, aircraft per day — one colour each, a tooltip on every bar, the same numbers as a table, light or dark with the device. No fonts or scripts from the internet. `/api/stats` gives the JSON; both say so when statistics are off.
+- **`zenithboard stats`** prints today, yesterday, the thirty-day average and best, and the day's hours as a sparkline; `stats csv` the raw lines; `stats status`, `stats clear`, `stats off` (keeps the files).
+- The daily aircraft count is a floor, and both views say so: a sample every fifteen minutes misses an aircraft that crossed in less. Fifteen minutes is the same trade the gain log makes between knowing and writing to the SD card.
+- Tested here against a fake decoder (what one sample writes, the day's count, pruning, the terminal view), against the real server on loopback (`/api/stats` off and on), and the page in a real browser in both themes and at phone width.
+
 ## 0.15.0
 Security pass, five things. Each one can be undone on its own; the last line of each entry says how.
 

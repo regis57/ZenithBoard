@@ -39,7 +39,7 @@ The story behind the project: [ZenithBoard on regis-hennequin.info](https://regi
 | **1. Get started** | [What you need](#what-you-need) · [Install, step by step](#install--step-by-step) |
 | **2. Network** | [Wi-Fi](#wi-fi) · [Fixed IP](#fixed-ip-address) · [A name for your wall](#a-name-for-your-wall) · [Ports](#network-ports-what-answers-where) |
 | **3. The wall** | [What it shows](#what-the-wall-shows) · [Look](#look-dot-matrix-or-airport-split-flap-board) · [Colours](#colours) · [Units, radius, position](#units-radius-and-position) · [Silhouettes](#aircraft-silhouettes) · [Routes and models](#flight-routes) · [Photos](#photos) · [Demo](#try-it-without-any-hardware) |
-| **4. The receiver** | [Gain](#gain-tune-the-dongle-optional) · [978 MHz UAT (US)](#978-mhz-uat-united-states) |
+| **4. The receiver** | [Gain](#gain-tune-the-dongle-optional) · [978 MHz UAT (US)](#978-mhz-uat-united-states) · [Statistics](#statistics-messages-per-hour-range-aircraft-per-day-optional) |
 | **5. Keep it running** | [Update](#updating-and-uninstalling) · [Logs](#logs-size-review-clean-optional) · [Reliability](#reliability-when-the-pi-freezes-or-loses-its-network-optional) · [Security](#security) · [Troubleshooting](#troubleshooting) · [Known limits](#known-limits) |
 | **Every command** | One table per subject, with what each one is for: **[Command reference](https://github.com/regis57/ZenithBoard/wiki/Command-reference)** (wiki) |
 | **The wiki** | [Roadmap](https://github.com/regis57/ZenithBoard/wiki/Roadmap) · [Project status](https://github.com/regis57/ZenithBoard/wiki/Project-status) · [Architecture](https://github.com/regis57/ZenithBoard/wiki/Architecture) · [Settings](https://github.com/regis57/ZenithBoard/wiki/Configuration-reference) · [Commands](https://github.com/regis57/ZenithBoard/wiki/Command-reference) · [Testing](https://github.com/regis57/ZenithBoard/wiki/Testing) · [Security](https://github.com/regis57/ZenithBoard/wiki/Security) |
@@ -483,6 +483,10 @@ Every service writes to the system journal, which already limits itself (up to 1
 The limit applies to all system logs (it is a journald setting, written to `/etc/systemd/journald.conf.d/zenithboard.conf`). To read a service's log: `zenithboard logs flightinfo|decoder|acars|uat`.
 
 ---
+
+## Statistics: messages per hour, range, aircraft per day (optional)
+
+Off by default. `sudo zenithboard stats on` (or menu 4 → Receiver → 5) takes one sample every fifteen minutes and keeps thirty days of them. Then `http://<pi-address>:8080/stats` shows today's numbers and three charts, and `zenithboard stats` prints the same in the terminal with a sparkline of the day's hours. The daily aircraft count is a floor: a sample every fifteen minutes misses an aircraft that crossed in less. About 6 KB a day on the card; `stats off` stops it and keeps the files. Details on the wiki: [Statistics](https://github.com/regis57/ZenithBoard/wiki/Statistics).
 
 ## Reliability: when the Pi freezes or loses its network (optional)
 

@@ -1,0 +1,40 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* The statistics page. System fonts only: the wall works offline. Follows the device's light or dark setting. */
+:root { --bg: #f7f6f2; --panel: #fff; --line: #dcd9d1; --fg: #1d1c1a; --muted: #6b6860; --accent: #2a78d6; --accent-ink: #1d5aa8; --tile: #f0eee8; --grid: #e6e3db; }
+@media (prefers-color-scheme: dark) { :root { --bg: #0f1013; --panel: #16181d; --line: #2a2d35; --fg: #e8e8ea; --muted: #9a9ea8; --accent: #3987e5; --accent-ink: #7fb3f2; --tile: #1c1f26; --grid: #262a33; color-scheme: dark; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; line-height: 1.5; }
+.wrap { max-width: 1000px; margin: 0 auto; padding: 20px 16px 40px; display: flex; flex-direction: column; gap: 18px; }
+h1 { font-size: 24px; margin: 0; }
+.sub, .note { color: var(--muted); font-size: 14px; margin: 4px 0 0; }
+a { color: var(--accent-ink); }
+pre { background: var(--tile); padding: 10px 12px; border-radius: 6px; font-size: 14px; }
+code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .92em; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.tile { background: var(--tile); border-radius: 6px; padding: 12px 14px; min-width: 0; }
+.tile .k { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.tile .v { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.15; margin-top: 2px; }
+.tile .d { font-size: 12px; color: var(--muted); }
+.charts { display: grid; grid-template-columns: 1fr; gap: 18px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px; }
+@media (min-width: 760px) { .charts { grid-template-columns: 1fr 1fr; } .charts .wide { grid-column: 1 / -1; } }
+figure { margin: 0; min-width: 0; }
+figcaption { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+figcaption span { color: var(--muted); font-weight: 400; }
+svg { width: 100%; height: auto; display: block; }
+.axis text { font: 11px ui-monospace, Menlo, Consolas, monospace; fill: var(--muted); }
+.grid line { stroke: var(--grid); stroke-width: 1; }
+.bar { fill: var(--accent); }
+.bar.hot { fill: var(--accent-ink); }
+.line { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; }
+.area { fill: var(--accent); opacity: .12; }
+.dot { fill: var(--accent); stroke: var(--panel); stroke-width: 2; }
+.lbl { font: 600 11px ui-monospace, Menlo, Consolas, monospace; fill: var(--fg); }
+.hit { fill: transparent; }
+.tip { position: fixed; pointer-events: none; background: var(--fg); color: var(--bg); font: 12px ui-monospace, Menlo, Consolas, monospace; padding: 5px 8px; border-radius: 4px; transform: translate(-50%, calc(-100% - 10px)); white-space: nowrap; z-index: 5; }
+.tip[hidden] { display: none; }
+details { border: 1px solid var(--line); border-radius: 6px; padding: 8px 14px; background: var(--panel); }
+summary { cursor: pointer; font-weight: 600; font-size: 14px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+th, td { text-align: left; padding: 5px 10px 5px 0; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+th { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 400; }
+.scroller { overflow-x: auto; }

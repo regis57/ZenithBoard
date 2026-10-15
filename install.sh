@@ -19,6 +19,8 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$ROOT/lib/patches.sh"
 # shellcheck source=lib/security.sh
 . "$ROOT/lib/security.sh"
+# shellcheck source=lib/stats.sh
+. "$ROOT/lib/stats.sh"
 . "$ROOT/lib/uat.sh"
 . "$ROOT/lib/wifi.sh"
 . "$ROOT/lib/network.sh"
@@ -132,11 +134,18 @@ settings_receiver_menu() {
       units "2  Units: metric / imperial" \
       location "3  Antenna position (updates it everywhere)" \
       gain "4  Gain: check it and tune the dongle's sensitivity" \
+      stats "5  Statistics: messages per hour, farthest aircraft, aircraft per day ($(stats_state))" \
       back "Return to the previous menu") || return 0
     case "$c" in
       region) settings_region && wt_msg "Region saved: $(cfg_get REGION world).\n\nIn menu 1 ADSB the 978 MHz UAT option appears for the United States." 10 ;;
       units) settings_units && restart_flightinfo ;;
       gain) gain_menu ;;
+      stats)
+        if [ "$(stats_state)" = on ]; then
+          if wt_yesno "Statistics are ON: a sample every 15 minutes, 30 days kept, readable at http://$(local_ip):$(cfg_get PORT 8080)/stats and with 'zenithboard stats'.\n\nTurn them OFF? (the files are kept)" 12; then clear; stats_off; read -rp "Press Enter to continue..." _; fi
+        else
+          if wt_yesno "Collect statistics?\n\nEvery 15 minutes: messages, the farthest aircraft, how many aircraft had a position, and which aircraft were seen. About 6 KB a day on the card, 30 days kept. Read them at http://$(local_ip):$(cfg_get PORT 8080)/stats or with 'zenithboard stats'. Off again at any time." 14; then clear; stats_on; read -rp "Press Enter to continue..." _; fi
+        fi ;;
       location)
         if settings_location; then
           clear; zb_apply_location "$(cfg_get LAT)" "$(cfg_get LON)" "$(cfg_get ALT_M 0)"
@@ -204,6 +213,7 @@ uninstall_all() {
   logs_auto_off
   netwatch_remove_units
   gain_log_remove_units
+  stats_remove_units
   is_acars && remove_acars
   is_flightinfo && remove_flightinfo
   is_planefinder && remove_planefinder
