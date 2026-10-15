@@ -20,6 +20,23 @@ assert.strictEqual(Flags.country(""), null);
 assert.strictEqual(Flags.country(null), null);
 assert.strictEqual(Flags.country("ZZ-ZZZ"), null, "an unknown prefix must say so rather than guess");
 
+// ---- a flag that would be invisible on a black wall gets the white outline, and keeps its own colours
+// The union flag is two thirds #012169: at eleven dots on an unlit wall it read as a hole, which is why a
+// British Airways aircraft looked as though it had no flag at all (reported from the real wall, 15 Oct 2026).
+function drawn(code) {
+  const px = new Map(); let outline = 0;
+  Flags.draw(code, 5, 5, (x, y, v) => {
+    if (x < 5 || x > 15 || y < 5 || y > 11) { if (v === 0xffffff) outline++; return; }
+    px.set(x + "," + y, v);
+  });
+  return { px, outline };
+}
+const gb = drawn("GB");
+assert.ok(gb.outline > 0, "the United Kingdom's flag must be outlined: it is the darkest of them all");
+assert.ok([...gb.px.values()].includes(0x012169), "its navy must still be that navy: colours are never brightened to make a flag show");
+for (const code of ["DE", "BE", "EE", "AE"]) assert.ok(drawn(code).outline > 0, code + " carries black and must stay outlined");
+for (const code of ["FR", "US", "JP", "IT", "NL", "SE", "IE", "IL"]) assert.strictEqual(drawn(code).outline, 0, code + " is visible on its own and must stay bare");
+
 // ---- maker -> where it is built (never the maker's mark, which is protected)
 const MADE = [["AIRBUS A320-214", "EU"], ["BOEING 737-800", "US"], ["EMBRAER ERJ-190", "BR"],
               ["DE HAVILLAND CANADA DHC-8", "CA"], ["ATR 72-600", "EU"], ["DASSAULT FALCON 900", "FR"],
@@ -74,10 +91,13 @@ for (const code of Object.keys(BLACK)) {
   assert.strictEqual(blackDots(code), BLACK[code], code + " must keep exactly its own black dots unlit");
   assert.ok(outlined(code), code + " has black in it and needs the white outline");
 }
+// The United Kingdom carries no black and is outlined all the same: two thirds of the union flag is #012169,
+// a navy that on an unlit wall reads as a hole (0.17.1, reported from the real wall). It is the only one.
+const DARK = { GB: 1 };
 for (const code of codes) {
   if (BLACK[code]) continue;
   assert.strictEqual(blackDots(code), 0, code + " has no black: an unlit dot there is a hole in the drawing");
-  assert.ok(!outlined(code), code + " has no black and must not be boxed in");
+  assert.strictEqual(!!outlined(code), !!DARK[code], code + (DARK[code] ? " is too dark to be left bare" : " is visible on its own and must not be boxed in"));
 }
 const white = render("DE").get("9,9");
 assert.strictEqual(white, 0xffffff, "the outline is white, not the wall colour");
@@ -96,4 +116,4 @@ assert.ok(Y2 + Flags.H < PH[1], "the flags must stay above the photo");
 assert.ok(Y1 + Flags.H <= Y2 - 1, "the two flags must not touch each other");
 
 console.log("flags ok: " + REG.length + " registrations, " + MADE.length + " makers, " + codes.length +
-            " flags all distinct and inside the grid, black left black, outlines only where there is black");
+            " flags all distinct and inside the grid, black left black, outlines only where a flag would otherwise be invisible");

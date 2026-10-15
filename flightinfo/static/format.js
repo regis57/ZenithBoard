@@ -59,7 +59,9 @@
 
   // The model row: the aircraft's name when it fits ("AIRBUS A321NEO"), else the name without the maker, else the
   // ICAO code with the registration (the decoder alone only knows the code).
-  var MAKERS = /^(AIRBUS|BOEING|EMBRAER|BOMBARDIER|DE HAVILLAND|DE HAVILLAND CANADA|CESSNA|BEECHCRAFT|BEECH|PIPER|DASSAULT|GULFSTREAM|SAAB|FOKKER|COMAC|MCDONNELL DOUGLAS|CANADAIR|DIAMOND|PILATUS|TEXTRON|LEARJET|HONDA|CIRRUS|ROBINSON|BELL|SIKORSKY|LOCKHEED|ANTONOV|ILYUSHIN|TUPOLEV|SUKHOI|MIL|AGUSTA|LEONARDO|EUROCOPTER|AEROSPATIALE|BRITISH AEROSPACE|BAE SYSTEMS)\s+/;
+  // Longest first: an alternation takes the first branch that matches, so DE HAVILLAND CANADA has to come
+  // before DE HAVILLAND or the model row keeps a lonely CANADA.
+  var MAKERS = /^(AIRBUS|BOEING|EMBRAER|BOMBARDIER|DE HAVILLAND CANADA|DE HAVILLAND|CESSNA|BEECHCRAFT|BEECH|PIPER|DASSAULT|GULFSTREAM|SAAB|FOKKER|COMAC|MCDONNELL DOUGLAS|CANADAIR|DIAMOND|PILATUS|TEXTRON|LEARJET|HONDA|CIRRUS|ROBINSON|BELL|SIKORSKY|LOCKHEED|ANTONOV|ILYUSHIN|TUPOLEV|SUKHOI|MIL|AGUSTA|LEONARDO|EUROCOPTER|AEROSPATIALE|BRITISH AEROSPACE|BAE SYSTEMS)\s+/;
   function modelLine(p, W) {
     var name = plain(p.type_name || "");
     if (name) {
@@ -68,6 +70,15 @@
       return cut(rest, W);
     }
     return [p.type, p.registration].filter(Boolean).join(" ").toUpperCase().slice(0, W);
+  }
+  // The model row for the dot-matrix wall, which scrolls what does not fit. The maker's name is dropped as soon
+  // as the whole thing is too long, because "A-380-800" standing still is read at a glance where "AIRBUS
+  // A-380-800" walking past is not. Only a model that is still too long without its maker scrolls.
+  function modelScroll(p, W) {
+    var name = plain(p.type_name || "");
+    if (!name) return modelLine(p, 99);
+    if (name.length <= W) return name;
+    return name.replace(MAKERS, "");
   }
 
   // Returns the text rows shown for one aircraft. W = characters per text row (the right-hand column holds the silhouette + photo).
@@ -86,7 +97,7 @@
       type: modelLine(p, W),
       // The same two rows uncut. The dot-matrix wall scrolls them when the flag has taken the last characters.
       airlineFull: (p.airline || "").toUpperCase(),
-      typeFull: modelLine(p, 99),
+      typeFull: modelScroll(p, W),
       alt: fit("ALT  " + alt),
       spd: fit("SPD  " + spd),
       from: r.from,
@@ -99,7 +110,7 @@
 
   var api = { compass: compass, radiusToKm: radiusToKm, convert: convert, planeLines: planeLines,
               radiusLabel: radiusLabel, spread: spread, pad: pad, KM_PER_MI: KM_PER_MI,
-              placeName: placeName, routeLines: routeLines, plain: plain, modelLine: modelLine };
+              placeName: placeName, routeLines: routeLines, plain: plain, modelLine: modelLine, modelScroll: modelScroll };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.Fmt = api;
 })(typeof self !== "undefined" ? self : this);
