@@ -51,7 +51,7 @@ cfg_set ALLOW_FROM any; cfg_set UPDATE_VERIFY 0; cfg_set DDNS_PROVIDER duckdns; 
 touch "$t/grafana-installed"; echo 200 > "$t/grafana-code"
 printf 'passwordauthentication yes\nport 22\n' > "$t/sshd.out"
 # as ss prints it on a Pi: every service twice (IPv4 and IPv6), the feeders' MLAT returns, FR24's page, one stranger
-printf 'LISTEN 0 128 0.0.0.0:8080 0.0.0.0:*\nLISTEN 0 128 [::]:8080 [::]:*\nLISTEN 0 128 0.0.0.0:22 0.0.0.0:*\nLISTEN 0 128 [::]:22 [::]:*\nLISTEN 0 128 0.0.0.0:3000 0.0.0.0:*\nLISTEN 0 128 0.0.0.0:30005 0.0.0.0:*\nLISTEN 0 128 0.0.0.0:30104 0.0.0.0:*\nLISTEN 0 128 0.0.0.0:30154 0.0.0.0:*\nLISTEN 0 128 0.0.0.0:31003 0.0.0.0:*\nLISTEN 0 128 0.0.0.0:8754 0.0.0.0:*\nLISTEN 0 128 127.0.0.1:5000 0.0.0.0:*\nLISTEN 0 128 [::1]:5001 [::]:*\nLISTEN 0 128 0.0.0.0:9000 0.0.0.0:*\n' > "$t/ss.out"
+printf 'LISTEN 0 128 0.0.0.0:8080 0.0.0.0:*\nLISTEN 0 128 [::]:8080 [::]:*\nLISTEN 0 128 0.0.0.0:22 0.0.0.0:*\nLISTEN 0 128 [::]:22 [::]:*\nLISTEN 0 128 0.0.0.0:3000 0.0.0.0:*\nLISTEN 0 128 0.0.0.0:30005 0.0.0.0:*\nLISTEN 0 128 0.0.0.0:30104 0.0.0.0:*\nLISTEN 0 128 0.0.0.0:30154 0.0.0.0:*\nLISTEN 0 128 0.0.0.0:31003 0.0.0.0:*\nLISTEN 0 128 0.0.0.0:8754 0.0.0.0:*\nLISTEN 0 128 0.0.0.0:8504 0.0.0.0:*\nLISTEN 0 128 127.0.0.1:5000 0.0.0.0:*\nLISTEN 0 128 [::1]:5001 [::]:*\nLISTEN 0 128 0.0.0.0:9000 0.0.0.0:*\n' > "$t/ss.out"
 echo "zenithboard-ddns.service 9.4" > "$t/scores"
 mkdir -p "$t/etc"; echo tok > "$DDNS_CURL"; chmod 644 "$DDNS_CURL"
 # the units the Pi has installed: sec_units reads /etc/systemd/system, which a test cannot write, so it is wrapped
