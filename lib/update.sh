@@ -14,6 +14,21 @@ ZB_TRUST_DIR="${ZB_VAR_DIR:-/var/lib/zenithboard}/trust"
 ZB_TRUST_FPR="$ZB_TRUST_DIR/signer.fpr"
 ZB_TRUST_GPG="$ZB_TRUST_DIR/gnupg"
 
+# Every unit file this Pi has is replaced by the repository's copy, whatever is being updated: an older
+# unit left behind (one from before the sandboxes, say) would otherwise keep running as it was, and
+# `zenithboard security` would keep pointing at it.
+zb_refresh_units() {
+  local f n changed=0 dir="${ZB_SYSTEMD_DIR:-/etc/systemd/system}"
+  for f in "$ZB_HOME"/systemd/zenithboard-*.service "$ZB_HOME"/systemd/zenithboard-*.timer; do
+    [ -f "$f" ] || continue
+    n=$(basename "$f")
+    [ -f "$dir/$n" ] || continue
+    cmp -s "$f" "$dir/$n" && continue
+    install -m 644 "$f" "$dir/$n" && changed=1
+  done
+  [ "$changed" = 0 ] || systemctl daemon-reload 2>/dev/null || true
+}
+
 zb_trust_stored() { cat "$ZB_TRUST_FPR" 2>/dev/null; }      # one fingerprint per line
 
 # zb_verify_decide STATUS SIGNER STORED -> ok | bad | unknown     (STATUS is git's %G?; STORED: one per line)
@@ -263,6 +278,7 @@ zb_update_components() {
     systemctl daemon-reload; systemctl restart zenithboard-acars-ingest zenithboard-acarsdec
     is_grafana && { apt_install --only-upgrade grafana || warn "grafana update failed"; install -m 644 "$ZB_HOME/acars/grafana-dashboard.json" /var/lib/grafana/zenithboard-dashboards/acars.json; systemctl restart grafana-server; sleep 3; grafana_secure_password || true; }
   fi
+  zb_refresh_units
   if [ -f /etc/systemd/system/zenithboard-wifi.service ]; then wifi_install_unit; fi
   if [ "$(cfg_get DDNS_PROVIDER none)" != none ]; then ddns_install_units; fi
   if [ "$(cfg_get LOG_AUTOCLEAN 0)" = 1 ]; then logs_auto_on; fi
