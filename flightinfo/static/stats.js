@@ -78,6 +78,16 @@
     mount.innerHTML = ""; mount.appendChild(s);
   }
 
+  // The version, and behind it what changed in it. Nothing is asked of GitHub: it is a link, followed only if
+  // somebody clicks it, so the page still names its version with no way out to the internet.
+  var RELEASES = "https://github.com/regis57/ZenithBoard/releases";
+  function versionLine(version) {
+    var a = $("s-version");
+    if (!a) return;
+    a.textContent = version ? "ZenithBoard " + version : "ZenithBoard";
+    a.href = version ? RELEASES + "/tag/v" + version : RELEASES;
+  }
+
   function render(d) {
     $("sub").textContent = d.samples + " samples of 15 minutes since " + d.since + ", 30 days kept.";
     var t = d.today || {};
@@ -103,6 +113,7 @@
   }
 
   fetch("/api/stats", { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (d) {
+    versionLine(d.version);
     if (!d.enabled) { $("sub").textContent = "Off."; $("off").hidden = false; return; }
     if (!d.samples) { $("sub").textContent = "On, waiting for the first sample."; $("empty").hidden = false; return; }
     $("dash").hidden = false; render(d);

@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.17.2
+- **Both pages say which version they are running**, in one grey line: at the foot of the gear panel on the wall, and at the foot of the statistics page. The name is a link to that version's own release notes on GitHub (`releases/tag/v0.17.2`), so "what changed?" is one tap away from the tablet. Nothing is asked of GitHub to draw the line: it is a link, followed only if somebody taps it, so a wall with no way out to the internet still names its version. `/api/stats` carries the version the way `/api/config` already did, whether statistics are on or off.
+
 ## 0.17.1
 Two things seen on the real wall.
 - **The British flag was there and could not be seen.** Two thirds of the union flag is `#012169`, a navy that at eleven dots on an unlit wall reads as a hole — so a British Airways aircraft looked as though it had no flag at all. A flag that would be invisible against the black wall now gets the same one-dot white outline as a flag carrying black. Its colours are untouched: a navy brightened into another blue is no longer that flag. The United Kingdom is the only one the rule newly catches, and a test holds the list.

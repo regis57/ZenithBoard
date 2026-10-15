@@ -50,3 +50,7 @@ Messages per hour today, 00 to 23
 ## Turning it off
 
 `sudo zenithboard stats off` disables the timer and removes its unit files. The CSV and the day files stay where they are until `stats clear`. Nothing else in ZenithBoard reads them.
+
+## What the page says about itself
+
+At the foot of the page, in grey, the version the server is running, linked to that version's release notes on GitHub. The line is drawn from `/api/stats`, which carries the version whether statistics are on or off; GitHub is asked for nothing unless somebody follows the link. It is there so a screenshot of the page says which code drew it.

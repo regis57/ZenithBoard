@@ -77,6 +77,8 @@ Flags are a dot-matrix matter. The split-flap board is sixteen letter drums and 
 | For every screen | `FLAGS` in `/etc/zenithboard/config.env`, then `zenithboard config` |
 | For this tablet only | the gear, **Flags**, or `?flags=0` in the address |
 
+At the foot of the gear panel sits one grey line: the version the wall is running, and behind it the release notes for that version on GitHub. It is a link and nothing more — the page asks GitHub for nothing, so a wall with no way out to the internet still names its version. The statistics page carries the same line at its foot.
+
 ## Staying up
 
 The page refreshes itself. It polls `/api/planes` for the aircraft inside the radius, cycles through them at `CYCLE_SECONDS` each, keeps the screen awake, and reloads itself if the Pi restarts — so a power cut ends with the wall back on screen and nobody touching the tablet. If the decoder stops answering it says **NO DATA – RECEIVER NOT RESPONDING** instead of showing stale aircraft.
