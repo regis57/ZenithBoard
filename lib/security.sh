@@ -54,21 +54,21 @@ sec_ssh() {
 }
 
 sec_ports() {
-  local line port addr known="" other="" wall; wall=$(cfg_get PORT 8080)
+  local port known="" other="" wall; wall=$(cfg_get PORT 8080)
   command -v ss >/dev/null 2>&1 || { sec_line INFO "ss is not available: open ports not listed"; return 0; }
-  while read -r line; do
-    addr=$(awk '{print $4}' <<<"$line"); port=${addr##*:}
-    case "$addr" in 127.0.0.1:*|\[::1\]:*) continue ;; esac          # this Pi only: not reachable from the network
+  # one line per port: a service listening on IPv4 and IPv6 shows up twice in ss, and once here
+  while read -r port; do
+    [ -n "$port" ] || continue
     case "$port" in
       "$wall") known="$known $port(wall)" ;;
       80|443) known="$known $port(map)" ;;
       22) known="$known $port(ssh)" ;;
       3000) known="$known $port(grafana)" ;;
-      300[0-9][0-9]|8754|8089|30053|30054) known="$known $port(decoder/feeder)" ;;
+      300[0-9][0-9]|301[0-9][0-9]|31[0-9][0-9][0-9]|8754|8089) known="$known $port(decoder/feeder)" ;;   # readsb's beast/raw/SBS ports, the feeders' MLAT returns, FR24's and Plane Finder's pages
       5353|68|546) ;;                                                 # mDNS, DHCP: the system's own
       *) other="$other $port" ;;
     esac
-  done < <(ss -H -ltn 2>/dev/null)
+  done < <(ss -H -ltn 2>/dev/null | awk '{print $4}' | grep -vE '^(127\.0\.0\.1|\[::1\]):' | sed 's/.*://' | sort -n -u)
   sec_line OK "Listening on the network:${known:- nothing}"
   [ -z "$other" ] || sec_line INFO "Also listening, not ZenithBoard's:$other (something you installed?)"
 }

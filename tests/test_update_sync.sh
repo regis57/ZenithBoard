@@ -52,4 +52,16 @@ res=$(zb_update --only flightinfo 2>&1); rc=$?
 check "not-installed component refused" "$rc:$(printf '%s' "$res" | grep -c 'not installed')" "1:1"
 check "list always offers ZenithBoard itself" "$(zb_update_list | grep -c '^  zenithboard ')" "1"
 check "every component has a label" "$(for c in $ZB_COMPONENTS; do zb_component_label "$c"; done | grep -c .)" "$(echo $ZB_COMPONENTS | wc -w)"
+# ---- every unit file the Pi has is refreshed from the repository, whatever component is being updated;
+#      one it does not have is not installed, and one already identical is left alone
+ud="$T/units"; mkdir -p "$ud"
+printf '[Service]\nExecStart=/old\n' > "$ud/zenithboard-data-refresh.service"      # the unit from before the sandboxes
+cp systemd/zenithboard-flightinfo.service "$ud/"                                    # already current
+old_mtime=$(stat -c %Y "$ud/zenithboard-flightinfo.service"); sleep 1
+mkdir -p "$T/bin"; printf '#!/bin/bash\necho "$*" >> "%s/systemctl.log"\n' "$T" > "$T/bin/systemctl"; chmod +x "$T/bin/systemctl"
+PATH="$T/bin:$PATH" ZB_SYSTEMD_DIR="$ud" ZB_HOME="$PWD" zb_refresh_units
+check "refresh: the old unit is replaced by the repository's" "$(cmp -s systemd/zenithboard-data-refresh.service "$ud/zenithboard-data-refresh.service" && echo same)" "same"
+check "refresh: a unit the Pi does not have is not installed" "$([ -e "$ud/zenithboard-netwatch.service" ] && echo yes || echo no)" "no"
+check "refresh: an identical unit is not rewritten" "$(stat -c %Y "$ud/zenithboard-flightinfo.service")" "$old_mtime"
+check "refresh: systemd is told once" "$(grep -c daemon-reload "$T/systemctl.log")" "1"
 exit $fail

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.16.1
+Three things the first real `zenithboard security` run on a Pi showed.
+- **An update now refreshes every ZenithBoard unit file the Pi has**, whatever component is being updated. The audit found `zenithboard-data-refresh` at 9.6: the unit from before the sandboxes was still in place, because only a full FlightInfo update rewrote it. Now any update replaces every unit that differs from the repository's copy, and tells systemd once.
+- **Open ports are listed once each.** A service listening on IPv4 and IPv6 appeared twice.
+- **The feeders' ports are recognised**: readsb's inputs and the MLAT returns (30100–31999) and Flightradar24's page (8754) are no longer "something you installed?".
+
 ## 0.16.0
 - **Statistics, off by default.** `sudo zenithboard stats on`, or menu 4 → Receiver → 5, starts a timer that takes one sample every fifteen minutes: messages decoded, the farthest aircraft, aircraft with a position, and the distinct aircraft seen that day. Thirty days are kept, about 6 KB a day. It runs as the `zenithboard` user inside the same sandbox as the wall (1.0 on systemd's scale).
 - **`http://PI:8080/stats`**: four numbers for today and three charts — messages per hour over 24 hours, the farthest aircraft per day, aircraft per day — one colour each, a tooltip on every bar, the same numbers as a table, light or dark with the device. No fonts or scripts from the internet. `/api/stats` gives the JSON; both say so when statistics are off.
