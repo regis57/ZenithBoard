@@ -50,6 +50,10 @@ sudo zenithboard update
 
 A display-only change needs one more thing: **reload the page on the tablet or television**. The browser is holding the old JavaScript, and nothing on the Pi can reach in and refresh it.
 
+## The wall is a process, not a file
+
+Deploying new files changes nothing for the wall until `zenithboard-flightinfo` is restarted: the server is a running Python process holding the old code. Since 0.17.3 the end of every update asks the wall on `127.0.0.1` which version it answers, restarts it when that is not the version just installed, and prints what it found. It is a check against the running machine rather than a trust in the flow, which is how the gap was found in the first place: a Pi whose menu said 0.17.2 while the wall's gear panel said 0.17.1.
+
 ## Checklist for a release
 
 * [ ] Both version numbers bumped and equal

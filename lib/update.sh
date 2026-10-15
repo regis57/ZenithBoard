@@ -286,7 +286,35 @@ zb_update_components() {
   if [ "$(cfg_get GAINLOG 0)" = 1 ]; then gain_log_install_units; fi
   if [ "$(cfg_get STATS 0)" = 1 ]; then stats_install_units; fi
   zb_mlat_guard
+  zb_wall_check
   log "Update finished. Check:  zenithboard status"
+}
+
+# The wall server is a running python process: new files on disk change nothing until it is restarted. An update
+# that did not pass through the FlightInfo step therefore left the wall answering the old version while the menu
+# already showed the new one (seen on a real Pi: menu 0.17.2, gear panel 0.17.1, after `update only zenithboard`).
+# Rather than trusting the flow to have restarted it, ask the wall what it is running and put it right if it is not
+# the version that is now installed. The wall answers on the loopback, so this says nothing to anyone outside.
+zb_wall_version() {
+  local port; port=$(cfg_get PORT 8080)
+  curl -fsS --max-time 5 "http://127.0.0.1:${port}/api/config" 2>/dev/null |
+    python3 -c 'import json,sys; print(json.load(sys.stdin).get("version",""))' 2>/dev/null
+}
+
+zb_wall_check() {
+  is_flightinfo || return 0
+  local v; v=$(zb_wall_version)
+  [ "$v" != "$ZB_VERSION" ] || { log "Wall: running $v"; return 0; }
+  if [ -z "$v" ]; then
+    warn "The wall did not answer on port $(cfg_get PORT 8080): check  zenithboard logs flightinfo"
+    return 0
+  fi
+  log "The wall is still running $v: restarting it on $ZB_VERSION"
+  restart_flightinfo
+  sleep 2
+  v=$(zb_wall_version)
+  [ "$v" = "$ZB_VERSION" ] && log "Wall: running $v" ||
+    warn "The wall answers $v, not $ZB_VERSION. Try:  sudo systemctl restart zenithboard-flightinfo"
 }
 
 # This menu is a running script: after an update it still holds the OLD code in memory. Start it again so the very next

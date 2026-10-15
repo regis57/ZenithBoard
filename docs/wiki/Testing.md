@@ -31,7 +31,7 @@ Run the whole set before pushing. It takes well under a minute, and the shell te
 | `test_wifi.sh` | Radio, country, scan, connect, forget |
 | `test_logs_uat.sh` | Log size, caps, clean-up; the UAT step |
 | `test_hardware.sh` | Pi model detection and the warnings for the tighter models |
-| `test_update_sync.sh`, `test_versions.sh` | That the updater knows every component, and that the two version numbers agree |
+| `test_update_sync.sh`, `test_versions.sh` | That the updater knows every component, that every unit file is refreshed, that the wall is asked which version it is actually running and restarted when it is behind, and that the two version numbers agree |
 | `test_fr24_key.sh` | The Flightradar24 signing key, by fingerprint |
 | `test_menus.sh` | Every menu has exactly one `back` entry and no dead item |
 | `test_format.js` | Formatting and unit conversion on the wall |
