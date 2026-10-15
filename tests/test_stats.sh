@@ -80,7 +80,8 @@ out=$(stats_show)
 check "show: today's aircraft count is the day file"  'printf "%s" "$out" | grep -q "Today  *4 aircraft seen"'
 check "show: today's messages are summed"             'printf "%s" "$out" | grep -q "$((2412 + 2412 + 1520)) messages"'
 check "show: farthest today"                          'printf "%s" "$out" | grep -q "farthest 312 km"'
-check "show: a sparkline of 24 bars"                  '[ "$(printf "%s" "$out" | grep -E "^ [▁-█]+$" | head -1 | sed "s/ //" | wc -m)" -ge 24 ]'
+spark=$(printf "%s\n" "$out" | grep -A1 "Messages per hour today" | tail -1)
+check "show: a sparkline of 24 bars"                  '[ "$(python3 -c "import sys; print(len(sys.argv[1].strip()))" "$spark")" = 24 ]'
 check "show: says the count is a floor"               'printf "%s" "$out" | grep -q "floor"'
 check "spark: heights follow the values"              '[ "$(stats_spark 0 4 8)" = "▁▅█" ]'
 check "spark: all zero is all low"                    '[ "$(stats_spark 0 0 0)" = "▁▁▁" ]'
