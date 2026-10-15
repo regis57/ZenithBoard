@@ -5,3 +5,30 @@ Description=ZenithBoard network watchdog (checks the Pi can reach its router)
 Type=oneshot
 ExecStart=/opt/zenithboard/bin/zenithboard netwatch run
 TimeoutStartSec=60
+# The failure counter lives in /run/zenithboard (memory), the last-reboot time under /var/lib/zenithboard,
+# a folder the wall's user owns: hence CAP_DAC_OVERRIDE. ping needs raw sockets; restarting the network and
+# rebooting go through systemd over D-Bus.
+RuntimeDirectory=zenithboard
+RuntimeDirectoryPreserve=yes
+ReadWritePaths=/var/lib/zenithboard
+PrivateDevices=true
+CapabilityBoundingSet=CAP_NET_RAW CAP_NET_ADMIN CAP_DAC_OVERRIDE
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK AF_PACKET
+# Sandbox, lighter: this script talks to the network and to systemd, so it keeps the raw-socket and netlink access
+# those tools need, and no system-call filter is applied — a filter that killed ping would silently leave the Pi
+# without its watchdog. Everything else is taken away. Measure with: systemd-analyze security zenithboard-netwatch.service
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+SystemCallArchitectures=native
+UMask=0077

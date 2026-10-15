@@ -35,6 +35,64 @@ install_grafana() {
   systemctl daemon-reload; systemctl enable grafana-server; systemctl restart grafana-server
 }
 
+# ------------------------------------------------------------------ the Grafana admin password
+# Grafana ships with admin / admin, and until somebody logs in and changes it, that is what anyone on the network
+# can log in with. So ZenithBoard sets one itself: generated, stored root-only in $ZB_ETC/grafana.pass, shown by
+# `zenithboard acars password`. Nothing is sent anywhere; the file is the only copy. `password set` lets you choose
+# your own, `password new` draws another. Checked at install, at every update, and by `zenithboard security`.
+GRAFANA_PASS_FILE="${ZB_ETC:-/etc/zenithboard}/grafana.pass"
+GRAFANA_URL="${ZB_GRAFANA_URL:-http://127.0.0.1:3000}"
+
+grafana_default_password_works() {   # 0 when admin/admin still logs in (the hole), 1 when it does not or Grafana is not up
+  local code
+  code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 -u admin:admin "$GRAFANA_URL/api/org" 2>/dev/null) || return 1
+  [ "$code" = 200 ]
+}
+grafana_new_password() { tr -dc 'A-HJ-NP-Za-kmnp-z2-9' < /dev/urandom 2>/dev/null | head -c 20; }   # no 0/O/1/l: it will be typed from a screen
+grafana_apply_password() {   # grafana_apply_password PASSWORD -> sets it in Grafana and keeps it root-only
+  local pw="$1" old
+  [ ${#pw} -ge 8 ] || { echo "The Grafana password must be at least 8 characters."; return 1; }
+  # grafana-cli writes Grafana's own sqlite database: the server is stopped around it, and it runs as the grafana
+  # user so nothing under /var/lib/grafana ends up owned by root
+  systemctl stop grafana-server 2>/dev/null || true
+  if ! runuser -u grafana -- grafana-cli admin reset-admin-password "$pw" >/dev/null 2>&1; then
+    systemctl start grafana-server 2>/dev/null || true; echo "grafana-cli could not set the password."; return 1
+  fi
+  old=$(umask); umask 077
+  install -d -m 755 "$(dirname "$GRAFANA_PASS_FILE")"
+  printf '%s\n' "$pw" > "$GRAFANA_PASS_FILE.new" && mv -f "$GRAFANA_PASS_FILE.new" "$GRAFANA_PASS_FILE"
+  umask "$old"; chmod 600 "$GRAFANA_PASS_FILE"
+  systemctl start grafana-server 2>/dev/null || true
+}
+grafana_secure_password() {   # called at install and update: closes admin/admin if it is still open, says what it did
+  is_grafana || return 0
+  if grafana_default_password_works; then
+    local pw; pw=$(grafana_new_password)
+    if grafana_apply_password "$pw"; then
+      echo "Grafana still accepted admin / admin, so a password was set. See it with: sudo zenithboard acars password"
+    else
+      echo "Grafana still accepts admin / admin and the password could not be changed: change it in Grafana itself (http://$(local_ip):3000/)."; return 1
+    fi
+  fi
+}
+grafana_password_cmd() {   # zenithboard acars password [new|set]
+  is_grafana || { echo "Grafana is not installed (ACARS is optional)."; return 1; }
+  case "${1:-show}" in
+    show)
+      if [ -f "$GRAFANA_PASS_FILE" ]; then echo "Grafana login: admin / $(cat "$GRAFANA_PASS_FILE")   at http://$(local_ip):3000/"
+      elif grafana_default_password_works; then echo "Grafana still uses admin / admin. Close that with: sudo zenithboard acars password new"; return 1
+      else echo "Grafana's password was changed in Grafana itself; ZenithBoard does not know it. To set one it knows: sudo zenithboard acars password new"; return 1; fi ;;
+    new)
+      local pw; pw=$(grafana_new_password); grafana_apply_password "$pw" || return 1
+      echo "Grafana login: admin / $pw   (kept in $GRAFANA_PASS_FILE, root only)" ;;
+    set)
+      local pw; read -rsp "New Grafana admin password (8 characters or more): " pw; echo
+      grafana_apply_password "$pw" || return 1
+      echo "Grafana password set and kept in $GRAFANA_PASS_FILE (root only)." ;;
+    *) echo "Usage: zenithboard acars password [new|set]"; return 1 ;;
+  esac
+}
+
 set_grafana_anonymous() {  # set_grafana_anonymous yes|no
   sed -i '/^GF_AUTH_ANONYMOUS_/d' /etc/default/grafana-server
   if [ "$1" = yes ]; then
@@ -54,7 +112,8 @@ install_acars() {
   systemctl restart zenithboard-acars-ingest; sleep 1; systemctl restart zenithboard-acarsdec
   install_grafana || return 1
   systemctl restart zenithboard-acars-ingest   # pick up group membership changes cleanly
-  echo "    ACARS dashboard:  http://$(local_ip):3000/   (first login admin / admin - you will be asked to change it)"
+  sleep 3; grafana_secure_password || true
+  echo "    ACARS dashboard:  http://$(local_ip):3000/   login: admin, password: sudo zenithboard acars password"
 }
 
 remove_acars() {

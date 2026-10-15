@@ -6,3 +6,32 @@ Wants=network-online.target
 [Service]
 Type=oneshot
 ExecStart=/opt/zenithboard/bin/zenithboard ddns update
+# The status line lives in /run/zenithboard, kept between runs
+RuntimeDirectory=zenithboard
+RuntimeDirectoryPreserve=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+# Sandbox: a root script that reads its settings and writes one file. Everything else is taken away from it, so
+# a flaw in it, or in a tool it runs, stays inside a box. Measure with: systemd-analyze security zenithboard-ddns.service
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+ProtectProc=invisible
+ProcSubset=pid
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+CapabilityBoundingSet=
+AmbientCapabilities=
+UMask=0077

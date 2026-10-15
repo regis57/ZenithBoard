@@ -17,6 +17,7 @@ import math
 import os
 import queue
 import re
+import socket
 import sys
 import threading
 import time
@@ -25,7 +26,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.14.4"
+VERSION = "0.15.0"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -55,6 +56,8 @@ DEFAULTS = {
     "DISPLAY_MODE": "dots",     # dots (dot matrix) | flap (split-flap airport board)
     "SHOW_ROUTES": "1",         # where the flight comes from / goes to (looked up by callsign on adsbdb.com)
     "PORT": "8080",
+    "BIND_ADDRESS": "0.0.0.0",  # the interface the wall listens on; 127.0.0.1 keeps it to this Pi (a reverse proxy, say)
+    "ALLOW_FROM": "private",    # who may read the wall: private (home networks only), any, or networks like 10.8.0.0/24,192.168.1.0/24
     "AIRCRAFT_JSON": "",        # optional explicit path override
     "UAT978": "0",              # merge the 978 MHz UAT aircraft (United States, dump978-fa + skyaware978)
     "AIRCRAFT_JSON_978": "",    # optional explicit path override for the UAT list
@@ -108,6 +111,58 @@ def cfg_bool(cfg, key, default="0"):
     # A Pi installed before a setting existed has no line for it, so a setting that should start life switched
     # on passes its own default here rather than inheriting "off" from an older config file.
     return str(cfg.get(key, default)).lower() in ("1", "true", "yes", "on")
+
+
+# --------------------------------------------------------------------------- who may read the wall
+# The wall has no login: it is a sign on a wall. So the question of who may read it is answered by where they
+# come from. "private" means the ranges home networks use (10/8, 172.16/12, 192.168/16, the Pi itself, link-local
+# and their IPv6 equivalents) — which is every tablet and television in the house, and nobody on the internet,
+# even when a router forwards the port by mistake or on purpose. "any" opens it, and a list of networks in CIDR
+# form allows exactly those (a VPN's range, say). Anything unreadable in the setting falls back to "private".
+import ipaddress
+
+
+def _as_ip(addr):
+    try:
+        ip = ipaddress.ip_address(str(addr).split("%")[0])        # drop a scope id like %eth0
+    except ValueError:
+        return None
+    mapped = getattr(ip, "ipv4_mapped", None)                     # ::ffff:192.168.1.5 is 192.168.1.5
+    return mapped or ip
+
+
+def allowed_networks(policy):
+    """-> list of networks, or None for "any". Unreadable input means private only, never open."""
+    policy = str(policy or "private").strip().lower()
+    if policy == "any":
+        return None
+    if policy == "private":
+        return list(PRIVATE_NETWORKS)
+    nets = []
+    for part in policy.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        try:
+            nets.append(ipaddress.ip_network(part, strict=False))
+        except ValueError:
+            return list(PRIVATE_NETWORKS)
+    return nets or list(PRIVATE_NETWORKS)
+
+
+PRIVATE_NETWORKS = tuple(ipaddress.ip_network(n) for n in (
+    "127.0.0.0/8", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "169.254.0.0/16",
+    "::1/128", "fc00::/7", "fe80::/10"))
+
+
+def client_allowed(addr, policy):
+    nets = allowed_networks(policy)
+    if nets is None:
+        return True
+    ip = _as_ip(addr)
+    if ip is None:
+        return False
+    return any(ip in n for n in nets)
 
 
 def radius_to_km(radius, units):
@@ -801,6 +856,8 @@ class Handler(BaseHTTPRequestHandler):
         url = urlparse(self.path)
         path = url.path
         cfg = load_config()
+        if not client_allowed(self.client_address[0], cfg.get("ALLOW_FROM", "private")):
+            return self._send(403, b"This wall answers its own network only (ALLOW_FROM).", "text/plain")
         if path == "/api/config":
             return self._send(200, public_config(cfg))
         if path == "/api/health":
@@ -860,11 +917,21 @@ class Handler(BaseHTTPRequestHandler):
         return self._send(200, body, ctype)
 
 
+class WallServer(ThreadingHTTPServer):
+    """ThreadingHTTPServer that can also sit on an IPv6 address."""
+    def __init__(self, bind, handler):
+        if ":" in bind[0]:
+            self.address_family = socket.AF_INET6
+        super().__init__(bind, handler)
+
+
 def main():
     cfg = load_config()
     port = int(os.environ.get("PORT") or cfg.get("PORT") or 8080)
-    httpd = ThreadingHTTPServer(("0.0.0.0", port), Handler)
-    print("ZenithBoard FlightInfo %s listening on :%d (config: %s)" % (VERSION, port, CONFIG_FILE), flush=True)
+    bind = str(cfg.get("BIND_ADDRESS") or "0.0.0.0").strip() or "0.0.0.0"
+    httpd = WallServer((bind, port), Handler)
+    print("ZenithBoard FlightInfo %s listening on %s:%d, answering %s (config: %s)"
+          % (VERSION, bind, port, cfg.get("ALLOW_FROM", "private"), CONFIG_FILE), flush=True)
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:

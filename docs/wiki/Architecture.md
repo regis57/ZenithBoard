@@ -41,7 +41,7 @@ Everything ZenithBoard installs lives in `/opt/zenithboard`. Nothing else is tou
 | `/var/lib/zenithboard/data/types.json` | The monthly refresh timer | The server, for silhouette names |
 | `/var/lib/zenithboard/gain-log.csv` | The gain log timer, every 15 min | You, in a spreadsheet. Holds 24 h, rolling |
 | `/var/lib/zenithboard/netwatch-reboot` | The network watchdog | Itself, to honour the three-hour gap |
-| `/run/zenithboard-netwatch.fails` | The network watchdog | Itself. In memory on purpose: nothing writes to the SD card every two minutes |
+| `/run/zenithboard/zenithboard-netwatch.fails` | The network watchdog | Itself. In memory on purpose: nothing writes to the SD card every two minutes |
 | `/etc/default/readsb` → `RECEIVER_OPTIONS` | `zenithboard gain set` | The decoder at start |
 
 The server never writes to the config. It reads it at each request, so a setting change shows on the wall without restarting anything.

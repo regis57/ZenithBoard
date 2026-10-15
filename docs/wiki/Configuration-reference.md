@@ -19,6 +19,8 @@ Read the whole file with `zenithboard config`.
 | `FLAGS` | `1` | the gear on the tablet, or this line | The two flags on the dot-matrix wall: where the aircraft is registered, and where it was built. With them on, the airline and model rows hold twelve characters instead of fourteen |
 | `SHOW_ROUTES` | `1` | `zenithboard routes on\|off` | Where the flight comes from and goes to. Needs internet |
 | `PORT` | `8080` | `zenithboard config-set PORT 8090` | The wall's port. Needs a restart of the service |
+| `BIND_ADDRESS` | `0.0.0.0` | `zenithboard config-set BIND_ADDRESS 127.0.0.1` | The interface the wall listens on. `127.0.0.1` keeps it to this Pi (behind a reverse proxy, say). Needs a restart of the service |
+| `ALLOW_FROM` | `private` | `zenithboard config-set ALLOW_FROM any` | Who may read the wall: `private` (home networks: 10/8, 172.16/12, 192.168/16, the Pi itself, link-local and their IPv6 equivalents), `any`, or a list of networks such as `10.8.0.0/24,100.64.0.0/10`. Anyone else gets a 403. An unreadable value means `private` |
 
 ## Position and region
 
@@ -61,6 +63,8 @@ The dynamic-DNS **token is not stored here.** It is asked for interactively and 
 | `LOG_AUTOCLEAN` | `0` | `zenithboard logs auto on\|off` | Daily clean-up keeping the last 7 days |
 | `NETWATCH` | `0` | `zenithboard netwatch on\|off` | The network watchdog. See [Reliability](Reliability-and-diagnostics) |
 | `GAINLOG` | `0` | `zenithboard gain log on\|off` | The 24-hour gain log. See [Gain tuning](Gain-tuning) |
+| `PATCHES` | `0` | `zenithboard patches on\|off` | Debian security fixes installed daily by themselves. See [Security](Security) |
+| `PATCHES_PKG_BY_ZB` | `0` | set by `patches on` | Whether `patches on` installed unattended-upgrades itself, so that `patches off` knows to remove it again |
 | `UPDATE_VERIFY` | `1` | by hand | Check the signature on the code before `zenithboard update` installs it. Set to `0` on a fork or your own branch. See [Security](Security) |
 | `HW_NOTICE_SEEN` | unset | set by the installer | Remembers that the "this Pi model is tight for this" notice has been shown once |
 

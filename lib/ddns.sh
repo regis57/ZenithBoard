@@ -14,7 +14,7 @@
 
 DDNS_UNIT=zenithboard-ddns
 DDNS_CURL="${ZB_ETC:-/etc/zenithboard}/ddns.curl"
-DDNS_STATE="${ZB_RUN_DIR:-/run}/zenithboard-ddns.status"   # in memory (tmpfs): the SD card is not written every 5 minutes
+DDNS_STATE="${ZB_RUN_DIR:-/run/zenithboard}/zenithboard-ddns.status"   # in memory (tmpfs): the SD card is not written every 5 minutes
 
 # ------------------------------------------------------------------ pure helpers
 ddns_provider_name() {
@@ -174,6 +174,19 @@ ddns_links() {   # the addresses once the router forwards the ports
   local h port; h=$(cfg_get DDNS_HOST); port=$(cfg_get PORT 8080)
   echo "ZenithBoard wall : http://$h:$port/"
   echo "Receiver map     : http://$h$(ddns_map_path)   (port 80)"
+  ddns_reach_note
+}
+# A name is the first step to being reachable from the internet, so this is where it is said plainly what the
+# wall will do when it is. Since 0.15.0 it answers home networks only unless told otherwise: a forwarded port
+# gets a 403 from outside, which is the safe mistake. Opening it is one setting, and it is a choice.
+ddns_reach_note() {
+  local who; who=$(cfg_get ALLOW_FROM private)
+  echo
+  case "$who" in
+    any) echo "The wall answers ANYONE (ALLOW_FROM=any): once port $(cfg_get PORT 8080) is forwarded it is public, with no password and no encryption, and it shows where your antenna is. To go back to your home network only: sudo zenithboard config-set ALLOW_FROM private" ;;
+    private|"") echo "The wall answers your HOME NETWORK only (ALLOW_FROM=private): from the internet a forwarded port gets a 403, nothing more. To open it on purpose: sudo zenithboard config-set ALLOW_FROM any   (or your VPN's range, e.g. 100.64.0.0/10). It has no password: whoever can reach it sees where your antenna is." ;;
+    *) echo "The wall answers only these networks (ALLOW_FROM=$who). Anyone else, including the internet through a forwarded port, gets a 403. It has no password: whoever is allowed sees where your antenna is." ;;
+  esac
 }
 
 # ------------------------------------------------------------------ menu
@@ -182,7 +195,7 @@ ddns_guide() {
   wt_scroll "WHICH SERVICE?  All three are free.\n\n DuckDNS (duckdns.org)  - the simplest. Sign in with Google, GitHub... pick a name such as myplanes -> myplanes.duckdns.org. It gives you a token. Never expires.\n\n No-IP (noip.com)  - the best known. Create an account, then a free hostname, then (Dynamic DNS > DDNS Keys) a DDNS key: a user name + password just for updates. The free plan asks you to confirm the hostname regularly (about once a month, by e-mail or button) or the name is released.\n\n FreeDNS (freedns.afraid.org)  - many domains to choose from. Create an account, add a Subdomain (type A), then open Dynamic DNS: copy the 'Direct URL' (or just its last part, the token).\n\nIf unsure: DuckDNS."
 }
 ddns_how_to_reach() {
-  wt_scroll "A NAME ALONE OPENS NOTHING.\n\nTo reach your Pi from outside, three things:\n 1. A name that follows your home address (this menu).\n 2. A FIXED address for the Pi (Network > Fixed IP) so the router always sends traffic to the same machine.\n 3. In your router (often called 'port forwarding' or 'NAT'): forward a port to the Pi.\n      the wall: port $(cfg_get PORT 8080) -> the Pi, port $(cfg_get PORT 8080)\n      the receiver map (tar1090, optional): port 80 -> the Pi, port 80\n\nPRIVACY: these pages have no password and no encryption. The map shows where your antenna is. Forward only what you want public, or keep it private with a VPN (Tailscale / WireGuard) instead - no port to open.\n\nSome providers share one public address between many homes (CGNAT): no port can be opened then. 'Status' tells you."
+  wt_scroll "A NAME ALONE OPENS NOTHING.\n\nTo reach your Pi from outside, three things:\n 1. A name that follows your home address (this menu).\n 2. A FIXED address for the Pi (Network > Fixed IP) so the router always sends traffic to the same machine.\n 3. In your router (often called 'port forwarding' or 'NAT'): forward a port to the Pi.\n      the wall: port $(cfg_get PORT 8080) -> the Pi, port $(cfg_get PORT 8080)\n      the receiver map (tar1090, optional): port 80 -> the Pi, port 80\n\nPRIVACY: these pages have no password and no encryption, and they show where your antenna is.\n\nThe wall answers your home network only (ALLOW_FROM=private): a forwarded port gets a 403 from the internet until you run: sudo zenithboard config-set ALLOW_FROM any  (or a VPN's range). The receiver map on port 80 has no such guard: forward it only if you want it public.\n\nThe private way to reach both from outside is a VPN (Tailscale / WireGuard): no port to open.\n\nSome providers share one public address between many homes (CGNAT): no port can be opened then. 'Status' tells you."
 }
 ddns_setup() {
   local p h u="" s

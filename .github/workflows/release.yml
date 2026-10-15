@@ -1,0 +1,39 @@
+name: Release
+# One GitHub release per version. When lib/versions.sh on main carries a version that has no tag yet, this makes
+# the tag and the release, with that version's CHANGELOG section as the notes. The tag itself is a plain tag: what
+# is signed is the commit it points at (every commit on main is, by GitHub's key), and that is what
+# `zenithboard update` checks. Nothing here is built or uploaded: the release is the signed source at that commit.
+on:
+  push:
+    branches: [main]
+    paths: [lib/versions.sh]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write           # to create the tag and the release
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1   # v7.0.1
+
+      - name: Which version is on main?
+        id: v
+        run: |
+          v=$(sed -n 's/^ZB_VERSION="\([0-9.]*\)"/\1/p' lib/versions.sh)
+          [ -n "$v" ] || { echo "no ZB_VERSION in lib/versions.sh"; exit 1; }
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          if git ls-remote --tags origin "refs/tags/v$v" | grep -q .; then echo "exists=1" >> "$GITHUB_OUTPUT"; else echo "exists=0" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Make the release
+        if: steps.v.outputs.exists == '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          V: ${{ steps.v.outputs.version }}
+        run: |
+          bash tools/release-notes.sh "$V" > notes.md
+          [ -s notes.md ] || echo "See CHANGELOG.md." > notes.md
+          gh release create "v$V" --target "$GITHUB_SHA" --title "ZenithBoard $V" --notes-file notes.md

@@ -261,7 +261,7 @@ zb_update_components() {
     rm -f /usr/local/bin/acarsdec; build_acarsdec || warn "acarsdec rebuild failed"
     install -m 644 "$ZB_HOME"/systemd/zenithboard-acars-ingest.service "$ZB_HOME"/systemd/zenithboard-acarsdec.service /etc/systemd/system/
     systemctl daemon-reload; systemctl restart zenithboard-acars-ingest zenithboard-acarsdec
-    is_grafana && { apt_install --only-upgrade grafana || warn "grafana update failed"; install -m 644 "$ZB_HOME/acars/grafana-dashboard.json" /var/lib/grafana/zenithboard-dashboards/acars.json; systemctl restart grafana-server; }
+    is_grafana && { apt_install --only-upgrade grafana || warn "grafana update failed"; install -m 644 "$ZB_HOME/acars/grafana-dashboard.json" /var/lib/grafana/zenithboard-dashboards/acars.json; systemctl restart grafana-server; sleep 3; grafana_secure_password || true; }
   fi
   if [ -f /etc/systemd/system/zenithboard-wifi.service ]; then wifi_install_unit; fi
   if [ "$(cfg_get DDNS_PROVIDER none)" != none ]; then ddns_install_units; fi

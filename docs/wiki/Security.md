@@ -8,30 +8,35 @@ ZenithBoard runs as root on a machine in your home, listens on your network, and
 
 | Layer | What protects it | Since |
 |---|---|---|
-| Your network | The wall has no login **by design**: never forward it from the internet | always |
+| Your network | The wall has no login **by design**. It answers home networks only (`ALLOW_FROM=private`): a forwarded port meets a 403 from the internet until you open it on purpose | 0.15.0 |
 | The wall server | Runs as a `nologin` system user inside a full systemd sandbox; can write nowhere | 0.12.0 |
 | The ACARS ingester | Same sandbox; listens on `127.0.0.1` only; parameterised SQL | 0.12.0 |
 | Its HTTP answers | Every header value comes from a fixed table inside the program | 0.12.2 |
 | Photos | The address must be `https` inside `planespotters.net` or `plnspttrs.net`; the type must be a known image type | 0.11.1, 0.12.4 |
 | Files it serves | Real-path check: nothing outside its own folders, symlinks included | always |
-| Updates of ZenithBoard | The commit is signature-checked before `install.sh` runs as root | 0.12.0, fixed in 0.12.3 |
+| Updates of ZenithBoard | The commit is signature-checked before `install.sh` runs as root. One GitHub release per version, pointing at that signed commit | 0.12.0, fixed in 0.12.3; releases 0.15.0 |
 | Downloads run as root | Private `mktemp` folder (mode 700), https only, no downgrade on redirect | 0.12.0, fixed in 0.12.1 |
 | Third-party installers | **Trusted, not checked** — written down below | always |
 | Package signatures | Never turned off. The Flightradar24 key is installed only if its fingerprint matches | always |
-| Secrets | The dynamic-DNS token never goes on a command line, into `config.env` or into a log | always |
+| Secrets | The dynamic-DNS token and the Grafana password never go on a command line, into `config.env` or into a log; both live in root-only files | always; Grafana 0.15.0 |
+| Grafana | ZenithBoard sets the admin password itself at install and at update, so `admin`/`admin` is never left open | 0.15.0 |
+| The operating system | Debian's security fixes can install themselves daily, from the security channel only; the feeders are left alone | 0.15.0 |
+| Checking all of it | `zenithboard security` reads the running Pi and says what is open and how to close it | 0.15.0 |
 | The repository | CodeQL, shellcheck, pinned actions, Dependabot, a monthly check of the download addresses | 0.11.1 |
 
 ## What is exposed on your network
 
 | Surface | Reachable from | Notes |
 |---|---|---|
-| The wall, port 8080 | Anyone on your network | No login. It is meant to be opened by a tablet with no keyboard |
+| The wall, port 8080 | Home networks (`ALLOW_FROM=private`) | No login: it is meant to be opened by a tablet with no keyboard. Anyone outside the private ranges gets a 403, forwarded port or not |
 | `/api/planes`, `/api/config` | Same | Aircraft in range, and display settings. **The antenna's exact position is never sent** |
 | tar1090, port 80 | Same | Installed by readsb, not by ZenithBoard |
-| Grafana, port 3000 | Same | Only with ACARS. Default login `admin`/`admin` — change it |
+| Grafana, port 3000 | Same | Only with ACARS. Login `admin` with the password ZenithBoard set: `sudo zenithboard acars password` |
 | Plane Finder, port 30053 | Same | Its own setup page |
 
 **Do not forward any of these from the internet.** Nothing here expects a hostile visitor: there is no login on the wall, no rate limit, and no audit trail. To see your wall from outside, use a VPN into your home network. The dynamic-DNS feature exists so *you* can find your Pi, not so the world can.
+
+Since 0.15.0 the wall enforces that itself: it answers only the private ranges (10/8, 172.16/12, 192.168/16, the Pi, link-local, and their IPv6 equivalents) and gives everyone else a 403. A port forwarded by mistake therefore shows nothing. If you do want it public, or reachable through a VPN whose addresses are not private (Tailscale uses 100.64/10), say so: `sudo zenithboard config-set ALLOW_FROM any`, or the networks allowed, `sudo zenithboard config-set ALLOW_FROM 100.64.0.0/10`. The dynamic-DNS menu repeats this at the moment a name is set up. `BIND_ADDRESS` (default `0.0.0.0`) is the other knob: `127.0.0.1` keeps the wall to the Pi itself, for a reverse proxy in front of it.
 
 ## The services can only do their own job
 
@@ -47,12 +52,19 @@ systemd-analyze security zenithboard-flightinfo
 
 On the author's Pi 3B it scores **1.3 (OK)**, on a scale where 0 is fully locked down and 10 is unprotected. What remains open is what the job needs: the internet (for photos and routes) and Python's memory model.
 
-Deliberately less restricted, and why:
+Every ZenithBoard service is sandboxed since 0.15.0, each keeping only what its job needs. Measured offline on the unit files, and enforced by `tests/test_units.sh` so a directive cannot quietly disappear:
 
-| Unit | Why |
-|---|---|
-| `zenithboard-acarsdec` | It drives a USB dongle, so devices cannot be taken away from it |
-| The watchdogs, Wi-Fi and DDNS timers | Short root tasks whose whole job is to restart the network, change the radio, or reboot the Pi |
+| Unit | Score | What it keeps, and why |
+|---|---|---|
+| `zenithboard-flightinfo` | 1.3 | Nothing: it reads, and talks to the internet for photos and routes |
+| `zenithboard-acars-ingest` | 1.3 | Writes `acars.db` |
+| `zenithboard-gain-log` | 1.0 | Runs as the `zenithboard` user, not root, since 0.15.0: it reads `stats.json` and appends one CSV line |
+| `zenithboard-logs-clean` | 1.4 | May write the journal folder, nothing else |
+| `zenithboard-ddns` | 1.7 | curl, no capability at all; its status line lives in `/run/zenithboard` |
+| `zenithboard-data-refresh` | 4.2 | Writes the aircraft-type list |
+| `zenithboard-netwatch` | 4.2 | Keeps raw sockets for `ping`, netlink and D-Bus for `nmcli` and `systemctl`, and **no system-call filter**: a filter that killed `ping` would leave the Pi unwatched without a sound |
+| `zenithboard-wifi` | 3.9 | Keeps `CAP_NET_ADMIN` for `iw reg set` and `/dev/rfkill` |
+| `zenithboard-acarsdec` | 6.0 | Drives a USB dongle, so devices cannot be taken away from it |
 
 ## The code is checked before it is run
 
@@ -151,10 +163,12 @@ Kept as a record, because a security page that only lists what is fine is not be
 | 0.12.2 | CodeQL | The 0.12.1 line-break filter was not recognisable as a protection | Every header from a fixed table |
 | 0.12.3 | A real Pi asking at every update | GitHub's key file has its expired key first; only that one was recorded | All usable keys recorded, expired ones never |
 | 0.12.4 | The wall itself | The host check left out `plnspttrs.net`, where the pictures actually are, so every photo was refused in silence | Both domains allowed; the test uses the real answer |
+| 0.15.0 | Reading the code again | The wall answered anyone, forwarded port included; Grafana kept `admin`/`admin`; five timers ran as root with no sandbox; the Pi installed no security fixes by itself | `ALLOW_FROM=private`; a generated Grafana password; every unit sandboxed; `zenithboard patches`; `zenithboard security` to check all of it |
 
 ## Running it more tightly, if you want to
 
 * Put the Pi on a guest network or its own VLAN. It needs the internet and nothing else on your LAN.
-* Change the Grafana password, or do not install ACARS.
+* Run `zenithboard security` and do what its WARN lines say.
 * `sudo zenithboard update` regularly: it is what brings security fixes to the decoder and the feeders.
-* Turn on `unattended-upgrades` for Debian **security** updates. Leave the feeders out of it — a feeder restarting itself at three in the morning can quietly break the single-MLAT rule.
+* `sudo zenithboard patches on`: Debian's security fixes, daily, from the security channel only. The feeders are left out on purpose — a feeder restarting itself at three in the morning can quietly break the single-MLAT rule — and the Pi is never rebooted by it. `patches off` removes exactly what `on` added.
+* SSH with a key rather than a password, once your key is in place: `PasswordAuthentication no` in `/etc/ssh/sshd_config.d/zenithboard.conf`, then `sudo systemctl restart ssh`. `zenithboard security` reads this setting.

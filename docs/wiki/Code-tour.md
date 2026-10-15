@@ -32,6 +32,8 @@ docs/wiki/              the source of this wiki
 | `flightinfo.sh` | Installing and configuring the wall |
 | `gain.sh` | The gain steps, reading `stats.json`, the advice, the 24-hour log, the menu |
 | `reliability.sh` | Both watchdogs, persistent logs, the health screen |
+| `patches.sh` | Debian security fixes by themselves: the one apt rule it writes, and taking it back |
+| `security.sh` | `zenithboard security`: reads the running Pi, one line per fact, each WARN with its fix |
 | `network.sh` | Fixed address, DHCP, `net status` |
 | `wifi.sh` | Radio, country, scan, connect, forget, the boot-time re-apply |
 | `ddns.sh` | DuckDNS, No-IP, FreeDNS |
