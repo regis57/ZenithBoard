@@ -62,6 +62,7 @@ sec_ports() {
     case "$port" in
       "$wall") known="$known $port(wall)" ;;
       80|443) known="$known $port(map)" ;;
+      8504|8978) known="$known $port(skyaware)" ;;                   # FlightAware's map, also on these two ports (1090 and 978 MHz)
       22) known="$known $port(ssh)" ;;
       3000) known="$known $port(grafana)" ;;
       300[0-9][0-9]|301[0-9][0-9]|31[0-9][0-9][0-9]|8754|8089) known="$known $port(decoder/feeder)" ;;   # readsb's beast/raw/SBS ports, the feeders' MLAT returns, FR24's and Plane Finder's pages
