@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **14 October 2026**, version **0.14.4**.
+Last updated: **15 October 2026**, version **0.15.0**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -53,6 +53,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 15 October 2026 | Second security pass (0.15.0): the wall answers home networks only, every service sandboxed, Grafana's default password closed, optional daily Debian security patches, a release per version, and `zenithboard security` to check the running Pi. Tested here with stubs and offline unit scoring; Grafana itself and the Pi's own `systemd-analyze` are the two things only the real machine can confirm |
 | 14 October 2026, night | The wall gained the registration and maker flags (0.14.0). The manufacturer logo that was asked for alongside them was refused: a trademark redrawn in dots is still the trademark. The country where the airframe is built carries the same meaning and is free to draw |
 | 14 October 2026, evening | A generated airport-hall ambience was added (0.13.0) and removed again an hour later (0.13.1): it did not sound good enough to keep. Turquoise and blue joined the wall colours the same evening and stayed |
 | 13 October 2026, morning | No aircraft photos on the wall, only the drawn plane. The address check added in 0.11.1 allowed `planespotters.net`, but the pictures are served from `plnspttrs.net`: every photo had been refused in silence since. Fixed in 0.12.4. The test that should have caught it had been written from a guessed address instead of the real one |

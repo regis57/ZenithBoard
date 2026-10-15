@@ -15,6 +15,10 @@ HERE="$(dirname "$(readlink -f "$0")")"
 . "$HERE/../lib/logs.sh"
 # shellcheck source=lib/reliability.sh
 . "$HERE/../lib/reliability.sh"
+# shellcheck source=lib/patches.sh
+. "$HERE/../lib/patches.sh"
+# shellcheck source=lib/security.sh
+. "$HERE/../lib/security.sh"
 # shellcheck source=lib/gain.sh
 . "$HERE/../lib/gain.sh"
 # shellcheck source=lib/uat.sh
@@ -60,6 +64,9 @@ ZenithBoard $ZB_VERSION - ADSB Flight Info
   zenithboard color amber|green|red|white|turquoise|blue   dot colour of every wall (amber is the default)
   zenithboard mode dots|flap            look of the wall: dot matrix (default) or split-flap airport board
   zenithboard cycle SECONDS             seconds each aircraft stays on the wall
+  zenithboard acars password [new|set]  the Grafana admin password ZenithBoard set (show it, draw a new one, choose one)
+  zenithboard patches on|off|status     Debian security fixes installed by themselves, daily (feeders left alone, no reboot)
+  zenithboard security                  what this Pi does right now: who can read the wall, updates, Grafana, SSH, ports, sandboxes
   zenithboard photos on|off             aircraft photos on the wall (needs internet on the Pi)
   zenithboard photos test [HEX]         check that this Pi can fetch photos from Planespotters
   zenithboard routes on|off             show where each flight comes from / goes to (looked up by callsign, needs internet)
@@ -80,6 +87,7 @@ USAGE
 }
 
 root_or_die() { [ "$(id -u)" -eq 0 ] || die "This command changes settings: run it with sudo."; }
+root_or_zb()  { [ "$(id -u)" -eq 0 ] || [ "$(id -un)" = "$ZB_USER" ] || die "This command runs as root or as the $ZB_USER user (the timer does)."; }
 
 show_state() { # show_state "Label" check_fn service
   local st="not installed"
@@ -186,6 +194,19 @@ case "${1:-}" in
     esac ;;
   cycle)
     root_or_die; is_number "${2:-x}" || die "Usage: zenithboard cycle SECONDS"; cfg_set CYCLE_SECONDS "$2"; restart_flightinfo ;;
+  security) security_check ;;
+  patches)
+    case "${2:-status}" in
+      on)  root_or_die; patches_on ;;
+      off) root_or_die; patches_off ;;
+      status) patches_status ;;
+      *) die "Usage: zenithboard patches on|off|status" ;;
+    esac ;;
+  acars)
+    case "${2:-}" in
+      password) root_or_die; grafana_password_cmd "${3:-show}" ;;
+      *) die "Usage: zenithboard acars password [new|set]" ;;
+    esac ;;
   photos)
     case "${2:-}" in
       on)  root_or_die; cfg_set SHOW_PHOTOS 1; restart_flightinfo; echo "Aircraft photos are ON. The wall reloads by itself within a few seconds." ;;
@@ -245,7 +266,7 @@ case "${1:-}" in
         case "${3:-status}" in
           on)     root_or_die; gain_log_start ;;
           off)    root_or_die; gain_log_stop ;;
-          run)    root_or_die; gain_log_run ;;
+          run)    root_or_zb; gain_log_run ;;
           show)   gain_log_show ;;
           clear)  root_or_die; gain_log_clear ;;
           path)   gain_log_path ;;

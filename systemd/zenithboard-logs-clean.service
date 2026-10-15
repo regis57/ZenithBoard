@@ -4,3 +4,31 @@ Description=ZenithBoard log clean-up (removes log messages older than 7 days)
 [Service]
 Type=oneshot
 ExecStart=/opt/zenithboard/bin/zenithboard logs auto-run
+# journalctl --vacuum deletes journal files, and nothing else is written
+ReadWritePaths=-/var/log/journal -/run/log/journal
+RestrictAddressFamilies=AF_UNIX
+# Sandbox: a root script that reads its settings and writes one file. Everything else is taken away from it, so
+# a flaw in it, or in a tool it runs, stays inside a box. Measure with: systemd-analyze security zenithboard-logs-clean.service
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+ProtectProc=invisible
+ProcSubset=pid
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+CapabilityBoundingSet=
+AmbientCapabilities=
+UMask=0077

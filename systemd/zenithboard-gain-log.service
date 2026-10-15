@@ -5,3 +5,34 @@ Description=ZenithBoard gain log (one measurement of the receiver gain, appended
 Type=oneshot
 ExecStart=/opt/zenithboard/bin/zenithboard gain log run
 TimeoutStartSec=60
+# Runs as the wall's own user: it reads the decoder's stats.json under /run and appends one line to the CSV in
+# /var/lib/zenithboard, which that user owns. Nothing here needs root, so root is not used.
+User=zenithboard
+Group=zenithboard
+ReadWritePaths=/var/lib/zenithboard
+RestrictAddressFamilies=AF_UNIX
+# Sandbox: a root script that reads its settings and writes one file. Everything else is taken away from it, so
+# a flaw in it, or in a tool it runs, stays inside a box. Measure with: systemd-analyze security zenithboard-gain-log.service
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+ProtectProc=invisible
+ProcSubset=pid
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+CapabilityBoundingSet=
+AmbientCapabilities=
+UMask=0077

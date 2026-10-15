@@ -123,7 +123,7 @@ Everything in the menus also exists as a command, which is quicker once you know
 
 **2 · FlightInfo** — installs the wall. At the end it prints the address, e.g. `http://192.168.1.50:8080/`.
 
-**3 · ACARS** *(optional)* — asks for the second dongle's serial number and your frequencies, builds `acarsdec`, installs Grafana and a ready-made dashboard at `http://<pi-address>:3000/` (first login `admin` / `admin`, you are asked to change it).
+**3 · ACARS** *(optional)* — asks for the second dongle's serial number and your frequencies, builds `acarsdec`, installs Grafana and a ready-made dashboard at `http://<pi-address>:3000/` (login `admin`; the password ZenithBoard set is shown by `sudo zenithboard acars password`).
 
 ### 6. Put the wall on the tablet
 Open the address from step 2 in the tablet's browser. Tap the browser's *Add to Home Screen* for a full-screen app look, or tap the faint gear in the bottom-right corner → **Full screen**. The screen stays awake and the page reloads itself if the Pi restarts.
@@ -505,8 +505,10 @@ A Pi that runs for months can freeze or lose its network at night. Everything he
 
 ZenithBoard runs as root, listens on your network and installs other people's software, so it is built to limit what can go wrong. The essentials:
 
-* **Never forward the wall from the internet.** It has no login, by design: it is meant for a tablet on your home network. To see it from outside, use a VPN into your home.
-* **The services can only do their own job.** The wall server and the ACARS ingester run as a system user that cannot log in, inside a systemd sandbox; the wall server cannot write anywhere. Check it with `systemd-analyze security zenithboard-flightinfo` (about 1.3 on a Pi 3B: 0 is locked down, 10 is open).
+* **The wall answers your home network only.** It has no login, by design: it is meant for a tablet on your home network, so it answers the private address ranges and gives everyone else a 403, forwarded port or not. To see it from outside, use a VPN into your home; to open it on purpose, `sudo zenithboard config-set ALLOW_FROM any`.
+* **The services can only do their own job.** Every ZenithBoard service runs inside a systemd sandbox that keeps only what its job needs; the wall server runs as a system user that cannot log in and cannot write anywhere. Check it with `systemd-analyze security zenithboard-flightinfo` (about 1.3 on a Pi 3B: 0 is locked down, 10 is open).
+* **Nothing is left at a default password, and the OS can patch itself.** Grafana gets a generated admin password at install (`sudo zenithboard acars password` shows it), and `sudo zenithboard patches on` installs Debian's security fixes daily, from the security channel only, feeders untouched.
+* **`zenithboard security` checks all of this on the running Pi** and says how to close whatever is open.
 * **Updates are checked before they run.** `sudo zenithboard update` verifies the signature on the new code before `install.sh` runs as root. The first time, it lists GitHub's signing keys and asks you to confirm — compare with the key ID behind the **Verified** badge on GitHub. After that it is silent; a bad signature stops it outright. On a fork, `sudo zenithboard config-set UPDATE_VERIFY 0`.
 * **Nothing from outside steers the Pi.** Photo addresses must be `https` inside `planespotters.net`, every header the wall sends comes from a fixed table in the program, downloads run as root go to a private folder over https only, and the dynamic-DNS token never appears on a command line or in a log.
 * **Some things are trusted, and written down.** The installers of readsb, ADSB Exchange and Flightradar24 run as root and cannot be checked; their addresses are pinned in [`lib/versions.sh`](lib/versions.sh), and a monthly check opens an issue when one stops answering. readsb has no uninstaller, so removing it prints the commands instead.
@@ -554,7 +556,7 @@ The processes, the files each one reads and writes, and the timers are set out i
 | Two MLAT clients in `status` | `sudo zenithboard mlat-guard` |
 | ACARS panels empty | `zenithboard logs acars`; confirm the ACARS dongle serial in `zenithboard config` and that frequencies are correct for your region. |
 | `apt update` says the **Flightradar24 repository "is not signed"** (`SHA1 is not considered secure`) | Debian 13 (trixie) rejects the SHA1 signature of FR24's first key. `sudo zenithboard update` installs FR24's 2026 key, **only if its fingerprint is `ED84 3290 A602 4136 85E5 7D43 6F77 03F6 5FA1 BDAF`**, and never turns signature checking off. Then add Flightradar24 again from menu *1 ADSB*. |
-| Grafana asks for a login | Default `admin` / `admin`. Menu 3 can allow anonymous *viewing* on your LAN only. |
+| Grafana asks for a login | `admin`, and the password from `sudo zenithboard acars password`. Menu 3 can allow anonymous *viewing* on your LAN only. |
 
 ---
 

@@ -15,6 +15,10 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$ROOT/lib/logs.sh"
 . "$ROOT/lib/gain.sh"
 . "$ROOT/lib/reliability.sh"
+# shellcheck source=lib/patches.sh
+. "$ROOT/lib/patches.sh"
+# shellcheck source=lib/security.sh
+. "$ROOT/lib/security.sh"
 . "$ROOT/lib/uat.sh"
 . "$ROOT/lib/wifi.sh"
 . "$ROOT/lib/network.sh"

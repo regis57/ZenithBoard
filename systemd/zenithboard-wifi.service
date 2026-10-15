@@ -7,6 +7,28 @@ Wants=NetworkManager.service
 Type=oneshot
 RemainAfterExit=yes
 ExecStart=/opt/zenithboard/bin/zenithboard wifi apply
+# iw reg set needs CAP_NET_ADMIN over netlink; rfkill needs /dev/rfkill, so devices are not hidden here
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_RAW
+RestrictAddressFamilies=AF_UNIX AF_NETLINK
+DeviceAllow=/dev/rfkill rw
+# Sandbox, lighter: this script talks to the network and to systemd, so it keeps the raw-socket and netlink access
+# those tools need, and no system-call filter is applied — a filter that killed ping would silently leave the Pi
+# without its watchdog. Everything else is taken away. Measure with: systemd-analyze security zenithboard-wifi.service
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+SystemCallArchitectures=native
+UMask=0077
 
 [Install]
 WantedBy=multi-user.target

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.15.0
+Security pass, five things. Each one can be undone on its own; the last line of each entry says how.
+
+- **The wall answers your home network only.** It used to answer anyone who could reach port 8080, which with a forwarded port meant the internet, antenna position included. It now serves the private address ranges (10/8, 172.16/12, 192.168/16, the Pi itself, link-local and their IPv6 equivalents) and gives everyone else a 403. New settings `ALLOW_FROM` (`private`, `any`, or a list of networks) and `BIND_ADDRESS`. The dynamic-DNS menu says this at the moment a name is set up. A Pi that forwarded its port on purpose will see a 403 from outside after this update: `sudo zenithboard config-set ALLOW_FROM any` restores it.
+- **Every service is sandboxed.** `ddns`, `logs-clean`, `gain-log`, `netwatch` and `wifi` ran as root with no protection (9.4 on systemd's scale). They now score 1.7, 1.4, 1.0, 4.2 and 3.9, each keeping exactly what its tools need: the watchdog keeps raw sockets for `ping` and has no system-call filter, because a filter that killed `ping` would leave the Pi unwatched in silence. The gain log timer runs as the `zenithboard` user, not root. `tests/test_units.sh` measures every unit and fails when a score climbs. The DDNS status and the watchdog counter moved to `/run/zenithboard/`. Undo: `git revert` of this version's commit and `zenithboard update`; the units are reinstalled by every update.
+- **Grafana no longer keeps `admin` / `admin`.** At install, and at the next update of a Pi that still accepts it, ZenithBoard sets a generated password and keeps it root-only in `/etc/zenithboard/grafana.pass`. `sudo zenithboard acars password` shows it, `password new` draws another, `password set` takes yours. Not tested against a running Grafana here; the decision, the file and its mode are. Undo: `password set` to anything you like.
+- **Debian security fixes, daily, optional.** `sudo zenithboard patches on` installs `unattended-upgrades` and a rule that takes the Debian security channel only: the feeders come from other repositories and are never touched, readsb is not a package, and the Pi is never rebooted by it. Also in the Reliability menu. `patches off` removes the rule, and the package too if `on` was what installed it; a Pi that had it before keeps it as it was.
+- **One GitHub release per version.** When `ZB_VERSION` changes on main, a workflow tags it and publishes that version's changelog section as the release notes. The tag is a plain tag; what is signed is the commit it points at, which is what `zenithboard update` checks.
+- **`zenithboard security`.** One screen of what the Pi does right now: who may read the wall, whether updates are verified, Grafana's password, SSH password logins, the ports listening on the network, the sandbox score of each installed service, the mode of the two secret files. Each WARN names the command that closes it; exit status 1 when there is one, so a script can notice.
+
 ## 0.14.4
 - README: a Beluga XL on the split-flap board, in the section about the two looks. Documentation only; nothing on the Pi changes.
 

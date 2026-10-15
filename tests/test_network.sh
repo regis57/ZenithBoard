@@ -137,4 +137,17 @@ check "off: key deleted"         '[ ! -e "$DDNS_CURL" ] && [ "$(cfg_get DDNS_PRO
 out=$(ddns_set noip a.ddns.net "" ""); check "noip without key refused" '[ $? -ne 0 ] || printf "%s" "$out" | grep -q needs'
 out=$(ddns_set duckdns a.duckdns.org "" "bad"); check "bad token refused, with its length" 'printf "%s" "$out" | grep -q "36 characters.*has 3"'
 
+# ---- domain name: the wall says what a forwarded port will meet, in every ALLOW_FROM state
+cfg_set DDNS_HOST a.duckdns.org
+cfg_set ALLOW_FROM private
+out=$(ddns_links); check "links, private: says home network only and 403 outside" 'printf "%s" "$out" | grep -q "HOME NETWORK only" && printf "%s" "$out" | grep -q 403'
+check "links, private: tells how to open it"                   'printf "%s" "$out" | grep -q "config-set ALLOW_FROM any"'
+cfg_set ALLOW_FROM any
+out=$(ddns_links); check "links, any: says it is public and shows the antenna" 'printf "%s" "$out" | grep -q "ANYONE" && printf "%s" "$out" | grep -qi antenna'
+check "links, any: tells how to close it"                     'printf "%s" "$out" | grep -q "config-set ALLOW_FROM private"'
+cfg_set ALLOW_FROM 100.64.0.0/10
+out=$(ddns_links); check "links, a list: names the networks"   'printf "%s" "$out" | grep -q "ALLOW_FROM=100.64.0.0/10"'
+cfg_set ALLOW_FROM ""
+out=$(ddns_links); check "links, unset: treated as private"    'printf "%s" "$out" | grep -q "HOME NETWORK only"'
+
 [ "$fail" = 0 ] && echo "ALL OK" || { echo "SOME FAILED"; exit 1; }

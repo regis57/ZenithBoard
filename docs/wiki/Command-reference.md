@@ -107,11 +107,20 @@ All three are off until you turn them on. How they decide, and how to read a bad
 
 ## Security and trust
 
-Not commands of their own, but the things you may need to do by hand. The reasoning is on [Security](Security).
+The reasoning is on [Security](Security).
+
+| Command | sudo | What it does |
+|---|---|---|
+| `zenithboard security` | | One screen of what this Pi does right now: who may read the wall, whether updates are verified, Grafana's password, SSH, open ports, the service sandboxes, the secret files. Each WARN says how to fix it. Exit status 1 when there is one |
+| `zenithboard patches on` · `off` · `status` | yes | Debian's security fixes installed by themselves, once a day, from the Debian security channel only: the feeders are left to `zenithboard update` and the Pi is never rebooted. `off` puts things back as they were |
+| `zenithboard acars password` · `new` · `set` | yes | The Grafana admin password ZenithBoard set (ACARS only): show it, draw a new one, or type your own. Kept root-only in `/etc/zenithboard/grafana.pass` |
+| `zenithboard config-set ALLOW_FROM private` · `any` · `10.8.0.0/24,…` | yes | Who may read the wall: home networks only (the default), anyone, or the networks listed. See [Security](Security) |
+
+And the things you may need to do by hand:
 
 | What | How | What it is for |
 |---|---|---|
-| See what the sandbox allows | `systemd-analyze security zenithboard-flightinfo` | A score from 0 (locked down) to 10. The wall server scores about 1.3 |
+| See what a sandbox allows | `systemd-analyze security zenithboard-flightinfo` | A score from 0 (locked down) to 10. The wall server scores about 1.3; every ZenithBoard service is under 4.5 |
 | See which signing keys this Pi trusts | `sudo cat /var/lib/zenithboard/trust/signer.fpr` | One fingerprint per line |
 | Trust GitHub's keys again from scratch | `sudo rm /var/lib/zenithboard/trust/signer.fpr` | The next update shows the keys and asks |
 | Turn the update check off (fork, own branch) | `sudo zenithboard config-set UPDATE_VERIFY 0` | Your own commits are not signed by GitHub's key |

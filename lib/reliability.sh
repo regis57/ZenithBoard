@@ -15,7 +15,7 @@ RELI_JOURNAL_CONF="${ZB_JOURNALD_DIR:-/etc/systemd/journald.conf.d}/50-persisten
 RELI_JOURNAL_DIR="${ZB_JOURNAL_DIR:-/var/log/journal}"
 RELI_WATCHDOG_DEV="${ZB_WATCHDOG_DEV:-/dev/watchdog}"
 NETWATCH_UNIT=zenithboard-netwatch
-NETWATCH_FAILS="${ZB_RUN_DIR:-/run}/zenithboard-netwatch.fails"            # in memory: nothing is written to the SD card every 2 minutes
+NETWATCH_FAILS="${ZB_RUN_DIR:-/run/zenithboard}/zenithboard-netwatch.fails"   # in memory: nothing is written to the SD card every 2 minutes
 NETWATCH_REBOOTED="${ZB_VAR_DIR:-/var/lib/zenithboard}/netwatch-reboot"    # when the network watchdog last rebooted the Pi (a time, not a log)
 NETWATCH_UPTIME_FILE="${ZB_UPTIME_FILE:-/proc/uptime}"
 NETWATCH_GRACE_S=600           # not judged during the first 10 minutes after a start (the router may still be starting too)
@@ -220,6 +220,7 @@ reliability_menu() {
       keeplogs "Saved logs (read the cause after a freeze): $(keeplogs_state)" \
       watchdog "Hardware watchdog (restarts a frozen Pi): $(watchdog_state)" \
       netwatch "Network watchdog (restarts a Pi that lost its network): $(netwatch_state)" \
+      patches "Debian security patches, installed daily by themselves: $(patches_state)" \
       back "Return to the previous menu") || return 0
     case "$c" in
       health) clear; health_check; echo; read -rp "Press Enter to continue..." _ ;;
@@ -232,6 +233,9 @@ reliability_menu() {
       netwatch)
         if [ "$(netwatch_state)" = on ]; then wt_yesno "The network watchdog is ON.\n\nTurn it OFF?" 8 && { clear; netwatch_off; read -rp "Press Enter to continue..." _; }
         else wt_yesno "Turn on the network watchdog?\n\nEvery 2 minutes the Pi checks that it can reach your router. After about 6 minutes without it, the network is restarted; after about 12 minutes the Pi restarts (never more than once every 3 hours, and not during the first 10 minutes after a start).\n\nIt only looks at your router, so an internet outage alone does not restart anything." 17 && { clear; netwatch_on; read -rp "Press Enter to continue..." _; }; fi ;;
+      patches)
+        if [ "$(patches_state)" = on ]; then wt_yesno "Debian security patches are ON.\n\nTurn them OFF?" 8 && { clear; patches_off; read -rp "Press Enter to continue..." _; }
+        else wt_yesno "Install Debian's security fixes by themselves, once a day?\n\nOnly the Debian security channel: openssl, the kernel, curl, python and the like. The ADS-B feeders come from other repositories and are never touched, and the Pi is never rebooted by it. ZenithBoard and the feeders still move only with 'zenithboard update'." 14 && { clear; patches_on; read -rp "Press Enter to continue..." _; }; fi ;;
       *) return 0 ;;
     esac
   done

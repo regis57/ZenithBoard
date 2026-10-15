@@ -466,6 +466,67 @@ class FlagsAndCycleTest(unittest.TestCase):
         self.assertFalse(server.public_config({})["demo"])            # cfg_bool's own default is unchanged
 
 
+class WhoMayReadTest(unittest.TestCase):
+    """The wall has no login, so who may read it is decided by where they come from."""
+
+    def test_home_networks_are_allowed_and_the_internet_is_not(self):
+        for addr in ("192.168.1.20", "10.0.0.3", "172.16.4.4", "127.0.0.1", "::1", "fe80::1%wlan0", "::ffff:192.168.1.5"):
+            self.assertTrue(server.client_allowed(addr, "private"), addr)
+        for addr in ("8.8.8.8", "2a01:e0a:1::1", "100.64.0.1", "203.0.113.9"):
+            self.assertFalse(server.client_allowed(addr, "private"), addr)
+
+    def test_any_opens_it_and_a_list_narrows_it(self):
+        self.assertTrue(server.client_allowed("8.8.8.8", "any"))
+        self.assertTrue(server.client_allowed("10.8.0.5", "10.8.0.0/24, 192.168.1.0/24"))
+        self.assertFalse(server.client_allowed("10.9.0.5", "10.8.0.0/24, 192.168.1.0/24"))
+        self.assertTrue(server.client_allowed("192.168.1.77", "10.8.0.0/24, 192.168.1.0/24"))
+
+    def test_a_broken_setting_falls_back_to_private_never_to_open(self):
+        for policy in ("", None, "garbage", "10.8.0.0/99", "10.8.0.0/24,notanet"):
+            self.assertTrue(server.client_allowed("192.168.1.5", policy), repr(policy))
+            self.assertFalse(server.client_allowed("8.8.8.8", policy), repr(policy))
+        self.assertFalse(server.client_allowed("notanip", "private"))
+
+    def test_the_default_setting_is_private(self):
+        self.assertEqual(server.DEFAULTS["ALLOW_FROM"], "private")
+        self.assertEqual(server.DEFAULTS["BIND_ADDRESS"], "0.0.0.0")
+
+    def test_the_running_server_refuses_with_403(self):
+        # The real server, on the loopback address. 127.0.0.1 is private, so the default lets it in; a list that
+        # leaves the loopback out must turn the same request away with a 403 and not with a crash.
+        import http.client, socket, tempfile, threading
+        with tempfile.NamedTemporaryFile("w", suffix=".env", delete=False) as fh:
+            fh.write("ALLOW_FROM=private\n")
+            cfgpath = fh.name
+        old_cfg = server.CONFIG_FILE
+        server.CONFIG_FILE = cfgpath
+        server._cfg_cache.update(mtime=None)                      # forget whatever config an earlier test loaded
+        httpd = server.WallServer(("127.0.0.1", 0), server.Handler)
+        port = httpd.server_address[1]
+        t = threading.Thread(target=httpd.serve_forever, daemon=True); t.start()
+        try:
+            def get(path):
+                c = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                c.request("GET", path); r = c.getresponse(); body = r.read(); c.close()
+                return r.status, body
+            self.assertEqual(get("/api/health")[0], 200)
+            with open(cfgpath, "w") as fh:
+                fh.write("ALLOW_FROM=10.8.0.0/24\n")
+            os.utime(cfgpath, (time.time() + 5, time.time() + 5))     # make the change visible to the mtime cache
+            status, body = get("/api/health")
+            self.assertEqual(status, 403)
+            self.assertIn(b"ALLOW_FROM", body)
+            with open(cfgpath, "w") as fh:
+                fh.write("ALLOW_FROM=any\n")
+            os.utime(cfgpath, (time.time() + 10, time.time() + 10))
+            self.assertEqual(get("/api/health")[0], 200)
+        finally:
+            httpd.shutdown(); httpd.server_close()
+            server.CONFIG_FILE = old_cfg
+            server._cfg_cache.update(mtime=None)
+            os.unlink(cfgpath)
+
+
 class PhotoUrlTest(unittest.TestCase):
     """The photo address is somebody else's answer, and the Pi fetches it itself: it has to be checked first."""
 

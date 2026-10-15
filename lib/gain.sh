@@ -152,6 +152,8 @@ gain_log_install_units() {
   [ -f "$ZB_HOME/systemd/$GAIN_LOG_UNIT.service" ] || return 0
   install -d -m 755 "$GAIN_LOG_UNIT_DIR"
   install -m 644 "$ZB_HOME/systemd/$GAIN_LOG_UNIT.service" "$ZB_HOME/systemd/$GAIN_LOG_UNIT.timer" "$GAIN_LOG_UNIT_DIR/"
+  # since 0.15.0 the timer runs as the wall's user: a CSV that root wrote before must be handed over to it
+  [ ! -f "$GAIN_LOG_FILE" ] || chown "$ZB_USER:$ZB_USER" "$GAIN_LOG_FILE" 2>/dev/null || true
   systemctl daemon-reload; systemctl enable --now "$GAIN_LOG_UNIT.timer" >/dev/null 2>&1 || true
 }
 gain_log_remove_units() {
