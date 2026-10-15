@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.16.3
+- **The statistics page no longer smears its left edge once an hour passes a million messages.** The vertical axis of *Messages per hour* drew a line every 10 000, which is about three hundred labels written on top of each other with 3 million messages in an hour. The step now fits the size (1, 2 or 5 times a power of ten, four to six lines), and the axis reads `1 M`, `2 M`, `20 k`; the number above the busiest bar and the tooltips stay whole. A test takes the real `ticks()` out of `stats.js`.
+
 ## 0.16.2
 - `zenithboard security` recognises ports 8504 and 8978: FlightAware's SkyAware map, which `dump1090-fa` also serves there. Found on a real Pi.
 

@@ -36,6 +36,7 @@ Run the whole set before pushing. It takes well under a minute, and the shell te
 | `test_menus.sh` | Every menu has exactly one `back` entry and no dead item |
 | `test_format.js` | Formatting and unit conversion on the wall |
 | `test_shapes.js`, `test_scene.js`, `test_flap.js` | Silhouettes, the animated scene, the split-flap board |
+| `test_statsjs.js` | The statistics charts' axis: a handful of round lines whatever the size, from ten to billions of messages |
 | `test_layout.js` | The settings gear clears the photo and the silhouette on 15 screen sizes |
 | `test_update_verify.sh` | The update's signature check: the whole decision table, real expired and current gpg keys, the one-time question for older installs, and that the private download folder outlives the sub-shell that asked for it |
 | `test_docs.sh` | Every command the program accepts, and every line of its help, appears on the [Command reference](Command-reference) page |
