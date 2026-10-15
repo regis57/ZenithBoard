@@ -90,8 +90,9 @@ check "sandboxes: OK"                                    'line OK "inside a sand
 check "secrets root-only: OK twice"                      '[ "$(printf "%s" "$out" | grep -c "is root-only")" = 2 ]'
 
 # ================= things that are simply absent
+# (the real sshd lives in /usr/sbin on a CI runner, so that directory is left out of PATH for this one call)
 rm -f "$t/grafana-installed" "$t/bin/sshd"
-out=$(security_check)
+out=$(PATH="$t/bin:/usr/bin:/bin" security_check)
 check "no grafana: OK, not installed"                    'line OK "Grafana is not installed"'
 check "no sshd: INFO"                                    'line INFO "No SSH server"'
 
