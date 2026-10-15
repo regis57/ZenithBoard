@@ -250,7 +250,9 @@ In the menu, **Help me choose** explains these three, **Set up** asks for the na
 * **Left (dots):** callsign, airline name, aircraft type and registration, altitude and speed. Then **where the flight comes from** and, after an arrow, **where it is going**: the airport's name when it fits, otherwise its city (`LUXEMBOURG`, `→PARIS`). See [Flight routes](#flight-routes). The last line gives the *position in the cycle*, the distance and the direction **from you** (`NNE`).
 * **Top right (dots):** a **silhouette that matches the real aircraft design**: an A380 is drawn as a four-engine airliner, a Cessna as a single-engine propeller plane, an F-16 as a fighter. See [Aircraft silhouettes](#aircraft-silhouettes).
 * **Bottom right (a real picture, not dots):** the **photo of that exact aircraft** from [Planespotters](https://www.planespotters.net/), with the photographer's name and a link to the photo page. When there is no photo (or no internet) it shows an **animated sky** with a **side view of the matching aircraft model**, labelled with the model name. The sky follows your clock as one continuous day: the sun rises along its arc and sets, the colours slide from dawn through midday to dusk, the clouds are lit from the side the sun is on, thin cirrus drifts overhead, and at night the stars twinkle under a crescent moon. Propellers and rotors turn.
-* Aircraft are shown nearest first, one at a time, for a few seconds each, with a wipe transition. With nothing in range the wall shows a clock and how many aircraft your antenna sees.
+* **Two small flags (dot matrix only):** at the right of the airline row, **where the aircraft is registered**; at the right of the model row, **where it was built**. Both are drawn in the same dots as everything else, so they scale with the wall. The country comes from the registration itself (`OE-LMP` is Austria, `CN-` is Morocco and not Canada: the longest prefix wins), from a table inside the page — nothing is looked up over the network, and an unknown prefix shows no flag rather than a wrong one. There are **no manufacturer logos**, in dots or otherwise: those marks are protected, and the country where the airframe is built carries the same meaning. A flag that contains black (Germany, Belgium, Estonia) gets a one-dot white outline, because the wall is black too — the black band is never lit in the wall's colour, which would make it a different flag. Switch them off for every screen with `FLAGS=0`, or for one tablet with the gear → **Flags**.
+* **Names too long to fit turn continuously.** The two flags cost those rows two characters each (twelve instead of fourteen), so a long airline or model name scrolls: the row holds the name, three spaces, then the name again, and what leaves on the left is already arriving on the right — no jump back to the start. An aircraft stays **fourteen seconds** by default, time enough for a long name to come round (`sudo zenithboard cycle 8` to change it).
+* Aircraft are shown nearest first, one at a time, for fourteen seconds each by default, with a wipe transition. With nothing in range the wall shows a clock and how many aircraft your antenna sees.
 
 ## Look: dot matrix or airport split-flap board
 
@@ -273,7 +275,7 @@ Not convincing? Nothing to undo: the dot matrix stays the default until you chan
 
 ## Colours
 
-The dots are **amber by default**. Pick amber, green, red or white:
+The dots are **amber by default**. Pick amber, green, red, white, turquoise (`#00d6d7`) or blue (`#0404e2`). One colour at a time: the point is a lit sign, not a screenshot of a map. Blue is the deepest of the six — on a dark wall at a distance it reads as a quiet navigation light rather than as text, so try turquoise first if the board is meant to be read from the sofa.
 
 | Where | How |
 |---|---|
@@ -289,7 +291,7 @@ Three ways, pick the one that suits you.
 |---|---|
 | **Command line** (affects every screen) | `sudo zenithboard units imperial` · `sudo zenithboard units metric` · `sudo zenithboard radius 5` · `sudo zenithboard cycle 8` |
 | **Menu** | `sudo zenithboard menu` → *4 Settings* (network, receiver, wall, logs) |
-| **On the tablet** (that tablet only) | Tap the faint gear in the bottom-right corner: units, radius, seconds per plane, colour (amber / green / red / white). Or use a link, see [Tablet links](#tablet-links-one-address-per-look) below. |
+| **On the tablet** (that tablet only) | Tap the faint gear in the bottom-right corner: units, radius, seconds per plane, colour (amber / green / red / white / turquoise / blue). Or use a link, see [Tablet links](#tablet-links-one-address-per-look) below. |
 
 Radius presets are **1, 2, 5, 10, 15, 30, 50** — read as kilometres in metric mode and miles in imperial mode. Changes apply immediately, no restart or reinstall.
 
