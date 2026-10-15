@@ -453,7 +453,7 @@ sudo zenithboard update only readsb flightinfo # just those two
 
 Names: `zenithboard` (the ZenithBoard code itself), `readsb`, `dump1090`, `adsbx`, `piaware`, `fr24`, `planefinder`, `flightinfo`, `acars`. Only what is installed is offered.
 
-**Which version do I have?** `zenithboard version` (also shown at the top of the menu and in `zenithboard status`). After an update it should show the newest version listed in the [changelog](CHANGELOG.md); if the update could not fetch the code it prints `NOT updated: staying on version ...`. On a tablet the version is in the gear panel, and at the foot of the statistics page, each linked to that version's release notes on GitHub — a link, not a lookup: nothing is asked of GitHub unless you tap it.
+**Which version do I have?** `zenithboard version` (also shown at the top of the menu and in `zenithboard status`). After an update it should show the newest version listed in the [changelog](CHANGELOG.md); if the update could not fetch the code it prints `NOT updated: staying on version ...`. On a tablet the version is in the gear panel — with a link to the statistics page beside it while statistics are on — and at the foot of the statistics page, each linked to that version's release notes on GitHub — a link, not a lookup: nothing is asked of GitHub unless you tap it.
 
 If a Pi still runs an older ZenithBoard whose update fails with *Diverging branches* (the project's history was rewritten), do this once, then update normally:
 

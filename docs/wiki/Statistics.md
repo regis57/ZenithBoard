@@ -7,7 +7,7 @@ sudo zenithboard stats on      # or: sudo zenithboard menu -> 4 Settings -> Rece
 zenithboard stats              # in the terminal
 ```
 
-and in a browser, `http://PI-ADDRESS:8080/stats`.
+and in a browser, `http://PI-ADDRESS:8080/stats`. From a tablet, the gear panel on the wall carries a link to it, beside the version — but only while statistics are on.
 
 ## What a sample is
 

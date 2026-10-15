@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.17.4
+- **The gear panel offers the statistics page, while there is one.** Beside the version, in the same grey: `ZenithBoard 0.17.4 · Statistics`. It appears only when `STATS=1` and goes as soon as statistics are switched off, because a link to a feature nobody turned on leads to a page that says "off" — a dead end dressed as a door. `/api/config` carries the setting; the wall reloads by itself within seconds of `zenithboard stats on` or `off`, so the link follows without touching the tablet.
+
 ## 0.17.3
 - **An update now checks that the wall really came back on the new version**, instead of assuming it. The wall is a running Python process: new files on disk change nothing until it is restarted, and an update that did not pass through the FlightInfo step left it answering the old version — the menu said 0.17.2 while the gear panel still said 0.17.1 (seen on a real Pi after `update only zenithboard`). The end of every update now asks the wall, on the loopback, which version it is running, restarts it when that is not the version just installed, and says so. A wall that still will not come up is reported with the command to run, never hidden.
 
