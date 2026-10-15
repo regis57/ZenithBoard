@@ -22,7 +22,7 @@ Inspired by [jprochazka/adsb-receiver](https://github.com/jprochazka/adsb-receiv
 
 ## See it
 
-**Watch:** [the 38-second Short](https://youtube.com/shorts/bhOSN4SAK3U) · [the split-flap Short](https://youtube.com/shorts/RpelTSHk6jo) · [the short how-to (no installation details)](https://youtu.be/vuBje80VaZA) · [the whole playlist](https://www.youtube.com/channel/UCBlFORfQZ6XtUnpuG5fBd9Q/playlists)
+**Watch:** [what's new in ZenithBoard (flags, scrolling names, colours)](https://youtu.be/XHzTL2T3D2A) · [the new promotional Short](https://youtube.com/shorts/irg4B0wQOBI) · [the split-flap Short](https://youtube.com/shorts/RpelTSHk6jo) · [the short how-to (no installation details)](https://youtu.be/vuBje80VaZA) · [the whole playlist](https://www.youtube.com/channel/UCBlFORfQZ6XtUnpuG5fBd9Q/playlists)
 
 <p align="center"><img src="docs/images/wall/zb-wall-green.gif" alt="The ZenithBoard wall cycling through aircraft in green" width="460">&nbsp;<img src="docs/images/wall/zb-flap-roll.gif" alt="The split-flap look, letters rolling to the next aircraft" width="460"></p>
 
@@ -40,9 +40,9 @@ The story behind the project: [ZenithBoard on regis-hennequin.info](https://regi
 | **2. Network** | [Wi-Fi](#wi-fi) · [Fixed IP](#fixed-ip-address) · [A name for your wall](#a-name-for-your-wall) · [Ports](#network-ports-what-answers-where) |
 | **3. The wall** | [What it shows](#what-the-wall-shows) · [Look](#look-dot-matrix-or-airport-split-flap-board) · [Colours](#colours) · [Units, radius, position](#units-radius-and-position) · [Silhouettes](#aircraft-silhouettes) · [Routes and models](#flight-routes) · [Photos](#photos) · [Demo](#try-it-without-any-hardware) |
 | **4. The receiver** | [Gain](#gain-tune-the-dongle-optional) · [978 MHz UAT (US)](#978-mhz-uat-united-states) · [Statistics](#statistics-messages-per-hour-range-aircraft-per-day-optional) |
-| **5. Keep it running** | [Update](#updating-and-uninstalling) · [Logs](#logs-size-review-clean-optional) · [Reliability](#reliability-when-the-pi-freezes-or-loses-its-network-optional) · [Security](#security) · [Troubleshooting](#troubleshooting) · [Known limits](#known-limits) |
+| **5. Keep it running** | [Update](#updating-and-uninstalling) · [Logs](#logs-size-review-clean-optional) · [Reliability](#reliability-when-the-pi-freezes-or-loses-its-network-optional) · [Security](#security) · [When a provider changes something](#when-flightaware-adsb-exchange-flightradar24-or-plane-finder-change-something) · [Troubleshooting](#troubleshooting) · [Known limits](#known-limits) |
 | **Every command** | One table per subject, with what each one is for: **[Command reference](https://github.com/regis57/ZenithBoard/wiki/Command-reference)** (wiki) |
-| **The wiki** | [Roadmap](https://github.com/regis57/ZenithBoard/wiki/Roadmap) · [Project status](https://github.com/regis57/ZenithBoard/wiki/Project-status) · [Architecture](https://github.com/regis57/ZenithBoard/wiki/Architecture) · [Settings](https://github.com/regis57/ZenithBoard/wiki/Configuration-reference) · [Commands](https://github.com/regis57/ZenithBoard/wiki/Command-reference) · [Testing](https://github.com/regis57/ZenithBoard/wiki/Testing) · [Security](https://github.com/regis57/ZenithBoard/wiki/Security) |
+| **The wiki** | [Roadmap](https://github.com/regis57/ZenithBoard/wiki/Roadmap) · [Project status](https://github.com/regis57/ZenithBoard/wiki/Project-status) · [Architecture](https://github.com/regis57/ZenithBoard/wiki/Architecture) · [Settings](https://github.com/regis57/ZenithBoard/wiki/Configuration-reference) · [Commands](https://github.com/regis57/ZenithBoard/wiki/Command-reference) · [Testing](https://github.com/regis57/ZenithBoard/wiki/Testing) · [Security](https://github.com/regis57/ZenithBoard/wiki/Security) · [Providers](https://github.com/regis57/ZenithBoard/wiki/Providers) |
 
 **Which defaults does what?** Everything in menu *4 Settings* (and `zenithboard ...`) sets the **default for every screen**. The gear icon on a tablet, or a link such as `?mode=flap`, only overrides it **for that tablet**; the gear's *Reset* returns the tablet to the Pi's default. So the two do not duplicate each other: one is the house rule, the other a personal choice.
 
@@ -460,7 +460,7 @@ cd ~/ZenithBoard && git fetch origin && git reset --hard origin/main && sudo ./i
 sudo zenithboard update
 ```
 
-The same is available in the menu (*6 Update*). Run it whenever a provider releases a new version, or once a month. If a provider changes a download link, edit it in [`lib/versions.sh`](lib/versions.sh) and run the update again — a monthly check in the project opens an issue when one of those links stops answering, so you usually hear about it before an install does.
+The same is available in the menu (*6 Update*). Run it whenever a provider releases a new version, or once a month.
 
 ```bash
 sudo zenithboard menu                                 # add or remove any component at any time
@@ -468,6 +468,18 @@ sudo /opt/zenithboard/install.sh --uninstall-all      # remove everything
 ```
 
 **One exception: readsb is never removed automatically.** Its installer builds it from source and provides no way back, so ZenithBoard says so and prints the commands to run by hand rather than deleting system files it did not put there. Everything else is removed normally.
+
+### When FlightAware, ADSB Exchange, Flightradar24 or Plane Finder change something
+
+They do not warn ZenithBoard, so the project is built to fail small:
+
+* **A new version** at the same address needs nothing but `sudo zenithboard update`. FlightAware and Flightradar24 update through their own APT repositories; ADSB Exchange's updater is fetched and run again each time. **Plane Finder is the exception**: its version is pinned, so a new client version is picked up when the number in [`lib/versions.sh`](lib/versions.sh) is bumped.
+* **A moved or renamed file** stops the install or update of **that provider only**, with a warning naming it. What was already installed keeps running, the other providers and the wall are untouched, and the update still ends normally.
+* **You hear about it first.** On the 1st of each month a check in the project requests every pinned address and opens an issue when one stops answering; the fix is one line in `lib/versions.sh`, released like any change. Then `sudo zenithboard update` is all it takes (`sudo zenithboard update only planefinder` retries just one).
+* **A new Flightradar24 signing key is refused** until its fingerprint has been checked and recorded. Package signature checking is never turned off to get past it.
+* **What cannot be seen coming:** an installer that changes what it does behind the same address. ADSB Exchange's, Flightradar24's and readsb's run as root and are trusted, not checked — the [Security](https://github.com/regis57/ZenithBoard/wiki/Security) page says so openly.
+
+Provider by provider, how to fix it yourself, and what the maintainer does: wiki **[When a provider changes something](https://github.com/regis57/ZenithBoard/wiki/Providers)**.
 
 ## Logs: size, review, clean (optional)
 
@@ -512,7 +524,8 @@ ZenithBoard runs as root, listens on your network and installs other people's so
 * **The wall answers your home network only.** It has no login, by design: it is meant for a tablet on your home network, so it answers the private address ranges and gives everyone else a 403, forwarded port or not. To see it from outside, use a VPN into your home; to open it on purpose, `sudo zenithboard config-set ALLOW_FROM any`.
 * **The services can only do their own job.** Every ZenithBoard service runs inside a systemd sandbox that keeps only what its job needs; the wall server runs as a system user that cannot log in and cannot write anywhere. Check it with `systemd-analyze security zenithboard-flightinfo` (about 1.3 on a Pi 3B: 0 is locked down, 10 is open).
 * **Nothing is left at a default password, and the OS can patch itself.** Grafana gets a generated admin password at install (`sudo zenithboard acars password` shows it), and `sudo zenithboard patches on` installs Debian's security fixes daily, from the security channel only, feeders untouched.
-* **`zenithboard security` checks all of this on the running Pi** and says how to close whatever is open.
+* **`zenithboard security` checks all of this on the running Pi** and says how to close whatever is open. On the author's own Pi it reports two warnings and both are decisions: the Debian patches are left for the owner to switch on, and SSH passwords stay because the Pi is reached from the home network only.
+* **The repository is guarded too:** `main` accepts pull requests only, squash-merged, signed, with the tests and CodeQL green; GitHub secret scanning and push protection are on.
 * **Updates are checked before they run.** `sudo zenithboard update` verifies the signature on the new code before `install.sh` runs as root. The first time, it lists GitHub's signing keys and asks you to confirm — compare with the key ID behind the **Verified** badge on GitHub. After that it is silent; a bad signature stops it outright. On a fork, `sudo zenithboard config-set UPDATE_VERIFY 0`.
 * **Nothing from outside steers the Pi.** Photo addresses must be `https` inside `planespotters.net`, every header the wall sends comes from a fixed table in the program, downloads run as root go to a private folder over https only, and the dynamic-DNS token never appears on a command line or in a log.
 * **Some things are trusted, and written down.** The installers of readsb, ADSB Exchange and Flightradar24 run as root and cannot be checked; their addresses are pinned in [`lib/versions.sh`](lib/versions.sh), and a monthly check opens an issue when one stops answering. readsb has no uninstaller, so removing it prints the commands instead.
@@ -566,7 +579,7 @@ The processes, the files each one reads and writes, and the timers are set out i
 
 ## Known limits
 
-* **Feeder download addresses** are pinned in [`lib/versions.sh`](lib/versions.sh) and were copied from each provider's own page on 6 October 2026. Providers rename and move files; a monthly check now opens an issue when one stops answering, and the fix is one line in that file (a pull request is welcome).
+* **Feeder download addresses** are pinned in [`lib/versions.sh`](lib/versions.sh) and were copied from each provider's own page on 6 October 2026. Providers rename and move files; a monthly check opens an issue when one stops answering, and the fix is one line in that file (a pull request is welcome). What happens meanwhile is under [When FlightAware, ADSB Exchange, Flightradar24 or Plane Finder change something](#when-flightaware-adsb-exchange-flightradar24-or-plane-finder-change-something).
 * **FlightAware and Flightradar24 store your antenna position on their websites**: after `zenithboard location`, update it there too (the command tells you where).
 * **The airline name list is built in** (about 90 major airlines); other airlines show the callsign only.
 * **Routes are looked up by callsign, not by flight.** A callsign can be reused for the other direction, so impossible answers are dropped rather than shown — a blank route row is better than a wrong one.

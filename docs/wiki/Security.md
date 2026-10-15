@@ -23,6 +23,9 @@ ZenithBoard runs as root on a machine in your home, listens on your network, and
 | The operating system | Debian's security fixes can install themselves daily, from the security channel only; the feeders are left alone | 0.15.0 |
 | Checking all of it | `zenithboard security` reads the running Pi and says what is open and how to close it | 0.15.0 |
 | The repository | CodeQL, shellcheck, pinned actions, Dependabot, a monthly check of the download addresses | 0.11.1 |
+| The `main` branch | A GitHub ruleset: pull request only, squash only, signed commits, the three checks must pass, no force push, no deletion. It refused a merge when the tests failed | October 2026 |
+| Secrets in the repository | GitHub secret scanning and push protection are on | October 2026 |
+| Statistics | Off by default. Its sample runs as the `zenithboard` user in the same kind of sandbox, and the `/stats` page answers the same networks as the wall | 0.16.0 |
 
 ## What is exposed on your network
 
@@ -33,6 +36,8 @@ ZenithBoard runs as root on a machine in your home, listens on your network, and
 | tar1090, port 80 | Same | Installed by readsb, not by ZenithBoard |
 | Grafana, port 3000 | Same | Only with ACARS. Login `admin` with the password ZenithBoard set: `sudo zenithboard acars password` |
 | Plane Finder, port 30053 | Same | Its own setup page |
+| SkyAware, port 8504 (or 8978) | Same | Served by FlightAware's lighttpd, not by ZenithBoard. `zenithboard security` names it |
+| `/stats`, `/api/stats` | Same as the wall | Only when `STATS=1`. Counts and ranges per hour and per day; the antenna's position is not part of it |
 
 **Do not forward any of these from the internet.** Nothing here expects a hostile visitor: there is no login on the wall, no rate limit, and no audit trail. To see your wall from outside, use a VPN into your home network. The dynamic-DNS feature exists so *you* can find your Pi, not so the world can.
 
@@ -118,7 +123,7 @@ The installer runs other people's installers, as root, straight from the network
 | `install_fr24_rpi.sh` | repo-feed.flightradar24.com |
 | `.deb` packages | FlightAware, Plane Finder, Grafana |
 
-**This is a real trust decision, and it is not hidden.** Installing ZenithBoard means trusting those projects as much as you trust this one. Pinning a checksum for each would break on every one of their releases, so what is pinned instead is the *address*, in `lib/versions.sh`, where you can read it before running anything. A monthly check (below) says when one of those addresses stops answering.
+**This is a real trust decision, and it is not hidden.** Installing ZenithBoard means trusting those projects as much as you trust this one. Pinning a checksum for each would break on every one of their releases, so what is pinned instead is the *address*, in `lib/versions.sh`, where you can read it before running anything. A monthly check (below) says when one of those addresses stops answering, and [When a provider changes something](Providers) says what happens then.
 
 **readsb cannot be uninstalled by ZenithBoard.** Its installer builds it from source and ships no way back, so removing readsb prints the commands to run by hand instead of guessing which system files to delete. Everything ZenithBoard itself installed is removed normally.
 
@@ -164,6 +169,19 @@ Kept as a record, because a security page that only lists what is fine is not be
 | 0.12.3 | A real Pi asking at every update | GitHub's key file has its expired key first; only that one was recorded | All usable keys recorded, expired ones never |
 | 0.12.4 | The wall itself | The host check left out `plnspttrs.net`, where the pictures actually are, so every photo was refused in silence | Both domains allowed; the test uses the real answer |
 | 0.15.0 | Reading the code again | The wall answered anyone, forwarded port included; Grafana kept `admin`/`admin`; five timers ran as root with no sandbox; the Pi installed no security fixes by itself | `ALLOW_FROM=private`; a generated Grafana password; every unit sandboxed; `zenithboard patches`; `zenithboard security` to check all of it |
+| 0.16.1 | The first `zenithboard security` on a real Pi | An older install still had the unsandboxed `data-refresh` unit (score 9.6): updates installed new unit files only for features that were switched on, never refreshing the ones already there. The same port was listed twice; feeder ports were unrecognised | Every update now refreshes every ZenithBoard unit file the Pi has; ports listed once; decoder and feeder ports recognised |
+| 0.16.2 | The same audit, rerun | Ports 8504 and 8978 were reported as unknown: they are SkyAware, served by FlightAware's lighttpd | Recognised and named |
+
+## What the author's own Pi says
+
+`zenithboard security` was run on the Pi that is actually outside, on 15 October 2026 (version 0.16.2). Everything passes except two warnings, and both are decisions rather than oversights:
+
+| Warning | Decision |
+|---|---|
+| Debian security patches are not switched on | Left to the owner: `sudo zenithboard patches on` when wanted. It is off by default because a machine that changes itself at night should be a choice |
+| SSH still accepts passwords | **Kept on purpose.** The Pi is reached by SSH from the home network only, nothing forwards port 22, and the wall refuses everyone outside the private ranges. The warning stays visible in the audit so the decision stays a decision. Anyone who opens the Pi to the internet should turn passwords off first |
+
+All five services are sandboxed, and every listening port is recognised: none is unexpected.
 
 ## Running it more tightly, if you want to
 

@@ -2,7 +2,7 @@
 
 No dates. ZenithBoard is a spare-time project and a date would be a fiction. What this page promises is an order: the *Now* list is what is actually being worked on, and nothing from *Later* starts before *Now* is empty.
 
-## Now — make 0.10.x trustworthy on real hardware
+## Now — prove it on real hardware
 
 The code is complete enough. What it lacks is proof.
 
