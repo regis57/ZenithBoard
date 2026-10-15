@@ -145,7 +145,7 @@ What is left is the GitHub Actions used by CI. They are **pinned to a commit, no
 | The download-address check | the 1st of each month, or by hand | Opens one issue when a pinned address stops answering (`tools/check-links.sh`) |
 | Dependabot | monthly | Pull requests for the pinned actions |
 
-**How CodeQL findings are handled:** a real finding is fixed and gets a test. A finding that describes something deliberate is dismissed in the *Security* tab as *Won't fix*, **with the reason written in the dismissal** — the rule is never switched off, because it should still catch the next mistake. Two are dismissed this way today:
+**How CodeQL findings are handled:** a real finding is fixed and gets a test. A finding that describes something deliberate is dismissed in the *Security* tab as *Won't fix*, **with the reason written in the dismissal** — the rule is never switched off, because it should still catch the next mistake. Two are dismissed this way today, and a third, an *Empty except* note raised on the statistics reader the same day, was fixed rather than dismissed:
 
 | Alert | Why it stays |
 |---|---|
@@ -170,6 +170,7 @@ Kept as a record, because a security page that only lists what is fine is not be
 | 0.12.4 | The wall itself | The host check left out `plnspttrs.net`, where the pictures actually are, so every photo was refused in silence | Both domains allowed; the test uses the real answer |
 | 0.15.0 | Reading the code again | The wall answered anyone, forwarded port included; Grafana kept `admin`/`admin`; five timers ran as root with no sandbox; the Pi installed no security fixes by itself | `ALLOW_FROM=private`; a generated Grafana password; every unit sandboxed; `zenithboard patches`; `zenithboard security` to check all of it |
 | 0.16.1 | The first `zenithboard security` on a real Pi | An older install still had the unsandboxed `data-refresh` unit (score 9.6): updates installed new unit files only for features that were switched on, never refreshing the ones already there. The same port was listed twice; feeder ports were unrecognised | Every update now refreshes every ZenithBoard unit file the Pi has; ports listed once; decoder and feeder ports recognised |
+| 0.16.2+ | CodeQL, on `main` | An `except OSError: pass` in the statistics reader: the deliberate fallback (keep the running count when a day file is gone) was indistinguishable from a forgotten error | The fallback is an explicit return value, same behaviour |
 | 0.16.2 | The same audit, rerun | Ports 8504 and 8978 were reported as unknown: they are SkyAware, served by FlightAware's lighttpd | Recognised and named |
 
 ## What the author's own Pi says
