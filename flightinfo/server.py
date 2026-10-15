@@ -123,6 +123,15 @@ import csv
 import datetime
 
 
+def _count_lines(path, default):
+    """Non-empty lines of a file, or `default` when it cannot be read."""
+    try:
+        with open(path, encoding="utf-8") as fh:
+            return sum(1 for line in fh if line.strip())
+    except OSError:
+        return default
+
+
 def read_stats(stats_dir=None, now=None):
     stats_dir = stats_dir or STATS_DIR
     now = now or datetime.datetime.now()
@@ -156,13 +165,10 @@ def read_stats(stats_dir=None, now=None):
         e["farthest_km"] = max(e["farthest_km"], far)
         e["aircraft"] = max(e["aircraft"], seen)
         e["samples"] += 1
-    # the day's aircraft count is the day file's length, which is exact for that day; the CSV only carries the running count
+    # the day's aircraft count is the day file's length, which is exact for that day; the CSV only carries the running
+    # count, which stands when the day file is missing (removed after thirty days, or the sampler was off that day)
     for d, e in days.items():
-        try:
-            with open(os.path.join(stats_dir, "seen-" + d), encoding="utf-8") as fh:
-                e["aircraft"] = sum(1 for line in fh if line.strip())
-        except OSError:
-            pass
+        e["aircraft"] = _count_lines(os.path.join(stats_dir, "seen-" + d), e["aircraft"])
     day_list = [days[d] for d in sorted(days)][-30:]
     today = now.strftime("%Y-%m-%d")
     t = days.get(today) or {"day": today, "messages": 0, "farthest_km": 0, "aircraft": 0, "samples": 0}
