@@ -21,7 +21,7 @@ The code is complete enough. What it lacks is proof.
 
 ## Later — good ideas, no urgency
 
-* More airlines in the built-in name list. It knows about ninety; everything else shows the bare callsign.
+* Airline names for callsigns that have no route in adsbdb: a dedicated airline lookup, one request per prefix, off by default. Since 0.17.0 every airline with a known route is already named from the route answer, so this is worth doing only if bare callsigns are still common on a real wall.
 * Wider silhouette coverage, so fewer aircraft fall back to the generic shape.
 * The 978 MHz UAT path validated by someone in the United States. It is written and tested, and nobody has run it for real.
 * Per-tablet presets, so a second screen can have its own look without a long link.

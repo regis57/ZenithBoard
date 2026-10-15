@@ -26,7 +26,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.16.3"
+VERSION = "0.17.0"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -344,8 +344,56 @@ def airline_for(callsign, airlines):
     if not m:
         return None, None
     icao = m.group(1)
-    info = airlines.get(icao)
+    info = airlines.get(icao) or learned_airline(icao)
     return (icao, info) if info else (icao, None)
+
+
+# Airlines learned from the route answers. adsbdb's answer for a callsign names the airline, so the wall keeps that
+# name for the callsign's three-letter prefix: a callsign of an airline outside the built-in list is then shown with
+# its name instead of bare. Kept in memory only (the server writes nowhere), for the life of the process; a route
+# lookup repeats every 12 hours anyway. The built-in list wins when it knows the prefix (its names are the short ones).
+_learned = {"data": {}, "lock": threading.Lock()}
+_CORP_RE = re.compile(r"[\s,]+(INC\.?|LTD\.?|LIMITED|LLC|PLC|S\.?A\.?|GMBH|AG|CO\.?|CORP\.?|CORPORATION|COMPANY)$", re.I)
+
+
+def clean_airline_name(name):
+    """'American Airlines Inc.' -> 'American Airlines'. The dot font has no accents (format.js drops them)."""
+    name = re.sub(r"\s+", " ", str(name or "")).strip()
+    while True:
+        short = _CORP_RE.sub("", name).strip()
+        if short == name or not short:
+            break
+        name = short
+    return name
+
+
+def parse_airline(data):
+    """adsbdb answer -> {'icao': 'EZY', 'name': 'easyJet', 'iata': 'U2'} or None."""
+    resp = data.get("response") if isinstance(data, dict) else None
+    fr = resp.get("flightroute") if isinstance(resp, dict) else None
+    al = fr.get("airline") if isinstance(fr, dict) else None
+    if not isinstance(al, dict):
+        return None
+    icao, name = str(al.get("icao") or "").strip().upper(), clean_airline_name(al.get("name"))
+    if not re.match(r"^[A-Z]{3}$", icao) or not name:
+        return None
+    return {"icao": icao, "name": name, "iata": str(al.get("iata") or "").strip().upper() or None}
+
+
+def learn_airline(data):
+    """Remember the airline an adsbdb answer names. Returns what was learned, or None."""
+    info = parse_airline(data)
+    if info:
+        with _learned["lock"]:
+            if len(_learned["data"]) > 2000:
+                _learned["data"].clear()
+            _learned["data"][info["icao"]] = {"name": info["name"], "iata": info["iata"], "learned": True}
+    return info
+
+
+def learned_airline(icao):
+    with _learned["lock"]:
+        return _learned["data"].get(icao)
 
 
 _types = {"key": None, "data": {}, "updated": None}
@@ -739,7 +787,9 @@ def _route_api(callsign):
     try:
         req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
         with urllib.request.urlopen(req, timeout=10) as resp:
-            return parse_route(json.load(resp)), True
+            data = json.load(resp)
+        learn_airline(data)                 # the answer names the airline too: keep it for callsigns of that prefix
+        return parse_route(data), True
     except urllib.error.HTTPError as exc:
         if exc.code != 404:
             print("route lookup %s: HTTP %s, retrying in %d s" % (callsign, exc.code, ROUTE_RETRY_S), file=sys.stderr, flush=True)

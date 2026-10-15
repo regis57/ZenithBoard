@@ -181,6 +181,55 @@ ADSBDB_SAMPLE = {"response": {"flightroute": {
     "destination": {"country_iso_name": "BG", "iata_code": "SOF", "icao_code": "LBSF", "municipality": "Sofia", "name": "Sofia Airport"}}}}
 
 
+# A real adsbdb answer, read on 15 October 2026: the route comes with the airline behind the callsign.
+ADSBDB_EASYJET = {"response": {"flightroute": {
+    "callsign": "EZY1234", "callsign_icao": "EZY1234", "callsign_iata": "U21234",
+    "airline": {"name": "easyJet", "icao": "EZY", "iata": "U2", "country": "United Kingdom", "country_iso": "GB", "callsign": "EASY"},
+    "origin": {"country_iso_name": "GB", "country_name": "United Kingdom", "elevation": 135, "iata_code": "EDI", "icao_code": "EGPH",
+               "latitude": 55.95015, "longitude": -3.37229, "municipality": "Edinburgh", "name": "Edinburgh Airport"},
+    "destination": {"country_iso_name": "FR", "country_name": "France", "elevation": 885, "iata_code": "BSL", "icao_code": "LFSB",
+                    "latitude": 47.60068, "longitude": 7.52112, "municipality": "Saint-Louis", "name": "EuroAirport Basel-Mulhouse-Freiburg"}}}}
+
+
+class LearnedAirlineTests(unittest.TestCase):
+    """0.17.0: a callsign outside the built-in list gets its airline name from the route answer the wall already asks for."""
+
+    def setUp(self):
+        with server._learned["lock"]:
+            server._learned["data"].clear()
+
+    def test_the_real_answer_names_the_airline(self):
+        self.assertEqual(server.parse_airline(ADSBDB_EASYJET), {"icao": "EZY", "name": "easyJet", "iata": "U2"})
+        self.assertEqual(server.parse_route(ADSBDB_EASYJET)["to"]["iata"], "BSL")     # the route still comes out of the same answer
+
+    def test_learned_name_shows_for_every_callsign_of_that_prefix(self):
+        self.assertEqual(server.airline_for("EZY52AB", {}), ("EZY", None))            # not in the built-in list: bare
+        server.learn_airline(ADSBDB_EASYJET)
+        self.assertEqual(server.airline_for("EZY52AB", {}), ("EZY", {"name": "easyJet", "iata": "U2", "learned": True}))
+        self.assertEqual(server.airline_for("EZY1", {}), ("EZY", {"name": "easyJet", "iata": "U2", "learned": True}))
+        self.assertEqual(server.airline_for("RYR1", {}), ("RYR", None))              # another prefix learns nothing from it
+
+    def test_builtin_list_wins_over_what_was_learned(self):
+        server.learn_airline(ADSBDB_EASYJET)
+        self.assertEqual(server.airline_for("EZY1", {"EZY": {"name": "EASYJET SHORT", "iata": "U2"}})[1]["name"], "EASYJET SHORT")
+
+    def test_corporate_suffixes_are_dropped_and_broken_answers_teach_nothing(self):
+        self.assertEqual(server.clean_airline_name("American Airlines Inc."), "American Airlines")
+        self.assertEqual(server.clean_airline_name("Lufthansa Cargo AG"), "Lufthansa Cargo")
+        self.assertEqual(server.clean_airline_name("  Air  France "), "Air France")
+        for bad in ({"response": "unknown callsign"}, {"response": {"flightroute": {"airline": {"name": "X", "icao": "TOOLONG"}}}},
+                    {"response": {"flightroute": {"airline": {"icao": "ABC", "name": ""}}}}, None, "garbage"):
+            self.assertIsNone(server.learn_airline(bad))
+        self.assertEqual(server._learned["data"], {})
+
+    def test_the_wall_shows_the_learned_name(self):
+        server.learn_airline(ADSBDB_EASYJET)
+        ac = {"hex": "4071f1", "flight": "EZY52AB ", "lat": 49.7, "lon": 6.2, "seen_pos": 1, "alt_baro": 35000, "gs": 440, "track": 90}
+        planes, _ = server.build_planes({"aircraft": [ac]}, 49.6, 6.1, 100, airlines={})
+        self.assertEqual(planes[0]["airline"], "easyJet")
+        self.assertEqual(planes[0]["airline_icao"], "EZY")
+
+
 class RouteTests(unittest.TestCase):
     def test_parse_real_adsbdb_answer(self):
         r = server.parse_route(ADSBDB_SAMPLE)
