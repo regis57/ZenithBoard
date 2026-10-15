@@ -24,3 +24,27 @@ for (const max of [1.08, 5, 12, 90, 450, 2500, 9000, 21000, 43000, 330000, 33687
   t.forEach((v, i) => assert.ok(Math.abs(v - i * step) < 1e-6 * Math.max(1, step), "uneven step"));
 }
 console.log("stats axis: ok");
+
+// ---- the version line (0.17.2): the number the page runs, and behind it what changed in that version.
+// It must never ask GitHub for anything by itself: a wall with no way out to the internet still shows its number.
+{
+  const at2 = src.indexOf("function versionLine(");
+  assert.ok(at2 > 0, "versionLine() not found in stats.js");
+  let d2 = 0, end2 = -1;
+  for (let j = src.indexOf("{", at2); j < src.length; j++) {
+    if (src[j] === "{") d2++;
+    else if (src[j] === "}" && --d2 === 0) { end2 = j + 1; break; }
+  }
+  const RELEASES = src.match(/RELEASES = "([^"]+)"/)[1];
+  assert.ok(/^https:\/\/github\.com\/regis57\/ZenithBoard\/releases$/.test(RELEASES), "the link must point at this project's releases");
+  const el = {};
+  const make = new Function("RELEASES", "$", src.slice(at2, end2) + "return versionLine;");
+  make(RELEASES, () => el)("0.17.2");
+  assert.strictEqual(el.textContent, "ZenithBoard 0.17.2");
+  assert.strictEqual(el.href, RELEASES + "/tag/v0.17.2", "the link goes to that version's own notes");
+  make(RELEASES, () => el)(undefined);
+  assert.strictEqual(el.textContent, "ZenithBoard", "no version: the name alone, no empty space after it");
+  assert.strictEqual(el.href, RELEASES, "and the list of releases rather than a tag that does not exist");
+  make(RELEASES, () => null)("0.17.2");          // no such element: must not throw
+}
+console.log("stats version line: ok");

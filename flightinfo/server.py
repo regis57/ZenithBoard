@@ -26,7 +26,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.17.1"
+VERSION = "0.17.2"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -990,8 +990,9 @@ class Handler(BaseHTTPRequestHandler):
             return self._planes(cfg, parse_qs(url.query))
         if path == "/api/stats":
             if not cfg_bool(cfg, "STATS"):
-                return self._send(200, {"enabled": False})
-            return self._send(200, read_stats() or {"enabled": True, "samples": 0, "hours": [], "days": [], "today": None, "best": None})
+                return self._send(200, {"enabled": False, "version": VERSION})
+            got = read_stats() or {"enabled": True, "samples": 0, "hours": [], "days": [], "today": None, "best": None}
+            return self._send(200, dict(got, version=VERSION))
         if path == "/stats":
             return self._file(STATIC_DIR, "stats.html")
         if path.startswith("/api/photo/"):

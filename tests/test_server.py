@@ -645,7 +645,10 @@ class StatsTest(unittest.TestCase):
             def get(path):
                 c = http.client.HTTPConnection("127.0.0.1", port, timeout=5); c.request("GET", path); r = c.getresponse(); b = r.read(); c.close(); return r.status, b
             st, body = get("/api/stats")
-            self.assertEqual(st, 200); self.assertEqual(json.loads(body), {"enabled": False})
+            self.assertEqual(st, 200)
+            # 0.17.2: the page names the version it runs, so a screenshot says which code drew it. It travels
+            # with the answer whether statistics are on or off, because the page shows the line in both states.
+            self.assertEqual(json.loads(body), {"enabled": False, "version": server.VERSION})
             st, body = get("/stats")
             self.assertEqual(st, 200); self.assertIn(b"ZenithBoard statistics", body)
             d = self._dir()
@@ -658,6 +661,7 @@ class StatsTest(unittest.TestCase):
             st, body = get("/api/stats")
             j = json.loads(body)
             self.assertTrue(j["enabled"]); self.assertEqual(j["samples"], 1); self.assertEqual(j["days"][0]["farthest_km"], 312)
+            self.assertEqual(j["version"], server.VERSION)
         finally:
             httpd.shutdown(); httpd.server_close()
             server.CONFIG_FILE, server.STATS_DIR = old_cfg, old_dir

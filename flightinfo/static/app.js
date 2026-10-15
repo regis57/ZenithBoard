@@ -410,6 +410,15 @@
     document.getElementById("s-theme").value = theme();
     document.getElementById("s-mode").value = mode();
     document.getElementById("s-flags").value = flagsOn() ? "1" : "0";
+    versionLine(document.getElementById("s-version"), server.version);
+  }
+  // The version, and behind it what changed in it. The page asks GitHub for nothing: this is a link, followed
+  // only if somebody taps it, so a wall with no way out to the internet still shows the number it is running.
+  var RELEASES = "https://github.com/regis57/ZenithBoard/releases";
+  function versionLine(a, version) {
+    if (!a) return;
+    a.textContent = version ? "ZenithBoard " + version : "ZenithBoard";
+    a.href = version ? RELEASES + "/tag/v" + version : RELEASES;
   }
   function bindPanel() {
     document.getElementById("gear").onclick = function () { fillPanel(); panel.hidden = !panel.hidden; };
