@@ -26,10 +26,11 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.15.0"
+VERSION = "0.16.0"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
+STATS_DIR = os.environ.get("ZENITHBOARD_STATS_DIR", "/var/lib/zenithboard/stats")   # written by the stats timer
 DEMO_DIR = os.path.join(BASE_DIR, "demo")
 DATA_DIR = os.path.join(BASE_DIR, "data")
 if BASE_DIR not in sys.path:
@@ -53,6 +54,7 @@ DEFAULTS = {
     "CYCLE_SECONDS": "14",
     "SHOW_PHOTOS": "1",
     "FLAGS": "1",               # the registration and maker flags on the dot-matrix wall
+    "STATS": "0",               # the 15-minute statistics timer; /stats and /api/stats say so when it is off
     "DISPLAY_MODE": "dots",     # dots (dot matrix) | flap (split-flap airport board)
     "SHOW_ROUTES": "1",         # where the flight comes from / goes to (looked up by callsign on adsbdb.com)
     "PORT": "8080",
@@ -111,6 +113,72 @@ def cfg_bool(cfg, key, default="0"):
     # A Pi installed before a setting existed has no line for it, so a setting that should start life switched
     # on passes its own default here rather than inheriting "off" from an older config file.
     return str(cfg.get(key, default)).lower() in ("1", "true", "yes", "on")
+
+
+# --------------------------------------------------------------------------- statistics
+# The stats timer (lib/stats.sh) writes one CSV line every fifteen minutes and one file of aircraft seen per day.
+# This turns them into what the /stats page and the terminal show: the last 24 hours by hour, thirty days by day,
+# and today's headline numbers. It reads; it never writes.
+import csv
+import datetime
+
+
+def read_stats(stats_dir=None, now=None):
+    stats_dir = stats_dir or STATS_DIR
+    now = now or datetime.datetime.now()
+    path = os.path.join(stats_dir, "stats.csv")
+    rows = []
+    try:
+        with open(path, newline="", encoding="utf-8") as fh:
+            for r in csv.DictReader(fh):
+                try:
+                    when = datetime.datetime.strptime(r["when"], "%Y-%m-%d %H:%M")
+                    rows.append((when, int(float(r["messages"] or 0)), int(float(r["farthest_km"] or 0)),
+                                 int(float(r["aircraft_pos"] or 0)), int(float(r["aircraft_seen"] or 0))))
+                except (KeyError, ValueError, TypeError):
+                    continue
+    except OSError:
+        return None
+    rows.sort()
+    # the last 24 hours, by hour of the day (the hour a sample was taken in)
+    since = now - datetime.timedelta(hours=24)
+    hours = [{"hour": h, "messages": 0, "samples": 0} for h in range(24)]
+    for when, msgs, far, pos, seen in rows:
+        if since < when <= now:
+            hours[when.hour]["messages"] += msgs
+            hours[when.hour]["samples"] += 1
+    # thirty days, by day
+    days = {}
+    for when, msgs, far, pos, seen in rows:
+        d = when.strftime("%Y-%m-%d")
+        e = days.setdefault(d, {"day": d, "messages": 0, "farthest_km": 0, "aircraft": 0, "samples": 0})
+        e["messages"] += msgs
+        e["farthest_km"] = max(e["farthest_km"], far)
+        e["aircraft"] = max(e["aircraft"], seen)
+        e["samples"] += 1
+    # the day's aircraft count is the day file's length, which is exact for that day; the CSV only carries the running count
+    for d, e in days.items():
+        try:
+            with open(os.path.join(stats_dir, "seen-" + d), encoding="utf-8") as fh:
+                e["aircraft"] = sum(1 for line in fh if line.strip())
+        except OSError:
+            pass
+    day_list = [days[d] for d in sorted(days)][-30:]
+    today = now.strftime("%Y-%m-%d")
+    t = days.get(today) or {"day": today, "messages": 0, "farthest_km": 0, "aircraft": 0, "samples": 0}
+    busiest = max(hours, key=lambda h: h["messages"]) if rows else None
+    best = max(day_list, key=lambda d: d["farthest_km"]) if day_list else None
+    return {
+        "enabled": True,
+        "samples": len(rows),
+        "since": rows[0][0].strftime("%Y-%m-%d %H:%M") if rows else None,
+        "today": {"day": today, "aircraft": t["aircraft"], "messages": t["messages"], "farthest_km": t["farthest_km"],
+                  "busiest_hour": busiest["hour"] if busiest and busiest["messages"] else None,
+                  "busiest_messages": busiest["messages"] if busiest else 0},
+        "best": {"day": best["day"], "farthest_km": best["farthest_km"]} if best else None,
+        "hours": hours,
+        "days": day_list,
+    }
 
 
 # --------------------------------------------------------------------------- who may read the wall
@@ -864,6 +932,12 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, {"ok": True, "version": VERSION})
         if path == "/api/planes":
             return self._planes(cfg, parse_qs(url.query))
+        if path == "/api/stats":
+            if not cfg_bool(cfg, "STATS"):
+                return self._send(200, {"enabled": False})
+            return self._send(200, read_stats() or {"enabled": True, "samples": 0, "hours": [], "days": [], "today": None, "best": None})
+        if path == "/stats":
+            return self._file(STATIC_DIR, "stats.html")
         if path.startswith("/api/photo/"):
             got = fetch_photo_bytes(path[len("/api/photo/"):].lower()) if cfg_bool(cfg, "SHOW_PHOTOS") else None
             return self._send(200, got[1], got[0], cache="max-age=3600") if got else self._send(404, b"", "text/plain")

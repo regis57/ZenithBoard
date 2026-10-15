@@ -63,6 +63,7 @@ The dynamic-DNS **token is not stored here.** It is asked for interactively and 
 | `LOG_AUTOCLEAN` | `0` | `zenithboard logs auto on\|off` | Daily clean-up keeping the last 7 days |
 | `NETWATCH` | `0` | `zenithboard netwatch on\|off` | The network watchdog. See [Reliability](Reliability-and-diagnostics) |
 | `GAINLOG` | `0` | `zenithboard gain log on\|off` | The 24-hour gain log. See [Gain tuning](Gain-tuning) |
+| `STATS` | `0` | `zenithboard stats on\|off` | A sample every 15 minutes for the `/stats` page and `zenithboard stats`. See [Statistics](Statistics) |
 | `PATCHES` | `0` | `zenithboard patches on\|off` | Debian security fixes installed daily by themselves. See [Security](Security) |
 | `PATCHES_PKG_BY_ZB` | `0` | set by `patches on` | Whether `patches on` installed unattended-upgrades itself, so that `patches off` knows to remove it again |
 | `UPDATE_VERIFY` | `1` | by hand | Check the signature on the code before `zenithboard update` installs it. Set to `0` on a fork or your own branch. See [Security](Security) |

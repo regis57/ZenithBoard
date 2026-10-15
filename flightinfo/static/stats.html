@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ZenithBoard statistics</title>
+  <link rel="stylesheet" href="/static/stats.css">
+</head>
+<body>
+  <main class="wrap">
+    <header>
+      <h1>ZenithBoard statistics</h1>
+      <p id="sub" class="sub">Loading&hellip;</p>
+    </header>
+    <section id="off" hidden>
+      <p>Statistics are off. They cost about 6 KB a day on the card and are collected every 15 minutes once you turn them on:</p>
+      <pre>sudo zenithboard stats on</pre>
+      <p>Then come back here. <a href="/">The wall</a>.</p>
+    </section>
+    <section id="empty" hidden>
+      <p>Statistics are on, but there is no sample yet: the first one comes on the next quarter hour. <a href="/">The wall</a>.</p>
+    </section>
+    <section id="dash" hidden>
+      <div class="tiles">
+        <div class="tile"><div class="k">Aircraft today</div><div class="v" id="t-aircraft">&ndash;</div><div class="d">distinct aircraft since midnight, a floor</div></div>
+        <div class="tile"><div class="k">Messages today</div><div class="v" id="t-messages">&ndash;</div><div class="d" id="t-busiest">&nbsp;</div></div>
+        <div class="tile"><div class="k">Farthest today</div><div class="v" id="t-far">&ndash;</div><div class="d">the farthest aircraft decoded</div></div>
+        <div class="tile"><div class="k">Best in 30 days</div><div class="v" id="t-best">&ndash;</div><div class="d" id="t-bestday">&nbsp;</div></div>
+      </div>
+      <div class="charts">
+        <figure class="wide"><figcaption>Messages per hour <span>&middot; last 24 hours</span></figcaption><div id="c-msgs"></div></figure>
+        <figure><figcaption>Farthest aircraft <span>&middot; km, per day</span></figcaption><div id="c-far"></div></figure>
+        <figure><figcaption>Aircraft seen <span>&middot; per day, a floor</span></figcaption><div id="c-planes"></div></figure>
+      </div>
+      <details><summary>The same numbers as a table</summary><div class="scroller"><table id="table"></table></div></details>
+      <p class="note">A sample every 15 minutes misses an aircraft that crossed in less, so a day's aircraft count is a floor, never a total. Messages are what the receiver decoded. <a href="/">The wall</a> &middot; <code>zenithboard stats</code> prints the same in the terminal.</p>
+    </section>
+  </main>
+  <div class="tip" id="tip" hidden></div>
+  <script src="/static/stats.js"></script>
+</body>
+</html>

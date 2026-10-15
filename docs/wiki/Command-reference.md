@@ -27,6 +27,9 @@ Every `zenithboard` command, grouped by what you are trying to do. `zenithboard`
 | `zenithboard color amber` · `green` · `red` · `white` · `turquoise` · `blue` | yes | Dot colour of every wall |
 | `zenithboard mode dots` · `flap` | yes | Dot matrix, or the airport split-flap board. Without an argument: shows the current one |
 | `zenithboard cycle SECONDS` | yes | How long each aircraft stays on screen (14 by default) |
+| `zenithboard stats` | | Today, yesterday, the 30-day average and best, and messages per hour as a sparkline. See [Statistics](Statistics) |
+| `zenithboard stats on` · `off` · `status` | yes | Collect a sample every 15 minutes (off by default). `off` keeps the files |
+| `zenithboard stats csv` · `clear` | yes for clear | The raw samples as CSV; empty them |
 | `zenithboard photos on` · `off` | yes | Aircraft photos from Planespotters. Off: the animated sky scene instead |
 | `zenithboard photos test [HEX]` | | Can this Pi reach Planespotters? One real request, and the answer |
 | `zenithboard routes on` · `off` | yes | Origin and destination, looked up by callsign. Off: no callsign leaves the Pi |
@@ -146,6 +149,7 @@ Listed so that nothing in `ps` or the journal is a mystery. Running them by hand
 | `zenithboard gain log run` | `zenithboard-gain-log.timer` | 15 minutes, if the gain log is on |
 | `zenithboard netwatch run` | `zenithboard-netwatch.timer` | 2 minutes, if the network watchdog is on |
 | `zenithboard logs auto-run` | `zenithboard-logs-clean.timer` | day, if automatic cleaning is on |
+| `zenithboard stats run` | `zenithboard-stats.timer` | 15 minutes, if statistics are on; runs as the `zenithboard` user |
 | `zenithboard ddns update` | `zenithboard-ddns.timer` | 5 minutes, if a name is set |
 | `zenithboard wifi apply` | `zenithboard-wifi.service` | boot |
 | `zenithboard update-components` | `zenithboard update` | update |

@@ -19,6 +19,8 @@ HERE="$(dirname "$(readlink -f "$0")")"
 . "$HERE/../lib/patches.sh"
 # shellcheck source=lib/security.sh
 . "$HERE/../lib/security.sh"
+# shellcheck source=lib/stats.sh
+. "$HERE/../lib/stats.sh"
 # shellcheck source=lib/gain.sh
 . "$HERE/../lib/gain.sh"
 # shellcheck source=lib/uat.sh
@@ -67,6 +69,9 @@ ZenithBoard $ZB_VERSION - ADSB Flight Info
   zenithboard acars password [new|set]  the Grafana admin password ZenithBoard set (show it, draw a new one, choose one)
   zenithboard patches on|off|status     Debian security fixes installed by themselves, daily (feeders left alone, no reboot)
   zenithboard security                  what this Pi does right now: who can read the wall, updates, Grafana, SSH, ports, sandboxes
+  zenithboard stats                     today, yesterday, 30 days, and messages per hour as a sparkline
+  zenithboard stats on|off|status       collect a sample every 15 minutes (off by default; the page is /stats)
+  zenithboard stats csv|clear           the raw samples / empty them
   zenithboard photos on|off             aircraft photos on the wall (needs internet on the Pi)
   zenithboard photos test [HEX]         check that this Pi can fetch photos from Planespotters
   zenithboard routes on|off             show where each flight comes from / goes to (looked up by callsign, needs internet)
@@ -195,6 +200,17 @@ case "${1:-}" in
   cycle)
     root_or_die; is_number "${2:-x}" || die "Usage: zenithboard cycle SECONDS"; cfg_set CYCLE_SECONDS "$2"; restart_flightinfo ;;
   security) security_check ;;
+  stats)
+    case "${2:-show}" in
+      show)   stats_show ;;
+      on)     root_or_die; stats_on ;;
+      off)    root_or_die; stats_off ;;
+      run)    root_or_zb; stats_run ;;
+      status) stats_status ;;
+      csv)    stats_csv ;;
+      clear)  root_or_die; stats_clear ;;
+      *) die "Usage: zenithboard stats [on|off|status|csv|clear]" ;;
+    esac ;;
   patches)
     case "${2:-status}" in
       on)  root_or_die; patches_on ;;
