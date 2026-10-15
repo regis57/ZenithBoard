@@ -6,11 +6,15 @@ The wall knows four things the radio does not tell it: which airline a callsign 
 
 | What | Source | Needs internet |
 |---|---|---|
-| Airline name | Built-in list, about 90 major airlines | No |
+| Airline name | Built-in list of about 90 major airlines; beyond it, the name the route answer carries (since 0.17.0) | No for the list; the rest rides on the route lookup |
 | Aircraft model name | `types.json`, refreshed monthly | Only for the refresh |
 | Route (from → to) | [adsbdb.com](https://www.adsbdb.com/) by callsign, with [hexdb.io](https://www.hexdb.io/) as a second opinion | Yes |
 | Photo | [Planespotters](https://www.planespotters.net/) by ICAO hex | Yes |
 | Silhouette | Drawn in code from the aircraft type | No |
+
+## Airline names learned from the route
+
+adsbdb's answer for a callsign names the airline as well as the airports (`"airline": {"name": "easyJet", "icao": "EZY", ...}`). Since 0.17.0 the wall keeps that name for the callsign's three-letter prefix, so the next `EZY` flight is labelled `EASYJET` even though easyJet is not in the built-in list. Three rules keep it honest: the built-in list wins when it knows the prefix (its names are the short ones a sign needs); the names live in memory only, since the wall server writes nowhere, and are learned again after a restart from the first route lookup; and with routes switched off nothing is learned, because nothing is asked. Corporate suffixes such as `Inc.` or `AG` are dropped before display, and the dot font drops accents as it does for airports.
 
 ## Nothing blocks the display
 

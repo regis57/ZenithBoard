@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **15 October 2026**, version **0.16.3**.
+Last updated: **15 October 2026**, version **0.17.0**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -43,7 +43,7 @@ Treat these as likely-working rather than known-working, and please report what 
 
 * Feeder download addresses are pinned in `lib/versions.sh` and were copied from each provider's page on 6 October 2026. Providers move files. A 404 during install usually means one line in that file needs updating. [When a provider changes something](Providers) says what happens and what to do.
 * FlightAware and Flightradar24 keep your antenna position on their own websites. `zenithboard location` cannot change that for you; it tells you where to go.
-* The airline name list covers about ninety airlines. Everything else shows the callsign.
+* The airline name list covers about ninety airlines. Since 0.17.0 the rest are named from the route lookup once one of their flights has been looked up; with routes off they show the callsign.
 * Routes are looked up by callsign, not by flight. A callsign can be reused for the other direction. The filter drops the impossible answers; it cannot invent the right one.
 * ACARS legality differs by country. Check your local rules.
 
@@ -53,6 +53,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 15 October 2026, late | Airline names learned from the route answer (0.17.0): the wall had been throwing away a name adsbdb sends with every route. Checked against the real answer for EZY1234, read in a browser the same day |
 | 15 October 2026, evening (2) | The statistics page was smeared on its left edge once an hour passed a million messages: the axis drew about three hundred labels on top of each other. Seen on the real Pi's first busy afternoon, fixed in 0.16.3 and tested against the real axis function |
 | 15 October 2026, evening | `zenithboard security` on the real Pi after 0.16.2: only two warnings, Debian patches not switched on and SSH passwords, the second kept on purpose (SSH is reached from home only). All five sandboxed services and every listening port recognised. The statistics portal is running |
 | 15 October 2026, afternoon | Statistics (0.16.0): a 15-minute sample, the `/stats` page and `zenithboard stats`, off by default. The page was checked in a real browser against the real server with thirty days of made-up samples before being merged |
