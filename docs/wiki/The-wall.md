@@ -77,7 +77,7 @@ Flags are a dot-matrix matter. The split-flap board is sixteen letter drums and 
 | For every screen | `FLAGS` in `/etc/zenithboard/config.env`, then `zenithboard config` |
 | For this tablet only | the gear, **Flags**, or `?flags=0` in the address |
 
-At the foot of the gear panel sits one grey line: the version the wall is running, and behind it the release notes for that version on GitHub. It is a link and nothing more — the page asks GitHub for nothing, so a wall with no way out to the internet still names its version. The statistics page carries the same line at its foot.
+At the foot of the gear panel sits one grey line: the version the wall is running, and behind it the release notes for that version on GitHub. When statistics are on, the way to the [statistics page](Statistics) sits beside it in the same grey; switch them off and the link goes, because the page would only say it is off. It is a link and nothing more — the page asks GitHub for nothing, so a wall with no way out to the internet still names its version. The statistics page carries the same line at its foot.
 
 ## Staying up
 

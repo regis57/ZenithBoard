@@ -411,6 +411,10 @@
     document.getElementById("s-mode").value = mode();
     document.getElementById("s-flags").value = flagsOn() ? "1" : "0";
     versionLine(document.getElementById("s-version"), server.version);
+    // The way to the statistics page, beside the version and in the same grey. It is offered only while the page
+    // has something to show: with statistics off, /stats says so rather than charting nothing, and a link to a
+    // feature nobody switched on is an invitation to a dead end.
+    document.getElementById("s-stats-sep").hidden = !server.stats;
   }
   // The version, and behind it what changed in it. The page asks GitHub for nothing: this is a link, followed
   // only if somebody taps it, so a wall with no way out to the internet still shows the number it is running.

@@ -506,6 +506,13 @@ class FlagsAndCycleTest(unittest.TestCase):
         self.assertTrue(server.public_config({"FLAGS": "1"})["flags"])
         self.assertFalse(server.public_config({"FLAGS": "0"})["flags"])
 
+    def test_the_wall_is_told_whether_there_is_a_statistics_page_to_offer(self):
+        # 0.17.4: the gear panel shows a way to /stats, but only while statistics are on — a link to a feature
+        # nobody switched on leads to a page that says "off", which is a dead end dressed as a door.
+        self.assertFalse(server.public_config({})["stats"])            # off by default, and on an older config.env
+        self.assertFalse(server.public_config({"STATS": "0"})["stats"])
+        self.assertTrue(server.public_config({"STATS": "1"})["stats"])
+
     def test_an_aircraft_stays_fourteen_seconds(self):
         self.assertEqual(server.public_config({})["cycle_seconds"], 14)
         self.assertEqual(server.DEFAULTS["CYCLE_SECONDS"], "14")

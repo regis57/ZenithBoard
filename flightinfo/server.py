@@ -26,7 +26,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.17.3"
+VERSION = "0.17.4"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -949,6 +949,7 @@ def public_config(cfg):
         "cycle_seconds": max(2, cfg_float(cfg, "CYCLE_SECONDS", 14)),
         "show_photos": cfg_bool(cfg, "SHOW_PHOTOS"),
         "flags": cfg_bool(cfg, "FLAGS", "1"),
+        "stats": cfg_bool(cfg, "STATS"),           # the gear panel offers the /stats page only when there is one
         "display_mode": "flap" if str(cfg.get("DISPLAY_MODE", "dots")).lower() == "flap" else "dots",
         "demo": cfg_bool(cfg, "DEMO"),
     }
