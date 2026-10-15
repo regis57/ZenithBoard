@@ -118,9 +118,23 @@
     return px;
   }
 
-  function hasBlack(px) {
-    for (var i = 0; i < px.length; i++) if (px[i] === BLACK) return true;
-    return false;
+  // A flag needs the white outline when it would otherwise have no edge against a black wall: either it carries
+  // black (Germany, Belgium, Estonia), or it is simply very dark. The United Kingdom is the second case — the
+  // union flag is two thirds #012169, a navy that at eleven dots on an unlit wall reads as a hole rather than a
+  // flag, which is how British Airways came to look as though it had no flag at all. The colours are never
+  // changed to make a flag show: a navy lightened into a brighter blue is no longer that flag.
+  var DARK_L = 40, DARK_SHARE = 0.5;
+  function luminance(c) {
+    var v = parseInt(c.slice(1), 16);
+    return 0.2126 * ((v >> 16) & 255) + 0.7152 * ((v >> 8) & 255) + 0.0722 * (v & 255);
+  }
+  function needsOutline(px) {
+    var dark = 0;
+    for (var i = 0; i < px.length; i++) {
+      if (px[i] === BLACK) return true;
+      if (luminance(px[i]) < DARK_L) dark++;
+    }
+    return dark >= px.length * DARK_SHARE;
   }
 
   root.Flags = {
@@ -150,14 +164,14 @@
 
     known: function (code) { return !!F[code]; },
 
-    // Draws the flag with put(x, y, value). The black of a flag stays black, because that is what the flag is.
-    // A flag that has black in it gets a white outline instead, so its edge is visible against a black wall;
-    // every other flag is drawn bare, with nothing around it.
+    // Draws the flag with put(x, y, value). A flag's colours are never changed to make it show: the black of a
+    // flag stays black, a navy stays that navy. What a flag that would be invisible against a black wall gets
+    // instead is a one-dot white outline, so its edge is there to see; every other flag is drawn bare.
     draw: function (code, x, y, put) {
       var px = pixels(code);
       if (!px) return false;
       var i, j;
-      if (hasBlack(px)) {
+      if (needsOutline(px)) {
         for (i = -1; i <= FW; i++) { put(x + i, y - 1, 0xffffff); put(x + i, y + FH, 0xffffff); }
         for (j = 0; j < FH; j++) { put(x - 1, y + j, 0xffffff); put(x + FW, y + j, 0xffffff); }
       }

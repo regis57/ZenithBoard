@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **15 October 2026**, version **0.17.0**.
+Last updated: **15 October 2026**, version **0.17.1**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -53,6 +53,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 15 October 2026, night | Two faults the real wall showed that no test had: the union flag, being nearly all dark navy, was invisible on the black wall (British Airways looked flagless), and the model row scrolled `AIRBUS A-380-800` where `A-380-800` would have stood still. Both fixed in 0.17.1, both now held by a test. Neither was reproducible from the code alone — the first needed someone to look at the wall, the second needed a real Etihad A380 |
 | 15 October 2026, late | Airline names learned from the route answer (0.17.0): the wall had been throwing away a name adsbdb sends with every route. Checked against the real answer for EZY1234, read in a browser the same day |
 | 15 October 2026, evening (2) | The statistics page was smeared on its left edge once an hour passed a million messages: the axis drew about three hundred labels on top of each other. Seen on the real Pi's first busy afternoon, fixed in 0.16.3 and tested against the real axis function |
 | 15 October 2026, evening | `zenithboard security` on the real Pi after 0.16.2: only two warnings, Debian patches not switched on and SSH passwords, the second kept on purpose (SSH is reached from home only). All five sandboxed services and every listening port recognised. The statistics portal is running |

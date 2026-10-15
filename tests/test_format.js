@@ -65,3 +65,21 @@ for (const u of ["metric", "imperial"]) for (const from of NASTY) for (const to 
 const g = Fmt.planeLines({ ...plane, on_ground: true }, "metric", 0, 1, 14);
 assert.strictEqual(g.alt, "ALT  GROUND");
 console.log("format tests OK");
+
+// ---- the model row that the dot-matrix wall scrolls (0.17.1)
+// Reported from the real wall: an Etihad A380 came through as "AIRBUS A-380-800", sixteen characters, and
+// walked past the twelve the flags leave instead of standing still as "A-380-800".
+{
+  const row = (name, W) => Fmt.modelScroll({ type_name: name, type: "X", registration: "G-X" }, W || 12);
+  assert.strictEqual(row("AIRBUS A-380-800"), "A-380-800", "the maker goes as soon as the whole does not fit");
+  assert.strictEqual(row("AIRBUS A-320neo"), "A-320NEO");
+  assert.strictEqual(row("BOEING 737 MAX 8"), "737 MAX 8");
+  assert.strictEqual(row("AIRBUS A-320"), "AIRBUS A-320", "what fits is left whole, maker included");
+  assert.strictEqual(row("DE HAVILLAND CANADA DHC-8-400"), "DHC-8-400", "the longest maker wins, no lonely CANADA");
+  assert.ok(row("BRITISH AEROSPACE AVRO 146-RJ100").length > 12, "what is still too long without its maker scrolls");
+  assert.strictEqual(row("AIRBUS A-380-800", 20), "AIRBUS A-380-800", "a wider row keeps the maker");
+  assert.strictEqual(Fmt.modelScroll({ type: "A20N", registration: "G-TTNA" }, 12), "A20N G-TTNA", "no name: code and registration");
+  // and the cut version used by the split-flap board is unchanged
+  assert.strictEqual(Fmt.modelLine({ type_name: "AIRBUS A-380-800" }, 12), "A-380-800");
+}
+console.log("format: model row ok");

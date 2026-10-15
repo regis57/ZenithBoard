@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.17.1
+Two things seen on the real wall.
+- **The British flag was there and could not be seen.** Two thirds of the union flag is `#012169`, a navy that at eleven dots on an unlit wall reads as a hole — so a British Airways aircraft looked as though it had no flag at all. A flag that would be invisible against the black wall now gets the same one-dot white outline as a flag carrying black. Its colours are untouched: a navy brightened into another blue is no longer that flag. The United Kingdom is the only one the rule newly catches, and a test holds the list.
+- **The model row keeps the maker only while the whole thing fits.** An Etihad A380 arrived as `AIRBUS A-380-800`, sixteen characters, and walked past the twelve the flags leave instead of standing still as `A-380-800`. Every neo, every MAX and every A380 scrolled for nothing. The maker is now dropped as soon as the full name is too long, and only what is still too long without it scrolls. `DE HAVILLAND CANADA` also stopped leaving a lonely `CANADA` behind.
+
 ## 0.17.0
 - **Airline names beyond the built-in list.** The route answer adsbdb gives for a callsign also names the airline, and the wall now keeps that name for the callsign's three-letter prefix: a flight of an airline outside the ninety built in is shown with its name instead of a bare callsign, from the first route lookup on, for every later flight of that airline. No new request, no new service, nothing written to disk (the names live in memory, the server stays read-only); with routes off nothing changes. The built-in list keeps priority, its names being the short ones. Corporate suffixes (`Inc.`, `AG`, `Ltd`) are dropped. Tested against a real adsbdb answer.
 
