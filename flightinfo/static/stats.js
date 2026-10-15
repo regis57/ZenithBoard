@@ -7,6 +7,12 @@
   function showTip(e, text) { tip.textContent = text; tip.hidden = false; tip.style.left = e.clientX + "px"; tip.style.top = e.clientY + "px"; }
   function hideTip() { tip.hidden = true; }
   function fmt(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " "); }
+  // the axis needs short labels: "2 M" fits the margin where "2 000 000" is cut off (the numbers above the bars stay whole)
+  function axisFmt(n) {
+    if (n >= 1e6) return String(Math.round(n / 1e5) / 10).replace(".0", "") + " M";
+    if (n >= 1e4) return String(Math.round(n / 100) / 10).replace(".0", "") + " k";
+    return fmt(n);
+  }
   var NS = "http://www.w3.org/2000/svg";
   function el(name, attrs, text) {
     var n = document.createElementNS(NS, name);
@@ -14,7 +20,15 @@
     if (text !== undefined) n.textContent = text;
     return n;
   }
-  function ticks(max) { var step = max > 20000 ? 10000 : max > 2000 ? 1000 : max > 400 ? 100 : max > 80 ? 20 : 10; var out = []; for (var v = 0; v <= max; v += step) out.push(v); return out; }
+  // A round step that gives about four to six lines whatever the size: 10 000 messages and 3 000 000 both read well.
+  // (A fixed step drew nearly four hundred labels on top of each other once an hour passed a million messages.)
+  function ticks(max) {
+    var raw = max / 4, mag = Math.pow(10, Math.floor(Math.log(raw) / Math.LN10)), m = raw / mag;
+    var step = (m <= 1 ? 1 : m <= 2 ? 2 : m <= 5 ? 5 : 10) * mag, out = [];
+    if (!(step > 0)) return [0];
+    for (var v = 0; v <= max; v += step) out.push(v);
+    return out;
+  }
   function shortDay(d) { var p = d.split("-"); return p[2] + "/" + p[1]; }
 
   function bars(mount, labels, values, unit, labelEvery, hot, W) {
@@ -22,7 +36,7 @@
     var H = 220, L = 50, R = 8, T = 16, B = 28, w = W - L - R, h = H - T - B;
     var max = Math.max(1, Math.max.apply(null, values)) * 1.08, tk = ticks(max);
     var s = el("svg", { viewBox: "0 0 " + W + " " + H }), g = el("g", { "class": "grid" }), ax = el("g", { "class": "axis" });
-    tk.forEach(function (v) { var y = T + h - v / max * h; g.appendChild(el("line", { x1: L, x2: W - R, y1: y, y2: y })); ax.appendChild(el("text", { x: L - 6, y: y + 4, "text-anchor": "end" }, fmt(v))); });
+    tk.forEach(function (v) { var y = T + h - v / max * h; g.appendChild(el("line", { x1: L, x2: W - R, y1: y, y2: y })); ax.appendChild(el("text", { x: L - 6, y: y + 4, "text-anchor": "end" }, axisFmt(v))); });
     s.appendChild(g); s.appendChild(ax);
     var n = values.length, gap = 2, bw = Math.max(1, (w - gap * (n - 1)) / n);
     values.forEach(function (v, i) {

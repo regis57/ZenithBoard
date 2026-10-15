@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **15 October 2026**, version **0.16.2**.
+Last updated: **15 October 2026**, version **0.16.3**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -53,6 +53,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 15 October 2026, evening (2) | The statistics page was smeared on its left edge once an hour passed a million messages: the axis drew about three hundred labels on top of each other. Seen on the real Pi's first busy afternoon, fixed in 0.16.3 and tested against the real axis function |
 | 15 October 2026, evening | `zenithboard security` on the real Pi after 0.16.2: only two warnings, Debian patches not switched on and SSH passwords, the second kept on purpose (SSH is reached from home only). All five sandboxed services and every listening port recognised. The statistics portal is running |
 | 15 October 2026, afternoon | Statistics (0.16.0): a 15-minute sample, the `/stats` page and `zenithboard stats`, off by default. The page was checked in a real browser against the real server with thirty days of made-up samples before being merged |
 | 15 October 2026 | Second security pass (0.15.0): the wall answers home networks only, every service sandboxed, Grafana's default password closed, optional daily Debian security patches, a release per version, and `zenithboard security` to check the running Pi. Tested here with stubs and offline unit scoring; Grafana itself and the Pi's own `systemd-analyze` are the two things only the real machine can confirm |
