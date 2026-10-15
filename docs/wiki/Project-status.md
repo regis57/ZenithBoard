@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **15 October 2026**, version **0.17.2**.
+Last updated: **15 October 2026**, version **0.17.3**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -53,6 +53,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 15 October 2026, night (3) | A Pi showed the menu at 0.17.2 and the wall at 0.17.1 at the same time: updating only the ZenithBoard code deployed the new files without restarting the wall server, which runs the old ones until it is told otherwise. Every update now asks the wall what it is running and puts it right (0.17.3) |
 | 15 October 2026, night (2) | The wall's gear panel and the statistics page now name the version they run, linked to its release notes (0.17.2) |
 | 15 October 2026, night | Two faults the real wall showed that no test had: the union flag, being nearly all dark navy, was invisible on the black wall (British Airways looked flagless), and the model row scrolled `AIRBUS A-380-800` where `A-380-800` would have stood still. Both fixed in 0.17.1, both now held by a test. Neither was reproducible from the code alone — the first needed someone to look at the wall, the second needed a real Etihad A380 |
 | 15 October 2026, late | Airline names learned from the route answer (0.17.0): the wall had been throwing away a name adsbdb sends with every route. Checked against the real answer for EZY1234, read in a browser the same day |

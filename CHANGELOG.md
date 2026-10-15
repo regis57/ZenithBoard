@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.17.3
+- **An update now checks that the wall really came back on the new version**, instead of assuming it. The wall is a running Python process: new files on disk change nothing until it is restarted, and an update that did not pass through the FlightInfo step left it answering the old version — the menu said 0.17.2 while the gear panel still said 0.17.1 (seen on a real Pi after `update only zenithboard`). The end of every update now asks the wall, on the loopback, which version it is running, restarts it when that is not the version just installed, and says so. A wall that still will not come up is reported with the command to run, never hidden.
+
 ## 0.17.2
 - **Both pages say which version they are running**, in one grey line: at the foot of the gear panel on the wall, and at the foot of the statistics page. The name is a link to that version's own release notes on GitHub (`releases/tag/v0.17.2`), so "what changed?" is one tap away from the tablet. Nothing is asked of GitHub to draw the line: it is a link, followed only if somebody taps it, so a wall with no way out to the internet still names its version. `/api/stats` carries the version the way `/api/config` already did, whether statistics are on or off.
 

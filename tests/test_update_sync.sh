@@ -64,4 +64,42 @@ check "refresh: the old unit is replaced by the repository's" "$(cmp -s systemd/
 check "refresh: a unit the Pi does not have is not installed" "$([ -e "$ud/zenithboard-netwatch.service" ] && echo yes || echo no)" "no"
 check "refresh: an identical unit is not rewritten" "$(stat -c %Y "$ud/zenithboard-flightinfo.service")" "$old_mtime"
 check "refresh: systemd is told once" "$(grep -c daemon-reload "$T/systemctl.log")" "1"
+# ---- the wall is asked what it is actually running, and restarted when it is not the installed version.
+#      Seen on a real Pi: the menu said 0.17.2 while the gear panel said 0.17.1, because that update had deployed
+#      the new files without passing through the FlightInfo step, which is what restarts the server process.
+wall_stub() {            # $1 = the version the fake wall answers; empty = it does not answer at all
+  { echo '#!/bin/bash'
+    if [ -z "$1" ]; then echo 'exit 7'; else echo "printf '{\"version\":\"$1\"}'"; fi
+  } > "$T/bin/curl"
+  chmod +x "$T/bin/curl"
+}
+{ echo '#!/bin/bash'
+  echo "echo \"\$*\" >> $T/restart.log"
+  # restart_flightinfo asks first whether the unit exists, so the stub has to answer that like systemd does
+  echo 'case "${1:-}" in list-unit-files) echo "$2 enabled";; esac'
+  echo 'exit 0'
+} > "$T/bin/systemctl"; chmod +x "$T/bin/systemctl"
+is_flightinfo() { return 0; }                      # pretend the wall is installed
+
+wall_stub "$ZB_VERSION"; : > "$T/restart.log"
+PATH="$T/bin:$PATH" zb_wall_check > "$T/out.txt" 2>&1
+check "wall: already on the installed version, nothing restarted" "$(grep -c restart "$T/restart.log")" "0"
+check "wall: it says which version is running" "$(grep -c "Wall: running $ZB_VERSION" "$T/out.txt")" "1"
+
+wall_stub "0.0.1"; : > "$T/restart.log"            # the process is older than the files on disk
+PATH="$T/bin:$PATH" zb_wall_check > "$T/out.txt" 2>&1
+check "wall: an older wall is restarted" "$(grep -c "restart zenithboard-flightinfo" "$T/restart.log")" "1"
+check "wall: and the reason is printed" "$(grep -c "still running 0.0.1" "$T/out.txt")" "1"
+check "wall: one that stays behind is reported, not hidden" "$(grep -c "systemctl restart zenithboard-flightinfo" "$T/out.txt")" "1"
+
+wall_stub ""; : > "$T/restart.log"                 # the wall does not answer at all
+PATH="$T/bin:$PATH" zb_wall_check > "$T/out.txt" 2>&1
+check "wall: no answer is a warning, never a restart loop" "$(grep -c restart "$T/restart.log")" "0"
+check "wall: the warning points at the logs" "$(grep -c "logs flightinfo" "$T/out.txt")" "1"
+
+is_flightinfo() { return 1; }                      # no wall installed: the check stays out of the way
+: > "$T/restart.log"
+PATH="$T/bin:$PATH" zb_wall_check > "$T/out.txt" 2>&1
+check "wall: none installed, nothing done" "$(cat "$T/restart.log")$(cat "$T/out.txt")" ""
+
 exit $fail
