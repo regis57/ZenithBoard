@@ -22,6 +22,7 @@ Installation, the menus and every setting are in the [README](https://github.com
 
 ## Running it
 
+* **[When a provider changes something](Providers)** — what happens when FlightAware, ADSB Exchange, Flightradar24 or Plane Finder move a file or change a key, and what to do.
 * **[Routes, photos and data](Routes-photos-and-data)** — the outside services, the caches, and what happens when they are down.
 * **[Reliability and diagnostics](Reliability-and-diagnostics)** — the watchdogs, the health screen, and how to read a bad night.
 * **[Gain tuning](Gain-tuning)** — getting the dongle's gain right.

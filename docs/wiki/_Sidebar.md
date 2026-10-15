@@ -9,8 +9,10 @@
 * [Configuration reference](Configuration-reference)
 * [Command reference](Command-reference)
 * [The wall](The-wall)
+* [Statistics](Statistics)
 
 *Running it*
+* [When a provider changes](Providers)
 * [Routes, photos and data](Routes-photos-and-data)
 * [Reliability and diagnostics](Reliability-and-diagnostics)
 * [Gain tuning](Gain-tuning)

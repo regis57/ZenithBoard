@@ -41,7 +41,7 @@ Treat these as likely-working rather than known-working, and please report what 
 
 ## Known rough edges
 
-* Feeder download addresses are pinned in `lib/versions.sh` and were copied from each provider's page on 6 October 2026. Providers move files. A 404 during install usually means one line in that file needs updating.
+* Feeder download addresses are pinned in `lib/versions.sh` and were copied from each provider's page on 6 October 2026. Providers move files. A 404 during install usually means one line in that file needs updating. [When a provider changes something](Providers) says what happens and what to do.
 * FlightAware and Flightradar24 keep your antenna position on their own websites. `zenithboard location` cannot change that for you; it tells you where to go.
 * The airline name list covers about ninety airlines. Everything else shows the callsign.
 * Routes are looked up by callsign, not by flight. A callsign can be reused for the other direction. The filter drops the impossible answers; it cannot invent the right one.
@@ -53,6 +53,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 15 October 2026, evening | `zenithboard security` on the real Pi after 0.16.2: only two warnings, Debian patches not switched on and SSH passwords, the second kept on purpose (SSH is reached from home only). All five sandboxed services and every listening port recognised. The statistics portal is running |
 | 15 October 2026, afternoon | Statistics (0.16.0): a 15-minute sample, the `/stats` page and `zenithboard stats`, off by default. The page was checked in a real browser against the real server with thirty days of made-up samples before being merged |
 | 15 October 2026 | Second security pass (0.15.0): the wall answers home networks only, every service sandboxed, Grafana's default password closed, optional daily Debian security patches, a release per version, and `zenithboard security` to check the running Pi. Tested here with stubs and offline unit scoring; Grafana itself and the Pi's own `systemd-analyze` are the two things only the real machine can confirm |
 | 14 October 2026, night | The wall gained the registration and maker flags (0.14.0). The manufacturer logo that was asked for alongside them was refused: a trademark redrawn in dots is still the trademark. The country where the airframe is built carries the same meaning and is free to draw |

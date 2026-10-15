@@ -21,3 +21,5 @@ The newest release only. There are no backports — upgrading is `cd ~/ZenithBoa
 **The wall has no login, by design.** It is meant to be opened by a tablet with no keyboard, on a home network. That is not a vulnerability; forwarding it to the internet is a mistake, and the documentation says so. A way to reach it from *outside* your network without you forwarding it would be a real finding.
 
 **Third-party installers are trusted on purpose.** Installing ZenithBoard runs readsb's, ADSB Exchange's and Flightradar24's own installers as root. That trust is documented rather than hidden. A hole in one of those belongs to that project; a way for ZenithBoard to run something *other* than what those projects published belongs here.
+
+What happens when one of those projects moves a file or changes a key is written down in **[When a provider changes something](https://github.com/regis57/ZenithBoard/wiki/Providers)**.
