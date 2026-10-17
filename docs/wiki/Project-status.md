@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **17 October 2026**, version **0.19.4**.
+Last updated: **17 October 2026**, version **0.19.5**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -53,6 +53,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 17 October 2026, twenty to four | Five minutes after the restart the service posted KLM24V with empty registration, model and route rows: its track, followed from far out, was long enough at once, while the wall had only just started asking adsbdb about it, which it does when an aircraft comes inside the radius it is asked about. The wall now says which lookups are on their way, and the service waits for them (up to two minutes). The owner also asked for posts that vary: the two looks in turn, the colours in turn, the maps in turn (0.19.5) |
 | 17 October 2026, half past three | After the update the service ran 0.19.3 at once (restarted by the update, its first line said so), `sudo social status` showed the 14:21 post, four aircraft posted, 24 types noted and a 333 km range record, and as `pi` it said it could not read rather than *never*. One claim did not hold: `systemctl status` still had no *Memory* line. Raspberry Pi OS boots with the kernel's memory controller off, so systemd can neither show nor cap the service's memory. The service now measures it itself (0.19.4) |
 | 17 October 2026, three o'clock | The Pi's own log, read line by line. The social service had run since 13:15: the updates that followed had installed new code without restarting it, so it still ran 0.19.0. `social status` run as `pi` said *no account* and *Last post: never* on a Pi that had posted twenty minutes before — `pi` cannot read the account file or the state folder, and the status did not say so. The gap had been set to one minute for a test, which explained the post that looked too early. Memory: 650 MB free on a Pi 3B, the service's own use not shown. All four fixed in 0.19.3, and the route rows now give the city (`→SAN JOSE`, not `→JUAN SANTAMAR`) |
 | 17 October 2026, half past two | The service posted by itself for the first time — a Lufthansa A340 under `heavy`, split-flap with the night map, read on a phone. It came 48 minutes after the previous post, which looked like the two-hour gap failing; reading the code for that found a real fault — the service kept its memory in RAM and wrote it back every fifteen seconds over what *Post now* had written — fixed in 0.19.2. The post itself was not that fault: the gap had been set to one minute for a test, as the Pi's own log showed an hour later |

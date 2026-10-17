@@ -33,9 +33,9 @@ Every `zenithboard` command, grouped by what you are trying to do. `zenithboard`
 | `zenithboard social setup` | yes | The Bluesky account (an app password, never the real one), then the words and the picture. A wizard that tries the account before going on. See [Social sharing](Social-sharing) |
 | `zenithboard social words` | yes | The place name the posts carry, the sharing radius, the gap between posts, and what is worth a post |
 | `zenithboard social picture` | yes | The picture: dot-matrix or split-flap, its colour, the map (a wizard) |
-| `zenithboard social look dots` · `flap` | yes | The dot-matrix wall with the track, or the split-flap board with a map |
-| `zenithboard social colour NAME` · `wall` | yes | amber, green, red, white, turquoise, blue, or the wall's own colour |
-| `zenithboard social map NAME` | yes | The split-flap look's map: normal, night, satellite, terrain or none |
+| `zenithboard social look dots` · `flap` · `alternate` | yes | The dot-matrix wall with the track, the split-flap board with a map, or the two in turn (one post each) |
+| `zenithboard social colour NAME` · `wall` · `rotate` | yes | amber, green, red, white, turquoise, blue, the wall's own colour, or the colours in turn (all but blue) |
+| `zenithboard social map NAME` · `rotate` | yes | The split-flap look's map: normal, night, satellite, terrain, none, or the four maps in turn |
 | `zenithboard social test [HEX]` | | Draw the picture and print the text for the best candidate (or that aircraft); post nothing. The picture is at `/social/preview` |
 | `zenithboard social on` · `off` · `status` | yes | Post the aircraft overhead as a picture of the wall (off by default). `off` keeps the account |
 | `zenithboard social post [HEX]` | | Post now, once, whatever the gap |

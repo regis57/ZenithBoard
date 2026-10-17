@@ -60,6 +60,14 @@ And then for the picture:
 | The colour of the letters and the track | the wall's own colour, or amber, green, red, white, turquoise, blue — the wall's colours, read from its own style sheet | the wall's |
 | The map (flap only) | `normal`, `night`, `satellite`, `terrain`, `none` | `normal` |
 
+**To vary the posts** (optional): the look can be `alternate` — dot-matrix, then split-flap, one post each — the colour `rotate` — amber, green, red, white, turquoise in turn, one step per post — and the map `rotate` — normal, night, satellite, terrain in turn, one step per split-flap post. Five colours against two looks: over ten posts each look meets each colour. The wall's blue is left out of the turn, because dark blue on black reads poorly on a phone and a blue track nearly disappears on the satellite map; it stays available as a fixed colour. `social status` names the next picture. Posts made by hand move the turn on too.
+
+```bash
+sudo zenithboard social look alternate
+sudo zenithboard social colour rotate
+sudo zenithboard social map rotate
+```
+
 Each of these has its own command too, for a quick change: `social words`, `social picture` (the three picture questions), `social look dots|flap`, `social colour green|wall`, `social map satellite`.
 
 ### 3. Try it
@@ -135,6 +143,8 @@ The board as the wall's split-flap look draws it — the same nine rows, without
 `rare` and `farthest` judge against history, so they wait until the service has watched for **three days**; `zenithboard social status` says where it stands. The other rules work from the first minute.
 
 Several rules can match; the best candidate is the one matching the most, and knowing the most (route, airline, model each count). One post per gap, at most.
+
+**Complete before posted.** The wall looks up an aircraft's route and, when the decoder does not know them, its registration and model on adsbdb.com, and it does so when the aircraft comes inside the radius it is asked about — the sharing radius, for the service. Those answers take a few seconds. An aircraft whose lookups are still on their way waits, up to two minutes from the moment the service first saw it waiting; then it goes with what is known. (Before 0.19.5 it went at once: a KLM flight was posted with empty registration, model and route rows, because its track, followed from far out, was already long enough.) `social test` waits within its own half minute, then shows what is known.
 
 **The text.** Says what the wall knows, in English, and nothing it does not. It starts with the flight and ends with the place you gave (here `Trémery`); the altitude is said as one (*altitude 8 500 m*) so it never reads as a distance from the place; an airline callsign is a hashtag, so the flight can be followed:
 

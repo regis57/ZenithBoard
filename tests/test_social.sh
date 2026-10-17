@@ -57,7 +57,9 @@ check "look: flap saved"                           'social_set_look flap >/dev/n
 check "colour: no argument is a usage line, not a reset" 'cfg_set SOCIAL_THEME red; ! social_set_colour "" >/dev/null && [ "$(cfg_get SOCIAL_THEME)" = red ] && ! social_set_map "night satellite" >/dev/null; cfg_set SOCIAL_THEME ""'
 check "colour: a wall colour, or the wall's"       'social_set_colour green >/dev/null && [ "$(cfg_get SOCIAL_THEME)" = green ] && social_set_colour wall >/dev/null && [ -z "$(cfg_get SOCIAL_THEME "")" ] && ! social_set_colour pink >/dev/null'
 check "map: the five, nothing else"                'social_set_map satellite >/dev/null && [ "$(cfg_get SOCIAL_MAP)" = satellite ] && ! social_set_map google >/dev/null && [ "$(cfg_get SOCIAL_MAP)" = satellite ]'
-check "the shell knows the Python lists"           'py=$(python3 -c "import sys; sys.path.insert(0, \"flightinfo\"); import social, server; print(\" \".join(social.MAPS)); print(\" \".join(server.THEMES))"); [ "$(echo "$py" | head -1)" = "$SOCIAL_MAPS" ] && [ "$(echo "$py" | tail -1)" = "$SOCIAL_THEMES" ]'
+check "the shell knows the Python lists"           'py=$(python3 -c "import sys; sys.path.insert(0, \"flightinfo\"); import social, server; print(\" \".join(social.MAP_CHOICES)); print(\" \".join(server.THEMES))"); [ "$(echo "$py" | head -1)" = "$SOCIAL_MAPS" ] && [ "$(echo "$py" | tail -1)" = "$SOCIAL_THEMES" ]'
+check "variety: alternate, rotate, rotate accepted" 'social_set_look alternate >/dev/null && [ "$(cfg_get SOCIAL_STYLE)" = alternate ] && social_set_colour rotate >/dev/null && [ "$(cfg_get SOCIAL_THEME)" = rotate ] && social_set_map rotate >/dev/null && [ "$(cfg_get SOCIAL_MAP)" = rotate ]'
+social_set_colour wall >/dev/null; social_set_map normal >/dev/null
 social_set_look dots >/dev/null
 
 # ---- on / off / remove

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.19.5
+- **A post waits for the aircraft's details.** KLM24V went out with empty registration, model and route rows: the wall asks adsbdb about an aircraft when it comes inside the radius it is asked about, and the service, whose track had followed it from far out, posted it the same second. `/api/planes` now says which lookups are still on their way (`pending`), and the service waits for them, up to two minutes from the first time it saw them pending, then posts with what is known. `social test` waits inside its half minute.
+- **Optional: posts that vary.** `social look alternate` (dot-matrix and split-flap, one post each), `social colour rotate` (amber, green, red, white, turquoise in turn; the wall's dark blue is left out of the turn, it reads poorly on a phone), `social map rotate` (the four maps in turn, at each split-flap post). Over ten posts each look meets each colour. `social status` names the next picture; posts made by hand move the turn on. Off by default; the wizard offers each.
+
 ## 0.19.4
 - **The social service reports its own memory**: in its hourly journal line and in `sudo zenithboard social status` (now, at most, and the largest drawing by Node). 0.19.3 said `systemctl status` would show it: it does not on Raspberry Pi OS, which boots with the kernel's memory controller off (`cgroup_disable=memory`), and for the same reason the unit's `MemoryMax=300M` only applies where that controller is on. Seen on the real Pi right after the 0.19.3 update; ZenithBoard does not change the boot command line for it.
 

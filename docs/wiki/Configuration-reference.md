@@ -70,9 +70,9 @@ The dynamic-DNS **token is not stored here.** It is asked for interactively and 
 | `SOCIAL_GAP_MIN` | `120` | same | At least this many minutes between two posts; never under 10, whatever is set (a value under it is used as 10 and `social status` says so) |
 | `SOCIAL_RULES` | `rare,military,helicopter,heavy,farthest` | same | What is worth a post; `all` is every rule at once: everything that flies over, the special aircraft first |
 | `SOCIAL_HASHTAGS` | `#ADSB #avgeek #ZenithBoard` | this line | Appended to every post |
-| `SOCIAL_STYLE` | `dots` | `zenithboard social look dots\|flap` | The picture: the dot-matrix wall with the track in dots, or the split-flap board with a map |
-| `SOCIAL_THEME` | empty | `zenithboard social colour NAME\|wall` | The picture's colour: `amber`, `green`, `red`, `white`, `turquoise`, `blue`; empty = the wall's `THEME` |
-| `SOCIAL_MAP` | `normal` | `zenithboard social map NAME` | The split-flap picture's map: `normal`, `night`, `satellite`, `terrain`, `none` (no map, nothing fetched) |
+| `SOCIAL_STYLE` | `dots` | `zenithboard social look dots\|flap\|alternate` | The picture: the dot-matrix wall with the track in dots, the split-flap board with a map, or the two in turn |
+| `SOCIAL_THEME` | empty | `zenithboard social colour NAME\|wall\|rotate` | The picture's colour: `amber`, `green`, `red`, `white`, `turquoise`, `blue`; empty = the wall's `THEME`; `rotate` = the colours in turn, all but blue |
+| `SOCIAL_MAP` | `normal` | `zenithboard social map NAME` | The split-flap picture's map: `normal`, `night`, `satellite`, `terrain`, `none` (no map, nothing fetched), `rotate` (the four maps in turn) |
 | `PATCHES` | `0` | `zenithboard patches on\|off` | Debian security fixes installed daily by themselves. See [Security](Security) |
 | `PATCHES_PKG_BY_ZB` | `0` | set by `patches on` | Whether `patches on` installed unattended-upgrades itself, so that `patches off` knows to remove it again |
 | `UPDATE_VERIFY` | `1` | by hand | Check the signature on the code before `zenithboard update` installs it. Set to `0` on a fork or your own branch. See [Security](Security) |

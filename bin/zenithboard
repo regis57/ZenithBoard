@@ -77,9 +77,9 @@ ZenithBoard $ZB_VERSION - ADSB Flight Info
   zenithboard social setup              the Bluesky account (a wizard; asks for an app password, never the real one)
   zenithboard social words              the place name, the radius, the gap between posts, what is worth a post
   zenithboard social picture            the picture: dot-matrix or split-flap, its colour, the map (a wizard)
-  zenithboard social look dots|flap     the dot-matrix wall with the track, or the split-flap board with a map
-  zenithboard social colour NAME|wall   amber, green, red, white, turquoise, blue, or the wall's own colour
-  zenithboard social map NAME           the split-flap look's map: normal, night, satellite, terrain or none
+  zenithboard social look dots|flap|alternate   dot-matrix with the track, split-flap with a map, or the two in turn
+  zenithboard social colour NAME|wall|rotate   amber, green, red, white, turquoise, blue, the wall's own, or in turn
+  zenithboard social map NAME|rotate    the split-flap look's map: normal, night, satellite, terrain, none, or in turn
   zenithboard social test [HEX]         draw the picture and print the text, post nothing (see it at /social/preview)
   zenithboard social on|off|status      post the aircraft overhead as a picture of the wall (off by default)
   zenithboard social post [HEX]         post now, once
@@ -239,7 +239,7 @@ case "${1:-}" in
       check)  root_or_die; python3 "$SOCIAL_PY" check ;;
       status) social_status ;;
       remove) root_or_die; social_remove ;;
-      *) die "Usage: zenithboard social setup|words|picture|look dots|flap|colour NAME|map NAME|on|off|test [HEX]|post [HEX]|check|status|remove" ;;
+      *) die "Usage: zenithboard social setup|words|picture|look dots|flap|alternate|colour NAME|map NAME|on|off|test [HEX]|post [HEX]|check|status|remove" ;;
     esac ;;
   patches)
     case "${2:-status}" in

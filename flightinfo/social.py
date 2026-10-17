@@ -48,6 +48,7 @@ NODE = os.environ.get("ZENITHBOARD_NODE", "node")
 
 TRACE_SECONDS = 15 * 60          # how much track is kept per aircraft
 TRACE_MIN_POINTS = 6             # a post needs at least this much track (30 s at 5 s a sample)
+SETTLE_S = 120                   # an aircraft whose route or model the wall is still looking up waits up to this long
 READ_EVERY_S = 5
 ASK_EVERY_S = 15
 RULES_ALL = ("rare", "military", "helicopter", "heavy", "farthest", "all")   # "all" was "any" until 0.19.1
@@ -64,6 +65,14 @@ DEFAULTS = {
 }
 STYLES = ("dots", "flap")
 MAPS = ("normal", "night", "satellite", "terrain", "none")
+# 0.19.5, optional: vary the posts. "alternate" takes the two looks in turn, "rotate" the wall's colours, and the
+# flap look's four maps (not "none"), one step per post. Off by default; a fixed look, colour and map stay as they are.
+# The rotation leaves out the wall's blue: dark blue on black reads poorly on a phone, and a blue track on the
+# satellite map nearly disappears (checked on the rendered pictures). Blue stays available as a fixed colour.
+STYLE_CHOICES = STYLES + ("alternate",)
+MAP_CHOICES = MAPS + ("rotate",)
+ROTATE_MAPS = ("normal", "night", "satellite", "terrain")
+ROTATE_THEMES = tuple(t for t in server.THEMES if t != "blue")
 HEAVY = {"A388", "A124", "A225", "B748", "B744", "A337", "A3ST", "BLCF", "C5M", "C17", "A400"}   # worth a post on sight
 WARMUP_DAYS = 3                  # "rare" and "farthest" judge against history: none before this much of it
 KEEP_PER_TYPE = 4                # the latest distinct aircraft kept per type: enough to tell rare (<= 2 others) from not
@@ -113,6 +122,27 @@ def gap_min(c):
 def gap_words(c):
     set_to = server.cfg_float(c, "SOCIAL_GAP_MIN", 120)
     return "%g min" % gap_min(c) if set_to >= GAP_FLOOR_MIN else "%g min (set to %g: the floor is %d)" % (gap_min(c), set_to, GAP_FLOOR_MIN)
+
+
+def picture_for(c, n):
+    """The settings with "alternate" and "rotate" turned into this post's look, colour and map. n = posts made so
+    far. Five colours against two looks: over ten posts each look meets each colour."""
+    out = dict(c)
+    style = str(c.get("SOCIAL_STYLE", "dots")).strip().lower()
+    alternate = style == "alternate"
+    if alternate:
+        out["SOCIAL_STYLE"] = STYLES[n % 2]
+    if str(c.get("SOCIAL_THEME", "")).strip().lower() == "rotate":
+        out["SOCIAL_THEME"] = ROTATE_THEMES[n % len(ROTATE_THEMES)]
+    if str(c.get("SOCIAL_MAP", "")).strip().lower() == "rotate":
+        k = n // 2 if alternate else n                  # alternating: the map moves on at each flap post
+        out["SOCIAL_MAP"] = ROTATE_MAPS[k % len(ROTATE_MAPS)]
+    return out
+
+
+def varies(c):
+    return (str(c.get("SOCIAL_STYLE", "")).lower() == "alternate" or str(c.get("SOCIAL_THEME", "")).lower() == "rotate"
+            or str(c.get("SOCIAL_MAP", "")).lower() == "rotate")
 
 
 def style_of(c):
@@ -191,6 +221,8 @@ def merge_disk(state):
     lp = disk.get("last_post")
     if isinstance(lp, (int, float)) and lp > state.get("last_post", 0):
         state["last_post"] = lp
+    if isinstance(disk.get("pictures"), int) and disk["pictures"] > int(state.get("pictures", 0)):
+        state["pictures"] = disk["pictures"]
     mine = state.setdefault("posted", {})
     for h, t in (disk.get("posted") or {}).items():
         if isinstance(t, (int, float)) and t > mine.get(h, 0):
@@ -203,6 +235,7 @@ def remember_post(hex_code, when):
     state = prune_state(load_state(), when)
     state["last_post"] = max(state.get("last_post", 0), when)
     state.setdefault("posted", {})[hex_code] = when
+    state["pictures"] = int(state.get("pictures", 0)) + 1
     save_state(state)
 
 
@@ -298,6 +331,7 @@ def note_range(state, km, now):
 class Tracks(object):
     def __init__(self):
         self.by_hex = {}                           # hex -> list of [lat, lon, alt_ft, t]
+        self.pending_since = {}                    # hex -> when the wall was first seen still looking it up
 
     def feed(self, aircraft, now):
         for ac in aircraft or []:
@@ -401,16 +435,27 @@ def interest(p, rules, state, now=None):
     return sum(r[1] for r in reasons), reasons[0][0]
 
 
-def choose(planes, tracks, rules, state, now):
-    """The best candidate right now, or None."""
+def choose(planes, tracks, rules, state, now, settle=True):
+    """The best candidate right now, or None. settle=False: do not wait for lookups still on their way."""
     best = None
     for p in planes:
         if not known(p) or p.get("on_ground"):
             continue
         if p.get("hex") in state.get("posted", {}):
             continue
-        if len(tracks.of(p.get("hex"))) < TRACE_MIN_POINTS:
+        trace = tracks.of(p.get("hex"))
+        if len(trace) < TRACE_MIN_POINTS:
             continue
+        # the wall is still asking adsbdb for its route or model: wait (up to SETTLE_S from the first time it was
+        # seen asking) rather than post a board with empty rows (0.19.5); past that, it goes with what is known.
+        # Counted from that moment, not from the track: the track starts far out, the lookups only when the aircraft
+        # comes inside the sharing radius, which is when it becomes a candidate
+        if settle and p.get("pending"):
+            if len(tracks.pending_since) > 2000:
+                tracks.pending_since.clear()
+            since = tracks.pending_since.setdefault(p.get("hex"), now)
+            if now - since < SETTLE_S:
+                continue
         score, why = interest(p, rules, state, now)
         if score <= 0:
             continue
@@ -840,7 +885,7 @@ def cmd_run():
     sec = account()
     print("social: running ZenithBoard %s. Bluesky: %s. Picture: %s. Radius %s km, gap %s, rules: %s. History since %s%s." % (
         server.VERSION,
-        sec.get("BLUESKY_HANDLE") if bluesky_ready(sec) else "NO ACCOUNT (run: sudo zenithboard social setup)", picture_words(c),
+        sec.get("BLUESKY_HANDLE") if bluesky_ready(sec) else "NO ACCOUNT (run: sudo zenithboard social setup)", picture_words(c, state),
         c.get("SOCIAL_RADIUS_KM"), gap_words(c), ", ".join(sorted(rules_of(c))) or "none",
         state.get("since"), "" if warmed(state, time.time()) else
         " (rare and farthest wait for %d days of it)" % WARMUP_DAYS), flush=True)
@@ -862,7 +907,7 @@ def cmd_run():
             if best and bluesky_ready(sec) and now - state.get("last_post", 0) >= gap and now - last_fail >= RETRY_AFTER_FAIL_S:
                 score, why, p = best
                 try:
-                    results = publish(p, tracks.of(p["hex"]), why, c, sec)
+                    results = publish(p, tracks.of(p["hex"]), why, picture_for(c, int(state.get("pictures", 0))), sec)
                 except Exception as exc:                 # a picture that cannot be drawn must not stop the service
                     results = {"bluesky": "FAILED: %s" % exc}
                 ok = not str(results.get("bluesky", "FAILED")).startswith("FAILED")
@@ -871,6 +916,7 @@ def cmd_run():
                 if ok:
                     state["last_post"] = now
                     state.setdefault("posted", {})[p["hex"]] = now
+                    state["pictures"] = int(state.get("pictures", 0)) + 1     # the next one varies, when asked to
                 else:
                     last_fail = now
             state["memory"] = dict(memory_mb(), since=started)  # for `social status`: since this start
@@ -911,6 +957,8 @@ def _collect_once(hex_code=None, seconds=35):
                 return c, state, p, tracks.of(hex_code), "chosen"
         return c, state, None, [], None
     best = choose(planes, tracks, rules_of(c) | {"all"}, state, time.time())
+    if not best:                                   # the half minute is over: what is known will do
+        best = choose(planes, tracks, rules_of(c) | {"all"}, state, time.time(), settle=False)
     if not best:
         return c, state, None, [], None
     return c, state, best[2], tracks.of(best[2]["hex"]), best[1]
@@ -921,7 +969,7 @@ def cmd_test(hex_code=None):
     if not p:
         print("Nothing to show: no aircraft with a track inside %s km right now (or the wall did not answer)." % c.get("SOCIAL_RADIUS_KM"))
         return 1
-    r = publish(p, trace, why, c, {}, dry=True, keep=os.path.join(STATE_DIR, "preview"))
+    r = publish(p, trace, why, picture_for(c, int(state.get("pictures", 0))), {}, dry=True, keep=os.path.join(STATE_DIR, "preview"))
     print("Aircraft: %s %s (%s)" % (p.get("flight") or "", p.get("hex"), p.get("type") or "?"))
     # The test always finds something to show (it adds "all"); say plainly whether the service would post it.
     score, real = interest(p, rules_of(c), state, time.time())
@@ -932,7 +980,7 @@ def cmd_test(hex_code=None):
         if not warmed(state, time.time()) and rules_of(c) & {"rare", "farthest"}:
             why_not += "; 'rare' and 'farthest' wait for %d days of history (since %s)" % (WARMUP_DAYS, state.get("since", "today"))
         print("Would the service post it? No: %s. The test shows it anyway." % why_not)
-    print("Picture: %s, %s (%s bytes)" % (picture_words(c), r.get("preview") or r.get("preview_error"), r.get("bytes")))
+    print("Picture: %s, %s (%s bytes)" % (picture_words(picture_for(c, int(state.get("pictures", 0)))), r.get("preview") or r.get("preview_error"), r.get("bytes")))
     if style_of(c) == "flap" and map_of(c) != "none" and r.get("map") == "none":
         print("Map: the tiles could not be fetched (no internet, or the tile service is busy); the track is drawn on black.")
     port = int(server.cfg_float(c, "PORT", 8080))
@@ -952,7 +1000,7 @@ def cmd_post(hex_code=None):
     if not bluesky_ready(sec):
         print("No Bluesky account is set up: run  sudo zenithboard social setup")
         return 1
-    results = publish(p, trace, why, c, sec)
+    results = publish(p, trace, why, picture_for(c, int(merge_disk(state).get("pictures", 0))), sec)
     print("bluesky: %s" % results.get("bluesky", "?"))
     ok = not str(results.get("bluesky", "FAILED")).startswith("FAILED")
     if ok:
@@ -970,11 +1018,20 @@ def cmd_check():
     return 1 if res.startswith("FAILED") else 0
 
 
-def picture_words(c):
-    """"dots, amber" or "flap, green, satellite map": what the picture will look like."""
-    if style_of(c) == "flap":
-        return "flap, %s, %s" % (theme_of(c), "no map" if map_of(c) == "none" else map_of(c) + " map")
-    return "dots, %s" % theme_of(c)
+def picture_words(c, state=None):
+    """"dots, amber" or "flap, green, satellite map": what the picture will look like. With the varying settings,
+    what varies, and the next post's picture when the count of posts is known."""
+    def one(r):
+        if style_of(r) == "flap":
+            return "flap, %s, %s" % (theme_of(r), "no map" if map_of(r) == "none" else map_of(r) + " map")
+        return "dots, %s" % theme_of(r)
+    if not varies(c):
+        return one(c)
+    what = [x for x, on in (("dots and flap in turn", str(c.get("SOCIAL_STYLE", "")).lower() == "alternate"),
+                            ("the colours in turn", str(c.get("SOCIAL_THEME", "")).lower() == "rotate"),
+                            ("the maps in turn", str(c.get("SOCIAL_MAP", "")).lower() == "rotate")) if on]
+    nxt = (" (next: %s)" % one(picture_for(c, int(state.get("pictures", 0))))) if state is not None else ""
+    return ", ".join(what) + nxt
 
 
 def unreadable(path):
@@ -994,7 +1051,8 @@ def cmd_status():
         print("Bluesky: set up, but %s cannot read the account file" % who)
     else:
         print("Bluesky: %s" % (("@" + sec["BLUESKY_HANDLE"]) if bluesky_ready(sec) else "no account (run: sudo zenithboard social setup)"))
-    print("Picture: %s" % picture_words(c))
+    state_blind = unreadable(STATE_DIR) or unreadable(os.path.join(STATE_DIR, "state.json"))
+    print("Picture: %s" % picture_words(c, None if state_blind else load_state()))
     print("Radius: %s km   Area: %s   Gap: %s   Rules: %s" % (c.get("SOCIAL_RADIUS_KM"), c.get("SOCIAL_AREA") or "(none)",
                                                                gap_words(c), ", ".join(sorted(rules_of(c))) or "none"))
     print("Hashtags: %s" % c.get("SOCIAL_HASHTAGS"))
