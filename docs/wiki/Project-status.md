@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **17 October 2026**, version **0.20.0**.
+Last updated: **17 October 2026**, version **0.20.1**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -27,6 +27,7 @@ One Raspberry Pi 3B, outdoors, on Wi-Fi, with an R820T dongle.
 | The systemd sandbox | The wall server runs inside it; `systemd-analyze security` gives 1.3 (OK) |
 | Signed updates | Checked against GitHub's current key, silent once confirmed |
 | `zenithboard health` | Reports power, temperature, memory, card and the previous boot correctly |
+| Room on a 1 GB board | With three feeders, the wall and social sharing: 656 MB of 1 GB still available, 36 °C, no throttling. See [Hardware](Hardware) |
 
 ## Written and unit-tested, not yet run for real
 
@@ -53,6 +54,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 17 October 2026, 21:00 | Would the card do better in a Pi 4 (2 GB) that was to hand? The figures said no: 656 MB of 1 GB available with readsb, three feeders, the wall and social sharing, 36 °C, no under-voltage or throttling in seven and a half hours. The Pi 4 stayed in its drawer. The hardware table, which said *estimates, not yet measured*, now starts from these figures, and a [Hardware](Hardware) page says what moving a card to another Pi would change |
 | 17 October 2026, night | The owner's rule for the feed, with a 10 km sharing radius: every aircraft that crosses it, once per crossing, nothing capped — the same aircraft not again five minutes after it leaves, but its return flight, or the next day's, yes. 0.20.0 makes that the behaviour: a crossing ends an hour after the aircraft left the radius, a new callsign is a new flight, one that left before its turn is still posted, and the default gap is none. The Bluesky session is now reused, since a sign-in per post could pass the account's 300 a day. The registration's flag moves beside the `REG` row, on the wall and in the posts: beside the airline, a German flag read as Lufthansa's country |
 | 17 October 2026, evening | Four hours of the service on its own (still 0.19.7: the two updates after it not yet installed): 19 posts between 16:02 and 19:51 under *ALL* with the ten-minute floor, about five an hour; 35 to 36 of the 238 looks an hour found a candidate; 42 MB at rest, 104 MB at most. The hourly line said *Node 104 MB at most* too — Python's figure, which the kernel credits to a child started by vfork. Node now reports its own (0.19.10) |
 | 17 October 2026, five o'clock | Two split-flap posts, RYR8526 and EWG6ZP, went out with empty route rows. Not the look: asked by hand, adsbdb gave other flights under those callsigns (Berlin → Stansted, Salzburg → Aalborg), which the wall rightly refuses for an aircraft over Metz heading south-east or north; hexdb.io, the second opinion, gave the right ones (Charleroi → Reggio Calabria, Menorca → Cologne), but a few seconds after the post. The wait for lookups now covers the second opinion too (0.19.9) |

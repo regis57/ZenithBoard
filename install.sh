@@ -46,13 +46,18 @@ preflight() {
 
 hardware_notice() {
   local msg=""
-  if is_old_pi; then
-    msg+="This looks like an older Raspberry Pi ($(pi_model)).\nADS-B + the FlightInfo wall run fine on it. Use Ethernet if you can, and a good power supply.\nACARS + Grafana are NOT recommended on it.\n\n"
+  # Since 0.20.1 from what was measured: the project's reference Pi is a 3B with 1 GB (wiki: Hardware)
+  if is_old_pi && pi_model | grep -q 'Raspberry Pi 3'; then
+    msg+="A Raspberry Pi 3 ($(pi_model)): the board ZenithBoard is measured on.\nADS-B, the feeders, the wall and social sharing run comfortably on it. Ethernet or a strong Wi-Fi signal, and the official power supply.\nACARS + Grafana are NOT recommended on it.\n\n"
+  elif is_old_pi; then
+    msg+="This looks like an older Raspberry Pi ($(pi_model)).\nADS-B + the FlightInfo wall run on it. Use Ethernet if you can, and a good power supply.\nACARS + Grafana are NOT recommended on it.\n\n"
   fi
-  if is_low_mem; then
-    msg+="Memory: only $(mem_total_mb) MB.\nRecommended here: ADS-B + FlightInfo + at most one or two extra feeders.\nACARS + Grafana need about 900 MB more: use a Pi with 2 GB or more.\n"
+  if is_low_mem && [ "$(mem_total_mb)" -lt 700 ]; then
+    msg+="Memory: only $(mem_total_mb) MB.\nRecommended here: ADS-B + the wall, no extra feeders.\nACARS + Grafana: no.\n"
+  elif is_low_mem; then
+    msg+="Memory: $(mem_total_mb) MB.\nMeasured on a 1 GB Pi 3B: ADS-B Exchange, FlightAware, Flightradar24, the wall and social sharing still leave about 650 MB free.\nACARS + Grafana need about 900 MB more: use a Pi with 2 GB or more.\n"
   fi
-  [ -n "$msg" ] && [ "$(cfg_get HW_NOTICE_SEEN)" != 1 ] && { wt_msg "$msg" 16; cfg_set HW_NOTICE_SEEN 1; }
+  [ -n "$msg" ] && [ "$(cfg_get HW_NOTICE_SEEN)" != 1 ] && { wt_msg "$msg" 20; cfg_set HW_NOTICE_SEEN 1; }
   return 0
 }
 
