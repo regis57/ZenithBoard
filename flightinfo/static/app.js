@@ -16,7 +16,7 @@
   var SIL_BOX = { x: RX, y: 0, w: RW, h: 34 };
   var PHOTO_BOX = { x: 86, y: 38, w: 42, h: 30 };  // 7:5, like the 3:2 Planespotters thumbnails
   var ON = 1;                                      // grid value: 1 = lit in the theme colour
-  var FLAP_COLS = 16, FLAP_ROWS = 8, FLAP_W = 84;  // split-flap style: 16 letters x 8 rows on the left 84 dots (the photo keeps the right-hand column)
+  var FLAP_COLS = 16, FLAP_ROWS = 9, FLAP_W = 84;  // split-flap style: 16 letters x 9 rows on the left 84 dots (the photo keeps the right-hand column)
 
   var canvas = document.getElementById("wall"), ctx = canvas.getContext("2d");
   var server = { units: "metric", theme: "amber", radius: 10, radius_presets: [1, 2, 5, 10, 15, 30, 50], cycle_seconds: 14,
@@ -161,15 +161,15 @@
     var L = Fmt.planeLines(p, u, planes.indexOf(p), planes.length, cols());
     scroll.prepare(p.hex + "|" + L.airlineFull + "|" + L.typeFull + "|" + maxX,
                    [{ y: 16, text: L.airlineFull }, { y: 25, text: L.typeFull }], maxX);
-    text(g, L.callsign, 0, 0, 2);
+    text(g, L.flight, 0, 0, 1); text(g, L.reg, 0, 8, 1);                 // 0.19.0: FLT and REG rows, not a two-row callsign
     textRow(g, scroll.text(0, L.airlineFull), 16, scroll.off(0), maxX);
     textRow(g, scroll.text(1, L.typeFull), 25, scroll.off(1), maxX);
     text(g, L.alt, 0, 34, 1); text(g, L.spd, 0, 43, 1); text(g, L.from, 0, 52, 1); text(g, L.to, 0, 61, 1);       // where the flight comes from / goes to (blank when unknown)
     text(g, L.footer, 0, 72, 1);
     if (on) badges(g, p);
     silhouette(g, p.shape || "generic", SIL_BOX);
-    return { g: g, sig: "p" + p.hex + L.callsign + L.footer + L.alt + L.spd + L.type + L.from + L.to + (p.photo || "") + (on ? "f" : ""), plane: p,
-             lines: [L.callsign, L.airline, L.type, L.alt, L.spd, L.from, L.to, L.footer] };
+    return { g: g, sig: "p" + p.hex + L.flight + L.reg + L.footer + L.alt + L.spd + L.type + L.from + L.to + (p.photo || "") + (on ? "f" : ""), plane: p,
+             lines: [L.flight, L.reg, L.airline, L.type, L.alt, L.spd, L.from, L.to, L.footer] };
   }
 
   // ------------------------------------------------------------------ scrolling rows

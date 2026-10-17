@@ -81,6 +81,16 @@
     return name.replace(MAKERS, "");
   }
 
+  // The two top rows (0.19.0): the flight and the registration, one row each, labelled like ALT and SPD under them
+  // ("FLT  EZY1234", "REG  G-UZHA"). Before, the callsign alone stood two rows high. An aircraft without a callsign
+  // shows its hex code as "HEX"; without a registration, nothing. The same rows on the wall and in the posts.
+  function topRows(p, W) {
+    W = W || 14;
+    var flight = String(p.flight || "").trim().toUpperCase(), reg = String(p.registration || "").trim().toUpperCase();
+    return { flight: (flight ? "FLT  " + flight.slice(0, 7) : "HEX  " + String(p.hex || "").toUpperCase()).slice(0, W),
+             reg: reg ? ("REG  " + reg).slice(0, W) : "" };
+  }
+
   // Returns the text rows shown for one aircraft. W = characters per text row (the right-hand column holds the silhouette + photo).
   function planeLines(p, units, index, total, W) {
     W = W || 14;
@@ -90,9 +100,10 @@
     var alt = p.on_ground ? "GROUND" : (c.alt == null ? "---" : String(Math.round(imp ? c.alt : c.alt / 10) * (imp ? 1 : 10)) + " " + c.altUnit);
     var spd = c.speed == null ? "---" : Math.round(c.speed) + " " + c.speedUnit;
     function fit(s) { return String(s).slice(0, W); }
-    var r = routeLines(p.route, W);
+    var r = routeLines(p.route, W), top = topRows(p, W);
     return {
       callsign: callsign,
+      flight: top.flight, reg: top.reg,
       airline: fit((p.airline || "").toUpperCase()),
       type: modelLine(p, W),
       // The same two rows uncut. The dot-matrix wall scrolls them when the flag has taken the last characters.
@@ -110,7 +121,7 @@
 
   var api = { compass: compass, radiusToKm: radiusToKm, convert: convert, planeLines: planeLines,
               radiusLabel: radiusLabel, spread: spread, pad: pad, KM_PER_MI: KM_PER_MI,
-              placeName: placeName, routeLines: routeLines, plain: plain, modelLine: modelLine, modelScroll: modelScroll };
+              placeName: placeName, routeLines: routeLines, plain: plain, modelLine: modelLine, modelScroll: modelScroll, topRows: topRows };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.Fmt = api;
 })(typeof self !== "undefined" ? self : this);

@@ -195,7 +195,7 @@ settings_menu() {
       wall "3  ZenithBoard wall: radius, look, colour, photos, routes..." \
       logs "4  Logs: size limit, review, automatic cleaning" \
       reliability "5  Reliability: watchdogs, saved logs, health check" \
-      social "6  Social sharing: post the aircraft overhead to Bluesky / Mastodon ($(social_state))" \
+      social "6  Social sharing: post the aircraft overhead to Bluesky ($(social_state))" \
       back "Return to the previous menu") || return 0
     case "$c" in
       network) network_menu ;;

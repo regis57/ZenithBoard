@@ -83,3 +83,14 @@ console.log("format tests OK");
   assert.strictEqual(Fmt.modelLine({ type_name: "AIRBUS A-380-800" }, 12), "A-380-800");
 }
 console.log("format: model row ok");
+
+// 0.19.0: the two top rows, the same on the wall and in the posts
+(function () {
+  var t = Fmt.topRows({ flight: "EZY1234 ", registration: "G-UZHA", hex: "4071f1" }, 14);
+  assert.deepStrictEqual(t, { flight: "FLT  EZY1234", reg: "REG  G-UZHA" }, "flight and registration labelled");
+  assert.deepStrictEqual(Fmt.topRows({ hex: "3c0001" }, 14), { flight: "HEX  3C0001", reg: "" }, "no callsign: the hex; no registration: nothing");
+  assert.strictEqual(Fmt.topRows({ flight: "X", registration: "N12345678" }, 12).reg, "REG  N123456", "cut to the row when the flags take the end");
+  var L = Fmt.planeLines({ flight: "EZY1234", registration: "G-UZHA" }, "metric", 0, 1, 12);
+  assert.strictEqual(L.flight, "FLT  EZY1234"); assert.strictEqual(L.reg, "REG  G-UZHA");
+  console.log("ok   top rows: FLT and REG");
+})();

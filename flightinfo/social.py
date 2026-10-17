@@ -1,26 +1,28 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Social sharing: post the aircraft overhead to Bluesky and Mastodon, as a picture of the wall.
+"""Social sharing: post the aircraft overhead to Bluesky, as a picture of the wall.
 
 Off by default. Switched on, this runs as a small service under the wall's own user. Every few seconds it reads
 the decoder's aircraft.json and keeps, in memory, the last positions of every aircraft (the track). Every
 fifteen seconds it asks the wall itself (on the loopback) which aircraft are inside the sharing radius, with
 everything the wall knows about them: airline, model, route, flags. When one of them is worth a post under the
-rules the owner chose, and the last post is old enough, it draws the picture (tools/social-render.js: the wall
-and the track, no browser, no photo) and posts it with a short text. The picture lives in /run while it is
-being sent and is deleted right after, sent or not.
+rules the owner chose, and the last post is old enough, it draws the picture and posts it with a short text.
+Two looks: the dot-matrix wall with the track drawn in dots (tools/social-render.js, Node), or the split-flap
+board beside a map with the track (social_card.py, Pillow; the map from EOX's tile service). No browser, no photo.
+The picture lives in /run while it is being sent and is deleted right after, sent or not.
 
 What never leaves the Pi: the receiver's position, the distance and the bearing to the aircraft, the Planespotters
-photo, and the account secrets, which live in /etc/zenithboard/social.env (root:zenithboard, mode 0640) and
-never in config.env, in a log or on a command line.
+photo, and the account secret (a Bluesky app password), which lives in /etc/zenithboard/social.env
+(root:zenithboard, mode 0640) and never in config.env, in a log or on a command line.
 
     social.py run            the service loop
     social.py test [HEX]     draw the picture and print the text for the best candidate (or HEX); posts nothing
     social.py post [HEX]     post now, once, whatever the gap
-    social.py check          try the accounts: a session on Bluesky, verify_credentials on Mastodon
+    social.py check          try the account: open a session on Bluesky
     social.py status         what it would do right now
 
-Standard library only, like the rest of the wall: urllib and json talk to both networks.
+Standard library only for the service and the network, like the rest of the wall; Pillow only for the split-flap
+look, imported when that look is chosen.
 """
 import datetime
 import json
@@ -56,13 +58,18 @@ DEFAULTS = {
     "SOCIAL_GAP_MIN": "120",         # at least this long between two posts
     "SOCIAL_RULES": "rare,military,helicopter,heavy,farthest",
     "SOCIAL_HASHTAGS": "#ADSB #avgeek #ZenithBoard",
-    "SOCIAL_NETWORKS": "",           # "bluesky,mastodon": set by the wizard once an account has passed `check`
+    "SOCIAL_STYLE": "dots",          # the picture: dots (the dot-matrix wall + track) | flap (split-flap board + map)
+    "SOCIAL_THEME": "",              # its colour: amber | green | red | white | turquoise | blue; empty = the wall's THEME
+    "SOCIAL_MAP": "normal",          # the flap look's map: normal | night | satellite | terrain | none
 }
+STYLES = ("dots", "flap")
+MAPS = ("normal", "night", "satellite", "terrain", "none")
 HEAVY = {"A388", "A124", "A225", "B748", "B744", "A337", "A3ST", "BLCF", "C5M", "C17", "A400"}   # worth a post on sight
 WARMUP_DAYS = 3                  # "rare" and "farthest" judge against history: none before this much of it
 KEEP_PER_TYPE = 4                # the latest distinct aircraft kept per type: enough to tell rare (<= 2 others) from not
 RECORD_MIN_KM = 50               # a range record under this is not one
 RECORD_RADIUS_KM = 500           # the wall answers out to this; farther than that is a position glitch anyway
+RETRY_AFTER_FAIL_S = 600         # a post that failed is not tried again for ten minutes: Bluesky limits sign-ins
 
 
 # --------------------------------------------------------------------------- settings and secrets
@@ -72,7 +79,8 @@ def cfg():
     return c
 
 
-def secrets():
+def account():
+    """The Bluesky account from social.env: the handle (public, the account's name) and its app password."""
     try:
         with open(SECRETS_FILE, "r", encoding="utf-8") as fh:
             return server.parse_env_text(fh.read())
@@ -85,15 +93,28 @@ def rules_of(c):
     return {r for r in want if r in RULES_ALL}
 
 
-def networks_of(c, sec):
-    """The networks that are both chosen and have their secrets."""
-    out = []
-    chosen = {n.strip().lower() for n in str(c.get("SOCIAL_NETWORKS", "")).split(",")}
-    if "bluesky" in chosen and sec.get("BLUESKY_HANDLE") and sec.get("BLUESKY_APP_PASSWORD"):
-        out.append("bluesky")
-    if "mastodon" in chosen and sec.get("MASTODON_URL") and sec.get("MASTODON_TOKEN"):
-        out.append("mastodon")
-    return out
+def bluesky_ready(sec):
+    """The account is set up: a handle and its app password. Bluesky is the only network since 0.19.0."""
+    return bool(sec.get("BLUESKY_HANDLE") and sec.get("BLUESKY_APP_PASSWORD"))
+
+
+def style_of(c):
+    s = str(c.get("SOCIAL_STYLE", "dots")).strip().lower()
+    return s if s in STYLES else "dots"
+
+
+def map_of(c):
+    m = str(c.get("SOCIAL_MAP", "normal")).strip().lower()
+    return m if m in MAPS else "normal"
+
+
+def theme_of(c):
+    """The picture's colour: its own setting, else the wall's, else amber."""
+    for k in ("SOCIAL_THEME", "THEME"):
+        t = str(c.get(k, "") or "").strip().lower()
+        if t in server.THEMES:
+            return t
+    return "amber"
 
 
 # --------------------------------------------------------------------------- state (what was posted, what is rare)
@@ -125,7 +146,8 @@ def prune_state(s, now):
     """What the rules need, and no more:
       types    type code -> {hex: last day seen}, the latest KEEP_PER_TYPE distinct aircraft, thirty days ("rare")
       far      day -> farthest km that day, thirty days ("farthest")
-      posted   hex -> time, one day (an aircraft is posted once)
+      posted   hex -> when it was last seen, kept a day past that (an aircraft is posted once: never again while
+               it is still in the sky, nor for a day after it has gone, 0.19.0)
       since    the first day the service watched the sky (no history, no "rare", no "farthest")
     0.18.0 counted a type once per poll instead of once per aircraft; that history is dropped, not converted."""
     cut = day_of(now - 30 * 86400)
@@ -158,6 +180,16 @@ def warmed(state, now):
     except (TypeError, ValueError):
         return False
     return now - start >= WARMUP_DAYS * 86400
+
+
+def note_seen(state, aircraft, now):
+    """An aircraft already posted is remembered for as long as it is still seen, and a day beyond: a slow aircraft
+    crossing the zone for an hour is one post, not one per gap (0.19.0)."""
+    posted = state.get("posted", {})
+    for a in aircraft or ():
+        h = str(a.get("hex", "")).lower()
+        if h in posted:
+            posted[h] = now
 
 
 def note_types(state, planes, now):
@@ -391,10 +423,30 @@ def range_words(km):
     return "over %d km out" % max(step, 50)
 
 
-def post_text(p, c, why=None):
+POST_MAX = 300                   # Bluesky's limit, in characters
+
+
+def fit_post(body, credit, tags, credit_short=None):
+    """The three lines inside Bluesky's 300 characters: first the credit shortened, then hashtags dropped from the
+    end, then the body cut at a separator. Never a hashtag cut in the middle (a wrong, clickable tag) and never a
+    credit cut (0.19.0, found in review: a range record with the satellite map was 300 characters exactly)."""
+    def join(b, cr, t):
+        return "\n".join(x for x in (b, cr or "", t) if x)
+    if len(join(body, credit, tags)) > POST_MAX and credit_short:
+        credit = credit_short
+    words = tags.split()
+    while len(join(body, credit, " ".join(words))) > POST_MAX and words:
+        words.pop()
+    tags = " ".join(words)
+    while len(join(body, credit, tags)) > POST_MAX and " \u00b7 " in body:
+        body = body.rsplit(" \u00b7 ", 1)[0]
+    return join(body, credit, tags)[:POST_MAX]
+
+
+def post_text(p, c, why=None, credit=None, credit_short=None):
     """The post. English, short, nothing the wall does not know. Starts with the flight ("Flight Etihad #ETD11K"),
     ends with the place ("above Trémery"); a range record ends with where it was seen from instead, since it was
-    nowhere near overhead."""
+    nowhere near overhead. credit: the map's credit line, when the picture has a map."""
     units = c.get("UNITS", "metric")
     alt = metres(p.get("alt_ft"), units)
     flight = (p.get("flight") or "").strip()
@@ -426,30 +478,29 @@ def post_text(p, c, why=None):
     a, b = (r.get("from") or {}), (r.get("to") or {})
     if a.get("city") or a.get("name"):
         parts.append("%s → %s" % (a.get("city") or a.get("name"), b.get("city") or b.get("name") or "?"))
-    # and last, where it is
+    # and last, where it is. The altitude is said as one ("altitude 8 500 m"): "8 500 m above Trémery" was read as
+    # a distance from the place (0.19.0)
+    height = ("altitude " + alt) if alt else ""
     if record:
-        if alt:
-            parts.append(alt)
+        parts.append(height)
         parts.append(", ".join(x for x in ("range record for 30 days: " + range_words(p["distance_km"]), seen_from(c)) if x))
     else:
-        where = area_words(c)
-        if heli and (p.get("alt_ft") or 0) < 3000:
-            parts.append(("low " + where).strip())
-        elif alt or where:
-            parts.append(" ".join(x for x in (alt, where) if x))
+        parts.append(height)
+        parts.append(area_words(c))
     text = " · ".join(x for x in parts if x)          # starts with the flight itself: no icon in front of it
     tags = str(c.get("SOCIAL_HASHTAGS", "")).strip()
     if heli:
         tags = tags.replace("#avgeek", "#helicopter") if "#avgeek" in tags else tags + " #helicopter"
     if p.get("military"):
         tags = tags.replace("#avgeek", "#military") if "#avgeek" in tags else tags + " #military"
-    return (text + "\n" + tags).strip() if tags else text
+    return fit_post(text, credit, tags.strip(), credit_short)
 
 
-def alt_text(p, c, trace):
+def alt_text(p, c, trace, look="dots", info=None):
     """For the picture: what a screen reader should say."""
     units = c.get("UNITS", "metric")
-    bits = ["Dot-matrix flight board"]
+    info = info or {}
+    bits = ["Split-flap flight board" if look == "flap" else "Dot-matrix flight board"]
     if p.get("flight"):
         bits.append((p.get("flight") or "").strip())
     if p.get("registration") and p["registration"].replace("-", "") != (p.get("flight") or "").strip():
@@ -464,21 +515,30 @@ def alt_text(p, c, trace):
     if r.get("from") and r.get("to"):
         bits.append("from %s to %s" % ((r["from"].get("city") or r["from"].get("name")), (r["to"].get("city") or r["to"].get("name"))))
     if metres(p.get("alt_ft"), units):
-        bits.append(metres(p.get("alt_ft"), units))
+        bits.append("altitude " + metres(p.get("alt_ft"), units))
     mins = max(1, int(round((trace[-1][3] - trace[0][3]) / 60))) if len(trace) > 1 else 0
-    tail = (". Beside it, the aircraft's track over the last %d minute%s, north up." % (mins, "" if mins == 1 else "s")) if mins else "."
+    s = "" if mins == 1 else "s"
+    if not mins:
+        tail = "."
+    elif look == "flap" and info.get("map_words"):
+        tail = ". Beside it, %s with the aircraft's track over the last %d minute%s, north up." % (info["map_words"], mins, s)
+    else:
+        tail = ". Beside it, the aircraft's track over the last %d minute%s, north up." % (mins, s)
+    if info.get("credit_full"):
+        tail += " Map: " + info["credit_full"] + "."
     return ", ".join(bits) + tail
 
 
 # --------------------------------------------------------------------------- the picture
-def render(p, trace, c, out_png):
-    spec = {"plane": p, "trace": trace, "units": c.get("UNITS", "metric"), "theme": c.get("THEME", "amber"),
-            "clock": clock_label(), "flags": server.cfg_bool(c, "FLAGS", "1"), "pitch": 10}
-    fd, spec_path = tempfile.mkstemp(prefix="social-", suffix=".json", dir=os.path.dirname(out_png) or None)
+def _node(spec, out, *extra):
+    """Run the dot-matrix renderer (or ask it for the board's rows, --lines). Returns its JSON answer."""
+    where = os.path.dirname(out) if out else None     # --lines: the system's temporary folder, nothing left behind
+    fd, spec_path = tempfile.mkstemp(prefix="social-", suffix=".json", dir=where or None)
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
             json.dump(spec, fh)
-        r = subprocess.run([NODE, RENDERER, spec_path, out_png], capture_output=True, text=True, timeout=60)
+        args = [NODE, RENDERER, spec_path] + ([out] if out else []) + list(extra)
+        r = subprocess.run(args, capture_output=True, text=True, timeout=60)
         if r.returncode != 0:
             raise RuntimeError("renderer failed: %s" % (r.stderr.strip() or r.stdout.strip()))
         return json.loads(r.stdout.strip() or "{}")
@@ -486,10 +546,43 @@ def render(p, trace, c, out_png):
         try:
             os.unlink(spec_path)
         except OSError:
-            pass
+            pass                                 # already gone: nothing to clean
 
 
-# --------------------------------------------------------------------------- the networks
+def flap_module():
+    """social_card (Pillow), or None when Pillow is not installed. Only the split-flap look needs it."""
+    try:
+        import social_card
+        return social_card
+    except ImportError:
+        return None
+
+
+def render(p, trace, c, out_base):
+    """Draw the picture in the chosen look. out_base has no extension: .png for dots, .jpg for flap (a map in PNG
+    would pass Bluesky's 1,000,000 bytes). Returns {path, mime, width, height, bytes, and for a map: credit, links,
+    credit_full, map_words}."""
+    look = style_of(c)
+    spec = {"plane": p, "trace": trace, "units": c.get("UNITS", "metric"), "theme": theme_of(c),
+            "clock": clock_label(), "flags": server.cfg_bool(c, "FLAGS", "1"), "pitch": 10}
+    card = flap_module() if look == "flap" else None
+    if look == "flap" and card is None:          # Pillow not installed (an offline `social look flap`): the dots, and a word
+        print("social: the split-flap picture needs Pillow: drawing the dot-matrix picture instead. Run: sudo zenithboard social look flap", flush=True)
+        look = "flap-fallback"
+    if card is not None:
+        got = _node(dict(spec, flags=False, cols=card.COLS), None, "--lines")
+        out = out_base + ".jpg"
+        info = card.render(got["lines"], trace, p, out, color=got.get("color", "#ffb000"),
+                           units=spec["units"], map_mode=map_of(c), cache_dir=os.path.join(STATE_DIR, "tiles"))
+        info.update(path=out, mime="image/jpeg")
+        return info
+    out = out_base + ".png"
+    info = _node(spec, out)
+    info.update(path=out, mime="image/png", fallback=(look == "flap-fallback"))
+    return info
+
+
+# --------------------------------------------------------------------------- the network
 def _json_request(url, data=None, headers=None, method=None, timeout=30):
     body = None if data is None else (data if isinstance(data, bytes) else json.dumps(data).encode("utf-8"))
     hdr = {"User-Agent": server.USER_AGENT}
@@ -517,91 +610,54 @@ def bluesky_session(sec):
                          {"identifier": sec["BLUESKY_HANDLE"], "password": sec["BLUESKY_APP_PASSWORD"]})
 
 
-def bluesky_facets(text):
-    """Hashtags as facets, which is how Bluesky makes them clickable. Byte offsets, UTF-8."""
+def _byte_span(text, start, end):
+    return len(text[:start].encode("utf-8")), len(text[:end].encode("utf-8"))
+
+
+def bluesky_facets(text, links=None):
+    """Hashtags and links as facets, which is how Bluesky makes them clickable. Byte offsets, UTF-8.
+    links: [(label, uri)], each label found in the text (the map credit's "maps.eox.at")."""
     facets = []
     for m in re.finditer(r"(?<!\w)#([A-Za-z0-9_]+)", text):
-        start = len(text[:m.start()].encode("utf-8"))
-        end = start + len(m.group(0).encode("utf-8"))
-        facets.append({"index": {"byteStart": start, "byteEnd": end},
+        a, b = _byte_span(text, m.start(), m.end())
+        facets.append({"index": {"byteStart": a, "byteEnd": b},
                        "features": [{"$type": "app.bsky.richtext.facet#tag", "tag": m.group(1)}]})
-    return facets
+    for label, uri in links or ():
+        at = text.find(label)
+        if at >= 0 and uri.startswith("https://"):
+            a, b = _byte_span(text, at, at + len(label))
+            facets.append({"index": {"byteStart": a, "byteEnd": b},
+                           "features": [{"$type": "app.bsky.richtext.facet#link", "uri": uri}]})
+    return sorted(facets, key=lambda f: f["index"]["byteStart"])
 
 
-def post_bluesky(sec, text, png_path, alt, width, height):
+def post_bluesky(sec, text, path, alt, width, height, mime="image/png", links=None):
     ses = bluesky_session(sec)
     auth = {"Authorization": "Bearer " + ses["accessJwt"]}
-    with open(png_path, "rb") as fh:
+    with open(path, "rb") as fh:
         data = fh.read()
     if len(data) > 1000000:
         raise RuntimeError("picture is %d bytes, Bluesky takes 1,000,000 at most" % len(data))
     blob = _json_request(BLUESKY_PDS + "/xrpc/com.atproto.repo.uploadBlob", data,
-                         dict(auth, **{"Content-Type": "image/png"}))["blob"]
-    record = {"$type": "app.bsky.feed.post", "text": text[:300], "createdAt": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
-              "langs": ["en"], "facets": bluesky_facets(text[:300]),
+                         dict(auth, **{"Content-Type": mime}))["blob"]
+    text = text[:300]
+    record = {"$type": "app.bsky.feed.post", "text": text, "createdAt": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+              "langs": ["en"], "facets": bluesky_facets(text, links),
               "embed": {"$type": "app.bsky.embed.images", "images": [{"alt": alt, "image": blob, "aspectRatio": {"width": width, "height": height}}]}}
     out = _json_request(BLUESKY_PDS + "/xrpc/com.atproto.repo.createRecord",
                         {"repo": ses["did"], "collection": "app.bsky.feed.post", "record": record}, auth)
     return out.get("uri", "")
 
 
-def _multipart(fields, file_field, filename, content, content_type):
-    boundary = "----zenithboard" + uuid.uuid4().hex
-    body = b""
-    for k, v in fields.items():
-        body += ("--%s\r\nContent-Disposition: form-data; name=\"%s\"\r\n\r\n%s\r\n" % (boundary, k, v)).encode("utf-8")
-    body += ("--%s\r\nContent-Disposition: form-data; name=\"%s\"; filename=\"%s\"\r\nContent-Type: %s\r\n\r\n"
-             % (boundary, file_field, filename, content_type)).encode("utf-8") + content + b"\r\n"
-    body += ("--%s--\r\n" % boundary).encode("utf-8")
-    return body, "multipart/form-data; boundary=" + boundary
-
-
-def post_mastodon(sec, text, png_path, alt):
-    base = sec["MASTODON_URL"].rstrip("/")
-    auth = {"Authorization": "Bearer " + sec["MASTODON_TOKEN"]}
-    with open(png_path, "rb") as fh:
-        data = fh.read()
-    body, ctype = _multipart({"description": alt[:1500]}, "file", "zenithboard.png", data, "image/png")
-    media = _json_request(base + "/api/v2/media", body, dict(auth, **{"Content-Type": ctype}))
-    media_id = media.get("id")
-    if not media_id:
-        raise RuntimeError("Mastodon did not return a media id")
-    # 202 = still processing (videos mostly); an image is usually ready at once. Ask a few times to be sure.
-    for _ in range(10):
-        try:
-            got = _json_request(base + "/api/v1/media/%s" % media_id, headers=auth)
-            if got.get("url"):
-                break
-        except urllib.error.HTTPError as exc:
-            if exc.code != 206:
-                raise
-        time.sleep(1)
-    out = _json_request(base + "/api/v1/statuses", {"status": text[:500], "media_ids": [media_id], "visibility": "public", "language": "en"},
-                        dict(auth, **{"Idempotency-Key": uuid.uuid4().hex}))
-    return out.get("url", "")
-
-
-def check_accounts(sec, networks):
-    """-> {network: 'ok ...' | 'FAILED ...'}"""
-    out = {}
-    if "bluesky" in networks:
-        try:
-            ses = bluesky_session(sec)
-            out["bluesky"] = "ok, signed in as %s" % ses.get("handle", sec["BLUESKY_HANDLE"])
-        except urllib.error.HTTPError as exc:
-            out["bluesky"] = "FAILED: " + _http_error_text(exc)
-        except Exception as exc:
-            out["bluesky"] = "FAILED: %s" % exc
-    if "mastodon" in networks:
-        try:
-            me = _json_request(sec["MASTODON_URL"].rstrip("/") + "/api/v1/accounts/verify_credentials",
-                               headers={"Authorization": "Bearer " + sec["MASTODON_TOKEN"]})
-            out["mastodon"] = "ok, signed in as @%s" % me.get("acct", "?")
-        except urllib.error.HTTPError as exc:
-            out["mastodon"] = "FAILED: " + _http_error_text(exc)
-        except Exception as exc:
-            out["mastodon"] = "FAILED: %s" % exc
-    return out
+def check_bluesky(sec):
+    """'ok, signed in as ...' or 'FAILED: ...'"""
+    try:
+        ses = bluesky_session(sec)
+        return "ok, signed in as %s" % ses.get("handle", sec["BLUESKY_HANDLE"])
+    except urllib.error.HTTPError as exc:
+        return "FAILED: " + _http_error_text(exc)
+    except Exception as exc:
+        return "FAILED: %s" % exc
 
 
 # --------------------------------------------------------------------------- one post, end to end
@@ -618,40 +674,53 @@ def work_dir():
     return d
 
 
-def publish(p, trace, why, c, sec, networks, dry=False, keep_png=None):
-    """Draw, post everywhere chosen, delete the picture. Returns {network: url or error}."""
-    png = os.path.join(work_dir(), "post-%s.png" % uuid.uuid4().hex)
+def keep_copy(src, keep_base):
+    """`social test` keeps the picture as preview.png or preview.jpg, and drops the other one, so /social/preview
+    shows the last picture drawn whatever the look."""
+    ext = os.path.splitext(src)[1]
+    os.makedirs(os.path.dirname(keep_base), exist_ok=True)
+    for other in (".png", ".jpg"):
+        if other != ext:
+            try:
+                os.unlink(keep_base + other)
+            except OSError:
+                pass                             # no preview of the other look to drop
+    with open(src, "rb") as a, open(keep_base + ext, "wb") as b:
+        b.write(a.read())
+    return keep_base + ext
+
+
+def publish(p, trace, why, c, sec, dry=False, keep=None):
+    """Draw, post to Bluesky, delete the picture. Returns {"bluesky": uri or 'FAILED ...'} (dry: the text instead)."""
+    base = os.path.join(work_dir(), "post-%s" % uuid.uuid4().hex)
     results = {}
     try:
-        info = render(p, trace, c, png)
-        text, alt = post_text(p, c, why), alt_text(p, c, trace)
-        if keep_png:
+        info = render(p, trace, c, base)
+        text = post_text(p, c, why, info.get("credit"), info.get("credit_short"))
+        alt = alt_text(p, c, trace, style_of(c), info)
+        if keep:
             try:
-                os.makedirs(os.path.dirname(keep_png), exist_ok=True)
-                with open(png, "rb") as src, open(keep_png, "wb") as dst:
-                    dst.write(src.read())
+                results["preview"] = keep_copy(info["path"], keep)
             except OSError as exc:
-                results["preview"] = "could not keep a copy: %s" % exc
+                results["preview_error"] = "could not keep a copy: %s" % exc
         if dry:
-            results["text"], results["alt"], results["bytes"] = text, alt, info.get("bytes")
+            results.update(text=text, alt=alt, bytes=info.get("bytes"), look=style_of(c), map=info.get("map"))
             return results
-        for net in networks:
-            try:
-                if net == "bluesky":
-                    results[net] = post_bluesky(sec, text, png, alt, info.get("width", 0), info.get("height", 0))
-                elif net == "mastodon":
-                    results[net] = post_mastodon(sec, text, png, alt)
-            except urllib.error.HTTPError as exc:
-                results[net] = "FAILED: " + _http_error_text(exc)
-            except Exception as exc:
-                results[net] = "FAILED: %s" % exc
+        try:
+            results["bluesky"] = post_bluesky(sec, text, info["path"], alt, info.get("width", 0), info.get("height", 0),
+                                              info.get("mime", "image/png"), info.get("links"))
+        except urllib.error.HTTPError as exc:
+            results["bluesky"] = "FAILED: " + _http_error_text(exc)
+        except Exception as exc:
+            results["bluesky"] = "FAILED: %s" % exc
         return results
     finally:
-        try:
-            os.unlink(png)
-        except OSError:
-            pass
-        d = os.path.dirname(png)
+        for ext in (".png", ".jpg"):
+            try:
+                os.unlink(base + ext)
+            except OSError:
+                pass                             # the other look's file was never drawn
+        d = os.path.dirname(base)
         if d != RUN_DIR:
             try:
                 os.rmdir(d)
@@ -678,6 +747,7 @@ def one_poll(c, state, tracks, aircraft, now):
     with a record it set itself (0.18.0 did, and "farthest" could never fire)."""
     radius = server.cfg_float(c, "SOCIAL_RADIUS_KM", 15)
     rules = rules_of(c)
+    note_seen(state, aircraft, now)
     planes = ask_wall(c, radius)
     far_hex, far_km = farthest_now(c, aircraft)
     if "farthest" in rules and far_hex and warmed(state, now) and far_km > max(RECORD_MIN_KM, range_best(state)):
@@ -695,11 +765,12 @@ def one_poll(c, state, tracks, aircraft, now):
 def cmd_run():
     tracks = Tracks()
     state = prune_state(load_state(), time.time())
-    last_ask, last_summary = 0, time.time()
+    last_ask, last_summary, last_fail = 0, time.time(), 0
     polls = candidates = 0
     c = cfg()
-    print("social: running. Networks: %s. Radius %s km, gap %s min, rules: %s. History since %s%s." % (
-        ", ".join(networks_of(c, secrets())) or "NONE (run: sudo zenithboard social setup)",
+    sec = account()
+    print("social: running. Bluesky: %s. Picture: %s. Radius %s km, gap %s min, rules: %s. History since %s%s." % (
+        sec.get("BLUESKY_HANDLE") if bluesky_ready(sec) else "NO ACCOUNT (run: sudo zenithboard social setup)", picture_words(c),
         c.get("SOCIAL_RADIUS_KM"), c.get("SOCIAL_GAP_MIN"), ", ".join(sorted(rules_of(c))) or "none",
         state.get("since"), "" if warmed(state, time.time()) else
         " (rare and farthest wait for %d days of it)" % WARMUP_DAYS), flush=True)
@@ -714,18 +785,24 @@ def cmd_run():
             planes, best = one_poll(c, state, tracks, aircraft, now)
             polls += 1
             candidates += 1 if best else 0
-            sec = secrets()
-            networks = networks_of(c, sec)
+            sec = account()
             gap = server.cfg_float(c, "SOCIAL_GAP_MIN", 120) * 60
-            if best and networks and now - state.get("last_post", 0) >= gap:
+            # A failed post (Bluesky down, the app password revoked, no picture) waits ten minutes before the next
+            # try: before 0.19.0 it was tried again at every look, every fifteen seconds, and each try signs in
+            if best and bluesky_ready(sec) and now - state.get("last_post", 0) >= gap and now - last_fail >= RETRY_AFTER_FAIL_S:
                 score, why, p = best
-                results = publish(p, tracks.of(p["hex"]), why, c, sec, networks)
-                ok = [n for n in networks if not str(results.get(n, "")).startswith("FAILED")]
-                print("social: posted %s (%s) to %s: %s" % (p.get("flight") or p.get("hex"), why, ", ".join(ok) or "nowhere",
-                                                          json.dumps(results)), flush=True)
+                try:
+                    results = publish(p, tracks.of(p["hex"]), why, c, sec)
+                except Exception as exc:                 # a picture that cannot be drawn must not stop the service
+                    results = {"bluesky": "FAILED: %s" % exc}
+                ok = not str(results.get("bluesky", "FAILED")).startswith("FAILED")
+                print("social: %s %s (%s): %s" % ("posted" if ok else "could not post", p.get("flight") or p.get("hex"), why,
+                                                  json.dumps(results)), flush=True)
                 if ok:
                     state["last_post"] = now
                     state.setdefault("posted", {})[p["hex"]] = now
+                else:
+                    last_fail = now
             save_state(state)
         if now - last_summary >= 3600:
             # once an hour, so the journal answers "why no post?" without a line every fifteen seconds
@@ -734,7 +811,7 @@ def cmd_run():
             print("social: last hour: %d looks, %d with a candidate under the rules. Last post: %s.%s%s" % (
                 polls, candidates, time.strftime("%H:%M", time.localtime(lp)) if lp else "never",
                 (" Next possible in %d min." % wait) if wait else "",
-                "" if networks_of(c, secrets()) else " No network set up: nothing can be posted."), flush=True)
+                "" if bluesky_ready(account()) else " No Bluesky account set up: nothing can be posted."), flush=True)
             last_summary, polls, candidates = now, 0, 0
         time.sleep(READ_EVERY_S)
 
@@ -773,8 +850,7 @@ def cmd_test(hex_code=None):
     if not p:
         print("Nothing to show: no aircraft with a track inside %s km right now (or the wall did not answer)." % c.get("SOCIAL_RADIUS_KM"))
         return 1
-    preview = os.path.join(STATE_DIR, "preview.png")
-    r = publish(p, trace, why, c, {}, [], dry=True, keep_png=preview)
+    r = publish(p, trace, why, c, {}, dry=True, keep=os.path.join(STATE_DIR, "preview"))
     print("Aircraft: %s %s (%s)" % (p.get("flight") or "", p.get("hex"), p.get("type") or "?"))
     # The test always finds something to show (it adds "any"); say plainly whether the service would post it.
     score, real = interest(p, rules_of(c), state, time.time())
@@ -785,7 +861,9 @@ def cmd_test(hex_code=None):
         if not warmed(state, time.time()) and rules_of(c) & {"rare", "farthest"}:
             why_not += "; 'rare' and 'farthest' wait for %d days of history (since %s)" % (WARMUP_DAYS, state.get("since", "today"))
         print("Would the service post it? No: %s. The test shows it anyway." % why_not)
-    print("Picture: %s (%s bytes)" % (preview, r.get("bytes")))
+    print("Picture: %s, %s (%s bytes)" % (picture_words(c), r.get("preview") or r.get("preview_error"), r.get("bytes")))
+    if style_of(c) == "flap" and map_of(c) != "none" and r.get("map") == "none":
+        print("Map: the tiles could not be fetched (no internet, or the tile service is busy); the track is drawn on black.")
     port = int(server.cfg_float(c, "PORT", 8080))
     print("See it:  http://%s:%d/social/preview" % (local_ip(), port))
     print("Text:")
@@ -799,15 +877,13 @@ def cmd_post(hex_code=None):
     if not p:
         print("Nothing to post: no aircraft with a track inside %s km right now." % c.get("SOCIAL_RADIUS_KM"))
         return 1
-    sec = secrets()
-    networks = networks_of(c, sec)
-    if not networks:
-        print("No network is set up: run  sudo zenithboard social setup")
+    sec = account()
+    if not bluesky_ready(sec):
+        print("No Bluesky account is set up: run  sudo zenithboard social setup")
         return 1
-    results = publish(p, trace, why, c, sec, networks)
-    for net in networks:
-        print("%s: %s" % (net, results.get(net, "?")))
-    ok = [n for n in networks if not str(results.get(n, "")).startswith("FAILED")]
+    results = publish(p, trace, why, c, sec)
+    print("bluesky: %s" % results.get("bluesky", "?"))
+    ok = not str(results.get("bluesky", "FAILED")).startswith("FAILED")
     if ok:
         state["last_post"] = time.time()
         state.setdefault("posted", {})[p["hex"]] = time.time()
@@ -816,24 +892,28 @@ def cmd_post(hex_code=None):
 
 
 def cmd_check():
-    c, sec = cfg(), secrets()
-    chosen = [n for n in ("bluesky", "mastodon") if n in str(c.get("SOCIAL_NETWORKS", "")).lower() or
-              (n == "bluesky" and sec.get("BLUESKY_HANDLE")) or (n == "mastodon" and sec.get("MASTODON_URL"))]
-    if not chosen:
+    sec = account()
+    if not bluesky_ready(sec):
         print("No account configured. Run:  sudo zenithboard social setup")
         return 1
-    res = check_accounts(sec, chosen)
-    for n in chosen:
-        print("%s: %s" % (n, res.get(n, "not configured")))
-    return 0 if all(not v.startswith("FAILED") for v in res.values()) else 1
+    res = check_bluesky(sec)
+    print("bluesky: %s" % res)
+    return 1 if res.startswith("FAILED") else 0
+
+
+def picture_words(c):
+    """"dots, amber" or "flap, green, satellite map": what the picture will look like."""
+    if style_of(c) == "flap":
+        return "flap, %s, %s" % (theme_of(c), "no map" if map_of(c) == "none" else map_of(c) + " map")
+    return "dots, %s" % theme_of(c)
 
 
 def cmd_status():
-    c, sec = cfg(), secrets()
+    c, sec = cfg(), account()
     state = load_state()
-    nets = networks_of(c, sec)
     print("Social sharing: %s" % ("on" if server.cfg_bool(c, "SOCIAL") else "off"))
-    print("Networks ready: %s" % (", ".join(nets) or "none (run: sudo zenithboard social setup)"))
+    print("Bluesky: %s" % (("@" + sec["BLUESKY_HANDLE"]) if bluesky_ready(sec) else "no account (run: sudo zenithboard social setup)"))
+    print("Picture: %s" % picture_words(c))
     print("Radius: %s km   Area: %s   Gap: %s min   Rules: %s" % (c.get("SOCIAL_RADIUS_KM"), c.get("SOCIAL_AREA") or "(none)",
                                                                    c.get("SOCIAL_GAP_MIN"), ", ".join(sorted(rules_of(c))) or "none"))
     print("Hashtags: %s" % c.get("SOCIAL_HASHTAGS"))

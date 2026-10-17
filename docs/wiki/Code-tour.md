@@ -15,9 +15,11 @@ lib/*.sh                one module per subject, sourced by both install.sh and b
 flightinfo/server.py    the wall's web server and all its lookups
 flightinfo/static/      the wall itself: app.js, flap.js, scene.js, shapes, CSS
 flightinfo/aircraft.py  reading aircraft.json
+flightinfo/social.py    social sharing: the service that picks an aircraft and posts it to Bluesky
+flightinfo/social_card.py  the split-flap picture with its map (Pillow)
 acars/acars_ingest.py   ACARS UDP -> SQLite, with retention
 systemd/                the unit files
-tools/                  maintenance scripts (type-list refresh, demo photos, checkers)
+tools/                  maintenance scripts (type-list refresh, demo photos, checkers), social-render.js (the dot-matrix picture)
 tests/                  the whole suite
 docs/wiki/              the source of this wiki
 ```

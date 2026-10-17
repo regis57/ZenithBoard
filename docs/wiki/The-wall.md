@@ -16,7 +16,7 @@ The `+ 3` leaves a margin, and the grid is then centred with an `ox` / `oy` offs
 
 | Area | Grid box | Holds |
 |---|---|---|
-| Text | left of column 86 | Callsign, airline, type, altitude, speed, distance, route — 14 characters per row |
+| Text | left of column 86 | Nine rows of 14 characters: `FLT  BAW123`, `REG  G-XLEA` (the flight and the registration, labelled like the rows under them, since 0.19.0; before, the callsign alone stood two rows high), airline, type, altitude, speed, route, and the last row with the distance and bearing |
 | Silhouette | x 90, y 0, 38 × 34 | The aircraft seen from above, drawn in dots |
 | Photo or scene | x 86, y 38, 42 × 30 | A real photo from Planespotters, or an animated side view when there is none |
 | Free | below row 68, on the right | Deliberately empty. The settings gear lives here |
@@ -38,7 +38,7 @@ Choices made in the gear are stored in that browser only. They override the Pi's
 | Mode | What it looks like |
 |---|---|
 | `dots` | The dot-matrix wall: text on the left, silhouette and photo on the right. The default |
-| `flap` | An airport split-flap board: 16 letters × 8 rows on the left 84 dots, with the flaps rolling as the text changes. The photo column stays |
+| `flap` | An airport split-flap board: 16 letters × 9 rows on the left 84 dots, with the flaps rolling as the text changes. The photo column stays |
 
 Set it for the whole Pi with `zenithboard mode dots|flap`, or per tablet with a link.
 

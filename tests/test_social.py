@@ -1,8 +1,9 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Social sharing (0.18.0): the words, the choice, the track, the picture, and the two networks' requests.
+"""Social sharing: the words, the choice, the track, the two pictures, and the requests sent to Bluesky.
 
-The networks are not called: a fake urlopen records what would have been sent and answers like the real
-services do (shapes copied from the Bluesky and Mastodon API documentation). The renderer is real (node).
+The network is not called: a fake urlopen records what would have been sent and answers like Bluesky does (shapes
+copied from its API documentation). The renderers are real: node for the dot-matrix picture, Pillow for the split-flap
+one, which is given fake map tiles.
 """
 import json
 import os
@@ -39,22 +40,23 @@ def trace(n=20, start=None):
 
 class WordsTest(unittest.TestCase):
     # 0.18.3: the post starts with the flight ("Flight Etihad #ETD11K") and ends with the place ("above Trémery");
-    # no icon in front, the callsign a hashtag so the flight can be followed
+    # no icon in front, the callsign a hashtag so the flight can be followed. 0.19.0: "altitude 11 280 m" on its own,
+    # because "8 500 m above Trémery" was read as a distance from Trémery
     def test_airline_with_route(self):
         self.assertEqual(social.post_text(EZY, CFG).split("\n")[0],
-                         "Flight easyJet #EZY1234 · Airbus A320neo · Edinburgh → Saint-Louis · 11 280 m over Luxembourg")
+                         "Flight easyJet #EZY1234 · Airbus A320neo · Edinburgh → Saint-Louis · altitude 11 280 m · over Luxembourg")
 
     def test_starts_with_the_flight_and_ends_above_the_place(self):
         t = social.post_text(EZY, dict(CFG, SOCIAL_AREA="Trémery")).split("\n")[0]
         self.assertTrue(t.startswith("Flight easyJet #EZY1234 · "), t)
-        self.assertTrue(t.endswith(" above Trémery"), t)
+        self.assertTrue(t.endswith(" · altitude 11 280 m · above Trémery"), t)
 
     def test_unknown_airline_shows_callsign_and_model(self):
-        self.assertEqual(social.post_text(BELUGA, CFG).split("\n")[0], "Flight #BGA113J · Airbus A330-743 Beluga XL · F-GXLH · 9 750 m over Luxembourg")
+        self.assertEqual(social.post_text(BELUGA, CFG).split("\n")[0], "Flight #BGA113J · Airbus A330-743 Beluga XL · F-GXLH · altitude 9 750 m · over Luxembourg")
 
     def test_a_registration_used_as_callsign_is_an_aircraft_not_a_flight(self):
         p = dict(BELUGA, flight="FGXLH", type_name="CESSNA 172", type="C172")
-        self.assertEqual(social.post_text(p, dict(CFG, SOCIAL_AREA="Trémery")).split("\n")[0], "Aircraft F-GXLH · Cessna 172 · 9 750 m above Trémery")
+        self.assertEqual(social.post_text(p, dict(CFG, SOCIAL_AREA="Trémery")).split("\n")[0], "Aircraft F-GXLH · Cessna 172 · altitude 9 750 m · above Trémery")
 
     def test_only_airline_callsigns_become_hashtags(self):
         self.assertEqual(social.hashtag_callsign("ETD11K"), "#ETD11K")
@@ -64,12 +66,12 @@ class WordsTest(unittest.TestCase):
 
     def test_helicopter(self):
         t = social.post_text(HELI, CFG)
-        self.assertTrue(t.startswith("Helicopter D-HABC · Airbus Helicopters H145 · low over Luxembourg"), t)
+        self.assertTrue(t.startswith("Helicopter D-HABC · Airbus Helicopters H145 · altitude 460 m · over Luxembourg"), t)
         self.assertIn("#helicopter", t)
 
     def test_military_without_callsign(self):
         t = social.post_text(KC135, CFG)
-        self.assertTrue(t.startswith("Military flight · Boeing KC-135R Stratotanker · 7 620 m over Luxembourg"), t)
+        self.assertTrue(t.startswith("Military flight · Boeing KC-135R Stratotanker · altitude 7 620 m · over Luxembourg"), t)
         self.assertIn("#military", t)
         self.assertTrue(social.post_text(dict(KC135, flight="RCH123"), CFG).startswith("Military flight #RCH123 · "))
 
@@ -92,7 +94,7 @@ class WordsTest(unittest.TestCase):
         # rounded DOWN to 50 km: enough to tell a record, not enough to draw a circle around the antenna
         t = social.post_text(dict(EZY, distance_km=332.4), CFG, why="farthest")
         self.assertTrue(t.startswith("Flight easyJet #EZY1234 · "), t)
-        self.assertIn("· 11 280 m · range record for 30 days: over 300 km out", t)
+        self.assertIn("· altitude 11 280 m · range record for 30 days: over 300 km out", t)
         self.assertNotIn("332", t)
         # far from overhead: the place is where it was seen from, not what it flew above
         t = social.post_text(dict(EZY, distance_km=332.4), dict(CFG, SOCIAL_AREA="Trémery"), why="farthest").split("\n")[0]
@@ -107,7 +109,35 @@ class WordsTest(unittest.TestCase):
         self.assertEqual(social.area_words({"SOCIAL_AREA": "near Metz"}), "near Metz")
         self.assertEqual(social.area_words({"SOCIAL_AREA": "over the Moselle"}), "over the Moselle")
         self.assertEqual(social.area_words({"SOCIAL_AREA": "  "}), "")
-        self.assertIn("1 750 m above Trémery", social.post_text(dict(EZY, alt_ft=5740), dict(CFG, SOCIAL_AREA="Trémery")))
+        self.assertIn("altitude 1 750 m · above Trémery", social.post_text(dict(EZY, alt_ft=5740), dict(CFG, SOCIAL_AREA="Trémery")))
+
+    def test_the_altitude_never_reads_as_a_distance(self):
+        # reported from the first posts: "10 670 m over Trémery" read as 10 km from Trémery
+        for p in (EZY, BELUGA, HELI, KC135):
+            line = social.post_text(p, dict(CFG, SOCIAL_AREA="Trémery")).split("\n")[0]
+            self.assertRegex(line, r"· altitude [0-9 ]+ m · above Trémery$")
+        self.assertIn("altitude 37 000 ft", social.post_text(EZY, dict(CFG, UNITS="imperial")))
+
+    def test_the_post_stays_inside_300_characters_without_cutting_a_hashtag(self):
+        # found in review: a range record with the satellite credit was 300 characters exactly, and Bluesky's cut
+        # at 300 turned #ZenithBoard into a clickable #ZenithBo
+        body = "Flight Emirates #UAE225 · Boeing 777-300ER · Dubai → San Francisco · altitude 11 280 m · range record for 30 days: over 300 km out, seen from Trémery"
+        credit, short = "Map: EOxCloudless 2025 by EOX, cloudless.eox.at, Copernicus Sentinel data; labels © OpenStreetMap contributors, maps.eox.at", "Map: EOxCloudless 2025 by EOX, cloudless.eox.at; labels © OSM, maps.eox.at"
+        t = social.fit_post(body, credit, "#ADSB #military #ZenithBoard", short)
+        self.assertLessEqual(len(t), 300)
+        self.assertEqual(t.split("\n"), [body, short, "#ADSB #military #ZenithBoard"])
+        t = social.fit_post(body + " · " + "x" * 120, credit, "#ADSB #military #ZenithBoard", short)
+        self.assertLessEqual(len(t), 300)
+        self.assertTrue(t.endswith("#ADSB") or t.endswith("#ZenithBoard") or t.endswith("#military") or "#" not in t.split("\n")[-1], t)
+        for tag in ("#ZenithBo", "#milit", "#AD\n"):
+            self.assertNotIn(tag, t)
+        self.assertIn(short, t)
+        self.assertEqual(social.fit_post("short", None, "#ADSB"), "short\n#ADSB")
+
+    def test_the_map_credit_comes_before_the_hashtags(self):
+        t = social.post_text(EZY, CFG, credit="Map \u00a9 OpenStreetMap contributors, EOX maps.eox.at").split("\n")
+        self.assertEqual(t[1], "Map \u00a9 OpenStreetMap contributors, EOX maps.eox.at")
+        self.assertTrue(t[2].startswith("#ADSB"))
 
     def test_de_havilland(self):
         # reported from the real Pi: "DE Havilland DHC-8-400 Dash 8"
@@ -117,6 +147,11 @@ class WordsTest(unittest.TestCase):
         a = social.alt_text(EZY, CFG, trace(20))
         self.assertIn("EZY1234", a); self.assertIn("easyJet", a); self.assertIn("from Edinburgh to Saint-Louis", a)
         self.assertIn("registration G-UZHA", a)
+        self.assertIn("altitude 11 280 m", a)
+        f = social.alt_text(EZY, CFG, trace(20), "flap", {"map_words": "a satellite map", "credit_full": "EOxCloudless 2025"})
+        self.assertTrue(f.startswith("Split-flap flight board"), f)
+        self.assertIn("Beside it, a satellite map with the aircraft's track", f)
+        self.assertTrue(f.endswith("Map: EOxCloudless 2025."), f)
         self.assertTrue(a.endswith("north up."), a)
 
 
@@ -254,11 +289,11 @@ class PictureTest(unittest.TestCase):
         if shutil.which(social.NODE) is None:
             self.skipTest("node not installed here")
         d = tempfile.mkdtemp(); self.addCleanup(shutil.rmtree, d, True)
-        out = os.path.join(d, "p.png")
-        info = social.render(EZY, trace(60), CFG, out)
-        with open(out, "rb") as fh:
+        info = social.render(EZY, trace(60), CFG, os.path.join(d, "p"))
+        with open(info["path"], "rb") as fh:
             head = fh.read(8)
         self.assertEqual(head, b"\x89PNG\r\n\x1a\n")
+        self.assertEqual((info["mime"], info["path"][-4:]), ("image/png", ".png"))
         self.assertLess(info["bytes"], 1000000)
         self.assertEqual((info["width"], info["height"]), (1310, 830))
 
@@ -279,17 +314,213 @@ class PictureTest(unittest.TestCase):
         self.assertEqual(out["bad"], [])
         self.assertEqual(out["a380"], 100)
 
-    def test_callsign_small_and_registration_under_it(self):
-        # 0.18.3: the callsign at the size of the other rows (7 dots high, not 14), the registration on the row under it
+    def test_flight_and_registration_rows_labelled_like_alt_and_spd(self):
+        # 0.19.0, from the owner's mock-up: "FLT  EZY1234" and "REG  G-UZHA", one row each, lined up with "ALT  11280 M"
+        out = self.node("console.log(JSON.stringify([R.rows(%s, {}), R.rows({hex: '3c0001'}, {})]));" % json.dumps(EZY))
+        self.assertEqual(out[0], {"flight": "FLT  EZY1234", "reg": "REG  G-UZHA"})
+        self.assertEqual(out[1], {"flight": "HEX  3C0001", "reg": ""})
         out = self.node("const g = new Uint32Array(R.GW * R.GH);"
                         " R.drawWall(g, %s, 'metric', '11:39 GMT+2', true);"
-                        " const lit = y => { let n = 0; for (let x = 0; x < 70; x++) n += g[y * R.GW + x] ? 1 : 0; return n; };"
+                        " const lit = y => { let n = 0; for (let x = 0; x < 84; x++) n += g[y * R.GW + x] ? 1 : 0; return n; };"
                         " console.log(JSON.stringify({row: [...Array(16).keys()].map(lit), clock: lit(72)}));" % json.dumps(EZY))
         rows = out["row"]
-        self.assertTrue(all(rows[y] for y in range(0, 7)), rows)          # the callsign
+        self.assertTrue(all(rows[y] for y in range(0, 7)), rows)          # FLT  EZY1234
         self.assertEqual(rows[7], 0, rows)                                  # one dark row
-        self.assertTrue(all(rows[y] for y in range(8, 15)), rows)          # G-UZHA
+        self.assertTrue(all(rows[y] for y in range(8, 15)), rows)          # REG  G-UZHA
         self.assertGreater(out["clock"], 0)
+
+    def test_colours_are_the_wall_s_own(self):
+        # read from style.css, so a theme added to the wall is a theme of the picture
+        out = self.node("console.log(JSON.stringify(Object.keys(R.THEMES).sort().map(k => [k, R.THEMES[k].toString(16)])));")
+        got = dict(out)
+        self.assertEqual(sorted(got), sorted(social.server.THEMES))
+        self.assertEqual(got["amber"], "ffb000")
+        with open(os.path.join(HERE, "..", "flightinfo", "static", "style.css")) as fh:
+            self.assertIn("#" + got["green"], fh.read())
+
+    def test_the_flap_board_rows(self):
+        if shutil.which(social.NODE) is None:
+            self.skipTest("node not installed here")
+        got = social._node({"plane": EZY, "units": "metric", "clock": "11:39 GMT+2", "theme": "green", "cols": 14}, None, "--lines")
+        # the wall's own formatting (format.js), 14 letters a row: what the tablet's split-flap look would show
+        self.assertEqual(got["lines"], ["FLT  EZY1234", "REG  G-UZHA", "EASYJET", "A-320NEO", "ALT  11280 M", "SPD  593 KMH",
+                                        "EDINBURGH", "\u2192EUROAIRPORT", "11:39 GMT+2"])
+        self.assertEqual(got["color"], "#39ff6a")
+
+    def test_the_picture_s_colour_setting(self):
+        self.assertEqual(social.theme_of({"THEME": "red"}), "red")                          # the wall's, by default
+        self.assertEqual(social.theme_of({"THEME": "red", "SOCIAL_THEME": "blue"}), "blue")
+        self.assertEqual(social.theme_of({"THEME": "red", "SOCIAL_THEME": "pink"}), "red")  # not a colour: ignored
+        self.assertEqual(social.style_of({"SOCIAL_STYLE": "FLAP"}), "flap")
+        self.assertEqual(social.style_of({"SOCIAL_STYLE": "photo"}), "dots")
+        self.assertEqual(social.map_of({"SOCIAL_MAP": "satellite"}), "satellite")
+        self.assertEqual(social.map_of({"SOCIAL_MAP": "google"}), "normal")
+
+
+try:
+    import social_card
+    from PIL import Image
+except ImportError:                                  # Pillow is only needed for the split-flap look
+    social_card = None
+
+
+def fake_tile(layer, ext, z, x, y):
+    import io
+    im = Image.new("RGBA" if ext == "png" else "RGB", (256, 256), (0, 0, 0, 0) if ext == "png" else (220, 215, 200))
+    buf = io.BytesIO()
+    im.save(buf, "PNG" if ext == "png" else "JPEG")
+    return buf.getvalue()
+
+
+@unittest.skipIf(social_card is None, "Pillow not installed here")
+class FlapPictureTest(unittest.TestCase):
+    LINES = ["FLT  EZY1234", "REG  G-UZHA", "EASYJET", "AIRBUS A320NEO", "ALT  11280 M", "SPD  593 KMH", "EDINBURGH", "\u2192SAINT-LOUIS", "11:39 GMT+2"]
+
+    def setUp(self):
+        self.d = tempfile.mkdtemp(); self.addCleanup(shutil.rmtree, self.d, True)
+
+    def test_a_jpeg_under_bluesky_s_limit_with_the_map_credited(self):
+        out = os.path.join(self.d, "p.jpg")
+        asked = []
+        info = social_card.render(self.LINES, trace(60), EZY, out, "#ffb000", map_mode="satellite",
+                                  fetch=lambda *a: asked.append(a) or fake_tile(*a))
+        with open(out, "rb") as fh:
+            self.assertEqual(fh.read(3), b"\xff\xd8\xff")
+        self.assertLess(info["bytes"], 1000000)
+        self.assertEqual((info["width"], info["height"]), (1500, 900))
+        self.assertEqual(info["map"], "satellite")
+        self.assertIn("cloudless.eox.at", info["credit"])
+        self.assertIn(("cloudless.eox.at", "https://cloudless.eox.at"), info["links"])
+        self.assertEqual({a[0] for a in asked}, {"s2cloudless-%d_3857" % social_card.S2_YEAR, "overlay_bright_3857"})
+
+    def test_no_tile_no_map_no_credit(self):
+        info = social_card.render(self.LINES, trace(60), EZY, os.path.join(self.d, "p.jpg"), map_mode="normal", fetch=lambda *a: None)
+        self.assertEqual(info["map"], "none")
+        self.assertIsNone(info["credit"])
+        info = social_card.render(self.LINES, trace(60), EZY, os.path.join(self.d, "q.jpg"), map_mode="none",
+                                  fetch=lambda *a: self.fail("map none must fetch nothing"))
+        self.assertEqual(info["map"], "none")
+
+    def test_eox_tile_address(self):
+        # as WMTSCapabilities.xml gives it: .../{layer}/default/{TileMatrixSet}/{TileMatrix}/{TileRow}/{TileCol}.jpg
+        self.assertEqual(social_card.tile_url("osm_3857", "jpg", 11, 1059, 701),
+                         "https://tiles.maps.eox.at/wmts/1.0.0/osm_3857/default/g/11/701/1059.jpg")
+
+    def test_the_view_holds_the_whole_track_and_is_centred_on_it(self):
+        t = trace(60)
+        z, ox, oy = social_card.choose_view(t, social_card.MAP_W, social_card.MAP_H)
+        xs = [social_card.world_px(p[0], p[1], z)[0] - ox for p in t]
+        ys = [social_card.world_px(p[0], p[1], z)[1] - oy for p in t]
+        self.assertTrue(0 < min(xs) and max(xs) < social_card.MAP_W and 0 < min(ys) and max(ys) < social_card.MAP_H)
+        self.assertLessEqual(z, social_card.MAX_ZOOM)
+        self.assertAlmostEqual((min(xs) + max(xs)) / 2, social_card.MAP_W / 2, delta=1)
+        # a 160 km track still fits, farther out
+        long = [[49.1, 4.2 + i * 0.0186, 28000, i * 5] for i in range(121)]
+        z2, _, _ = social_card.choose_view(long, social_card.MAP_W, social_card.MAP_H)
+        self.assertLess(z2, z)
+
+    def test_tiles_are_cached_for_a_month(self):
+        calls = []
+
+        class Resp(object):
+            def __init__(self, data): self.data = data
+            def read(self, n=-1): return self.data
+            def __enter__(self): return self
+            def __exit__(self, *a): return False
+
+        def opener(req, timeout=None):
+            calls.append((req.full_url, req.get_header("User-agent")))
+            return Resp(fake_tile("osm_3857", "jpg", 11, 1, 2))
+        cache = os.path.join(self.d, "tiles")
+        a = social_card.fetch_tile("osm_3857", "jpg", 11, 1, 2, cache, "ZenithBoard/test", opener)
+        b = social_card.fetch_tile("osm_3857", "jpg", 11, 1, 2, cache, "ZenithBoard/test", opener)
+        self.assertEqual(a, b)
+        self.assertEqual(len(calls), 1, "the second time comes from the cache")
+        self.assertEqual(calls[0][1], "ZenithBoard/test")
+        path = os.path.join(cache, "osm_3857", "11", "1", "2.jpg")
+        old = time.time() - 40 * 86400
+        os.utime(path, (old, old))
+        social_card.fetch_tile("osm_3857", "jpg", 11, 1, 2, cache, "ZenithBoard/test", opener)
+        self.assertEqual(len(calls), 2, "over a month old: fetched again")
+        os.utime(path, (old - 40 * 86400, old - 40 * 86400))
+        social_card.prune_cache(cache)
+        self.assertFalse(os.path.exists(path), "a tile over two months old is dropped")
+
+    def test_a_tile_that_is_not_256_square_or_came_over_http_is_refused(self):
+        class Resp(object):
+            def __init__(self, data, url="https://tiles.maps.eox.at/x"): self.data, self.url = data, url
+            def read(self, n=-1): return self.data
+            def geturl(self): return self.url
+            def __enter__(self): return self
+            def __exit__(self, *a): return False
+        import io
+        big = io.BytesIO(); Image.new("RGB", (4000, 4000)).save(big, "PNG")
+        self.assertIsNone(social_card.fetch_tile("osm_3857", "jpg", 3, 1, 2, None, "UA", lambda r, timeout=None: Resp(big.getvalue())))
+        self.assertIsNone(social_card.fetch_tile("osm_3857", "jpg", 3, 1, 2, None, "UA", lambda r, timeout=None: Resp(fake_tile("osm_3857", "jpg", 3, 1, 2), "http://elsewhere/x")))
+        self.assertIsNotNone(social_card.fetch_tile("osm_3857", "jpg", 3, 1, 2, None, "UA", lambda r, timeout=None: Resp(fake_tile("osm_3857", "jpg", 3, 1, 2))))
+
+    def test_a_stale_tile_is_still_a_map_when_eox_is_down(self):
+        cache = os.path.join(self.d, "tiles")
+        path = os.path.join(cache, "osm_3857", "11", "1", "2.jpg")
+        os.makedirs(os.path.dirname(path))
+        with open(path, "wb") as fh:
+            fh.write(fake_tile("osm_3857", "jpg", 11, 1, 2))
+        old = time.time() - 40 * 86400
+        os.utime(path, (old, old))
+        social_card.prune_cache(cache)                                      # between one and two months: kept
+        self.assertTrue(os.path.exists(path))
+        down = lambda r, timeout=None: (_ for _ in ()).throw(OSError("down"))
+        self.assertIsNotNone(social_card.fetch_tile("osm_3857", "jpg", 11, 1, 2, cache, "UA", down))
+
+    def test_the_legend_boxes_are_see_through(self):
+        img, shown = social_card.draw_map(trace(60), EZY, "#ffb000", fetch=lambda *a: fake_tile("osm_3857", "jpg", 1, 1, 1))
+        # the legend box sits bottom-left over a light tile: dark but not black
+        px = img.getpixel((20, social_card.MAP_H - 60))
+        self.assertGreater(sum(px), 60, px); self.assertLess(sum(px), 400, px)
+
+    def test_an_error_page_is_not_a_tile(self):
+        class Resp(object):
+            def read(self, n=-1): return b"<html>rate limited</html>"
+            def __enter__(self): return self
+            def __exit__(self, *a): return False
+        self.assertIsNone(social_card.fetch_tile("osm_3857", "jpg", 3, 1, 2, os.path.join(self.d, "t"), "UA", lambda r, timeout=None: Resp()))
+
+    def test_night_is_dark(self):
+        light = Image.new("RGB", (8, 8), (235, 230, 220))
+        self.assertLess(sum(social_card.darken(light).getpixel((0, 0))), 120)
+
+    def test_a_letter_a_flap_cannot_carry_is_a_blank_flap(self):
+        a = social_card.draw_board(["\u00c9TOILE"], "#ffb000")
+        b = social_card.draw_board([" TOILE"], "#ffb000")
+        self.assertEqual(a.tobytes(), b.tobytes())
+
+    def test_without_pillow_the_flap_look_falls_back_to_dots(self):
+        if shutil.which(social.NODE) is None:
+            self.skipTest("node not installed here")
+        import builtins
+        real = builtins.__import__
+        def no_pil(name, *a, **k):
+            if name == "social_card":
+                raise ImportError("no PIL")
+            return real(name, *a, **k)
+        builtins.__import__ = no_pil; self.addCleanup(setattr, builtins, "__import__", real)
+        import contextlib, io
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            info = social.render(EZY, trace(30), dict(CFG, SOCIAL_STYLE="flap"), os.path.join(self.d, "p"))
+        self.assertEqual((info["mime"], info["fallback"]), ("image/png", True))
+        self.assertIn("Pillow", out.getvalue())
+
+    def test_social_render_in_the_flap_look(self):
+        if shutil.which(social.NODE) is None:
+            self.skipTest("node not installed here")
+        old = social_card.fetch_tile
+        social_card.fetch_tile = lambda layer, ext, z, x, y, *a, **k: fake_tile(layer, ext, z, x, y)
+        self.addCleanup(setattr, social_card, "fetch_tile", old)
+        c = dict(CFG, SOCIAL_STYLE="flap", SOCIAL_MAP="night", SOCIAL_THEME="turquoise")
+        old_dir = social.STATE_DIR; social.STATE_DIR = self.d; self.addCleanup(setattr, social, "STATE_DIR", old_dir)
+        info = social.render(EZY, trace(60), c, os.path.join(self.d, "p"))
+        self.assertEqual((info["mime"], info["path"][-4:], info["map"]), ("image/jpeg", ".jpg", "night"))
+        self.assertIn("maps.eox.at", social.post_text(EZY, c, None, info["credit"]))
 
 
 class FakeResponse(object):
@@ -304,7 +535,7 @@ class FakeResponse(object):
 
 
 class NetworksTest(unittest.TestCase):
-    """What is sent to each network, checked against the shapes their documentation gives."""
+    """What is sent to Bluesky, checked against the shapes its documentation gives."""
 
     def setUp(self):
         self.sent = []
@@ -320,14 +551,6 @@ class NetworksTest(unittest.TestCase):
                 return FakeResponse({"blob": {"$type": "blob", "ref": {"$link": "bafy"}, "mimeType": "image/png", "size": 5}})
             if url.endswith("createRecord"):
                 return FakeResponse({"uri": "at://did:plc:xyz/app.bsky.feed.post/3k", "cid": "bafy2"})
-            if url.endswith("/api/v2/media"):
-                return FakeResponse({"id": "110", "type": "image", "url": "https://files.example/x.png"})
-            if "/api/v1/media/" in url:
-                return FakeResponse({"id": "110", "url": "https://files.example/x.png"})
-            if url.endswith("/api/v1/statuses"):
-                return FakeResponse({"id": "1", "url": "https://mastodon.example/@zb/1"})
-            if url.endswith("verify_credentials"):
-                return FakeResponse({"acct": "zb"})
             raise AssertionError("unexpected url " + url)
         urllib.request.urlopen = fake
         self.addCleanup(setattr, urllib.request, "urlopen", self.old)
@@ -353,22 +576,24 @@ class NetworksTest(unittest.TestCase):
         f0 = rec["facets"][0]["index"]
         self.assertEqual(rec["text"].encode("utf-8")[f0["byteStart"]:f0["byteEnd"]], b"#ADSB")
 
-    def test_mastodon_media_then_status(self):
-        sec = {"MASTODON_URL": "https://mastodon.example/", "MASTODON_TOKEN": "tok"}
-        url = social.post_mastodon(sec, "✈ easyJet\n#ADSB", self.png, "alt here")
-        self.assertEqual(url, "https://mastodon.example/@zb/1")
-        self.assertTrue(self.sent[0][0].endswith("/api/v2/media"))
-        self.assertTrue(self.sent[0][1]["Content-type"].startswith("multipart/form-data; boundary="))
-        self.assertIn(b'name="description"\r\n\r\nalt here', self.sent[0][2])
-        self.assertIn(b'filename="zenithboard.png"', self.sent[0][2])
-        last = json.loads(self.sent[-1][2])
-        self.assertEqual(last["media_ids"], ["110"]); self.assertEqual(last["visibility"], "public")
-        self.assertIn("Idempotency-key", self.sent[-1][1])
+    def test_a_jpeg_and_the_map_credit_as_a_link(self):
+        sec = {"BLUESKY_HANDLE": "zb.bsky.social", "BLUESKY_APP_PASSWORD": "x"}
+        text = "Flight easyJet #EZY1234 \u00b7 altitude 11 280 m\nMap \u00a9 OpenStreetMap contributors, EOX maps.eox.at\n#ADSB"
+        social.post_bluesky(sec, text, self.png, "alt", 1500, 900, "image/jpeg", [("maps.eox.at", "https://maps.eox.at")])
+        self.assertEqual(self.sent[1][1]["Content-type"], "image/jpeg")
+        rec = json.loads(self.sent[2][2])["record"]
+        links = [f for f in rec["facets"] if f["features"][0]["$type"].endswith("#link")]
+        self.assertEqual(len(links), 1)
+        i = links[0]["index"]
+        self.assertEqual(rec["text"].encode("utf-8")[i["byteStart"]:i["byteEnd"]], b"maps.eox.at")
+        self.assertEqual(links[0]["features"][0]["uri"], "https://maps.eox.at")
+        starts = [f["index"]["byteStart"] for f in rec["facets"]]
+        self.assertEqual(starts, sorted(starts))
 
-    def test_check_accounts(self):
-        sec = {"BLUESKY_HANDLE": "zb.bsky.social", "BLUESKY_APP_PASSWORD": "x", "MASTODON_URL": "https://mastodon.example", "MASTODON_TOKEN": "t"}
-        r = social.check_accounts(sec, ["bluesky", "mastodon"])
-        self.assertTrue(r["bluesky"].startswith("ok")); self.assertTrue(r["mastodon"].startswith("ok"))
+    def test_check_the_account(self):
+        self.assertTrue(social.check_bluesky({"BLUESKY_HANDLE": "zb.bsky.social", "BLUESKY_APP_PASSWORD": "x"}).startswith("ok"))
+        self.assertFalse(social.bluesky_ready({"MASTODON_URL": "https://m.example", "MASTODON_TOKEN": "t"}),
+                         "Mastodon is gone (0.19.0): its secrets alone are no account")
 
     def test_secrets_are_never_in_the_text(self):
         sec = {"BLUESKY_HANDLE": "zb.bsky.social", "BLUESKY_APP_PASSWORD": "aaaa-bbbb-cccc-dddd"}
@@ -401,6 +626,58 @@ class ClockTest(unittest.TestCase):
         self.assertEqual(self.at("America/New_York", winter), "07:00 GMT-5")
 
 
+class OncePerAircraftTest(unittest.TestCase):
+    def test_an_aircraft_is_posted_once_while_it_is_in_the_sky(self):
+        # a slow aircraft that stays an hour in the zone, with a 20-minute gap: before 0.19.0 the "posted" memory
+        # was a day from the post, which already held; now it is a day from the last time the aircraft was seen,
+        # so a restart of the service or a long loiter can never make a second post of the same airframe
+        st, t0 = warm(), time.time() - 3 * 86400
+        st["posted"] = {EZY["hex"]: t0}
+        for h in range(0, 50, 1):                               # seen every hour for two days
+            social.note_seen(st, [{"hex": EZY["hex"].upper()}], t0 + h * 3600)
+            social.prune_state(st, t0 + h * 3600)
+        self.assertIn(EZY["hex"], st["posted"])
+        tracks = social.Tracks()
+        for pt in trace(8, t0 + 49 * 3600 - 40):
+            tracks.feed([{"hex": EZY["hex"], "lat": pt[0], "lon": pt[1], "alt_baro": pt[2], "seen_pos": 0}], pt[3])
+        self.assertIsNone(social.choose([EZY], tracks, {"any"}, st, t0 + 49 * 3600))
+        social.prune_state(st, t0 + 49 * 3600 + 2 * 86400)   # a day after it was last seen: forgotten
+        self.assertNotIn(EZY["hex"], st["posted"])
+
+
+class ServiceLoopTest(unittest.TestCase):
+    def test_a_failed_post_is_not_retried_at_every_look(self):
+        # before 0.19.0 a failed post was tried again at the next look, fifteen seconds later, and each try signs in
+        # to Bluesky: an app password revoked, or Bluesky down, meant a sign-in every fifteen seconds
+        import contextlib
+        import io
+        start = 1800000000.0
+        clock = [start]
+        tries = []
+
+        class Stop(Exception):
+            pass
+
+        def fake_sleep(sec):
+            clock[0] += sec
+            if clock[0] > start + 30 * 60:
+                raise Stop()
+        for name, fake in (("read_aircraft", lambda c: []), ("account", lambda: {"BLUESKY_HANDLE": "h", "BLUESKY_APP_PASSWORD": "p"}),
+                           ("one_poll", lambda c, st, tr, ac, now: ([EZY], (5, "any", EZY))), ("load_state", warm),
+                           ("save_state", lambda st: None), ("cfg", lambda: dict(CFG)),
+                           ("publish", lambda *a, **k: tries.append(clock[0]) or {"bluesky": "FAILED: 503 down"})):
+            self.addCleanup(setattr, social, name, getattr(social, name))
+            setattr(social, name, fake)
+        self.addCleanup(setattr, time, "time", time.time); time.time = lambda: clock[0]
+        self.addCleanup(setattr, time, "sleep", time.sleep); time.sleep = fake_sleep
+        with contextlib.redirect_stdout(io.StringIO()):
+            with self.assertRaises(Stop):
+                social.cmd_run()
+        self.assertGreaterEqual(len(tries), 3)
+        self.assertLessEqual(len(tries), 4, "half an hour: a try every ten minutes, not every fifteen seconds")
+        self.assertTrue(all(b - a >= social.RETRY_AFTER_FAIL_S for a, b in zip(tries, tries[1:])))
+
+
 class PublishTest(unittest.TestCase):
     def test_an_unwritable_run_folder_does_not_stop_a_picture(self):
         # 0.18.1: `social test` from the command line crashed with PermissionError on /run/zenithboard/social,
@@ -408,7 +685,7 @@ class PublishTest(unittest.TestCase):
         if shutil.which(social.NODE) is None:
             self.skipTest("node not installed here")
         old = social.RUN_DIR; social.RUN_DIR = "/proc/no-such-place/social"; self.addCleanup(setattr, social, "RUN_DIR", old)
-        r = social.publish(EZY, trace(30), "any", CFG, {}, [], dry=True)
+        r = social.publish(EZY, trace(30), "any", CFG, {}, dry=True)
         self.assertIn("text", r)
         self.assertFalse([d for d in os.listdir(tempfile.gettempdir()) if d.startswith("zenithboard-social-")], "the stand-in folder must be removed")
 
@@ -420,11 +697,15 @@ class PublishTest(unittest.TestCase):
         old = urllib.request.urlopen
         urllib.request.urlopen = lambda req, timeout=None: (_ for _ in ()).throw(OSError("no network"))
         self.addCleanup(setattr, urllib.request, "urlopen", old)
-        keep = os.path.join(d, "keep", "preview.png")
-        r = social.publish(EZY, trace(30), "any", CFG, {"BLUESKY_HANDLE": "h", "BLUESKY_APP_PASSWORD": "p"}, ["bluesky"], keep_png=keep)
+        keep = os.path.join(d, "keep", "preview")
+        os.makedirs(os.path.dirname(keep), exist_ok=True)
+        with open(keep + ".jpg", "wb") as fh:          # a flap preview from before
+            fh.write(b"old")
+        r = social.publish(EZY, trace(30), "any", CFG, {"BLUESKY_HANDLE": "h", "BLUESKY_APP_PASSWORD": "p"}, keep=keep)
         self.assertTrue(r["bluesky"].startswith("FAILED"))
         self.assertEqual([f for f in os.listdir(d) if f.startswith("post-")], [], "the picture must not stay on the Pi")
-        self.assertTrue(os.path.exists(keep))
+        self.assertTrue(os.path.exists(keep + ".png"))
+        self.assertFalse(os.path.exists(keep + ".jpg"), "the preview is the last picture drawn, whatever the look")
 
 
 if __name__ == "__main__":
