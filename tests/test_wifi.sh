@@ -95,6 +95,17 @@ calls=""; wifi_session_on_wifi() { return 0; }
 wifi_install_nm >/dev/null 2>&1; rc=$?
 check "install-nm: refused when the session runs over Wi-Fi, nothing touched" '[ "$rc" -ne 0 ] && [ -z "$calls" ]'
 
+# ---- the one-line summary of the menus: nmcli prints nothing at all (not an empty line) when no network is active,
+#      and the old sed on that output never ran, so a Pi on Ethernet with its radio on read "ON, " (0.21.1)
+mkdir -p "$t/nm-bin"
+printf '#!/bin/bash\ncase "$*" in "radio wifi") echo enabled ;; *"-f DEVICE,TYPE device"*) echo "wlan0:wifi" ;; *"-f ACTIVE,SSID device wifi list"*) printf "%%s" "${NM_SSIDS:-}" ;; esac\n' > "$t/nm-bin/nmcli"
+printf '#!/bin/bash\nexit 0\n' > "$t/nm-bin/systemctl"; chmod +x "$t/nm-bin"/*
+# (a fresh shell: the tests above replaced nmcli and systemctl by functions, which would shadow the stubs on PATH)
+summary_with() { NM_SSIDS="${1:-}" PATH="$t/nm-bin:$PATH" bash -c '. lib/common.sh; . lib/wifi.sh; wifi_summary'; }
+check "summary: radio on, no network -> not connected" '[ "$(summary_with "")" = "ON, not connected" ]'
+check "summary: radio on, a network -> its name"       '[ "$(summary_with "$(printf "no:Other\nyes:Livebox-1A2B\n")")" = "ON, Livebox-1A2B" ]'
+check "menu: the Wi-Fi screen says (no Wi-Fi network) rather than nothing" 'grep -q "Connected to: \$(s=\$(wifi_active_ssid); printf .%s. \"\${s:-(no Wi-Fi network)}\")" lib/wifi.sh'
+
 # ---- the boot unit exists and calls the CLI
 check "systemd unit present"                'grep -q "wifi apply" systemd/zenithboard-wifi.service && grep -q "After=NetworkManager.service" systemd/zenithboard-wifi.service'
 

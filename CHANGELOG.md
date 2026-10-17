@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.21.1
+The fresh-install check from the roadmap, done as far as it can be without a Pi: `install.sh` walked end to end from the README, in a container, against a scripted whiptail and stand-ins for the system (every flag, the first-run wizard, every menu, the deployed wall answering on its port, the uninstall). What it found, fixed, and now held by `tests/test_install.sh`:
+- **A missing whiptail no longer ends in silence.** When `apt` could not install whiptail and curl (no internet, say), every screen failed and the installer quietly exited with nothing said. It now stops with the command to run by hand.
+- **The Wi-Fi line read `ON, ` on a Pi on Ethernet.** `nmcli` prints nothing at all when no network is active, so the text meant to say *not connected* never appeared, in the Settings menu, the Wi-Fi menu and `zenithboard status`. Fixed, with a test.
+- **The wall's colour in the menu offers all six colours.** Menu *4 Settings → 3 Wall → Colour* still listed amber, green, red and white; turquoise and blue (0.13.1) could only be set from the command or the tablet's gear.
+- **A typo in the altitude is asked again** instead of being written as 0 without a word, like a bad latitude already was.
+- The welcome screen pointed at `sudo zenithboard config` to change the answers later; that command only shows them. It now names menu *4 Settings* and the commands.
+- A decoder that fails to install says that the feeders were not installed either, and a failed download says what it usually means (no internet, or a moved address).
+- On a machine that is not a Raspberry Pi the installer no longer prints `No such file or directory` twice for the model file.
+- README: *4 Settings* has six groups, not four (Logs, Reliability and Social sharing were missing from the list), and step 6 says where the wall's address comes from (menu 2 prints it, `zenithboard status` repeats it).
+- *Maintenance → Save my settings* proposes a folder that exists when there is no sudo user (root's), not `/home/pi`.
+- For the test, `ZENITHBOARD_HOME` and `ZENITHBOARD_BIN_DIR` redirect `/opt/zenithboard` and the `zenithboard` link, like `ZENITHBOARD_ETC` does for the settings. Nothing changes on a Pi.
+
 ## 0.21.0
 From a walk through every menu on the reference Pi, recorded.
 - **The menu keeps the one irreversible step out of the way.** *7 Uninstall everything* is now inside *7 Maintenance*, after *Save my settings* and *Restore settings*, and it asks for the word `uninstall` to be typed, not a Yes: one Enter too many at the end of the list must not take a working receiver down. Removing the wall and deleting every log ask for a typed word too.

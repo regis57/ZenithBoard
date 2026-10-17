@@ -33,7 +33,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 zb_tmp_init   # the private folder for downloads, made here in the main shell (see zb_tmp in lib/common.sh)
 
-usage() { echo "Usage: sudo ./install.sh [--deploy] [--uninstall-all] [--version]      (to upgrade: sudo zenithboard update)"; }
+usage() { echo "Usage: sudo ./install.sh [--deploy] [--uninstall-all] [--version] [--help]      (to upgrade: sudo zenithboard update)"; }
 
 preflight() {
   need_root "$@"
@@ -41,6 +41,9 @@ preflight() {
   case "$(arch)" in arm64|armhf) ;; *) warn "Architecture $(arch) is not a Raspberry Pi; continuing anyway." ;; esac
   if ! command -v whiptail >/dev/null || ! command -v curl >/dev/null; then
     log "Installing whiptail and curl"; apt-get update -qq && apt_install whiptail curl ca-certificates
+    # Without whiptail every screen fails and the menu quietly exits with nothing said (fresh-install check, 0.21.1)
+    command -v whiptail >/dev/null && command -v curl >/dev/null \
+      || die "whiptail and curl could not be installed (no internet, or apt failed above). Install them by hand:  sudo apt install whiptail curl   then run this again."
   fi
   mkdir -p "$ZB_ETC"; touch "$ZB_CONFIG"; cfg_defaults
   hardware_notice
@@ -65,7 +68,7 @@ hardware_notice() {
 
 first_run_wizard() {
   grep -q '^LAT=.' "$ZB_CONFIG" && grep -q '^LON=.' "$ZB_CONFIG" && return 0
-  wt_msg "Welcome to ZenithBoard - ADSB Flight Info.\n\nA few questions first:\n  1. Your region (decides whether 978 MHz UAT is offered)\n  2. Units (metric or imperial)\n  3. Where your antenna is\n  4. The default detection radius\n\nYou can change all of them later:  sudo zenithboard config   (or Settings in this menu)." 18 || exit 0
+  wt_msg "Welcome to ZenithBoard - ADSB Flight Info.\n\nA few questions first:\n  1. Your region (decides whether 978 MHz UAT is offered)\n  2. Units (metric or imperial)\n  3. Where your antenna is\n  4. The default detection radius\n\nYou can change all of them later: menu 4 Settings (sudo zenithboard menu), or the commands\n  sudo zenithboard region|units|location|radius ..." 18 || exit 0
   settings_region || exit 0
   [ "$(cfg_get REGION world)" != us ] || cfg_set UNITS imperial     # a sensible start for the US; the next screen lets you change it
   settings_units || exit 0
@@ -97,8 +100,11 @@ settings_location() {
     lon=$(wt_input "Antenna LONGITUDE in decimal degrees (e.g. 6.1757, west is negative)." "$(cfg_get LON)") || return 1
     valid_lon "$lon" && break; wt_msg "Not a valid longitude (-180..180)." 8
   done
-  alt=$(wt_input "Antenna altitude above sea level in METRES (approximate is fine)." "$(cfg_get ALT_M 0)") || return 1
-  is_number "$alt" || alt=0
+  # a typo used to become 0 without a word (fresh-install check, 0.21.1): ask again instead, like the latitude
+  while true; do
+    alt=$(wt_input "Antenna altitude above sea level in METRES (approximate is fine)." "$(cfg_get ALT_M 0)") || return 1
+    is_number "$alt" && break; wt_msg "Not a number: the altitude in metres, e.g. 180 (0 if you do not know it)." 8
+  done
   cfg_set LAT "$lat"; cfg_set LON "$lon"; cfg_set ALT_M "$alt"
 }
 
@@ -110,9 +116,12 @@ settings_style() {
 }
 
 settings_color() {
-  local cur c a g r w; cur=$(cfg_get THEME amber); a=OFF; g=OFF; r=OFF; w=OFF
-  case "$cur" in green) g=ON ;; red) r=ON ;; white) w=ON ;; *) a=ON ;; esac
-  c=$(wt_radio "Dot colour of the wall (amber is the default)." amber "Amber" "$a" green "Green" "$g" red "Red" "$r" white "White" "$w") || return 1
+  # the same six as `zenithboard color` and the tablet's gear: turquoise and blue (0.13.1) were missing here until 0.21.1
+  local cur c items=() col on; cur=$(cfg_get THEME amber)
+  for col in amber green red white turquoise blue; do
+    on=OFF; [ "$col" = "$cur" ] && on=ON; items+=("$col" "${col^}" "$on")
+  done
+  c=$(wt_radio "Dot colour of the wall (amber is the default).\n\nTurquoise and blue are the deepest: blue reads as a navigation light from across a room, so try turquoise first for a wall read from the sofa." "${items[@]}") || return 1
   cfg_set THEME "$c"
 }
 
@@ -172,7 +181,7 @@ settings_wall_menu() {
     c=$(wt_menu "ZenithBoard wall settings (defaults for every screen; a tablet can override them with its gear icon)\n\nRadius: $(cfg_get RADIUS)    Look: $(cfg_get DISPLAY_MODE dots)    Colour: $(cfg_get THEME amber)    Seconds per aircraft: $(cfg_get CYCLE_SECONDS)\nPhotos: $(cfg_get SHOW_PHOTOS)    Routes: $(cfg_get SHOW_ROUTES 1)    Monthly data refresh: $( [ "$(cfg_get AUTO_DATA_REFRESH 1)" = 1 ] && echo ON || echo OFF )" \
       radius "1  Detection radius" \
       style "2  Look: dot matrix / split-flap airport board" \
-      color "3  Colour: amber / green / red / white" \
+      color "3  Colour: amber, green, red, white, turquoise, blue" \
       cycle "4  Seconds per aircraft" \
       photos "5  Aircraft photos on/off" \
       routes "6  Flight origin/destination on/off" \
@@ -259,14 +268,14 @@ uninstall_all() {
   is_adsbx && remove_adsbx
   [ -n "$(installed_decoder)" ] && remove_decoder
   if wt_yesno "Also delete your ZenithBoard settings ($ZB_ETC) and program files ($ZB_HOME)?" 8; then
-    rm -rf "$ZB_ETC" "$ZB_HOME" /usr/local/bin/zenithboard
+    rm -rf "$ZB_ETC" "$ZB_HOME" "$ZB_BIN_DIR/zenithboard"
     id "$ZB_USER" >/dev/null 2>&1 && userdel "$ZB_USER" 2>/dev/null
   fi
   log "Everything removed."; exit 0
 }
 
 maintenance_menu() {
-  local c f out
+  local c f out d
   while true; do
     c=$(wt_menu "Maintenance\n\nSettings file: $ZB_CONFIG   (secrets are in their own root-only files and never leave with it)" \
       save "Save my settings to a file (to keep, or to move to another Pi)" \
@@ -275,7 +284,8 @@ maintenance_menu() {
       back "Return to the previous menu") || return 0
     case "$c" in
       save)
-        f=$(wt_input "Where to write the settings file." "/home/${SUDO_USER:-pi}/zenithboard-settings-$(hostname)-$(date +%Y%m%d).env") || continue
+        d="/home/${SUDO_USER:-}"; [ -n "${SUDO_USER:-}" ] && [ -d "$d" ] || d="${HOME:-/root}"     # the user's own folder, or root's when there is no sudo user
+        f=$(wt_input "Where to write the settings file." "$d/zenithboard-settings-$(hostname)-$(date +%Y%m%d).env") || continue
         if out=$(settings_export "$f" 2>&1); then
           [ -n "${SUDO_USER:-}" ] && chown "$SUDO_USER" "$f" 2>/dev/null
           wt_msg "Saved: $out\n\nCopy it off the Pi (scp, a USB stick). On another Pi:  sudo zenithboard settings import FILE" 12

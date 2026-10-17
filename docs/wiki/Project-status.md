@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **17 October 2026**, version **0.21.0**.
+Last updated: **18 October 2026**, version **0.21.1**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -38,6 +38,7 @@ Treat these as likely-working rather than known-working, and please report what 
 |---|---|
 | 978 MHz UAT (United States) | No US hardware has run it |
 | Fixed IP address | The `nmcli` calls are tested; a real address change was not run. Keep a keyboard and screen at hand |
+| A fresh install from the README | `install.sh` has been run end to end in a container against a scripted whiptail and stand-ins (0.21.1, `tests/test_install.sh`): flags, wizard, every menu, the deployed wall answering, the uninstall. A blank card on a real Pi has not been done |
 | Plane Finder | The installer runs; no feed has been watched |
 | ACARS and Grafana | Built and tested; no long run on real traffic |
 
