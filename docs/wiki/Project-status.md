@@ -27,6 +27,7 @@ One Raspberry Pi 3B, outdoors, on Wi-Fi, with an R820T dongle.
 | The systemd sandbox | The wall server runs inside it; `systemd-analyze security` gives 1.3 (OK) |
 | Signed updates | Checked against GitHub's current key, silent once confirmed |
 | `zenithboard health` | Reports power, temperature, memory, card and the previous boot correctly |
+| Social sharing on Bluesky | Posting on its own since 17 October 2026 under *ALL*, both looks, the four maps, the colours in turn; every crossing of a 10 km radius once since 0.20.0. Memory measured by the service itself |
 | Room on a 1 GB board | With three feeders, the wall and social sharing: 656 MB of 1 GB still available, 36 °C, no throttling. See [Hardware](Hardware) |
 
 ## Written and unit-tested, not yet run for real
