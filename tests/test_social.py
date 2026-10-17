@@ -858,6 +858,17 @@ class LogFindingsTest(unittest.TestCase):
         self.assertNotIn("no account", text)
         self.assertNotIn("Last post: never", text)
 
+    def test_node_says_its_own_memory(self):
+        # 0.19.10: the hourly line read "104 MB at most, Node 104 MB at most" on the Pi — the kernel credits a child
+        # started by vfork with the parent's peak. Node now reports its own, and that is what is kept
+        if shutil.which(social.NODE) is None:
+            self.skipTest("node not installed here")
+        self.addCleanup(setattr, social, "NODE_PEAK_KB", social.NODE_PEAK_KB)
+        social.NODE_PEAK_KB = [0]
+        got = social._node({"plane": EZY, "units": "metric", "clock": "", "theme": "amber", "cols": 14}, None, "--lines")
+        self.assertGreater(got["maxrss_kb"], 10 * 1024)
+        self.assertEqual(social.memory_mb()["node"], round(got["maxrss_kb"] / 1024.0))
+
     def test_the_service_measures_its_own_memory(self):
         # systemctl showed no Memory line on the Pi: the kernel's memory controller is off on Raspberry Pi OS
         m = social.memory_mb()

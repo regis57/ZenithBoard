@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.19.10
+- **The memory figure for Node is Node's own.** The service's hourly line read *104 MB at most, Node 104 MB at most*: Python starts Node with vfork, and the kernel then credits the child with the parent's peak, so both numbers were Python's. The renderer now reports its own peak (`process.resourceUsage().maxRSS`) and the service keeps the largest. Seen on the real Pi after four hours of posting.
+
 ## 0.19.9
 - **A post waits for the second opinion on the route too.** RYR8526 and EWG6ZP went out with empty route rows. adsbdb had other flights under those callsigns (Berlin → Stansted, Salzburg → Aalborg), which the wall rightly refuses for an aircraft over Metz flying south-east or north; it then asks hexdb.io, which had the right ones (Charleroi → Reggio Calabria, Menorca → Cologne) — a few seconds after the post. `/api/planes` now reports that second lookup as pending as well, and social sharing waits for it like for the first (two minutes at most). Checked against both services' real answers for these two callsigns.
 
