@@ -223,6 +223,16 @@ class NetworksTest(unittest.TestCase):
 
 
 class PublishTest(unittest.TestCase):
+    def test_an_unwritable_run_folder_does_not_stop_a_picture(self):
+        # 0.18.1: `social test` from the command line crashed with PermissionError on /run/zenithboard/social,
+        # which only exists while the service runs. A private temporary folder stands in, and is removed after.
+        if shutil.which(social.NODE) is None:
+            self.skipTest("node not installed here")
+        old = social.RUN_DIR; social.RUN_DIR = "/proc/no-such-place/social"; self.addCleanup(setattr, social, "RUN_DIR", old)
+        r = social.publish(EZY, trace(30), "any", CFG, {}, [], dry=True)
+        self.assertIn("text", r)
+        self.assertFalse([d for d in os.listdir(tempfile.gettempdir()) if d.startswith("zenithboard-social-")], "the stand-in folder must be removed")
+
     def test_the_picture_is_deleted_after_a_post_even_when_the_network_fails(self):
         if shutil.which(social.NODE) is None:
             self.skipTest("node not installed here")

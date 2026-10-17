@@ -458,10 +458,22 @@ def check_accounts(sec, networks):
 
 
 # --------------------------------------------------------------------------- one post, end to end
+def work_dir():
+    """Where the picture is drawn: /run/zenithboard/social under the service (systemd makes it, in memory); from
+    the command line that folder may not exist or not be ours, so a private temporary folder then (0.18.1)."""
+    try:
+        os.makedirs(RUN_DIR, exist_ok=True)
+        if os.access(RUN_DIR, os.W_OK):
+            return RUN_DIR
+    except OSError:
+        pass
+    d = tempfile.mkdtemp(prefix="zenithboard-social-")
+    return d
+
+
 def publish(p, trace, why, c, sec, networks, dry=False, keep_png=None):
     """Draw, post everywhere chosen, delete the picture. Returns {network: url or error}."""
-    os.makedirs(RUN_DIR, exist_ok=True)
-    png = os.path.join(RUN_DIR, "post-%s.png" % uuid.uuid4().hex)
+    png = os.path.join(work_dir(), "post-%s.png" % uuid.uuid4().hex)
     results = {}
     try:
         info = render(p, trace, c, png)
@@ -492,6 +504,12 @@ def publish(p, trace, why, c, sec, networks, dry=False, keep_png=None):
             os.unlink(png)
         except OSError:
             pass
+        d = os.path.dirname(png)
+        if d != RUN_DIR:
+            try:
+                os.rmdir(d)
+            except OSError:
+                pass
 
 
 def note_types(state, planes, now):
