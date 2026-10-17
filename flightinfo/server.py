@@ -41,7 +41,7 @@ def social_preview_name():
         try:
             got.append((os.path.getmtime(os.path.join(SOCIAL_DIR, n)), n))
         except OSError:
-            pass
+            pass                                 # that look was never drawn
     return max(got)[1] if got else "preview.png"
 DEMO_DIR = os.path.join(BASE_DIR, "demo")
 DATA_DIR = os.path.join(BASE_DIR, "data")

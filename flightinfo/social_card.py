@@ -183,7 +183,7 @@ def fetch_tile(layer, ext, z, x, y, cache_dir=None, user_agent="ZenithBoard", op
             if time.time() - os.path.getmtime(path) < CACHE_DAYS * 86400:
                 return stale
         except OSError:
-            stale = None
+            stale = None                         # unreadable cache entry: as if absent
     req = urllib.request.Request(tile_url(layer, ext, z, x, y), headers={"User-Agent": user_agent})
     try:
         with (opener or urllib.request.urlopen)(req, timeout=10) as resp:
@@ -207,7 +207,7 @@ def fetch_tile(layer, ext, z, x, y, cache_dir=None, user_agent="ZenithBoard", op
                 fh.write(data)
             os.replace(tmp, path)
         except OSError:
-            pass
+            pass                                 # a cache that cannot be written is just no cache
     return data
 
 
@@ -224,12 +224,12 @@ def prune_cache(cache_dir, now=None):
             try:
                 st = os.stat(p)
             except OSError:
-                continue
+                continue                         # removed meanwhile
             if now - st.st_mtime > 2 * CACHE_DAYS * 86400:
                 try:
                     os.unlink(p)
                 except OSError:
-                    pass
+                    pass                         # removed meanwhile
             else:
                 files.append((st.st_mtime, st.st_size, p))
     total = sum(f[1] for f in files)
@@ -240,7 +240,7 @@ def prune_cache(cache_dir, now=None):
             os.unlink(p)
             total -= size
         except OSError:
-            pass
+            pass                                 # removed meanwhile
 
 
 def darken(tile):
@@ -402,13 +402,15 @@ def draw_map(trace, plane, color, units="metric", mode="normal", cache_dir=None,
 # --------------------------------------------------------------------------- the picture
 def save_jpeg(img, out, limit=950000):
     """As a JPEG under Bluesky's 1,000,000 bytes: the quality goes down a step at a time if it has to."""
+    buf = io.BytesIO()
     for q in (90, 84, 78, 72, 66, 60):
         buf = io.BytesIO()
         img.save(buf, "JPEG", quality=q, subsampling=0 if q >= 84 else 2, optimize=True)
-        if buf.tell() <= limit or q == 60:
-            with open(out, "wb") as fh:
-                fh.write(buf.getvalue())
-            return buf.tell()
+        if buf.tell() <= limit:
+            break
+    with open(out, "wb") as fh:
+        fh.write(buf.getvalue())
+    return buf.tell()
 
 
 def render(lines, trace, plane, out, color="#ffb000", units="metric", map_mode="normal", cache_dir=None, fetch=None,

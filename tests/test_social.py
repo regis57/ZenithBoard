@@ -662,7 +662,7 @@ class ServiceLoopTest(unittest.TestCase):
             clock[0] += sec
             if clock[0] > start + 30 * 60:
                 raise Stop()
-        for name, fake in (("read_aircraft", lambda c: []), ("secrets", lambda: {"BLUESKY_HANDLE": "h", "BLUESKY_APP_PASSWORD": "p"}),
+        for name, fake in (("read_aircraft", lambda c: []), ("account", lambda: {"BLUESKY_HANDLE": "h", "BLUESKY_APP_PASSWORD": "p"}),
                            ("one_poll", lambda c, st, tr, ac, now: ([EZY], (5, "any", EZY))), ("load_state", warm),
                            ("save_state", lambda st: None), ("cfg", lambda: dict(CFG)),
                            ("publish", lambda *a, **k: tries.append(clock[0]) or {"bluesky": "FAILED: 503 down"})):

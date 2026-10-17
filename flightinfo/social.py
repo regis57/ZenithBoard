@@ -79,7 +79,8 @@ def cfg():
     return c
 
 
-def secrets():
+def account():
+    """The Bluesky account from social.env: the handle (public, the account's name) and its app password."""
     try:
         with open(SECRETS_FILE, "r", encoding="utf-8") as fh:
             return server.parse_env_text(fh.read())
@@ -545,7 +546,7 @@ def _node(spec, out, *extra):
         try:
             os.unlink(spec_path)
         except OSError:
-            pass
+            pass                                 # already gone: nothing to clean
 
 
 def render(p, trace, c, out_base):
@@ -556,6 +557,7 @@ def render(p, trace, c, out_base):
     spec = {"plane": p, "trace": trace, "units": c.get("UNITS", "metric"), "theme": theme_of(c),
             "clock": clock_label(), "flags": server.cfg_bool(c, "FLAGS", "1"), "pitch": 10}
     if look == "flap":
+        social_card = None
         try:
             import social_card                   # Pillow: only this look needs it
         except ImportError as exc:               # not installed (an offline `social look flap`): the dots, and a word
@@ -711,7 +713,7 @@ def publish(p, trace, why, c, sec, dry=False, keep=None):
             try:
                 os.unlink(base + ext)
             except OSError:
-                pass
+                pass                             # the other look's file was never drawn
         d = os.path.dirname(base)
         if d != RUN_DIR:
             try:
@@ -760,7 +762,7 @@ def cmd_run():
     last_ask, last_summary, last_fail = 0, time.time(), 0
     polls = candidates = 0
     c = cfg()
-    sec = secrets()
+    sec = account()
     print("social: running. Bluesky: %s. Picture: %s. Radius %s km, gap %s min, rules: %s. History since %s%s." % (
         sec.get("BLUESKY_HANDLE") if bluesky_ready(sec) else "NO ACCOUNT (run: sudo zenithboard social setup)", picture_words(c),
         c.get("SOCIAL_RADIUS_KM"), c.get("SOCIAL_GAP_MIN"), ", ".join(sorted(rules_of(c))) or "none",
@@ -777,7 +779,7 @@ def cmd_run():
             planes, best = one_poll(c, state, tracks, aircraft, now)
             polls += 1
             candidates += 1 if best else 0
-            sec = secrets()
+            sec = account()
             gap = server.cfg_float(c, "SOCIAL_GAP_MIN", 120) * 60
             # A failed post (Bluesky down, the app password revoked, no picture) waits ten minutes before the next
             # try: before 0.19.0 it was tried again at every look, every fifteen seconds, and each try signs in
@@ -803,7 +805,7 @@ def cmd_run():
             print("social: last hour: %d looks, %d with a candidate under the rules. Last post: %s.%s%s" % (
                 polls, candidates, time.strftime("%H:%M", time.localtime(lp)) if lp else "never",
                 (" Next possible in %d min." % wait) if wait else "",
-                "" if bluesky_ready(secrets()) else " No Bluesky account set up: nothing can be posted."), flush=True)
+                "" if bluesky_ready(account()) else " No Bluesky account set up: nothing can be posted."), flush=True)
             last_summary, polls, candidates = now, 0, 0
         time.sleep(READ_EVERY_S)
 
@@ -869,7 +871,7 @@ def cmd_post(hex_code=None):
     if not p:
         print("Nothing to post: no aircraft with a track inside %s km right now." % c.get("SOCIAL_RADIUS_KM"))
         return 1
-    sec = secrets()
+    sec = account()
     if not bluesky_ready(sec):
         print("No Bluesky account is set up: run  sudo zenithboard social setup")
         return 1
@@ -884,7 +886,7 @@ def cmd_post(hex_code=None):
 
 
 def cmd_check():
-    sec = secrets()
+    sec = account()
     if not bluesky_ready(sec):
         print("No account configured. Run:  sudo zenithboard social setup")
         return 1
@@ -901,7 +903,7 @@ def picture_words(c):
 
 
 def cmd_status():
-    c, sec = cfg(), secrets()
+    c, sec = cfg(), account()
     state = load_state()
     print("Social sharing: %s" % ("on" if server.cfg_bool(c, "SOCIAL") else "off"))
     print("Bluesky: %s" % (("@" + sec["BLUESKY_HANDLE"]) if bluesky_ready(sec) else "no account (run: sudo zenithboard social setup)"))
