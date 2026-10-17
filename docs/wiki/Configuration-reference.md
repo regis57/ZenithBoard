@@ -67,7 +67,7 @@ The dynamic-DNS **token is not stored here.** It is asked for interactively and 
 | `SOCIAL` | `0` | `zenithboard social on\|off` | Post the aircraft overhead to Bluesky / Mastodon. See [Social sharing](Social-sharing) |
 | `SOCIAL_NETWORKS` | empty | `zenithboard social setup` | `bluesky`, `mastodon` or both: which accounts the wizard set up. The secrets themselves are in `social.env`, not here |
 | `SOCIAL_RADIUS_KM` | `15` | `zenithboard social words` | An aircraft is a candidate while inside it. Separate from `RADIUS` |
-| `SOCIAL_AREA` | empty | same | The place named in the posts, in your words (`over Luxembourg`). Never derived from the position |
+| `SOCIAL_AREA` | empty | same | The place named in the posts, in your words: a town name (`Trémery`) reads *above Trémery*, a phrase (`near Metz`) is kept. Never derived from the position |
 | `SOCIAL_GAP_MIN` | `120` | same | At least this many minutes between two posts |
 | `SOCIAL_RULES` | `rare,military,helicopter,heavy,farthest` | same | What is worth a post; `any` posts the best-known aircraft once per gap |
 | `SOCIAL_HASHTAGS` | `#ADSB #avgeek #ZenithBoard` | this line | Appended to every post |

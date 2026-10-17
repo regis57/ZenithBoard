@@ -52,7 +52,7 @@ RULES_ALL = ("rare", "military", "helicopter", "heavy", "farthest", "any")
 DEFAULTS = {
     "SOCIAL": "0",
     "SOCIAL_RADIUS_KM": "15",
-    "SOCIAL_AREA": "",               # "over Luxembourg": the owner's words, never derived from the position
+    "SOCIAL_AREA": "",               # "Trémery" (read "above Trémery") or "near Metz": the owner's words, never the position
     "SOCIAL_GAP_MIN": "120",         # at least this long between two posts
     "SOCIAL_RULES": "rare,military,helicopter,heavy,farthest",
     "SOCIAL_HASHTAGS": "#ADSB #avgeek #ZenithBoard",
@@ -349,13 +349,40 @@ def nice_type(p):
     return p.get("type") or ""
 
 
+def place_name(c):
+    """The place the owner named, as typed."""
+    return re.sub(r"\s+", " ", str(c.get("SOCIAL_AREA", ""))).strip()
+
+
 def area_words(c):
-    """The owner's place words. A bare place name ("Trémery") reads as "over Trémery"; words that already start
-    with a preposition ("near Metz", "over the Moselle") are kept as they are."""
-    area = re.sub(r"\s+", " ", str(c.get("SOCIAL_AREA", ""))).strip()
-    if area and area[0].isupper() and not re.match(r"^(Over|Near|Above|Around|Above|By)\b", area):
-        area = "over " + area
+    """How the post ends. A place name ("Trémery") reads "above Trémery"; words that bring their own preposition
+    ("near Metz", "over the Moselle") are kept as typed."""
+    area = place_name(c)
+    if area and area[0].isupper() and not re.match(r"^(Over|Near|Above|Around|By)\b", area):
+        area = "above " + area
     return area
+
+
+def seen_from(c):
+    """For a range record, which is nowhere near overhead: "seen from Trémery". A phrase is left out."""
+    area = place_name(c)
+    return ("seen from " + area) if area and area[0].isupper() and not re.match(r"^(Over|Near|Above|Around|By)\b", area) else ""
+
+
+def clock_label(t=None):
+    """The time on the picture, with its offset from GMT as the Pi's time zone has it that day: 11:28 GMT+2 in a
+    French summer, 10:28 GMT+1 in winter, 05:58 GMT+5:30 in India. Daylight saving is whatever the zone says."""
+    lt = time.localtime(t)
+    off = int(getattr(lt, "tm_gmtoff", 0) or 0) // 60
+    h, m = divmod(abs(off), 60)
+    tz = "GMT" if off == 0 else "GMT%s%d%s" % ("+" if off > 0 else "-", h, (":%02d" % m) if m else "")
+    return time.strftime("%H:%M", lt) + " " + tz
+
+
+def hashtag_callsign(flight):
+    """An airline callsign (ETD11K) becomes a hashtag, so a flight can be followed; a registration used as a
+    callsign (DEABC) stays plain text."""
+    return ("#" + flight) if server.CALLSIGN_RE.match(flight or "") else flight
 
 
 def range_words(km):
@@ -365,48 +392,52 @@ def range_words(km):
 
 
 def post_text(p, c, why=None):
-    """The post. English, short, nothing the wall does not know."""
+    """The post. English, short, nothing the wall does not know. Starts with the flight ("Flight Etihad #ETD11K"),
+    ends with the place ("above Trémery"); a range record ends with where it was seen from instead, since it was
+    nowhere near overhead."""
     units = c.get("UNITS", "metric")
-    where = (" " + area_words(c)) if area_words(c) else ""
     alt = metres(p.get("alt_ft"), units)
     flight = (p.get("flight") or "").strip()
     reg = p.get("registration") or ""
     typ = nice_type(p)
     airline = p.get("airline") or ""
     heli = p.get("shape") == "heli"
-    icon = "🚁" if heli else "✈"
-    parts = []
-    if p.get("military") and airline in ("", "MILITARY"):
-        parts.append("Military")
-        if typ:
-            parts.append(typ)
-        if flight:
-            parts.append(flight)
+    military = bool(p.get("military")) and airline in ("", "MILITARY")
+    record = why == "farthest" and p.get("distance_km")
+    cs = hashtag_callsign(flight)
+    # the head: what this is
+    if military:
+        head = "Military flight" + (" " + cs if cs else "")
     elif airline and airline != "MILITARY":
-        parts.append((airline + " " + flight).strip())
-        if typ:
-            parts.append(typ)
-        r = p.get("route") or {}
-        a, b = (r.get("from") or {}), (r.get("to") or {})
-        if a.get("city") or a.get("name"):
-            parts.append("%s → %s" % (a.get("city") or a.get("name"), b.get("city") or b.get("name") or "?"))
+        head = "Flight %s %s" % (airline, cs) if cs else "Flight " + airline
+    elif heli:
+        head = "Helicopter " + (cs or reg) if (cs or reg) else "Helicopter"
+    elif cs and cs.replace("-", "") != reg.replace("-", ""):     # a callsign that is not just the registration
+        head = "Flight " + cs
     else:
-        if typ:
-            parts.append(typ)
-        if reg:
-            parts.append(reg)
-        if flight and flight != reg:
-            parts.append(flight)
-    if heli:
-        parts.append("low%s" % where if (p.get("alt_ft") or 0) < 3000 else "%s%s" % (alt or "", where))
-    elif alt:
-        parts.append("%s%s" % (alt, where))
-    elif where:
-        parts.append(where.strip())
-    if why == "farthest" and p.get("distance_km"):
-        icon = "📡"
-        parts.append("range record for 30 days, " + range_words(p["distance_km"]))
-    text = icon + " " + " · ".join(x for x in parts if x)
+        head = "Aircraft " + reg if reg else "Aircraft"
+    parts = [head.strip()]
+    # then what it is and where it goes
+    if typ:
+        parts.append(typ)
+    if reg and reg not in head and not (airline and airline != "MILITARY"):
+        parts.append(reg)
+    r = p.get("route") or {}
+    a, b = (r.get("from") or {}), (r.get("to") or {})
+    if a.get("city") or a.get("name"):
+        parts.append("%s → %s" % (a.get("city") or a.get("name"), b.get("city") or b.get("name") or "?"))
+    # and last, where it is
+    if record:
+        if alt:
+            parts.append(alt)
+        parts.append(", ".join(x for x in ("range record for 30 days: " + range_words(p["distance_km"]), seen_from(c)) if x))
+    else:
+        where = area_words(c)
+        if heli and (p.get("alt_ft") or 0) < 3000:
+            parts.append(("low " + where).strip())
+        elif alt or where:
+            parts.append(" ".join(x for x in (alt, where) if x))
+    text = " · ".join(x for x in parts if x)          # starts with the flight itself: no icon in front of it
     tags = str(c.get("SOCIAL_HASHTAGS", "")).strip()
     if heli:
         tags = tags.replace("#avgeek", "#helicopter") if "#avgeek" in tags else tags + " #helicopter"
@@ -421,6 +452,8 @@ def alt_text(p, c, trace):
     bits = ["Dot-matrix flight board"]
     if p.get("flight"):
         bits.append((p.get("flight") or "").strip())
+    if p.get("registration") and p["registration"].replace("-", "") != (p.get("flight") or "").strip():
+        bits.append("registration " + p["registration"])            # the picture's second row (0.18.3)
     if p.get("airline") and p["airline"] != "MILITARY":
         bits.append(p["airline"])
     if p.get("military"):
@@ -440,7 +473,7 @@ def alt_text(p, c, trace):
 # --------------------------------------------------------------------------- the picture
 def render(p, trace, c, out_png):
     spec = {"plane": p, "trace": trace, "units": c.get("UNITS", "metric"), "theme": c.get("THEME", "amber"),
-            "clock": time.strftime("%H:%M"), "flags": server.cfg_bool(c, "FLAGS", "1"), "pitch": 10}
+            "clock": clock_label(), "flags": server.cfg_bool(c, "FLAGS", "1"), "pitch": 10}
     fd, spec_path = tempfile.mkstemp(prefix="social-", suffix=".json", dir=os.path.dirname(out_png) or None)
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as fh:

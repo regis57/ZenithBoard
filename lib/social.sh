@@ -99,7 +99,7 @@ social_setup() {
 # the radius, the gap, the rules.
 social_setup_words() {
   local area radius gap rules
-  area=$(wt_input "Where is this, in two or three words, as the posts should say it? (for example: over Luxembourg).\nLeave empty for no place at all. The receiver's position is never used." "$(cfg_get SOCIAL_AREA "")") || return 1
+  area=$(wt_input "Where is this, in two or three words, as the posts should say it? A town name (Trémery) reads \"above Trémery\"; your own words (near Metz) are kept.\nLeave empty for no place at all. The receiver's position is never used." "$(cfg_get SOCIAL_AREA "")") || return 1
   cfg_set SOCIAL_AREA "$area"
   radius=$(wt_input "Sharing radius in km: an aircraft is a candidate while it is inside it. This is separate from the wall's radius." "$(cfg_get SOCIAL_RADIUS_KM 15)") || return 1
   is_number "$radius" && cfg_set SOCIAL_RADIUS_KM "$radius"

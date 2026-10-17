@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.18.3
+Asked for after reading the first real post on a phone.
+- **The post starts with the flight and ends with the place:** `Flight Etihad #ETD11K · Airbus A380-800 · Paris → Abu Dhabi · 8 500 m above Trémery`. No icon in front; an airline callsign is a hashtag, so the flight can be followed; a callsign that is only the registration reads `Aircraft D-EABC`, a helicopter `Helicopter …`, a military flight `Military flight …`. A town name reads *above Trémery* (it read *over* in 0.18.2); a phrase of your own (`near Metz`) is kept. A range record ends with *seen from Trémery*, since it was nowhere near overhead.
+- **The picture:** the callsign at the size of the other rows, with the registration on the row under it; the last row has the time with its offset from GMT as the Pi's time zone has it that day — `11:39 GMT+2` in a French summer, `GMT+1` in winter, `GMT+5:30` where that applies. The alt text names the registration too.
+- **The track always fits its frame.** A `10KM` legend pushed the scale bar out of the frame, and an A380's ten minutes (165 km) ran past the edge. The bar is shorter, sits against the right edge, and stands for 1 to 500 km, the smallest that keeps the whole track inside.
+- The tablet's wall is unchanged: these are the posted picture's rows only.
+
 ## 0.18.2
 Social sharing could hardly ever post: two of its five default rules could not fire in the service, though `social test` said they would.
 - **`rare` counted looks, not aircraft.** The service asked the wall every fifteen seconds and counted the type each time; by the time an aircraft had thirty seconds of track it had been counted three times, so no type was ever "seen twice or less". It now keeps, per type, the last few distinct aircraft and the day; rare means at most two *other* aircraft of that type in thirty days. The 0.18.0 history is dropped, not converted.

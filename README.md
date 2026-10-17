@@ -505,7 +505,7 @@ Off by default. `sudo zenithboard stats on` (or menu 4 → Receiver → 5) takes
 
 ## Share what flies over: Bluesky and Mastodon (optional)
 
-Off by default. Switched on, the Pi posts the aircraft worth a post — a military tanker, a Beluga, a type it has not seen in a month, the farthest of the day — as a **picture of the wall** with the aircraft's **track over the last minutes** drawn beside it in the same dots, and a short text: `✈ easyJet EZY1234 · Airbus A320neo · Edinburgh → Basel · 11 280 m over Luxembourg`. The Pi draws the picture itself, no browser needed, on a Pi 3B included.
+Off by default. Switched on, the Pi posts the aircraft worth a post — a military tanker, a Beluga, a type it has not seen in a month, the farthest of the day — as a **picture of the wall** with the aircraft's **track over the last minutes** drawn beside it in the same dots, and a short text: `Flight easyJet #EZY1234 · Airbus A320neo · Edinburgh → Basel · 11 280 m above Trémery`. The Pi draws the picture itself, no browser needed, on a Pi 3B included.
 
 ```bash
 sudo zenithboard social setup     # the accounts: a Bluesky app password and/or a Mastodon access token — never a real password
