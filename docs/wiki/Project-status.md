@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **15 October 2026**, version **0.17.4**.
+Last updated: **15 October 2026**, version **0.18.0**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -53,6 +53,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 17 October 2026 | Social sharing (0.18.0): Bluesky and Mastodon, a picture of the wall with the aircraft's track, drawn by the Pi without a browser. Decided against X (paid API since February 2026), Threads and Instagram (both fetch the picture from a public address). The Planespotters photo stays off the posts: their terms forbid re-hosting it. Mocked up in a browser and checked against the real renderer before being written; the networks are tested against fakes until the first real post |
 | 15 October 2026, night (4) | The gear panel gained a link to the statistics page, shown only while statistics are on (0.17.4) |
 | 15 October 2026, night (3) | A Pi showed the menu at 0.17.2 and the wall at 0.17.1 at the same time: updating only the ZenithBoard code deployed the new files without restarting the wall server, which runs the old ones until it is told otherwise. Every update now asks the wall what it is running and puts it right (0.17.3) |
 | 15 October 2026, night (2) | The wall's gear panel and the statistics page now name the version they run, linked to its release notes (0.17.2) |

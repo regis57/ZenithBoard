@@ -90,12 +90,19 @@ sec_units() {
 }
 
 sec_secrets() {
-  local f m
+  local f m o
   for f in "$DDNS_CURL" "$GRAFANA_PASS_FILE"; do
     [ -f "$f" ] || continue
     m=$(stat -c %a "$f" 2>/dev/null)
     [ "$m" = 600 ] && sec_line OK "$(basename "$f") is root-only" || sec_line WARN "$(basename "$f") is mode $m: a secret readable by others" "sudo chmod 600 $f"
   done
+  # the social secrets are read by the service, which runs as the wall's user: root-owned, group zenithboard, 0640, nothing for others
+  f="${SOCIAL_SECRETS:-$ZB_ETC/social.env}"
+  if [ -f "$f" ]; then
+    m=$(stat -c %a "$f" 2>/dev/null); o=$(stat -c %U:%G "$f" 2>/dev/null)
+    if [ "$m" = 640 ] && [ "$o" = "root:$ZB_USER" ]; then sec_line OK "social.env is root:$ZB_USER, mode 640 (the service reads it, nobody else)"
+    else sec_line WARN "social.env is $o mode $m: the social account secrets may be readable by others" "sudo chown root:$ZB_USER $f && sudo chmod 640 $f"; fi
+  fi
 }
 
 security_check() {

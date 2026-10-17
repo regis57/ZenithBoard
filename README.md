@@ -40,9 +40,9 @@ The story behind the project: [ZenithBoard on regis-hennequin.info](https://regi
 | **2. Network** | [Wi-Fi](#wi-fi) · [Fixed IP](#fixed-ip-address) · [A name for your wall](#a-name-for-your-wall) · [Ports](#network-ports-what-answers-where) |
 | **3. The wall** | [What it shows](#what-the-wall-shows) · [Look](#look-dot-matrix-or-airport-split-flap-board) · [Colours](#colours) · [Units, radius, position](#units-radius-and-position) · [Silhouettes](#aircraft-silhouettes) · [Routes and models](#flight-routes) · [Photos](#photos) · [Demo](#try-it-without-any-hardware) |
 | **4. The receiver** | [Gain](#gain-tune-the-dongle-optional) · [978 MHz UAT (US)](#978-mhz-uat-united-states) · [Statistics](#statistics-messages-per-hour-range-aircraft-per-day-optional) |
-| **5. Keep it running** | [Update](#updating-and-uninstalling) · [Logs](#logs-size-review-clean-optional) · [Reliability](#reliability-when-the-pi-freezes-or-loses-its-network-optional) · [Security](#security) · [When a provider changes something](#when-flightaware-adsb-exchange-flightradar24-or-plane-finder-change-something) · [Troubleshooting](#troubleshooting) · [Known limits](#known-limits) |
+| **5. Keep it running** | [Update](#updating-and-uninstalling) · [Logs](#logs-size-review-clean-optional) · [Share on Bluesky / Mastodon](#share-what-flies-over-bluesky-and-mastodon-optional) · [Reliability](#reliability-when-the-pi-freezes-or-loses-its-network-optional) · [Security](#security) · [When a provider changes something](#when-flightaware-adsb-exchange-flightradar24-or-plane-finder-change-something) · [Troubleshooting](#troubleshooting) · [Known limits](#known-limits) |
 | **Every command** | One table per subject, with what each one is for: **[Command reference](https://github.com/regis57/ZenithBoard/wiki/Command-reference)** (wiki) |
-| **The wiki** | [Roadmap](https://github.com/regis57/ZenithBoard/wiki/Roadmap) · [Project status](https://github.com/regis57/ZenithBoard/wiki/Project-status) · [Architecture](https://github.com/regis57/ZenithBoard/wiki/Architecture) · [Settings](https://github.com/regis57/ZenithBoard/wiki/Configuration-reference) · [Commands](https://github.com/regis57/ZenithBoard/wiki/Command-reference) · [Testing](https://github.com/regis57/ZenithBoard/wiki/Testing) · [Security](https://github.com/regis57/ZenithBoard/wiki/Security) · [Providers](https://github.com/regis57/ZenithBoard/wiki/Providers) |
+| **The wiki** | [Roadmap](https://github.com/regis57/ZenithBoard/wiki/Roadmap) · [Project status](https://github.com/regis57/ZenithBoard/wiki/Project-status) · [Architecture](https://github.com/regis57/ZenithBoard/wiki/Architecture) · [Settings](https://github.com/regis57/ZenithBoard/wiki/Configuration-reference) · [Commands](https://github.com/regis57/ZenithBoard/wiki/Command-reference) · [Testing](https://github.com/regis57/ZenithBoard/wiki/Testing) · [Security](https://github.com/regis57/ZenithBoard/wiki/Security) · [Providers](https://github.com/regis57/ZenithBoard/wiki/Providers) · [Social sharing](https://github.com/regis57/ZenithBoard/wiki/Social-sharing) |
 
 **Which defaults does what?** Everything in menu *4 Settings* (and `zenithboard ...`) sets the **default for every screen**. The gear icon on a tablet, or a link such as `?mode=flap`, only overrides it **for that tablet**; the gear's *Reset* returns the tablet to the Pi's default. So the two do not duplicate each other: one is the house rule, the other a personal choice.
 
@@ -502,6 +502,18 @@ The limit applies to all system logs (it is a journald setting, written to `/etc
 ## Statistics: messages per hour, range, aircraft per day (optional)
 
 Off by default. `sudo zenithboard stats on` (or menu 4 → Receiver → 5) takes one sample every fifteen minutes and keeps thirty days of them. Then `http://<pi-address>:8080/stats` shows today's numbers and three charts, and `zenithboard stats` prints the same in the terminal with a sparkline of the day's hours. The daily aircraft count is a floor: a sample every fifteen minutes misses an aircraft that crossed in less. About 6 KB a day on the card; `stats off` stops it and keeps the files. Details on the wiki: [Statistics](https://github.com/regis57/ZenithBoard/wiki/Statistics).
+
+## Share what flies over: Bluesky and Mastodon (optional)
+
+Off by default. Switched on, the Pi posts the aircraft worth a post — a military tanker, a Beluga, a type it has not seen in a month, the farthest of the day — as a **picture of the wall** with the aircraft's **track over the last minutes** drawn beside it in the same dots, and a short text: `✈ easyJet EZY1234 · Airbus A320neo · Edinburgh → Basel · 11 280 m over Luxembourg`. The Pi draws the picture itself, no browser needed, on a Pi 3B included.
+
+```bash
+sudo zenithboard social setup     # the accounts: a Bluesky app password and/or a Mastodon access token — never a real password
+sudo zenithboard social test      # draw the picture and print the text; post nothing (see it at http://<pi>:8080/social/preview)
+sudo zenithboard social on        # from now on, under your rules; off at any time
+```
+
+Or menu *4 Settings → 6 Social sharing*. The wizard tries each account before going on, then asks for the place to name in the posts (your words), the sharing radius, the minimum gap between posts, and the rules. **Nothing that gives your position away leaves the Pi**: no distance, no bearing, no map, no photo; the track is centred on the aircraft. The secrets live in a root-owned file the service alone can read, the picture is drawn in memory and deleted after each post, and `zenithboard security` checks all of it. Why Bluesky and Mastodon and not X, Threads or Instagram, how to get the secrets step by step, what each rule means, and what a Pi 4 will add: wiki **[Social sharing](https://github.com/regis57/ZenithBoard/wiki/Social-sharing)**.
 
 ## Reliability: when the Pi freezes or loses its network (optional)
 

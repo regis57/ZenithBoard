@@ -10,6 +10,7 @@
 * [Command reference](Command-reference)
 * [The wall](The-wall)
 * [Statistics](Statistics)
+* [Social sharing](Social-sharing)
 
 *Running it*
 * [When a provider changes](Providers)

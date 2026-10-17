@@ -26,11 +26,12 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.17.4"
+VERSION = "0.18.0"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 STATS_DIR = os.environ.get("ZENITHBOARD_STATS_DIR", "/var/lib/zenithboard/stats")   # written by the stats timer
+SOCIAL_DIR = os.environ.get("ZENITHBOARD_SOCIAL_DIR", "/var/lib/zenithboard/social")   # `zenithboard social test` leaves preview.png here
 DEMO_DIR = os.path.join(BASE_DIR, "demo")
 DATA_DIR = os.path.join(BASE_DIR, "data")
 if BASE_DIR not in sys.path:
@@ -996,6 +997,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, dict(got, version=VERSION))
         if path == "/stats":
             return self._file(STATIC_DIR, "stats.html")
+        if path == "/social/preview":                 # the picture `zenithboard social test` drew, to look at before posting anything
+            return self._file(SOCIAL_DIR, "preview.png")
         if path.startswith("/api/photo/"):
             got = fetch_photo_bytes(path[len("/api/photo/"):].lower()) if cfg_bool(cfg, "SHOW_PHOTOS") else None
             return self._send(200, got[1], got[0], cache="max-age=3600") if got else self._send(404, b"", "text/plain")
