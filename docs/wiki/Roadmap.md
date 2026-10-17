@@ -13,6 +13,26 @@ The code is complete enough. What it lacks is proof.
 | **Count what the wall cannot name or draw** | Two *Later* items — airline names for bare callsigns, more silhouettes — wait on real figures, not guesses. Since 0.21.0 the statistics sampler notes, every quarter hour, each aircraft shown with a callsign but no airline (by its three-letter prefix) and each one drawn with the generic silhouette (by type code). `zenithboard stats on` must be on | After two weeks, `zenithboard stats gaps` pasted into an issue decides which prefixes get a lookup and which shapes get drawn |
 | Leave the gain alone | Settled at 48.0 dB, 4–5 % strong messages at rush hour | Nothing to do. Recorded so it is not re-opened |
 
+## Deciding the airline lookup and the new silhouettes on figures
+
+Two *Later* items are to be built from what the reference Pi measures, not from guesses. Statistics were switched on there on 18 October 2026; the figures are read on **17 November 2026** with `zenithboard stats gaps`, and this is the procedure, written down so it does not depend on anyone's memory.
+
+**What is being counted.** With statistics on, every quarter hour the sampler asks the wall which aircraft are inside its radius and notes, once per aircraft over thirty days: the three-letter callsign prefix of each aircraft shown with a callsign but no airline name, and the type code of each aircraft drawn with the generic silhouette. `zenithboard stats gaps` prints both lists, most frequent first.
+
+**2. Airline names for callsigns without a route**
+
+1. Read the prefix list. A prefix seen on fewer than three aircraft in thirty days is noise. If no prefix passes that bar, the item is closed: the route lookup already names what matters.
+2. Otherwise, one lookup per prefix, not per flight: the ICAO airline designator (`EZY`, `BGA`) asked once of adsbdb's airline endpoint if it answers by designator, or taken from an open designator list shipped with the wall if it does not; the answer cached for months in the wall's cache folder, like routes. Off by default, a line in the wall settings menu, `zenithboard config-set AIRLINE_LOOKUP 1`.
+3. Checked against the real answers for the prefixes in the list before it ships, like the route filter was.
+
+**3. More silhouettes**
+
+1. Read the type-code list. The five to ten most frequent codes get a shape each; the rest keep the generic one.
+2. Each shape is drawn in `flightinfo/static/shapes.js` with the primitives already there, previewed as a picture here, and shipped only once it has been seen — the rule for everything on the wall.
+3. `aircraft.classify` maps the code to the new shape; `tests/test_shapes.js` holds the mapping so a code cannot quietly fall back to generic again.
+
+**If the figures never come** (the Pi was off, statistics were switched off), the two items stay in *Later* as they are. Nothing is built on a guess.
+
 ## What 1.0 takes
 
 1.0 means *validated on real hardware, no caveats in [Project status](Project-status)* ([Release process](Release-process)). Each open caveat ends one way or the other:
