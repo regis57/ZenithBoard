@@ -40,23 +40,23 @@ def trace(n=20, start=None):
 
 class WordsTest(unittest.TestCase):
     # 0.18.3: the post starts with the flight ("Flight Etihad #ETD11K") and ends with the place ("above Trémery");
-    # no icon in front, the callsign a hashtag so the flight can be followed. 0.19.0: "altitude 11 280 m" on its own,
-    # because "8 500 m above Trémery" was read as a distance from Trémery
+    # no icon in front, the callsign a hashtag so the flight can be followed. 0.19.0: "altitude 11\u00a0280\u00a0m" on its own,
+    # because "8\u00a0500\u00a0m above Trémery" was read as a distance from Trémery
     def test_airline_with_route(self):
         self.assertEqual(social.post_text(EZY, CFG).split("\n")[0],
-                         "Flight easyJet #EZY1234 · Airbus A320neo · Edinburgh → Saint-Louis · altitude 11 280 m · over Luxembourg")
+                         "Flight easyJet #EZY1234 · Airbus A320neo · Edinburgh → Saint-Louis · altitude 11\u00a0280\u00a0m · over Luxembourg")
 
     def test_starts_with_the_flight_and_ends_above_the_place(self):
         t = social.post_text(EZY, dict(CFG, SOCIAL_AREA="Trémery")).split("\n")[0]
         self.assertTrue(t.startswith("Flight easyJet #EZY1234 · "), t)
-        self.assertTrue(t.endswith(" · altitude 11 280 m · above Trémery"), t)
+        self.assertTrue(t.endswith(" · altitude 11\u00a0280\u00a0m · above Trémery"), t)
 
     def test_unknown_airline_shows_callsign_and_model(self):
-        self.assertEqual(social.post_text(BELUGA, CFG).split("\n")[0], "Flight #BGA113J · Airbus A330-743 Beluga XL · F-GXLH · altitude 9 750 m · over Luxembourg")
+        self.assertEqual(social.post_text(BELUGA, CFG).split("\n")[0], "Flight #BGA113J · Airbus A330-743 Beluga XL · F-GXLH · altitude 9\u00a0750\u00a0m · over Luxembourg")
 
     def test_a_registration_used_as_callsign_is_an_aircraft_not_a_flight(self):
         p = dict(BELUGA, flight="FGXLH", type_name="CESSNA 172", type="C172")
-        self.assertEqual(social.post_text(p, dict(CFG, SOCIAL_AREA="Trémery")).split("\n")[0], "Aircraft F-GXLH · Cessna 172 · altitude 9 750 m · above Trémery")
+        self.assertEqual(social.post_text(p, dict(CFG, SOCIAL_AREA="Trémery")).split("\n")[0], "Aircraft F-GXLH · Cessna 172 · altitude 9\u00a0750\u00a0m · above Trémery")
 
     def test_only_airline_callsigns_become_hashtags(self):
         self.assertEqual(social.hashtag_callsign("ETD11K"), "#ETD11K")
@@ -66,12 +66,12 @@ class WordsTest(unittest.TestCase):
 
     def test_helicopter(self):
         t = social.post_text(HELI, CFG)
-        self.assertTrue(t.startswith("Helicopter D-HABC · Airbus Helicopters H145 · altitude 460 m · over Luxembourg"), t)
+        self.assertTrue(t.startswith("Helicopter D-HABC · Airbus Helicopters H145 · altitude 460\u00a0m · over Luxembourg"), t)
         self.assertIn("#helicopter", t)
 
     def test_military_without_callsign(self):
         t = social.post_text(KC135, CFG)
-        self.assertTrue(t.startswith("Military flight · Boeing KC-135R Stratotanker · altitude 7 620 m · over Luxembourg"), t)
+        self.assertTrue(t.startswith("Military flight · Boeing KC-135R Stratotanker · altitude 7\u00a0620\u00a0m · over Luxembourg"), t)
         self.assertIn("#military", t)
         self.assertTrue(social.post_text(dict(KC135, flight="RCH123"), CFG).startswith("Military flight #RCH123 · "))
 
@@ -81,7 +81,7 @@ class WordsTest(unittest.TestCase):
 
     def test_imperial_and_no_area(self):
         c = dict(CFG, UNITS="imperial", SOCIAL_AREA="")
-        self.assertIn("37 000 ft", social.post_text(EZY, c))
+        self.assertIn("37\u00a0000\u00a0ft", social.post_text(EZY, c))
         self.assertNotIn("over", social.post_text(EZY, c))
 
     def test_text_never_carries_distance_or_bearing(self):
@@ -91,37 +91,39 @@ class WordsTest(unittest.TestCase):
             self.assertNotIn("NE", t.split("\n")[0].replace("NEO", "").replace("Beluga", ""))
 
     def test_a_range_record_is_said_without_the_figure(self):
-        # rounded DOWN to 50 km: enough to tell a record, not enough to draw a circle around the antenna
+        # rounded DOWN to 50\u00a0km: enough to tell a record, not enough to draw a circle around the antenna
         t = social.post_text(dict(EZY, distance_km=332.4), CFG, why="farthest")
         self.assertTrue(t.startswith("Flight easyJet #EZY1234 · "), t)
-        self.assertIn("· altitude 11 280 m · range record for 30 days: over 300 km out", t)
+        self.assertIn("· altitude 11\u00a0280\u00a0m · range record for 30 days: over 300\u00a0km out", t)
         self.assertNotIn("332", t)
         # far from overhead: the place is where it was seen from, not what it flew above
         t = social.post_text(dict(EZY, distance_km=332.4), dict(CFG, SOCIAL_AREA="Trémery"), why="farthest").split("\n")[0]
-        self.assertTrue(t.endswith("range record for 30 days: over 300 km out, seen from Trémery"), t)
+        self.assertTrue(t.endswith("range record for 30 days: over 300\u00a0km out, seen from Trémery"), t)
         self.assertNotIn("above", t)
-        self.assertEqual(social.range_words(51), "over 50 km out")
-        self.assertEqual(social.range_words(149.9), "over 100 km out")
+        self.assertEqual(social.range_words(51), "over 50\u00a0km out")
+        self.assertEqual(social.range_words(149.9), "over 100\u00a0km out")
 
     def test_a_bare_place_name_reads_above(self):
-        # reported from the real Pi: "1 750 m Trémery"; 0.18.3 asked for "above"
+        # reported from the real Pi: "1\u00a0750\u00a0m Trémery"; 0.18.3 asked for "above"
         self.assertEqual(social.area_words({"SOCIAL_AREA": "Trémery"}), "above Trémery")
         self.assertEqual(social.area_words({"SOCIAL_AREA": "near Metz"}), "near Metz")
         self.assertEqual(social.area_words({"SOCIAL_AREA": "over the Moselle"}), "over the Moselle")
         self.assertEqual(social.area_words({"SOCIAL_AREA": "  "}), "")
-        self.assertIn("altitude 1 750 m · above Trémery", social.post_text(dict(EZY, alt_ft=5740), dict(CFG, SOCIAL_AREA="Trémery")))
+        self.assertIn("altitude 1\u00a0750\u00a0m · above Trémery", social.post_text(dict(EZY, alt_ft=5740), dict(CFG, SOCIAL_AREA="Trémery")))
 
     def test_the_altitude_never_reads_as_a_distance(self):
-        # reported from the first posts: "10 670 m over Trémery" read as 10 km from Trémery
+        # reported from the first posts: "10\u00a0670\u00a0m over Trémery" read as 10\u00a0km from Trémery
         for p in (EZY, BELUGA, HELI, KC135):
             line = social.post_text(p, dict(CFG, SOCIAL_AREA="Trémery")).split("\n")[0]
-            self.assertRegex(line, r"· altitude [0-9 ]+ m · above Trémery$")
-        self.assertIn("altitude 37 000 ft", social.post_text(EZY, dict(CFG, UNITS="imperial")))
+            self.assertRegex(line, r"· altitude [0-9\u00a0]+\u00a0m · above Trémery$")
+        # and never split across two lines on a phone (0.19.8: "altitude 8" / "600 m")
+        self.assertNotRegex(social.post_text(EZY, CFG), r"\d \d|\d m\b")
+        self.assertIn("altitude 37\u00a0000\u00a0ft", social.post_text(EZY, dict(CFG, UNITS="imperial")))
 
     def test_the_post_stays_inside_300_characters_without_cutting_a_hashtag(self):
         # found in review: a range record with a long credit was 300 characters exactly, and Bluesky's cut at 300
         # turned #ZenithBoard into a clickable #ZenithBo
-        body = "Flight Emirates #UAE225 · Boeing 777-300ER · Dubai → San Francisco · altitude 11 280 m · range record for 30 days: over 300 km out, seen from Trémery"
+        body = "Flight Emirates #UAE225 · Boeing 777-300ER · Dubai → San Francisco · altitude 11\u00a0280\u00a0m · range record for 30 days: over 300\u00a0km out, seen from Trémery"
         credit = "Map: EOxCloudless by EOX, © OpenStreetMap"
         t = social.fit_post(body, credit, "#ADSB #military #ZenithBoard")
         self.assertLessEqual(len(t), 300)
@@ -167,7 +169,7 @@ class WordsTest(unittest.TestCase):
         a = social.alt_text(EZY, CFG, trace(20))
         self.assertIn("EZY1234", a); self.assertIn("easyJet", a); self.assertIn("from Edinburgh to Saint-Louis", a)
         self.assertIn("registration G-UZHA", a)
-        self.assertIn("altitude 11 280 m", a)
+        self.assertIn("altitude 11\u00a0280\u00a0m", a)
         f = social.alt_text(EZY, CFG, trace(20), "flap", {"map_words": "a satellite map", "credit_full": "EOxCloudless 2025"})
         self.assertTrue(f.startswith("Split-flap flight board"), f)
         self.assertIn("Beside it, a satellite map with the aircraft's track", f)
@@ -319,7 +321,7 @@ class ChoiceTest(unittest.TestCase):
 
 class RangeRecordTest(unittest.TestCase):
     """0.18.0: "farthest" compared an aircraft with a record it had just set itself, and only looked inside the
-    sharing radius (15 km by default) for something over 50 km: it could never fire."""
+    sharing radius (15\u00a0km by default) for something over 50\u00a0km: it could never fire."""
 
     def setUp(self):
         self.c = dict(CFG, LAT="49.20", LON="6.20", SOCIAL_RULES="farthest", SOCIAL_RADIUS_KM="15")
@@ -334,7 +336,7 @@ class RangeRecordTest(unittest.TestCase):
         social.ask_wall = lambda c, r: []                       # nothing inside the sharing radius
         social.ask_wall_one = lambda c, h: dict(self.far) if h == "4b1801" else None
         self.addCleanup(setattr, social, "ask_wall", self.old[0]); self.addCleanup(setattr, social, "ask_wall_one", self.old[1])
-        # 210 km from the receiver at 49.20 N 6.20 E: due east, ~2.86 degrees of longitude
+        # 210\u00a0km from the receiver at 49.20 N 6.20 E: due east, ~2.86 degrees of longitude
         self.sky = [{"hex": "4b1801", "lat": 49.20, "lon": 6.20 + 210 / (111.32 * 0.6534), "seen_pos": 1}]
 
     def test_a_new_thirty_day_record_is_a_candidate_once(self):
@@ -396,7 +398,7 @@ class PictureTest(unittest.TestCase):
         return json.loads(r.stdout)
 
     def test_the_scale_keeps_the_track_inside_the_panel(self):
-        # 0.18.2 let an A380's ten minutes (165 km) run past the frame; every extent up to 500 km per bar fits now
+        # 0.18.2 let an A380's ten minutes (165\u00a0km) run past the frame; every extent up to 500\u00a0km per bar fits now
         out = self.node("const bad = []; for (let e = 0.1; e < 500 * R.HALF / R.BAR; e *= 1.07) {"
                         " const s = R.pickScaleKm(e); if (e * R.BAR / s > R.HALF) bad.push([e, s]); }"
                         " console.log(JSON.stringify({bad, a380: R.pickScaleKm(165)}));")
@@ -503,7 +505,7 @@ class FlapPictureTest(unittest.TestCase):
         self.assertTrue(0 < min(xs) and max(xs) < social_card.MAP_W and 0 < min(ys) and max(ys) < social_card.MAP_H)
         self.assertLessEqual(z, social_card.MAX_ZOOM)
         self.assertAlmostEqual((min(xs) + max(xs)) / 2, social_card.MAP_W / 2, delta=1)
-        # a 160 km track still fits, farther out
+        # a 160\u00a0km track still fits, farther out
         long = [[49.1, 4.2 + i * 0.0186, 28000, i * 5] for i in range(121)]
         z2, _, _ = social_card.choose_view(long, social_card.MAP_W, social_card.MAP_H)
         self.assertLess(z2, z)
@@ -650,7 +652,7 @@ class NetworksTest(unittest.TestCase):
 
     def test_bluesky_three_calls_with_hashtag_facets_and_alt(self):
         sec = {"BLUESKY_HANDLE": "zb.bsky.social", "BLUESKY_APP_PASSWORD": "aaaa-bbbb-cccc-dddd"}
-        uri = social.post_bluesky(sec, "✈ easyJet · 11 280 m\n#ADSB #ZenithBoard", self.png, "alt here", 1310, 830)
+        uri = social.post_bluesky(sec, "✈ easyJet · 11\u00a0280\u00a0m\n#ADSB #ZenithBoard", self.png, "alt here", 1310, 830)
         self.assertEqual(uri, "at://did:plc:xyz/app.bsky.feed.post/3k")
         urls = [s[0].split("/")[-1] for s in self.sent]
         self.assertEqual(urls, ["com.atproto.server.createSession", "com.atproto.repo.uploadBlob", "com.atproto.repo.createRecord"])
@@ -667,7 +669,7 @@ class NetworksTest(unittest.TestCase):
 
     def test_a_jpeg_and_the_map_credit_as_a_link(self):
         sec = {"BLUESKY_HANDLE": "zb.bsky.social", "BLUESKY_APP_PASSWORD": "x"}
-        text = "Flight easyJet #EZY1234 \u00b7 altitude 11 280 m\n#ADSB\nMap \u00a9 OpenStreetMap, EOX"
+        text = "Flight easyJet #EZY1234 \u00b7 altitude 11\u00a0280\u00a0m\n#ADSB\nMap \u00a9 OpenStreetMap, EOX"
         social.post_bluesky(sec, text, self.png, "alt", 1500, 900, "image/jpeg", [("OpenStreetMap", "https://www.openstreetmap.org/copyright"), ("EOX", "https://maps.eox.at")])
         self.assertEqual(self.sent[1][1]["Content-type"], "image/jpeg")
         rec = json.loads(self.sent[2][2])["record"]

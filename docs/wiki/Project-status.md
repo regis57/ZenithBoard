@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **17 October 2026**, version **0.19.7**.
+Last updated: **17 October 2026**, version **0.19.8**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -53,6 +53,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 17 October 2026, four o'clock | The first post with every 0.19 change in it, EWG9NU at 16:02, eighty seconds after the service started: all nine rows filled (the wait for adsbdb did its job), *→COLOGNE* by its city, the first step of the varied pictures (dots, amber), no credit line since there was no map. One flaw on a phone: *altitude 8* at the end of a line and *600 m* on the next. Numbers now hold together (0.19.8) |
 | 17 October 2026, quarter to four | First satellite post, a Bellanca Decathlon (LX-FUN): the empty airline and route rows are right for a light aircraft, but the map credit took three lines of the post. It is now one short line at the end, the names as links; the full text stays on the picture and in the alt text (0.19.6) |
 | 17 October 2026, twenty to four | Five minutes after the restart the service posted KLM24V with empty registration, model and route rows: its track, followed from far out, was long enough at once, while the wall had only just started asking adsbdb about it, which it does when an aircraft comes inside the radius it is asked about. The wall now says which lookups are on their way, and the service waits for them (up to two minutes). The owner also asked for posts that vary: the two looks in turn, the colours in turn, the maps in turn (0.19.5) |
 | 17 October 2026, half past three | After the update the service ran 0.19.3 at once (restarted by the update, its first line said so), `sudo social status` showed the 14:21 post, four aircraft posted, 24 types noted and a 333 km range record, and as `pi` it said it could not read rather than *never*. One claim did not hold: `systemctl status` still had no *Memory* line. Raspberry Pi OS boots with the kernel's memory controller off, so systemd can neither show nor cap the service's memory. The service now measures it itself (0.19.4) |
