@@ -16,7 +16,7 @@ The `+ 3` leaves a margin, and the grid is then centred with an `ox` / `oy` offs
 
 | Area | Grid box | Holds |
 |---|---|---|
-| Text | left of column 86 | Nine rows of 14 characters: `FLT  BAW123`, `REG  G-XLEA` (the flight and the registration, labelled like the rows under them, since 0.19.0; before, the callsign alone stood two rows high), airline, type, altitude, speed, route, and the last row with the distance and bearing |
+| Text | left of column 86 | Nine rows of 14 characters: `FLT  BAW123`, `REG  G-XLEA` (the flight and the registration, labelled like the rows under them, since 0.19.0; before, the callsign alone stood two rows high), airline, type, altitude, speed, route, and the last row with the distance and bearing. The route rows give the city when it fits (`→SAN JOSE`), else the airport's name |
 | Silhouette | x 90, y 0, 38 × 34 | The aircraft seen from above, drawn in dots |
 | Photo or scene | x 86, y 38, 42 × 30 | A real photo from Planespotters, or an animated side view when there is none |
 | Free | below row 68, on the right | Deliberately empty. The settings gear lives here |

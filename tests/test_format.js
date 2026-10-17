@@ -22,18 +22,20 @@ assert.strictEqual(L.from, ""); assert.strictEqual(L.to, "");       // no route 
 assert.ok(Math.abs(Fmt.radiusToKm(10, "imperial") - 16.09344) < 1e-6);
 assert.strictEqual(Fmt.compass(359), "N"); assert.strictEqual(Fmt.compass(90), "E");
 
-// ---- route rows: the airport's name when it fits, otherwise its city; plain capitals only
+// ---- route rows: the city when it fits, otherwise the airport's name, otherwise the city cut at a word; plain capitals only
 const ap = (name, city) => ({ name, city });
 const name = (n, c, w) => Fmt.placeName(ap(n, c), w || 14);
 assert.strictEqual(name("Munich Airport", "Munich"), "MUNICH");                         // generic words dropped
-assert.strictEqual(name("John F Kennedy International Airport", "New York"), "JOHN F KENNEDY");   // the name fits: use it
-assert.strictEqual(name("John F Kennedy International Airport", "New York", 13), "NEW YORK");     // too long for 13: the city
+assert.strictEqual(name("John F Kennedy International Airport", "New York"), "NEW YORK");         // the city first, like a departure board
+assert.strictEqual(name("Juan Santamar\u00eda International Airport", "San Jos\u00e9 (Alajuela)", 13), "SAN JOSE");   // seen on the first posts: was JUAN SANTAMAR
+assert.strictEqual(name("Gatwick Airport", ""), "GATWICK");                                       // no city: the name
 assert.strictEqual(name("Charles de Gaulle International Airport", "Paris"), "PARIS");            // name too long: city
 assert.strictEqual(name("Z\u00fcrich Airport", "Zurich"), "ZURICH");                                // accents folded
 assert.strictEqual(name("Nice-C\u00f4te d'Azur Airport", "Nice"), "NICE");
 assert.strictEqual(name("Reykjav\u00edk Keflav\u00edk International Airport", "Keflav\u00edk"), "KEFLAVIK");
 assert.strictEqual(name("\u00d8rland Main Air Station", "Brekstad"), "BREKSTAD");                  // fold \u00d8 even though NFD does not
-assert.strictEqual(name("Frankfurt am Main Airport", "Frankfurt am Main"), "FRANKFURT AM");        // cut at a word, not mid-word
+assert.strictEqual(name("Frankfurt am Main Airport", "Frankfurt am Main"), "FRANKFURT");           // cut at a word, never on "AM"
+assert.strictEqual(name("A", "Saint-Martin-de-Belleville Sur Mer"), "A");                           // the short name fits before a cut city
 assert.strictEqual(name("International Airport", "Metz"), "METZ");                                // nothing left after stripping: city
 assert.strictEqual(name("", ""), ""); assert.strictEqual(Fmt.placeName({ iata: "XYZ" }, 14), "XYZ");
 assert.strictEqual(Fmt.placeName(null, 14), "");

@@ -69,6 +69,8 @@ WARMUP_DAYS = 3                  # "rare" and "farthest" judge against history: 
 KEEP_PER_TYPE = 4                # the latest distinct aircraft kept per type: enough to tell rare (<= 2 others) from not
 RECORD_MIN_KM = 50               # a range record under this is not one
 RECORD_RADIUS_KM = 500           # the wall answers out to this; farther than that is a position glitch anyway
+GAP_FLOOR_MIN = 10               # whatever is set, never more than one post every ten minutes: a declared bot that
+                                 # posts every minute is what gets an account reported (0.19.3; seen set to 1 for a test)
 RETRY_AFTER_FAIL_S = 600         # a post that failed is not tried again for ten minutes: Bluesky limits sign-ins
 
 
@@ -101,6 +103,16 @@ def rules_of(c):
 def bluesky_ready(sec):
     """The account is set up: a handle and its app password. Bluesky is the only network since 0.19.0."""
     return bool(sec.get("BLUESKY_HANDLE") and sec.get("BLUESKY_APP_PASSWORD"))
+
+
+def gap_min(c):
+    """The minutes between two posts: the setting, never under GAP_FLOOR_MIN."""
+    return max(GAP_FLOOR_MIN, server.cfg_float(c, "SOCIAL_GAP_MIN", 120))
+
+
+def gap_words(c):
+    set_to = server.cfg_float(c, "SOCIAL_GAP_MIN", 120)
+    return "%g min" % gap_min(c) if set_to >= GAP_FLOOR_MIN else "%g min (set to %g: the floor is %d)" % (gap_min(c), set_to, GAP_FLOOR_MIN)
 
 
 def style_of(c):
@@ -798,9 +810,10 @@ def cmd_run():
     polls = candidates = 0
     c = cfg()
     sec = account()
-    print("social: running. Bluesky: %s. Picture: %s. Radius %s km, gap %s min, rules: %s. History since %s%s." % (
+    print("social: running ZenithBoard %s. Bluesky: %s. Picture: %s. Radius %s km, gap %s, rules: %s. History since %s%s." % (
+        server.VERSION,
         sec.get("BLUESKY_HANDLE") if bluesky_ready(sec) else "NO ACCOUNT (run: sudo zenithboard social setup)", picture_words(c),
-        c.get("SOCIAL_RADIUS_KM"), c.get("SOCIAL_GAP_MIN"), ", ".join(sorted(rules_of(c))) or "none",
+        c.get("SOCIAL_RADIUS_KM"), gap_words(c), ", ".join(sorted(rules_of(c))) or "none",
         state.get("since"), "" if warmed(state, time.time()) else
         " (rare and farthest wait for %d days of it)" % WARMUP_DAYS), flush=True)
     while True:
@@ -815,7 +828,7 @@ def cmd_run():
             polls += 1
             candidates += 1 if best else 0
             sec = account()
-            gap = server.cfg_float(c, "SOCIAL_GAP_MIN", 120) * 60
+            gap = gap_min(c) * 60
             # A failed post (Bluesky down, the app password revoked, no picture) waits ten minutes before the next
             # try: before 0.19.0 it was tried again at every look, every fifteen seconds, and each try signs in
             if best and bluesky_ready(sec) and now - state.get("last_post", 0) >= gap and now - last_fail >= RETRY_AFTER_FAIL_S:
@@ -836,7 +849,7 @@ def cmd_run():
         if now - last_summary >= 3600:
             # once an hour, so the journal answers "why no post?" without a line every fifteen seconds
             lp = state.get("last_post")
-            wait = max(0, int((lp + server.cfg_float(c, "SOCIAL_GAP_MIN", 120) * 60 - now) / 60)) if lp else 0
+            wait = max(0, int((lp + gap_min(c) * 60 - now) / 60)) if lp else 0
             print("social: last hour: %d looks, %d with a candidate under the rules. Last post: %s.%s%s" % (
                 polls, candidates, time.strftime("%H:%M", time.localtime(lp)) if lp else "never",
                 (" Next possible in %d min." % wait) if wait else "",
@@ -935,28 +948,55 @@ def picture_words(c):
     return "dots, %s" % theme_of(c)
 
 
+def unreadable(path):
+    """True when the path is there but this user cannot read it (`social status` run as pi, not as root)."""
+    return os.path.exists(path) and not os.access(path, os.R_OK | (os.X_OK if os.path.isdir(path) else 0))
+
+
 def cmd_status():
+    """What the service would do. Run as a user who cannot read the account file or the state folder (pi), it says
+    so: in 0.19.2 it printed "no account" and "Last post: never" on a Pi that had just posted (seen on the real Pi)."""
     c, sec = cfg(), account()
-    state = load_state()
+    who = getpass_user()
+    blind = []
     print("Social sharing: %s" % ("on" if server.cfg_bool(c, "SOCIAL") else "off"))
-    print("Bluesky: %s" % (("@" + sec["BLUESKY_HANDLE"]) if bluesky_ready(sec) else "no account (run: sudo zenithboard social setup)"))
+    if unreadable(SECRETS_FILE):
+        blind.append(SECRETS_FILE)
+        print("Bluesky: set up, but %s cannot read the account file" % who)
+    else:
+        print("Bluesky: %s" % (("@" + sec["BLUESKY_HANDLE"]) if bluesky_ready(sec) else "no account (run: sudo zenithboard social setup)"))
     print("Picture: %s" % picture_words(c))
-    print("Radius: %s km   Area: %s   Gap: %s min   Rules: %s" % (c.get("SOCIAL_RADIUS_KM"), c.get("SOCIAL_AREA") or "(none)",
-                                                                   c.get("SOCIAL_GAP_MIN"), ", ".join(sorted(rules_of(c))) or "none"))
+    print("Radius: %s km   Area: %s   Gap: %s   Rules: %s" % (c.get("SOCIAL_RADIUS_KM"), c.get("SOCIAL_AREA") or "(none)",
+                                                               gap_words(c), ", ".join(sorted(rules_of(c))) or "none"))
     print("Hashtags: %s" % c.get("SOCIAL_HASHTAGS"))
-    lp = state.get("last_post")
-    print("Last post: %s" % (time.strftime("%Y-%m-%d %H:%M", time.localtime(lp)) if lp else "never"))
-    now = time.time()
-    print("Posted in the last day: %d aircraft   Types noted: %d   Range record (30 days): %s" % (
-        len(state.get("posted", {})), len(state.get("types", {})),
-        ("%d km" % range_best(state)) if range_best(state) else "none yet"))
-    if state.get("since"):
-        print("History since %s: %s" % (state["since"], "rare and farthest are active" if warmed(state, now)
-                                          else "rare and farthest start after %d days" % WARMUP_DAYS))
-    gap = server.cfg_float(c, "SOCIAL_GAP_MIN", 120) * 60
-    if lp and now - lp < gap:
-        print("Next post possible in %d min (the gap)." % int((lp + gap - now) / 60))
+    if unreadable(STATE_DIR) or unreadable(os.path.join(STATE_DIR, "state.json")):
+        blind.append(STATE_DIR)
+        print("History: %s cannot read the service's state folder" % who)
+    else:
+        state = load_state()
+        lp = state.get("last_post")
+        print("Last post: %s" % (time.strftime("%Y-%m-%d %H:%M", time.localtime(lp)) if lp else "never"))
+        now = time.time()
+        print("Posted in the last day: %d aircraft   Types noted: %d   Range record (30 days): %s" % (
+            len(state.get("posted", {})), len(state.get("types", {})),
+            ("%d km" % range_best(state)) if range_best(state) else "none yet"))
+        if state.get("since"):
+            print("History since %s: %s" % (state["since"], "rare and farthest are active" if warmed(state, now)
+                                              else "rare and farthest start after %d days" % WARMUP_DAYS))
+        gap = gap_min(c) * 60
+        if lp and now - lp < gap:
+            print("Next post possible in %d min (the gap)." % int((lp + gap - now) / 60))
+    if blind:
+        print("For the whole picture:  sudo zenithboard social status")
     return 0
+
+
+def getpass_user():
+    try:
+        import pwd
+        return pwd.getpwuid(os.getuid()).pw_name
+    except Exception:
+        return "this user"
 
 
 def main(argv):

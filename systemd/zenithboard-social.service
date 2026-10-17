@@ -18,6 +18,10 @@ RuntimeDirectory=zenithboard/social
 RuntimeDirectoryMode=0700
 ReadWritePaths=/var/lib/zenithboard/social
 RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+# Memory: counted (so `systemctl status` shows it) and capped. A split-flap picture with its map peaks near 140 MB
+# (Python and Pillow about 90, Node about 45); the cap keeps a runaway away from the decoder on a 1 GB Pi 3B.
+MemoryAccounting=yes
+MemoryMax=300M
 # Sandbox, as for the wall server. Measure with: systemd-analyze security zenithboard-social
 NoNewPrivileges=true
 ProtectSystem=strict

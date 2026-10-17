@@ -1,7 +1,16 @@
 # Changelog
 
+## 0.19.3
+From the real Pi's log.
+- **An update restarts the social service.** It only made sure it was enabled, and a running service keeps the code it started with: the Pi ran 0.19.0 for hours after installing 0.19.2. The service's first journal line now says which version it runs, and `social status` says when it runs code older than what is installed.
+- **`social status` tells the truth when it cannot read.** Run as `pi`, it said *no account* and *Last post: never* on a Pi that had just posted: `pi` cannot read the account file or the state folder. It now says it cannot, and how to see everything (`sudo zenithboard social status`, which reads them as the service's user).
+- **Ten minutes at least between two posts**, whatever is set. The gap had been set to one minute for a test; with *ALL*, that is a post a minute, which is what gets a bot account reported. A smaller value is used as ten and the status says so; the wizard says it too.
+- **The service's memory is counted and capped** (`MemoryMax=300M`): a split-flap picture with its map peaks near 140 MB; `systemctl status zenithboard-social` now shows the figure.
+- **Route rows: the city when it fits**, the way a departure board reads — `→SAN JOSE`, not the airport's `→JUAN SANTAMAR` — then the airport's name, then the city cut at a word, never on a dangling word (`FRANKFURT`, not `FRANKFURT AM`). On the tablet and in the posts.
+- The 0.19.2 entry said a post had broken the two-hour gap; it had not, the gap was one minute. The fault 0.19.2 fixed was real, found while looking.
+
 ## 0.19.2
-- **A post made by hand now counts for the running service.** *Post now* (`social post`) writes its post to the state file, but the service kept its own copy in memory and wrote it back every fifteen seconds, so the manual post was forgotten at once: the gap restarted from the service's own last post, and the aircraft posted by hand could be posted a second time. Seen on the real Pi: a Lufthansa A340 went out 48 minutes after a *Post now*, with a two-hour gap. The service now reads the file before each decision and keeps the latest post and every posted aircraft from both; `social post` merges in turn instead of overwriting.
+- **A post made by hand now counts for the running service.** *Post now* (`social post`) writes its post to the state file, but the service kept its own copy in memory and wrote it back every fifteen seconds, so the manual post was forgotten at once: the gap restarted from the service's own last post, and the aircraft posted by hand could be posted a second time. Found by reading the code after a post that looked too early (it was not: the gap had been set to one minute for a test, see 0.19.3). The service now reads the file before each decision and keeps the latest post and every posted aircraft from both; `social post` merges in turn instead of overwriting.
 
 ## 0.19.1
 - **The rules list: the special aircraft, then ALL.** *ALL* means everything that flies over, the special ones included — ticking it alone is ticking every line, and a military aircraft under ALL is posted as military, ahead of an airliner. It was *any*, the last of six lines that read like a sixth kind of aircraft, and under *any* alone a tanker counted as "anything". The old word still works in `config.env`. The list says which rules wait for three days of history.

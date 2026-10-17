@@ -13,6 +13,12 @@ sudo zenithboard social test       # draw the picture, print the text, post noth
 sudo zenithboard social on         # from now on, under the rules you chose
 ```
 
+What it looks like on Bluesky — the author's account, [@zenithboard.bsky.social](https://bsky.app/profile/zenithboard.bsky.social), on its first afternoon: a Lufthansa A340 posted by the service under `heavy` in the split-flap look (turquoise, night map), and a Eurowings A320 in the dot-matrix look.
+
+<img src="https://github.com/regis57/ZenithBoard/raw/main/docs/images/social-feed.png" alt="The ZenithBoard account on Bluesky: the profile with its automated-account badge, a split-flap post with a map, a dot-matrix post" width="420">
+
+Those two were drawn by 0.19.0; since 0.19.3 the route rows give the city — `→SAN JOSE` and `→PALMA` where these show `→JUAN SANTAMAR` and `→PALMA DE`.
+
 Why Bluesky alone: X closed its free API in February 2026 and charges per post; Threads and Instagram cannot take an uploaded picture, they fetch it from a public address, which would mean putting the Pi on the internet. Bluesky takes the picture directly, costs nothing, and its API is open. Mastodon was supported in 0.18 and taken out in 0.19.0; an update removes its token from the Pi (revoke it on your instance too). See [When a provider changes something](Providers) for the general attitude.
 
 ---
@@ -43,7 +49,7 @@ Give the handle and paste the app password (typed blind, as a password); the wiz
 |---|---|---|
 | Where is this? | The place named at the end of the posts. Your words: a town name (`Trémery`) reads *above Trémery*, words that start with their own preposition (`near Metz`, `over the Moselle`) are kept. The receiver's position is never used. A small village narrows your home down to a few kilometres; a city, a department or a region does not | nothing |
 | Sharing radius | An aircraft is a candidate while inside it. Separate from the wall's radius | 15 km |
-| Minimum minutes between posts | So the account is not a firehose | 120 |
+| Minimum minutes between posts | So the account is not a firehose. Ten at least: a declared bot that posts every minute is what gets reported, so a smaller value is used as ten | 120 |
 | What is worth a post | See the rules below | rare, military, helicopter, heavy, farthest |
 
 And then for the picture:
@@ -162,7 +168,7 @@ The dot-matrix picture is `tools/social-render.js`: Node reads `app.js` and lift
 
 Bluesky is three requests, standard library only: `createSession → uploadBlob → createRecord`, with the hashtags and the map's link as facets so they are clickable, and the alt text and the aspect ratio with the image.
 
-State lives in `/var/lib/zenithboard/social/state.json`: for each type, the last few distinct aircraft seen and the day (for `rare`), the farthest aircraft of each of the last thirty days (for `farthest`), the day the service started watching, which aircraft were posted in the last day, and the last post's time. The map tiles are cached next to it, in `tiles/`, at most 60 MB and a month. Once an hour the service writes one line to its journal — how many looks, how many found a candidate, when the next post is possible — so `zenithboard logs social` answers *why no post?* `social remove` deletes it all.
+State lives in `/var/lib/zenithboard/social/state.json`: for each type, the last few distinct aircraft seen and the day (for `rare`), the farthest aircraft of each of the last thirty days (for `farthest`), the day the service started watching, which aircraft were posted in the last day, and the last post's time. The map tiles are cached next to it, in `tiles/`, at most 60 MB and a month. Once an hour the service writes one line to its journal — how many looks, how many found a candidate, when the next post is possible — so `zenithboard logs social` answers *why no post?* Its first line says which version it runs. The service may use 300 MB of memory at most (`MemoryMax`), about half of it in the second it draws a split-flap picture; `systemctl status zenithboard-social` shows the figure. `social remove` deletes it all.
 
 ---
 
@@ -181,6 +187,8 @@ sudo zenithboard social remove    # account, state, map tiles and service gone (
 
 | What you see | What to do |
 |---|---|
+| `social status` says it *cannot read* the account file or the state folder | You ran it as `pi`. Those files belong to the service's user; `sudo zenithboard social status` reads them as that user |
+| `social status` says the service *runs the code from before the last update* | `sudo systemctl restart zenithboard-social`. Since 0.19.3 an update restarts it by itself; before, it only made sure it was enabled, and a running service kept its old code |
 | `social check` says FAILED | The handle has no `@`, and the password is the *app* password, not the account's. Make a new app password if in doubt |
 | `social test` says nothing to show | No aircraft with thirty seconds of track inside the sharing radius right now. Try a wider radius, or `social test HEX` with an aircraft from `zenithboard status` |
 | It posts nothing | First: `test` never posts. Then `zenithboard social status` — is it *on*, is the account ready, is the gap still running? Then `zenithboard logs social`: the hourly line says how many looks found a candidate. `rare` and `farthest` start after three days, so on the first days only `military`, `helicopter` and `heavy` can fire: tick `all` to see it post the ordinary traffic too (the special aircraft still go first) |
