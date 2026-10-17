@@ -19,6 +19,8 @@ Useful to include:
 
 ## House style
 
+The repository's `CLAUDE.md` is the short form of this page and of the release process, written for an AI coding session: the hard rules (no logos, signature checks never off, off by default, reversible, previewed, measured), the exact commit and merge steps, and the wiki sync. A human contributor can read it the same way.
+
 **The code.**
 
 * Shell: `bash`, shellcheck clean at `-S warning`. Settings are read through `cfg_get`, never directly, so a missing key falls back to its default. Every system path has a `ZB_*` environment override, which is what makes it testable.
