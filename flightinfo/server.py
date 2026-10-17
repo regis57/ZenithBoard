@@ -26,7 +26,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.19.8"
+VERSION = "0.19.9"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -478,23 +478,28 @@ def build_planes(data, lat, lon, radius_km, airlines=None, photo_lookup=None, de
             found = photo_lookup(ac.get("hex"))
             if found:
                 photo, credit, link = "/api/photo/%s" % ac.get("hex"), found.get("photographer"), found.get("link")
+        # What is still on its way for this aircraft: the wall ignores it (it shows the rows when they come); social
+        # sharing waits for it rather than post a board with empty rows. 0.19.5: adsbdb's first answer, after KLM24V
+        # went out with no registration, model or route. 0.19.9: hexdb's second opinion too, after RYR8526 and EWG6ZP
+        # went out with no route — adsbdb had another flight under those callsigns (Berlin-Stansted, Salzburg-
+        # Aalborg), rightly refused, while hexdb had the right one (Charleroi-Reggio Calabria, Menorca-Cologne) on its
+        # way a few seconds later
+        pending = []
         if demo and ac.get("demo_route"):
             route = ac["demo_route"]
         else:
             route = route_lookup(flight) if route_lookup is not None else None
+            if route is None and route_lookup is not None and getattr(route_lookup, "pending", None) and route_lookup.pending(flight):
+                pending.append("route")
             checked = route_plausible(route, ac["lat"], ac["lon"], ac.get("track"), ac.get("gs"))
             if route and not checked and route_fallback is not None:      # a second opinion, only when the first answer is wrong
                 for leg in route_fallback(flight) or ():
                     checked = route_plausible(leg, ac["lat"], ac["lon"], ac.get("track"), ac.get("gs"), strict=True)
                     if checked:
                         break
+                if not checked and getattr(route_fallback, "pending", None) and route_fallback.pending(flight):
+                    pending.append("route")
             route = checked
-        # What is still on its way from adsbdb for this aircraft: the wall ignores it (it shows the rows when they
-        # come); social sharing waits for it rather than post a board with empty rows (0.19.5, seen on the real Pi:
-        # KLM24V posted with no registration, no model and no route, thirty seconds after it appeared)
-        pending = []
-        if route is None and route_lookup is not None and getattr(route_lookup, "pending", None) and route_lookup.pending(flight):
-            pending.append("route")
         # The decoder only knows the type and the registration when its aircraft database has the airframe. When it
         # does not, ask adsbdb.com (by the aircraft's hex code) so the model is still shown and the silhouette fits.
         reg, code, found = ac.get("r"), ac.get("t"), None
@@ -920,6 +925,9 @@ def lookup_route_fallback(callsign):
     """Non-blocking: the routes hexdb knows for this callsign (a list), or None while unknown / not asked yet."""
     cs = (callsign or "").strip().upper()
     return _routes2.get(cs) if CALLSIGN_RE.match(cs) else None
+
+
+lookup_route_fallback.pending = lambda callsign: _routes2.pending((callsign or "").strip().upper())
 
 
 # --------------------------------------------------------------------------- aircraft model (adsbdb.com, optional)

@@ -245,6 +245,29 @@ class SettleTest(unittest.TestCase):
                                      49.25, 6.2, 10, route_lookup=route)
         self.assertEqual(planes[0]["pending"], ["route"])
 
+    def test_a_second_opinion_on_its_way_is_waited_for_too(self):
+        # 0.19.9, seen on the real Pi: RYR8526 over Metz heading south-east. adsbdb said Berlin -> Stansted (another
+        # flight under that callsign: rightly refused); hexdb, asked next, said Charleroi -> Reggio Calabria, which
+        # is this one, but the post had gone before its answer came
+        srv = social.server
+        ber = {"iata": "BER", "city": "Berlin", "name": "Berlin Brandenburg", "lat": 52.35139, "lon": 13.49389}
+        stn = {"iata": "STN", "city": "London", "name": "London Stansted", "lat": 51.885, "lon": 0.235}
+        crl = {"iata": "CRL", "city": "Charleroi", "name": "Brussels South Charleroi", "lat": 50.459, "lon": 4.4538}
+        reg = {"iata": "REG", "city": "Reggio Calabria", "name": "Reggio Calabria", "lat": 38.0712, "lon": 15.6516}
+        sky = {"aircraft": [{"hex": "4ca7b5", "flight": "RYR8526", "lat": 49.35, "lon": 6.15, "alt_baro": 34000, "track": 140, "gs": 465}]}
+        first = lambda cs: {"from": ber, "to": stn}
+        first.pending = lambda cs: False
+        asked = lambda cs: None
+        asked.pending = lambda cs: True
+        planes, _ = srv.build_planes(sky, 49.25, 6.2, 20, route_lookup=first, route_fallback=asked)
+        self.assertIsNone(planes[0]["route"], "Berlin -> Stansted cannot be an aircraft over Metz heading south-east")
+        self.assertEqual(planes[0]["pending"], ["route"], "hexdb is on its way: wait")
+        came = lambda cs: [{"from": crl, "to": reg}]
+        came.pending = lambda cs: False
+        planes, _ = srv.build_planes(sky, 49.25, 6.2, 20, route_lookup=first, route_fallback=came)
+        self.assertEqual(planes[0]["route"]["to"]["city"], "Reggio Calabria")
+        self.assertEqual(planes[0]["pending"], [])
+
 
 class ChoiceTest(unittest.TestCase):
     def test_all_means_every_rule_and_the_special_aircraft_first(self):
