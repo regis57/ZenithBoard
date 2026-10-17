@@ -39,24 +39,29 @@ CHARS = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,-/:+()→"   # what a flap carri
 
 TILE_HOST = "https://tiles.maps.eox.at/wmts/1.0.0/"
 S2_YEAR = 2025                               # the newest Sentinel-2 cloudless layer EOX publishes (s2cloudless-2025_3857)
-EOX_LINK = ("maps.eox.at", "https://maps.eox.at")
+# Two credits for each map. credit_full is the whole required text: drawn on the picture and read in the alt text.
+# credit is the line in the post: short, with its words as links (Bluesky shows a word and opens its address), so the
+# post carries what the licences ask of an online publication — the name, and a way to the details — without three
+# lines of small print under every aircraft (0.19.6, asked for after the first satellite post). OSMF's attribution
+# guideline accepts "© OpenStreetMap" with the name linked to its copyright page; EOX asks for its name and a link.
+OSM_LINK = ("OpenStreetMap", "https://www.openstreetmap.org/copyright")
+EOX_LINK = ("EOX", "https://maps.eox.at")
 MAP_STYLES = {
     "normal": {"layers": [("osm_3857", "jpg")], "words": "an OpenStreetMap map",
-               "credit": "Map © OpenStreetMap contributors, EOX maps.eox.at", "links": [EOX_LINK], "credit_short": "Map © OSM, EOX maps.eox.at",
-               "credit_full": "© OpenStreetMap contributors, rendering © EOX (maps.eox.at)"},
+               "credit": "Map \u00a9 OpenStreetMap, EOX", "links": [OSM_LINK, EOX_LINK],
+               "credit_full": "\u00a9 OpenStreetMap contributors, rendering \u00a9 EOX (maps.eox.at)"},
     "night": {"layers": [("osm_3857", "jpg")], "night": True, "words": "a darkened OpenStreetMap map",
-              "credit": "Map © OpenStreetMap contributors, EOX maps.eox.at", "links": [EOX_LINK], "credit_short": "Map © OSM, EOX maps.eox.at",
-              "credit_full": "© OpenStreetMap contributors, rendering © EOX (maps.eox.at)"},
+              "credit": "Map \u00a9 OpenStreetMap, EOX", "links": [OSM_LINK, EOX_LINK],
+              "credit_full": "\u00a9 OpenStreetMap contributors, rendering \u00a9 EOX (maps.eox.at)"},
     "terrain": {"layers": [("terrain_3857", "jpg"), ("overlay_3857", "png")], "words": "a terrain map",
-                "credit": "Map © OpenStreetMap contributors and others, EOX maps.eox.at", "links": [EOX_LINK], "credit_short": "Map © OSM and others, EOX maps.eox.at",
-                "credit_full": "Terrain: data © OpenStreetMap contributors and others, rendering © EOX (maps.eox.at)"},
+                "credit": "Map \u00a9 OpenStreetMap and others, EOX", "links": [OSM_LINK, EOX_LINK],
+                "credit_full": "Terrain: data \u00a9 OpenStreetMap contributors and others, rendering \u00a9 EOX (maps.eox.at)"},
     "satellite": {"layers": [("s2cloudless-%d_3857" % S2_YEAR, "jpg"), ("overlay_bright_3857", "png")], "words": "a satellite map",
-                  "credit": "Map: EOxCloudless %d by EOX, cloudless.eox.at, Copernicus Sentinel data; labels © OpenStreetMap contributors, maps.eox.at" % S2_YEAR,
-                  "links": [("cloudless.eox.at", "https://cloudless.eox.at"), EOX_LINK],
-                  "credit_short": "Map: EOxCloudless %d by EOX, cloudless.eox.at; labels © OSM, maps.eox.at" % S2_YEAR,
+                  "credit": "Map: EOxCloudless by EOX, \u00a9 OpenStreetMap",
+                  "links": [("EOxCloudless", "https://cloudless.eox.at"), ("EOX", "https://eox.at"), OSM_LINK],
                   "credit_full": "EOxCloudless %d https://cloudless.eox.at by EOX IT Services GmbH (Contains modified Copernicus Sentinel data %d); "
-                                 "labels © OpenStreetMap contributors, rendering © EOX" % (S2_YEAR, S2_YEAR)},
-    "none": {"layers": [], "words": "", "credit": None, "credit_short": None, "links": [], "credit_full": None},
+                                 "labels \u00a9 OpenStreetMap contributors, rendering \u00a9 EOX" % (S2_YEAR, S2_YEAR)},
+    "none": {"layers": [], "words": "", "credit": None, "links": [], "credit_full": None},
 }
 MAX_ZOOM, MIN_ZOOM = 12, 4                   # 12: about 18 km across the map at 49 degrees north
 FIT = 0.7                                    # the track takes at most this share of the map, so the aircraft is never on the edge
@@ -430,5 +435,5 @@ def render(lines, trace, plane, out, color="#ffb000", units="metric", map_mode="
     img.paste(mp, (MAP_X, M))
     size = save_jpeg(img, out)
     st = MAP_STYLES.get(shown) or MAP_STYLES["none"]
-    return {"width": W, "height": H, "bytes": size, "map": shown, "credit": st["credit"], "credit_short": st["credit_short"], "links": list(st["links"]),
+    return {"width": W, "height": H, "bytes": size, "map": shown, "credit": st["credit"], "links": list(st["links"]),
             "credit_full": st["credit_full"], "map_words": st["words"] or "a plain dark background"}

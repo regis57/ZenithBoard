@@ -539,14 +539,12 @@ def range_words(km):
 POST_MAX = 300                   # Bluesky's limit, in characters
 
 
-def fit_post(body, credit, tags, credit_short=None):
-    """The three lines inside Bluesky's 300 characters: first the credit shortened, then hashtags dropped from the
-    end, then the body cut at a separator. Never a hashtag cut in the middle (a wrong, clickable tag) and never a
-    credit cut (0.19.0, found in review: a range record with the satellite map was 300 characters exactly)."""
+def fit_post(body, credit, tags):
+    """The post's lines inside Bluesky's 300 characters: the text, the hashtags, the map's credit last, as a
+    footnote (0.19.6: it sat between the text and the hashtags). When it is too long: hashtags dropped from the end,
+    then the body cut at a separator. Never a hashtag cut in the middle (a wrong, clickable tag) and never the credit."""
     def join(b, cr, t):
-        return "\n".join(x for x in (b, cr or "", t) if x)
-    if len(join(body, credit, tags)) > POST_MAX and credit_short:
-        credit = credit_short
+        return "\n".join(x for x in (b, t, cr or "") if x)
     words = tags.split()
     while len(join(body, credit, " ".join(words))) > POST_MAX and words:
         words.pop()
@@ -556,7 +554,7 @@ def fit_post(body, credit, tags, credit_short=None):
     return join(body, credit, tags)[:POST_MAX]
 
 
-def post_text(p, c, why=None, credit=None, credit_short=None):
+def post_text(p, c, why=None, credit=None):
     """The post. English, short, nothing the wall does not know. Starts with the flight ("Flight Etihad #ETD11K"),
     ends with the place ("above Trémery"); a range record ends with where it was seen from instead, since it was
     nowhere near overhead. credit: the map's credit line, when the picture has a map."""
@@ -606,7 +604,7 @@ def post_text(p, c, why=None, credit=None, credit_short=None):
         tags = tags.replace("#avgeek", "#helicopter") if "#avgeek" in tags else tags + " #helicopter"
     if p.get("military"):
         tags = tags.replace("#avgeek", "#military") if "#avgeek" in tags else tags + " #military"
-    return fit_post(text, credit, tags.strip(), credit_short)
+    return fit_post(text, credit, tags.strip())
 
 
 def alt_text(p, c, trace, look="dots", info=None):
@@ -736,7 +734,7 @@ def bluesky_facets(text, links=None):
         facets.append({"index": {"byteStart": a, "byteEnd": b},
                        "features": [{"$type": "app.bsky.richtext.facet#tag", "tag": m.group(1)}]})
     for label, uri in links or ():
-        at = text.find(label)
+        at = text.rfind(label)                   # the credit is the last line: its words, not the same word higher up
         if at >= 0 and uri.startswith("https://"):
             a, b = _byte_span(text, at, at + len(label))
             facets.append({"index": {"byteStart": a, "byteEnd": b},
@@ -809,7 +807,7 @@ def publish(p, trace, why, c, sec, dry=False, keep=None):
     results = {}
     try:
         info = render(p, trace, c, base)
-        text = post_text(p, c, why, info.get("credit"), info.get("credit_short"))
+        text = post_text(p, c, why, info.get("credit"))
         alt = alt_text(p, c, trace, style_of(c), info)
         if keep:
             try:

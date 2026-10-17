@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.19.6
+- **The map credit in a post is one short line, at the end:** *Map © OpenStreetMap, EOX* (satellite: *Map: EOxCloudless by EOX, © OpenStreetMap*), each name a link — to OpenStreetMap's copyright page, to EOX. It was three lines of small print between the text and the hashtags. The whole required text is still drawn on the picture and read in the alt text; OpenStreetMap's attribution guideline accepts the name linked to its copyright page, and EOX asks an online publication for its name and a link. Asked for after the first satellite post.
+
 ## 0.19.5
 - **A post waits for the aircraft's details.** KLM24V went out with empty registration, model and route rows: the wall asks adsbdb about an aircraft when it comes inside the radius it is asked about, and the service, whose track had followed it from far out, posted it the same second. `/api/planes` now says which lookups are still on their way (`pending`), and the service waits for them, up to two minutes from the first time it saw them pending, then posts with what is known. `social test` waits inside its half minute.
 - **Optional: posts that vary.** `social look alternate` (dot-matrix and split-flap, one post each), `social colour rotate` (amber, green, red, white, turquoise in turn; the wall's dark blue is left out of the turn, it reads poorly on a phone), `social map rotate` (the four maps in turn, at each split-flap post). Over ten posts each look meets each colour. `social status` names the next picture; posts made by hand move the turn on. Off by default; the wizard offers each.
