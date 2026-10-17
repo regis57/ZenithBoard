@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.18.0
+- **Social sharing, off by default: the aircraft worth a post, on Bluesky and Mastodon, as a picture of the wall.** `sudo zenithboard social setup` asks for a Bluesky app password or a Mastodon access token (never a real password), tries the accounts, then asks for the words: the place named in the posts, the sharing radius, the minimum gap between posts, and what is worth a post — a rare type, military, a helicopter, a heavy, the farthest of the day, or anything. `social test` draws the picture and prints the text without posting; `social on` starts the service. Menu: *4 Settings → 6 Social sharing*.
+- **The picture is the dot-matrix wall with the aircraft's track** over the last minutes in the right-hand column, drawn by the Pi itself from the wall's own code — no browser, no photo, under a second on a Pi 3B. Node is installed from Debian for it when sharing is switched on; nothing else is added.
+- **Nothing that gives the receiver away leaves the Pi:** no distance, no bearing, the time where the tablet shows them, the track centred on the aircraft with no map. The Planespotters photo is not posted (their terms). Secrets live in `/etc/zenithboard/social.env`, root-owned, mode 0640, read by the service only; `zenithboard security` checks it. The picture is drawn in memory and deleted after each post.
+- The service runs as the `zenithboard` user in the wall's sandbox (1.3), and `zenithboard update` carries it. Wiki: [Social sharing](https://github.com/regis57/ZenithBoard/wiki/Social-sharing).
+
 ## 0.17.4
 - **The gear panel offers the statistics page, while there is one.** Beside the version, in the same grey: `ZenithBoard 0.17.4 · Statistics`. It appears only when `STATS=1` and goes as soon as statistics are switched off, because a link to a feature nobody turned on leads to a page that says "off" — a dead end dressed as a door. `/api/config` carries the setting; the wall reloads by itself within seconds of `zenithboard stats on` or `off`, so the link follows without touching the tablet.
 

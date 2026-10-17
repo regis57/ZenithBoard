@@ -14,6 +14,8 @@ The code is complete enough. What it lacks is proof.
 
 ## Next — once the above is proven
 
+* **Social sharing on a Pi 4: the split-flap look and the real tar1090 map in the picture** (0.18.1). Both need a headless Chromium — about 400 MB for ten seconds — so they are for Pis with 2 GB or more, detected and refused below. The map goes without the site marker and the range rings, with OpenStreetMap's attribution kept; a satellite layer if tar1090's own layer list offers one that allows it.
+
 * **Enrich the statistics page**, later, once there are some weeks of real data to look at: coverage by direction (which side of the sky the antenna hears best) and the airlines seen most often. The page today shows messages per hour, the farthest aircraft and aircraft per day ([Statistics](Statistics)); nothing is added before the real figures show what is worth drawing.
 * **A decision on AirNav RadarBox.** A fifth feeder is only worth it if its MLAT does not fight the single-MLAT rule. Waiting on a few nights of data first.
 * **Wi-Fi hardening**: `autoconnect-retries` and turning the radio's power saving off are two `nmcli` settings that cost nothing. No longer urgent — the night losses turned out to be an access point on a timer, not the Pi — but they would shorten the recovery when a network does come back.

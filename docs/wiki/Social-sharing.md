@@ -1,0 +1,141 @@
+# Social sharing
+
+Off by default. Switched on, the Pi posts the aircraft worth a post — a military tanker, a Beluga, a type it has not seen in a month — to **Bluesky** and/or **Mastodon**, as a picture of the wall with a short text. The picture is the dot-matrix board as it is at that moment, and in the right-hand column the aircraft's track over the last minutes, drawn in the same dots. No photo, no map, no browser: the Pi draws it itself in under a second, on a Pi 3B included.
+
+```bash
+sudo zenithboard social setup      # the accounts, once      (or: menu -> 4 Settings -> 6 Social sharing)
+sudo zenithboard social test       # draw the picture, print the text, post nothing
+sudo zenithboard social on         # from now on, under the rules you chose
+```
+
+Why not X, Threads or Instagram: X closed its free API in February 2026 and charges per post; Threads and Instagram cannot take an uploaded picture, they fetch it from a public address, which would mean putting the Pi on the internet. Bluesky and Mastodon take the picture directly, cost nothing, and their APIs are open. See [When a provider changes something](Providers) for the general attitude.
+
+---
+
+## Step by step
+
+### 1. Create the account, and its secret
+
+The Pi never gets your real password. Each network has a secret made for one program, which you can revoke without changing anything else.
+
+**Bluesky.** Create the account at bsky.app. Then *Settings → Privacy and Security → App Passwords → Add App Password*. Name it `zenithboard`. The password is shown **once**, in the form `xxxx-xxxx-xxxx-xxxx`: copy it. The wizard asks for your handle (`yourname.bsky.social`, without `@`) and that app password.
+
+**Mastodon.** Create the account on the instance of your choice. Then *Preferences → Development → New application*. Name it `ZenithBoard`, tick **only** `write:media` and `write:statuses`, untick everything else, save. Open the application and copy **Your access token**. The wizard asks for the instance address (`https://mastodon.social`) and that token.
+
+Revoking: delete the app password on Bluesky, or the application on Mastodon. The Pi's posts stop with the next attempt, and `zenithboard social check` says so.
+
+### 2. Run the wizard
+
+```bash
+sudo zenithboard social setup
+```
+
+Tick the networks, paste each secret (typed blind, as a password), and the wizard **tries the accounts before going further**: a session on Bluesky, `verify_credentials` on Mastodon. A refusal is shown and nothing more is asked. Then it asks for the words:
+
+| Question | What it is for | Default |
+|---|---|---|
+| Where is this? | The place named in the posts — *over Luxembourg*. Your words. The receiver's position is never used, and never sent | nothing |
+| Sharing radius | An aircraft is a candidate while inside it. Separate from the wall's radius | 15 km |
+| Minimum minutes between posts | So the account is not a firehose | 120 |
+| What is worth a post | See the rules below | rare, military, helicopter, heavy, farthest |
+
+### 3. Try it
+
+```bash
+sudo zenithboard social test
+```
+
+Waits up to half a minute for an aircraft with a track, draws the picture, and prints the text and the alt text. Nothing is posted. The picture is at `http://PI-ADDRESS:8080/social/preview`, on your home network like the wall. `social test 4071f1` does it for one aircraft by its hex code.
+
+### 4. Switch it on
+
+```bash
+sudo zenithboard social on
+zenithboard social status
+zenithboard logs social
+```
+
+`on` installs Node from Debian if it is missing (it draws the picture; about 30 MB, the only thing the feature adds), starts the service, and says the rules it will follow. `off` stops it and keeps the accounts; `remove` forgets the accounts too.
+
+---
+
+## What gets posted, and what never does
+
+**The rules.** An aircraft is a candidate while inside the sharing radius, known (a type, a registration or an airline — an aircraft with nothing known is never posted), airborne, with at least thirty seconds of track, and not posted in the last day. Among the candidates, the rules say which are worth it:
+
+| Rule | Posts an aircraft that is… |
+|---|---|
+| `rare` | of a type seen twice or less in the last thirty days (this sighting included) |
+| `military` | military, by the decoder's database flag or by its type |
+| `helicopter` | a helicopter |
+| `heavy` | an A380, 747, Beluga, Antonov 124/225, C-5, C-17, A400M, or any four-engined airliner |
+| `farthest` | farther than anything today, and more than 50 km out |
+| `any` | anything at all: the best-known aircraft of the moment, once per gap |
+
+Several rules can match; the best candidate is the one matching the most, and knowing the most (route, airline, model each count). One post per gap, at most.
+
+**The text.** Says what the wall knows, in English, and nothing it does not:
+
+| Case | Text |
+|---|---|
+| Airline flight, route known | `✈ easyJet EZY1234 · Airbus A320neo · Edinburgh → Saint-Louis · 11 280 m over Luxembourg` |
+| Airline flight, route unknown | `✈ British Airways BAW123 · Airbus A380-800 · 11 900 m over Luxembourg` |
+| No airline known | `✈ Airbus A330-743 Beluga XL · F-GXLH · BGA113J · 9 750 m over Luxembourg` |
+| Helicopter | `🚁 Airbus Helicopters H145 · D-HABC · low over Luxembourg` |
+| Military, no callsign | `✈ Military · Boeing KC-135R Stratotanker · 7 620 m over Luxembourg` |
+| Farthest of the day | `… · 332 km out — farthest today` |
+| Nothing known | no post |
+
+Then the hashtags (`#ADSB #avgeek #ZenithBoard` by default; `#helicopter` or `#military` replace `#avgeek` when they apply). The picture carries an alt text built from the same facts, for screen readers. Units follow the wall's setting.
+
+**What never leaves the Pi:**
+
+* **The receiver's position**, and anything that gives it away: the posts carry no distance and no bearing, the picture's last row shows the time where the tablet shows `12KM NE`, and the track is centred on the aircraft, north up, with no map behind it. A hundred posts give nothing to triangulate.
+* **The Planespotters photo.** Their terms forbid re-hosting it. The track takes its place.
+* **The secrets.** They live in `/etc/zenithboard/social.env`, owned by root, readable by the `zenithboard` group (the service's user), mode 0640; never in `config.env`, never in a log, never in `zenithboard config`. `zenithboard security` checks the file's owner and mode.
+* **The picture itself**, after the post: it is drawn in `/run/zenithboard/social` — memory, not the card — and deleted once the networks have answered, whether they took it or not.
+
+---
+
+## How it works
+
+`zenithboard-social.service` runs `flightinfo/social.py` as the `zenithboard` user inside the same sandbox as the wall (exposure 1.3 on systemd's scale; `tests/test_units.sh` holds the ceiling). Every five seconds it reads the decoder's `aircraft.json` and keeps the last fifteen minutes of positions per aircraft in memory. Every fifteen seconds it asks the wall itself, on the loopback, which aircraft are inside the sharing radius — with everything the wall knows about them: airline, model, route, flags. When a candidate passes the rules and the gap has passed, it draws the picture and posts it.
+
+The picture is `tools/social-render.js`: Node reads `app.js` and lifts the wall's own text functions (the way the tests do), draws the rows, the flags from `flags.js`, the track in the right-hand column, and writes the PNG with Node's `zlib`. About 60 KB, under a second on a Pi 3B. Bluesky takes at most 1,000,000 bytes per picture; this is far below.
+
+The networks are four requests each, standard library only: Bluesky `createSession → uploadBlob → createRecord` (hashtags as facets, so they are clickable; the alt text and the aspect ratio with the image); Mastodon `POST /api/v2/media` (multipart, with the description) then `POST /api/v1/statuses` with an idempotency key, so a retry cannot post twice.
+
+State lives in `/var/lib/zenithboard/social/state.json`: which types were seen on which days (for `rare`), which aircraft were posted today, the farthest of the day, and the last post's time. `social remove` deletes it.
+
+---
+
+## What the hardware allows
+
+| Pi | Picture | Why |
+|---|---|---|
+| Pi 3B and up | Dot-matrix wall + track, as described | No browser, no library: Node draws dots |
+| Pi 4 and up, 2 GB or more | *Coming in 0.18.1:* the split-flap look, and the real tar1090 map in the right-hand column | Those need a headless Chromium: about 400 MB for ten seconds per post |
+
+---
+
+## Updating and removing
+
+`sudo zenithboard update` carries the service like every other: the unit file is refreshed and the service restarted when sharing is on. The secrets are untouched by an update.
+
+```bash
+sudo zenithboard social off       # stop posting; accounts kept
+sudo zenithboard social remove    # accounts, state and service gone (Node stays: apt remove nodejs)
+```
+
+---
+
+## Troubleshooting
+
+| What you see | What to do |
+|---|---|
+| `social check` says FAILED for Bluesky | The handle has no `@`, and the password is the *app* password, not the account's. Make a new app password if in doubt |
+| `social check` says FAILED for Mastodon | The address starts with `https://` and has no path; the token is from an application with `write:media` and `write:statuses` |
+| `social test` says nothing to show | No aircraft with thirty seconds of track inside the sharing radius right now. Try a wider radius, or `social test HEX` with an aircraft from `zenithboard status` |
+| It posts nothing for days | Look at `zenithboard social status` — the rules may be strict for your sky. `rare` needs a month of history to mean anything. Add `any` to see it work, then take it out |
+| `zenithboard logs social` shows `the wall did not answer` | The wall server is down: `zenithboard status`, `zenithboard logs flightinfo` |
+| A post went out that you would rather not have | Delete it on the network. Narrow the rules with `social words`. Nothing posted can be recalled by the Pi |

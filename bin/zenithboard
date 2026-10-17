@@ -21,6 +21,8 @@ HERE="$(dirname "$(readlink -f "$0")")"
 . "$HERE/../lib/security.sh"
 # shellcheck source=lib/stats.sh
 . "$HERE/../lib/stats.sh"
+# shellcheck source=lib/social.sh
+. "$HERE/../lib/social.sh"
 # shellcheck source=lib/gain.sh
 . "$HERE/../lib/gain.sh"
 # shellcheck source=lib/uat.sh
@@ -72,6 +74,13 @@ ZenithBoard $ZB_VERSION - ADSB Flight Info
   zenithboard stats                     today, yesterday, 30 days, and messages per hour as a sparkline
   zenithboard stats on|off|status       collect a sample every 15 minutes (off by default; the page is /stats)
   zenithboard stats csv|clear           the raw samples / empty them
+  zenithboard social setup              accounts for Bluesky / Mastodon (a wizard; asks for an app password or a token)
+  zenithboard social words              the place name, the radius, the gap between posts, what is worth a post
+  zenithboard social test [HEX]         draw the picture and print the text, post nothing (see it at /social/preview)
+  zenithboard social on|off|status      post the aircraft overhead as a picture of the wall (off by default)
+  zenithboard social post [HEX]         post now, once
+  zenithboard social check              try the accounts
+  zenithboard social remove             forget the accounts, stop the service
   zenithboard photos on|off             aircraft photos on the wall (needs internet on the Pi)
   zenithboard photos test [HEX]         check that this Pi can fetch photos from Planespotters
   zenithboard routes on|off             show where each flight comes from / goes to (looked up by callsign, needs internet)
@@ -82,7 +91,7 @@ ZenithBoard $ZB_VERSION - ADSB Flight Info
   zenithboard update list               what is installed and can be updated one by one
   zenithboard update only NAME...       update just those (e.g. readsb flightinfo)
   zenithboard mlat-guard                re-enforce a single MLAT client
-  zenithboard logs [flightinfo|acars|decoder|uat]   show the last 100 lines of a service
+  zenithboard logs [flightinfo|acars|decoder|uat|social]   show the last 100 lines of a service
   zenithboard logs usage|review         size of the system logs / size + recent warnings
   zenithboard logs limit MB|default     cap the size of the system logs (10-2000 MB)
   zenithboard logs clean                delete ALL logs now
@@ -210,6 +219,19 @@ case "${1:-}" in
       csv)    stats_csv ;;
       clear)  root_or_die; stats_clear ;;
       *) die "Usage: zenithboard stats [on|off|status|csv|clear]" ;;
+    esac ;;
+  social)
+    case "${2:-status}" in
+      setup)  root_or_die; social_setup ;;
+      words)  root_or_die; social_setup_words ;;
+      on)     root_or_die; social_on ;;
+      off)    root_or_die; social_off ;;
+      test)   root_or_zb; social_need_node && social_prepare_dir && { [ "$(id -u)" -ne 0 ] && python3 "$SOCIAL_PY" test "${3:-}" || sudo -u "$ZB_USER" python3 "$SOCIAL_PY" test "${3:-}"; } ;;
+      post)   root_or_zb; social_need_node && social_prepare_dir && { [ "$(id -u)" -ne 0 ] && python3 "$SOCIAL_PY" post "${3:-}" || sudo -u "$ZB_USER" python3 "$SOCIAL_PY" post "${3:-}"; } ;;
+      check)  root_or_die; python3 "$SOCIAL_PY" check ;;
+      status) social_status ;;
+      remove) root_or_die; social_remove ;;
+      *) die "Usage: zenithboard social setup|words|on|off|test [HEX]|post [HEX]|check|status|remove" ;;
     esac ;;
   patches)
     case "${2:-status}" in
@@ -347,9 +369,10 @@ case "${1:-}" in
       auto-run) root_or_die; logs_auto_run ;;
       uat) journalctl -u dump978-fa -u skyaware978 -n 100 --no-pager ;;
       flightinfo) journalctl -u zenithboard-flightinfo -n 100 --no-pager ;;
+      social) journalctl -u zenithboard-social -n 100 --no-pager ;;
       acars) journalctl -u zenithboard-acarsdec -u zenithboard-acars-ingest -n 100 --no-pager ;;
       decoder) journalctl -u "$(cfg_get DECODER readsb)" -n 100 --no-pager ;;
-      *) die "Usage: zenithboard logs [flightinfo|acars|decoder]" ;;
+      *) die "Usage: zenithboard logs [flightinfo|acars|decoder|social]" ;;
     esac ;;
   menu) root_or_die; exec "$HERE/../install.sh" ;;
   version|--version) echo "ZenithBoard $ZB_VERSION" ;;

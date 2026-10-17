@@ -1,0 +1,46 @@
+[Unit]
+Description=ZenithBoard social sharing (posts the aircraft overhead to Bluesky / Mastodon as a picture of the wall)
+After=network-online.target zenithboard-flightinfo.service
+Wants=network-online.target
+
+[Service]
+ExecStart=/usr/bin/python3 /opt/zenithboard/flightinfo/social.py run
+Restart=always
+RestartSec=10
+# Runs as the wall's own user: it reads the decoder's aircraft.json under /run, asks the wall on the loopback,
+# keeps its state under /var/lib/zenithboard/social and draws the picture in /run/zenithboard/social (memory,
+# deleted after each post). It needs the internet to post, and node to draw. Nothing here needs root.
+User=zenithboard
+Group=zenithboard
+Environment=ZENITHBOARD_CONFIG=/etc/zenithboard/config.env
+RuntimeDirectory=zenithboard/social
+RuntimeDirectoryMode=0700
+ReadWritePaths=/var/lib/zenithboard/social
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+# Sandbox, as for the wall server. Measure with: systemd-analyze security zenithboard-social
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+ProtectProc=invisible
+ProcSubset=pid
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+CapabilityBoundingSet=
+AmbientCapabilities=
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

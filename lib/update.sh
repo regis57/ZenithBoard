@@ -285,6 +285,7 @@ zb_update_components() {
   if [ "$(cfg_get NETWATCH 0)" = 1 ]; then netwatch_install_units; fi
   if [ "$(cfg_get GAINLOG 0)" = 1 ]; then gain_log_install_units; fi
   if [ "$(cfg_get STATS 0)" = 1 ]; then stats_install_units; fi
+  if [ "$(cfg_get SOCIAL 0)" = 1 ]; then social_install_units; fi
   zb_mlat_guard
   zb_wall_check
   log "Update finished. Check:  zenithboard status"

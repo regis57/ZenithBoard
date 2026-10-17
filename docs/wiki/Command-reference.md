@@ -30,6 +30,13 @@ Every `zenithboard` command, grouped by what you are trying to do. `zenithboard`
 | `zenithboard stats` | | Today, yesterday, the 30-day average and best, and messages per hour as a sparkline. See [Statistics](Statistics) |
 | `zenithboard stats on` · `off` · `status` | yes | Collect a sample every 15 minutes (off by default). `off` keeps the files |
 | `zenithboard stats csv` · `clear` | yes for clear | The raw samples as CSV; empty them |
+| `zenithboard social setup` | yes | The accounts: Bluesky (an app password), Mastodon (an access token). A wizard that tries each account before it is done. See [Social sharing](Social-sharing) |
+| `zenithboard social words` | yes | The place name the posts carry, the sharing radius, the gap between posts, and what is worth a post |
+| `zenithboard social test [HEX]` | | Draw the picture and print the text for the best candidate (or that aircraft); post nothing. The picture is at `/social/preview` |
+| `zenithboard social on` · `off` · `status` | yes | Post the aircraft overhead as a picture of the wall (off by default). `off` keeps the accounts |
+| `zenithboard social post [HEX]` | | Post now, once, whatever the gap |
+| `zenithboard social check` | yes | Try the accounts: a session on Bluesky, `verify_credentials` on Mastodon |
+| `zenithboard social remove` | yes | Forget the accounts, stop the service, delete its state |
 | `zenithboard photos on` · `off` | yes | Aircraft photos from Planespotters. Off: the animated sky scene instead |
 | `zenithboard photos test [HEX]` | | Can this Pi reach Planespotters? One real request, and the answer |
 | `zenithboard routes on` · `off` | yes | Origin and destination, looked up by callsign. Off: no callsign leaves the Pi |
@@ -90,7 +97,7 @@ All three are off until you turn them on. How they decide, and how to read a bad
 | Command | sudo | What it is for |
 |---|---|---|
 | `zenithboard logs` | | The wall's own service, last 100 lines |
-| `zenithboard logs decoder` · `acars` · `uat` | | The last 100 lines of that service |
+| `zenithboard logs decoder` · `acars` · `uat` · `social` | | The last 100 lines of that service |
 | `zenithboard logs usage` | | How much space the system logs take |
 | `zenithboard logs review` | | Size, plus the recent warnings |
 | `zenithboard logs limit MB` · `default` | yes | Cap the system logs, 10–2000 MB |
@@ -150,6 +157,7 @@ Listed so that nothing in `ps` or the journal is a mystery. Running them by hand
 | `zenithboard netwatch run` | `zenithboard-netwatch.timer` | 2 minutes, if the network watchdog is on |
 | `zenithboard logs auto-run` | `zenithboard-logs-clean.timer` | day, if automatic cleaning is on |
 | `zenithboard stats run` | `zenithboard-stats.timer` | 15 minutes, if statistics are on; runs as the `zenithboard` user |
+| `flightinfo/social.py run` | `zenithboard-social.service` | A service, if social sharing is on: reads `aircraft.json` every 5 s, asks the wall every 15 s, posts under the rules; runs as the `zenithboard` user |
 | `zenithboard ddns update` | `zenithboard-ddns.timer` | 5 minutes, if a name is set |
 | `zenithboard wifi apply` | `zenithboard-wifi.service` | boot |
 | `zenithboard update-components` | `zenithboard update` | update |

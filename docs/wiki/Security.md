@@ -18,7 +18,7 @@ ZenithBoard runs as root on a machine in your home, listens on your network, and
 | Downloads run as root | Private `mktemp` folder (mode 700), https only, no downgrade on redirect | 0.12.0, fixed in 0.12.1 |
 | Third-party installers | **Trusted, not checked** — written down below | always |
 | Package signatures | Never turned off. The Flightradar24 key is installed only if its fingerprint matches | always |
-| Secrets | The dynamic-DNS token and the Grafana password never go on a command line, into `config.env` or into a log; both live in root-only files | always; Grafana 0.15.0 |
+| Secrets | The dynamic-DNS token, the Grafana password and the social-network secrets never go on a command line, into `config.env` or into a log; they live in root-owned files (the social one readable by the service's group) | always; Grafana 0.15.0; social 0.18.0 |
 | Grafana | ZenithBoard sets the admin password itself at install and at update, so `admin`/`admin` is never left open | 0.15.0 |
 | The operating system | Debian's security fixes can install themselves daily, from the security channel only; the feeders are left alone | 0.15.0 |
 | Checking all of it | `zenithboard security` reads the running Pi and says what is open and how to close it | 0.15.0 |
@@ -26,6 +26,7 @@ ZenithBoard runs as root on a machine in your home, listens on your network, and
 | The `main` branch | A GitHub ruleset: pull request only, squash only, signed commits, the three checks must pass, no force push, no deletion. It refused a merge when the tests failed | October 2026 |
 | Secrets in the repository | GitHub secret scanning and push protection are on | October 2026 |
 | Statistics | Off by default. Its sample runs as the `zenithboard` user in the same kind of sandbox, and the `/stats` page answers the same networks as the wall | 0.16.0 |
+| Social sharing | Off by default. Posts carry no distance, no bearing, no map and no photo; the service runs as the `zenithboard` user in the wall's sandbox; the account secrets are root:zenithboard 0640, checked by the audit; the picture is drawn in memory and deleted after the post | 0.18.0 |
 
 ## What is exposed on your network
 
@@ -38,6 +39,7 @@ ZenithBoard runs as root on a machine in your home, listens on your network, and
 | Plane Finder, port 30053 | Same | Its own setup page |
 | SkyAware, port 8504 (or 8978) | Same | Served by FlightAware's lighttpd, not by ZenithBoard. `zenithboard security` names it |
 | `/stats`, `/api/stats` | Same as the wall | Only when `STATS=1`. Counts and ranges per hour and per day; the antenna's position is not part of it |
+| `/social/preview` | Same as the wall | The picture `zenithboard social test` drew, if any |
 
 **Do not forward any of these from the internet.** Nothing here expects a hostile visitor: there is no login on the wall, no rate limit, and no audit trail. To see your wall from outside, use a VPN into your home network. The dynamic-DNS feature exists so *you* can find your Pi, not so the world can.
 
@@ -64,6 +66,7 @@ Every ZenithBoard service is sandboxed since 0.15.0, each keeping only what its 
 | `zenithboard-flightinfo` | 1.3 | Nothing: it reads, and talks to the internet for photos and routes |
 | `zenithboard-acars-ingest` | 1.3 | Writes `acars.db` |
 | `zenithboard-gain-log` | 1.0 | Runs as the `zenithboard` user, not root, since 0.15.0: it reads `stats.json` and appends one CSV line |
+| `zenithboard-social` | 1.3 | Reads `aircraft.json`, asks the wall on the loopback, writes its own state folder, posts over the internet. Node runs inside the same box to draw the picture |
 | `zenithboard-logs-clean` | 1.4 | May write the journal folder, nothing else |
 | `zenithboard-ddns` | 1.7 | curl, no capability at all; its status line lives in `/run/zenithboard` |
 | `zenithboard-data-refresh` | 4.2 | Writes the aircraft-type list |

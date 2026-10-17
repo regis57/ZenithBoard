@@ -21,6 +21,8 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$ROOT/lib/security.sh"
 # shellcheck source=lib/stats.sh
 . "$ROOT/lib/stats.sh"
+# shellcheck source=lib/social.sh
+. "$ROOT/lib/social.sh"
 . "$ROOT/lib/uat.sh"
 . "$ROOT/lib/wifi.sh"
 . "$ROOT/lib/network.sh"
@@ -193,9 +195,11 @@ settings_menu() {
       wall "3  ZenithBoard wall: radius, look, colour, photos, routes..." \
       logs "4  Logs: size limit, review, automatic cleaning" \
       reliability "5  Reliability: watchdogs, saved logs, health check" \
+      social "6  Social sharing: post the aircraft overhead to Bluesky / Mastodon ($(social_state))" \
       back "Return to the previous menu") || return 0
     case "$c" in
       network) network_menu ;;
+      social) social_menu ;;
       receiver) settings_receiver_menu ;;
       wall) settings_wall_menu ;;
       logs) logs_menu ;;
