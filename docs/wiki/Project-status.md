@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **17 October 2026**, version **0.20.1**.
+Last updated: **17 October 2026**, version **0.21.0**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -55,6 +55,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 18 October 2026, 00:15 | Two screen recordings of a walk through every menu, after the 0.20.1 update. Seen: *Uninstall everything* sat between *Update* and *Exit* as entry 7, one Enter from a Yes; the ACARS tag *[NOT recommended on this Pi]* was cut off at the screen's edge; `status` called a 1 GB Pi a low-memory board to skip ACARS on, the day after that board was measured comfortable; a full update ran `apt` on every feeder for a change to ZenithBoard alone; no way to keep the settings as a file. The Debian patches were switched on during the recording. 0.21.0 answers each: a Maintenance entry with save, restore and an uninstall that asks for the typed word; a quick update; a shorter tag; the measured wording |
 | 17 October 2026, 21:00 | Would the card do better in a Pi 4 (2 GB) that was to hand? The figures said no: 656 MB of 1 GB available with readsb, three feeders, the wall and social sharing, 36 °C, no under-voltage or throttling in seven and a half hours. The Pi 4 stayed in its drawer. The hardware table, which said *estimates, not yet measured*, now starts from these figures, and a [Hardware](Hardware) page says what moving a card to another Pi would change |
 | 17 October 2026, night | The owner's rule for the feed, with a 10 km sharing radius: every aircraft that crosses it, once per crossing, nothing capped — the same aircraft not again five minutes after it leaves, but its return flight, or the next day's, yes. 0.20.0 makes that the behaviour: a crossing ends an hour after the aircraft left the radius, a new callsign is a new flight, one that left before its turn is still posted, and the default gap is none. The Bluesky session is now reused, since a sign-in per post could pass the account's 300 a day. The registration's flag moves beside the `REG` row, on the wall and in the posts: beside the airline, a German flag read as Lufthansa's country |
 | 17 October 2026, evening | Four hours of the service on its own (still 0.19.7: the two updates after it not yet installed): 19 posts between 16:02 and 19:51 under *ALL* with the ten-minute floor, about five an hour; 35 to 36 of the 238 looks an hour found a candidate; 42 MB at rest, 104 MB at most. The hourly line said *Node 104 MB at most* too — Python's figure, which the kernel credits to a child started by vfork. Node now reports its own (0.19.10) |

@@ -29,6 +29,7 @@ jobs:
           bash tests/test_security.sh
           bash tests/test_stats.sh
           bash tests/test_social.sh
+          bash tests/test_settings.sh
           bash tests/test_versions.sh
           bash tests/test_fr24_key.sh
           bash tests/test_logs_uat.sh

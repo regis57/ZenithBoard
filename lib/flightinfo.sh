@@ -73,7 +73,7 @@ flightinfo_menu() {
     case "$choice" in
       install|update) clear; install_flightinfo; read -rp "Press Enter to continue..." _ ;;
       radius) change_radius ;;
-      remove) wt_yesno "Remove FlightInfo?" 8 && { clear; remove_flightinfo; } ;;
+      remove) wt_yesno "Remove FlightInfo (the wall)?\n\nThe feeders keep running; your settings stay in $ZB_CONFIG and the wall comes back with menu 2." 10 && [ "$(wt_input "To remove the wall, type the word  remove  (anything else cancels)." "")" = remove ] && { clear; remove_flightinfo; } ;;
       *) return 0 ;;
     esac
   done

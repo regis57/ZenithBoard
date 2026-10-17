@@ -333,11 +333,13 @@ update_menu() {
   local c items=() sel x names=()
   while true; do
     c=$(wt_menu "Update\n\nZenithBoard $ZB_VERSION. Your settings are never touched." \
-      all "Update everything (ZenithBoard + every installed component)" \
+      quick "ZenithBoard and the wall only: the new version in seconds (the feeders are left as they are)" \
+      all "Update everything (ZenithBoard + every installed component: the feeders ask apt, a minute or two)" \
       pick "Choose what to update (tick the ones you want)" \
       list "What is installed" \
       back "Return to the previous menu") || return 0
     case "$c" in
+      quick) clear; "$ZB_HOME/bin/zenithboard" update quick; update_menu_reload ;;
       all) clear; "$ZB_HOME/bin/zenithboard" update; update_menu_reload ;;
       list) clear; zb_update_list; echo; read -rp "Press Enter..." _ ;;
       pick)
