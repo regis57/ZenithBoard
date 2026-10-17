@@ -12,6 +12,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1   # v7.0.1
       - name: shellcheck
         run: shellcheck -x -S warning install.sh bin/zenithboard bin/run-acarsdec bin/zenithboard-demo lib/*.sh tests/*.sh tools/*.sh
+      - name: What the split-flap picture needs, as a Pi installs it (Pillow, the DejaVu fonts)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq python3-pil fonts-dejavu-core
       - name: Python tests
         run: |
           python3 -m unittest discover -s tests -v

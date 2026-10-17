@@ -74,13 +74,17 @@ ZenithBoard $ZB_VERSION - ADSB Flight Info
   zenithboard stats                     today, yesterday, 30 days, and messages per hour as a sparkline
   zenithboard stats on|off|status       collect a sample every 15 minutes (off by default; the page is /stats)
   zenithboard stats csv|clear           the raw samples / empty them
-  zenithboard social setup              accounts for Bluesky / Mastodon (a wizard; asks for an app password or a token)
+  zenithboard social setup              the Bluesky account (a wizard; asks for an app password, never the real one)
   zenithboard social words              the place name, the radius, the gap between posts, what is worth a post
+  zenithboard social picture            the picture: dot-matrix or split-flap, its colour, the map (a wizard)
+  zenithboard social look dots|flap     the dot-matrix wall with the track, or the split-flap board with a map
+  zenithboard social colour NAME|wall   amber, green, red, white, turquoise, blue, or the wall's own colour
+  zenithboard social map NAME           the split-flap look's map: normal, night, satellite, terrain or none
   zenithboard social test [HEX]         draw the picture and print the text, post nothing (see it at /social/preview)
   zenithboard social on|off|status      post the aircraft overhead as a picture of the wall (off by default)
   zenithboard social post [HEX]         post now, once
-  zenithboard social check              try the accounts
-  zenithboard social remove             forget the accounts, stop the service
+  zenithboard social check              try the account
+  zenithboard social remove             forget the account, stop the service
   zenithboard photos on|off             aircraft photos on the wall (needs internet on the Pi)
   zenithboard photos test [HEX]         check that this Pi can fetch photos from Planespotters
   zenithboard routes on|off             show where each flight comes from / goes to (looked up by callsign, needs internet)
@@ -223,15 +227,19 @@ case "${1:-}" in
   social)
     case "${2:-status}" in
       setup)  root_or_die; social_setup ;;
-      words)  root_or_die; social_setup_words ;;
+      words)  root_or_die; social_setup_words && echo "Saved." ;;
+      picture) root_or_die; social_setup_picture ;;
+      look)   root_or_die; social_set_look "${3:-}" ;;
+      colour|color) root_or_die; social_set_colour "${3:-}" ;;
+      map)    root_or_die; social_set_map "${3:-}" ;;
       on)     root_or_die; social_on ;;
       off)    root_or_die; social_off ;;
-      test)   root_or_zb; social_need_node && social_prepare_dir && { [ "$(id -u)" -ne 0 ] && python3 "$SOCIAL_PY" test "${3:-}" || sudo -u "$ZB_USER" python3 "$SOCIAL_PY" test "${3:-}"; } ;;
-      post)   root_or_zb; social_need_node && social_prepare_dir && { [ "$(id -u)" -ne 0 ] && python3 "$SOCIAL_PY" post "${3:-}" || sudo -u "$ZB_USER" python3 "$SOCIAL_PY" post "${3:-}"; } ;;
+      test)   root_or_zb; social_need_tools && social_prepare_dir && { [ "$(id -u)" -ne 0 ] && python3 "$SOCIAL_PY" test "${3:-}" || sudo -u "$ZB_USER" python3 "$SOCIAL_PY" test "${3:-}"; } ;;
+      post)   root_or_zb; social_need_tools && social_prepare_dir && { [ "$(id -u)" -ne 0 ] && python3 "$SOCIAL_PY" post "${3:-}" || sudo -u "$ZB_USER" python3 "$SOCIAL_PY" post "${3:-}"; } ;;
       check)  root_or_die; python3 "$SOCIAL_PY" check ;;
       status) social_status ;;
       remove) root_or_die; social_remove ;;
-      *) die "Usage: zenithboard social setup|words|on|off|test [HEX]|post [HEX]|check|status|remove" ;;
+      *) die "Usage: zenithboard social setup|words|picture|look dots|flap|colour NAME|map NAME|on|off|test [HEX]|post [HEX]|check|status|remove" ;;
     esac ;;
   patches)
     case "${2:-status}" in

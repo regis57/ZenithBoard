@@ -2,12 +2,14 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Social sharing (menu 4 Settings -> 6 Social sharing, and `zenithboard social ...`).
 #
-# Posts the aircraft overhead to Bluesky and/or Mastodon as a picture of the wall, with a short text. Off by
-# default. The work is done by flightinfo/social.py, running as a service under the wall's user; this file is the
-# setup wizard, the switch, and the commands. The picture is drawn by tools/social-render.js, which needs Node,
-# installed from Debian when sharing is switched on (about 30 MB; the only thing the feature adds to the Pi).
+# Posts the aircraft overhead to Bluesky as a picture of the wall, with a short text. Off by default. The work is
+# done by flightinfo/social.py, running as a service under the wall's user; this file is the setup wizard, the
+# switch, and the commands. Two looks for the picture: the dot-matrix wall with the track in dots (drawn by
+# tools/social-render.js, which needs Node, about 30 MB), or the split-flap board beside a map (drawn by
+# flightinfo/social_card.py, which needs Pillow and the DejaVu fonts, a few MB). Each is installed from Debian
+# when it is first needed. Bluesky only since 0.19.0: Mastodon was taken out.
 #
-# Secrets (a Bluesky app password, a Mastodon access token) live in $ZB_ETC/social.env, owned by root, readable by
+# The secret (a Bluesky app password, never the real one) lives in $ZB_ETC/social.env, owned by root, readable by
 # the zenithboard group (the service runs as that user), mode 0640. Never in config.env, never in a log, never
 # shown by `zenithboard config`. `social remove` deletes that file.
 SOCIAL_SECRETS="${ZENITHBOARD_SOCIAL_SECRETS:-${ZB_ETC:-/etc/zenithboard}/social.env}"
@@ -16,8 +18,11 @@ SOCIAL_UNIT=zenithboard-social
 SOCIAL_UNIT_DIR="${ZB_SYSTEMD_DIR:-/etc/systemd/system}"
 SOCIAL_PY="$ZB_HOME/flightinfo/social.py"
 
+or_text() { if [ -n "$1" ]; then printf '%s' "$1"; else printf '%s' "$2"; fi; }   # a value, or what to say when it is empty
 social_state() { [ "$(cfg_get SOCIAL 0)" = 1 ] && echo on || echo off; }
-social_networks() { cfg_get SOCIAL_NETWORKS ""; }
+social_account() { social_secret_get BLUESKY_HANDLE; }
+SOCIAL_THEMES="amber green red white turquoise blue"
+SOCIAL_MAPS="normal night satellite terrain none"
 
 # ---- the service
 social_install_units() {
@@ -41,6 +46,28 @@ social_need_node() {
   log "Installing Node (draws the picture; about 30 MB)"
   apt_install nodejs >/dev/null || { err "Node could not be installed: the picture cannot be drawn without it."; return 1; }
 }
+social_need_pil() {      # the split-flap look: Pillow paints the board and the map, in the DejaVu font
+  python3 -c 'import PIL' >/dev/null 2>&1 && [ -f /usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf ] && return 0
+  log "Installing Pillow and the DejaVu fonts (draw the split-flap picture; a few MB)"
+  apt_install python3-pil fonts-dejavu-core >/dev/null || { err "Pillow could not be installed: the split-flap picture cannot be drawn without it."; return 1; }
+}
+social_need_tools() {    # what the chosen look needs: Node always (the dot-matrix picture, and the flap board's rows), Pillow for flap
+  social_need_node || return 1
+  [ "$(cfg_get SOCIAL_STYLE dots)" != flap ] || social_need_pil
+}
+
+# 0.19.0 took Mastodon out. A Pi set up before that keeps its Bluesky account; the Mastodon token and the list of
+# networks are dropped, so no secret stays behind for a feature that is gone. Run by every update; does nothing twice.
+social_migrate() {
+  if grep -q '^SOCIAL_NETWORKS=' "$ZB_CONFIG" 2>/dev/null; then cfg_del SOCIAL_NETWORKS; fi
+  if [ -f "$SOCIAL_SECRETS" ] && grep -q '^MASTODON_' "$SOCIAL_SECRETS" 2>/dev/null; then
+    local h p
+    h=$(social_secret_get BLUESKY_HANDLE); p=$(social_secret_get BLUESKY_APP_PASSWORD)
+    if [ -n "$h" ]; then social_secrets_write "BLUESKY_HANDLE=$h" "BLUESKY_APP_PASSWORD=$p"; else rm -f "$SOCIAL_SECRETS"; fi
+    log "Social sharing: Mastodon is no longer supported; its token was removed from $SOCIAL_SECRETS (revoke it on your instance too)."
+  fi
+  return 0
+}
 
 # ---- the secrets file: written whole, never appended to, never world-readable
 social_secret_get() { [ -r "$SOCIAL_SECRETS" ] || return 0; sed -n -E "s/^$1=\"?([^\"]*)\"?$/\1/p" "$SOCIAL_SECRETS" | head -1; }
@@ -55,44 +82,25 @@ social_secrets_write() {   # social_secrets_write KEY=VALUE...  (every key; what
   mv "$tmp" "$SOCIAL_SECRETS"
 }
 social_valid_handle() { [[ $1 =~ ^[a-z0-9][a-z0-9.-]{2,}\.[a-z]{2,}$ ]]; }
-social_valid_url() { [[ $1 =~ ^https://[a-z0-9.-]+(:[0-9]+)?/?$ ]]; }
 
-# ---- the wizard. Asks only what each network needs, tries the account before saving anything else.
+# ---- the wizard: the Bluesky account, tried before anything else is asked
 social_setup() {
-  local net handle pw url tok have_b have_m keep=() chosen=() r
-  have_b=$(social_secret_get BLUESKY_HANDLE); have_m=$(social_secret_get MASTODON_URL)
-  net=$(whiptail --title "$WT_TITLE" --checklist "Share the aircraft overhead on which networks? (Space = tick, Enter = go)\n\nEach needs one secret you create on the network's own site; the next screens say where. Nothing is posted until you switch sharing on." 16 76 2 \
-      bluesky "Bluesky  (an app password)" "$( [ -n "$have_b" ] && echo ON || echo OFF )" \
-      mastodon "Mastodon (an access token)" "$( [ -n "$have_m" ] && echo ON || echo OFF )" 3>&1 1>&2 2>&3) || return 1
-  net=${net//\"/}
-  if [[ " $net " == *" bluesky "* ]]; then
-    handle=$(wt_input "Bluesky handle, without @ (for example zenithboard.bsky.social)." "${have_b}") || return 1
-    handle=${handle#@}; handle=$(echo "$handle" | tr '[:upper:]' '[:lower:]')
-    social_valid_handle "$handle" || { wt_msg "That does not look like a Bluesky handle: $handle" 8; return 1; }
-    pw=$(whiptail --title "$WT_TITLE" --passwordbox "Bluesky APP password for that account (not your real password).\n\nMake one at bsky.app: Settings -> Privacy and Security -> App Passwords -> Add App Password. It looks like xxxx-xxxx-xxxx-xxxx and is shown once." 14 76 3>&1 1>&2 2>&3) || return 1
-    [ -n "$pw" ] || pw=$(social_secret_get BLUESKY_APP_PASSWORD)
-    [ -n "$pw" ] || { wt_msg "No app password given." 7; return 1; }
-    keep+=("BLUESKY_HANDLE=$handle" "BLUESKY_APP_PASSWORD=$pw"); chosen+=(bluesky)
-  fi
-  if [[ " $net " == *" mastodon "* ]]; then
-    url=$(wt_input "Your Mastodon instance, with https:// (for example https://mastodon.social)." "${have_m:-https://mastodon.social}") || return 1
-    url=${url%/}
-    social_valid_url "$url" || { wt_msg "That does not look like an instance address: $url" 8; return 1; }
-    tok=$(whiptail --title "$WT_TITLE" --passwordbox "Mastodon access token.\n\nOn your instance: Preferences -> Development -> New application. Name it ZenithBoard, tick only write:media and write:statuses, save, open it and copy 'Your access token'." 14 76 3>&1 1>&2 2>&3) || return 1
-    [ -n "$tok" ] || tok=$(social_secret_get MASTODON_TOKEN)
-    [ -n "$tok" ] || { wt_msg "No token given." 7; return 1; }
-    keep+=("MASTODON_URL=$url" "MASTODON_TOKEN=$tok"); chosen+=(mastodon)
-  fi
-  [ "${#chosen[@]}" -gt 0 ] || { wt_msg "Nothing chosen, nothing changed." 7; return 1; }
-  social_secrets_write "${keep[@]}" || { wt_msg "Could not write $SOCIAL_SECRETS" 8; return 1; }
-  cfg_set SOCIAL_NETWORKS "$(IFS=,; echo "${chosen[*]}")"
-  clear; echo "Trying the accounts..."; echo
+  local handle pw have r
+  have=$(social_secret_get BLUESKY_HANDLE)
+  handle=$(wt_input "Bluesky handle, without @ (for example zenithboard.bsky.social).\n\nThe account should be declared as automated: on bsky.app, Settings -> Account -> Automation label." "${have}") || return 1
+  handle=${handle#@}; handle=$(echo "$handle" | tr '[:upper:]' '[:lower:]')
+  social_valid_handle "$handle" || { wt_msg "That does not look like a Bluesky handle: $handle" 8; return 1; }
+  pw=$(whiptail --title "$WT_TITLE" --passwordbox "Bluesky APP password for that account (not your real password).\n\nMake one at bsky.app: Settings -> Privacy and Security -> App Passwords -> Add App Password. It looks like xxxx-xxxx-xxxx-xxxx and is shown once.$( [ -n "$have" ] && printf '\n\nLeave empty to keep the one saved.')" 15 76 3>&1 1>&2 2>&3) || return 1
+  [ -n "$pw" ] || pw=$(social_secret_get BLUESKY_APP_PASSWORD)
+  [ -n "$pw" ] || { wt_msg "No app password given." 7; return 1; }
+  social_secrets_write "BLUESKY_HANDLE=$handle" "BLUESKY_APP_PASSWORD=$pw" || { wt_msg "Could not write $SOCIAL_SECRETS" 8; return 1; }
+  clear; echo "Trying the account..."; echo
   r=$(python3 "$SOCIAL_PY" check 2>&1); echo "$r"; echo
   if echo "$r" | grep -q FAILED; then
-    echo "At least one account refused. The secrets are saved; fix them with  sudo zenithboard social setup  and try again."
+    echo "Bluesky refused. The handle and app password are saved; fix them with  sudo zenithboard social setup  and try again."
     read -rp "Press Enter to continue..." _; return 1
   fi
-  social_setup_words
+  social_setup_words && social_setup_picture
 }
 
 # The words of the posts: the area named in them (the owner's words, never derived from the antenna's position),
@@ -110,26 +118,70 @@ social_setup_words() {
       military "military" "$(social_rule_on military)" \
       helicopter "a helicopter" "$(social_rule_on helicopter)" \
       heavy "an A380, 747, Beluga, Antonov, C-17 and the like" "$(social_rule_on heavy)" \
-      farthest "the farthest of the day (over 50 km)" "$(social_rule_on farthest)" \
+      farthest "a range record for 30 days (over 50 km)" "$(social_rule_on farthest)" \
       any "anything at all (one post per gap, the best-known aircraft)" "$(social_rule_on any)" 3>&1 1>&2 2>&3) || return 1
   rules=${rules//\"/}; cfg_set SOCIAL_RULES "${rules// /,}"
-  wt_msg "Saved.\n\nNext:  sudo zenithboard social test   draws the picture and shows the text, posts nothing.\nThen:  sudo zenithboard social on     starts posting under these rules." 11
+}
+
+# ---- the picture: the look, its colour, the map (the flap look only)
+social_valid_in() { local v=$1; shift; [[ " $* " == *" $v "* ]]; }
+social_set_look() {
+  social_valid_in "$1" dots flap || { echo "Look: dots or flap"; return 1; }
+  cfg_set SOCIAL_STYLE "$1"
+  [ "$1" != flap ] || social_need_pil || return 1
+  echo "Picture: $1. Try it:  sudo zenithboard social test"
+}
+social_set_colour() {
+  local c=$1; [ "$c" != wall ] || c=""
+  [ -z "$c" ] || social_valid_in "$c" $SOCIAL_THEMES || { echo "Colour: $SOCIAL_THEMES, or wall (the wall's own, $(cfg_get THEME amber))"; return 1; }
+  cfg_set SOCIAL_THEME "$c"
+  echo "Picture colour: $(or_text "$c" "the wall's ($(cfg_get THEME amber))")."
+}
+social_set_map() {
+  social_valid_in "$1" $SOCIAL_MAPS || { echo "Map: $SOCIAL_MAPS"; return 1; }
+  cfg_set SOCIAL_MAP "$1"
+  echo "Map: $1 (the split-flap look). $( [ "$(cfg_get SOCIAL_STYLE dots)" = flap ] || echo 'The picture is the dot-matrix look now; switch with  sudo zenithboard social look flap')"
+}
+social_setup_picture() {
+  local look col map cur on
+  cur=$(cfg_get SOCIAL_STYLE dots)
+  look=$(wt_radio "The picture each post carries. (Space = choose, Enter = go)" \
+      dots "Dot-matrix wall, the track drawn in dots beside it" "$( [ "$cur" = dots ] && echo ON || echo OFF )" \
+      flap "Split-flap board, a map with the track beside it" "$( [ "$cur" = flap ] && echo ON || echo OFF )") || return 1
+  cur=$(cfg_get SOCIAL_THEME ""); [ -n "$cur" ] || cur=wall
+  local items=(wall "The wall's own colour ($(cfg_get THEME amber))" "$( [ "$cur" = wall ] && echo ON || echo OFF )")
+  for c in $SOCIAL_THEMES; do on=OFF; [ "$cur" = "$c" ] && on=ON; items+=("$c" "${c^}" "$on"); done
+  col=$(wt_radio "Colour of the letters and the track" "${items[@]}") || return 1
+  if [ "$look" = flap ]; then
+    cur=$(cfg_get SOCIAL_MAP normal)
+    map=$(wt_radio "The map beside the board (from EOX's map service, credited on every post)" \
+        normal "OpenStreetMap" "$( [ "$cur" = normal ] && echo ON || echo OFF )" \
+        night "OpenStreetMap, darkened" "$( [ "$cur" = night ] && echo ON || echo OFF )" \
+        satellite "Satellite (Sentinel-2 cloudless, non-commercial use)" "$( [ "$cur" = satellite ] && echo ON || echo OFF )" \
+        terrain "Terrain: relief, forests, rivers" "$( [ "$cur" = terrain ] && echo ON || echo OFF )" \
+        none "No map: the track on black, nothing fetched" "$( [ "$cur" = none ] && echo ON || echo OFF )") || return 1
+    social_set_map "$map" >/dev/null
+  fi
+  clear
+  social_set_colour "$col" >/dev/null
+  social_set_look "$look" >/dev/null || { read -rp "Press Enter to continue..." _; return 1; }
+  wt_msg "Saved. Picture: $look, $(or_text "$(cfg_get SOCIAL_THEME "")" "the wall's colour")$( [ "$look" = flap ] && echo ", $(cfg_get SOCIAL_MAP normal) map").\n\nNext:  sudo zenithboard social test   draws the picture and shows the text, posts nothing.\nThen:  sudo zenithboard social on     starts posting." 12
 }
 social_rule_on() { case ",$(cfg_get SOCIAL_RULES "$(python3 -c 'import sys; sys.path.insert(0, sys.argv[1]); import social; print(social.DEFAULTS["SOCIAL_RULES"])' "$ZB_HOME/flightinfo")")," in *",$1,"*) echo ON ;; *) echo OFF ;; esac; }
 
 social_on() {
-  [ -n "$(social_networks)" ] && [ -r "$SOCIAL_SECRETS" ] || { echo "No account yet: run  sudo zenithboard social setup  first."; return 1; }
-  social_need_node || return 1
+  [ -n "$(social_account)" ] || { echo "No Bluesky account yet: run  sudo zenithboard social setup  first."; return 1; }
+  social_need_tools || return 1
   social_prepare_dir || { echo "Could not make $SOCIAL_DIR"; return 1; }
   cfg_set SOCIAL 1; social_install_units
-  echo "Social sharing is ON: $(social_networks), radius $(cfg_get SOCIAL_RADIUS_KM) km, at most one post every $(cfg_get SOCIAL_GAP_MIN) min, rules: $(cfg_get SOCIAL_RULES)."
+  echo "Social sharing is ON: Bluesky @$(social_account), radius $(cfg_get SOCIAL_RADIUS_KM) km, at most one post every $(cfg_get SOCIAL_GAP_MIN) min, rules: $(cfg_get SOCIAL_RULES)."
   echo "Watch it:  zenithboard logs social      Stop it:  sudo zenithboard social off"
 }
 social_off() { cfg_set SOCIAL 0; social_remove_units; echo "Social sharing is OFF. The accounts are kept (remove them: sudo zenithboard social remove)."; }
 social_remove() {
   social_off >/dev/null
-  rm -f "$SOCIAL_SECRETS"; cfg_set SOCIAL_NETWORKS ""; rm -rf "$SOCIAL_DIR"
-  echo "Social sharing removed: the account secrets, the state and the service are gone. Node stays (apt remove nodejs to drop it)."
+  rm -f "$SOCIAL_SECRETS"; rm -rf "$SOCIAL_DIR"
+  echo "Social sharing removed: the account secret, the state, the map tiles and the service are gone. Node and Pillow stay (apt remove nodejs python3-pil to drop them)."
 }
 social_status() {
   python3 "$SOCIAL_PY" status
@@ -140,23 +192,25 @@ social_status() {
 social_menu() {
   local c
   while true; do
-    c=$(wt_menu "Social sharing: $(social_state)    Networks: $(social_networks | sed 's/^$/none/')\nRadius: $(cfg_get SOCIAL_RADIUS_KM 15) km    Gap: $(cfg_get SOCIAL_GAP_MIN 120) min    Area: $(cfg_get SOCIAL_AREA "" | sed 's/^$/(none)/')\nRules: $(cfg_get SOCIAL_RULES rare,military,helicopter,heavy,farthest)\n\nPosts a picture of the wall and a short text when something worth it flies over. Nothing leaves the Pi until you switch it on." \
-      setup "1  Set up or change the accounts (Bluesky, Mastodon)" \
+    c=$(wt_menu "Social sharing: $(social_state)    Bluesky: $(or_text "$(social_account)" "no account")    Picture: $(cfg_get SOCIAL_STYLE dots)\nRadius: $(cfg_get SOCIAL_RADIUS_KM 15) km    Gap: $(cfg_get SOCIAL_GAP_MIN 120) min    Area: $(or_text "$(cfg_get SOCIAL_AREA "")" "(none)")\nRules: $(cfg_get SOCIAL_RULES rare,military,helicopter,heavy,farthest)\n\nPosts a picture of the wall and a short text when something worth it flies over. Nothing leaves the Pi until you switch it on." \
+      setup "1  Set up or change the Bluesky account" \
       words "2  Words and rules: place name, radius, gap, what is worth a post" \
-      test "3  Try it: draw the picture and show the text, post nothing" \
-      toggle "4  Switch sharing $( [ "$(social_state)" = on ] && echo OFF || echo ON )" \
-      post "5  Post now, once" \
-      status "6  Status" \
-      remove "7  Remove: accounts, state and service" \
+      picture "3  The picture: dot-matrix or split-flap, colour, map" \
+      test "4  Try it: draw the picture and show the text, post nothing" \
+      toggle "5  Switch sharing $( [ "$(social_state)" = on ] && echo OFF || echo ON )" \
+      post "6  Post now, once" \
+      status "7  Status" \
+      remove "8  Remove: account, state and service" \
       back "Return to the previous menu") || return 0
     case "$c" in
       setup) social_setup || true ;;
-      words) social_setup_words || true ;;
-      test) clear; social_need_node && social_prepare_dir && sudo -u "$ZB_USER" python3 "$SOCIAL_PY" test; read -rp "Press Enter to continue..." _ ;;
+      words) social_setup_words && wt_msg "Saved." 7 || true ;;
+      picture) social_setup_picture || true ;;
+      test) clear; social_need_tools && social_prepare_dir && sudo -u "$ZB_USER" python3 "$SOCIAL_PY" test; read -rp "Press Enter to continue..." _ ;;
       toggle) clear; if [ "$(social_state)" = on ]; then social_off; else social_on; fi; read -rp "Press Enter to continue..." _ ;;
-      post) clear; social_need_node && social_prepare_dir && sudo -u "$ZB_USER" python3 "$SOCIAL_PY" post; read -rp "Press Enter to continue..." _ ;;
+      post) clear; social_need_tools && social_prepare_dir && sudo -u "$ZB_USER" python3 "$SOCIAL_PY" post; read -rp "Press Enter to continue..." _ ;;
       status) clear; social_status; read -rp "Press Enter to continue..." _ ;;
-      remove) if wt_yesno "Remove social sharing: the account secrets, the state and the service?" 8; then clear; social_remove; read -rp "Press Enter to continue..." _; fi ;;
+      remove) if wt_yesno "Remove social sharing: the account secret, the state and the service?" 8; then clear; social_remove; read -rp "Press Enter to continue..." _; fi ;;
       *) return 0 ;;
     esac
   done

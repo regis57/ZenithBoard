@@ -30,13 +30,17 @@ Every `zenithboard` command, grouped by what you are trying to do. `zenithboard`
 | `zenithboard stats` | | Today, yesterday, the 30-day average and best, and messages per hour as a sparkline. See [Statistics](Statistics) |
 | `zenithboard stats on` · `off` · `status` | yes | Collect a sample every 15 minutes (off by default). `off` keeps the files |
 | `zenithboard stats csv` · `clear` | yes for clear | The raw samples as CSV; empty them |
-| `zenithboard social setup` | yes | The accounts: Bluesky (an app password), Mastodon (an access token). A wizard that tries each account before it is done. See [Social sharing](Social-sharing) |
+| `zenithboard social setup` | yes | The Bluesky account (an app password, never the real one), then the words and the picture. A wizard that tries the account before going on. See [Social sharing](Social-sharing) |
 | `zenithboard social words` | yes | The place name the posts carry, the sharing radius, the gap between posts, and what is worth a post |
+| `zenithboard social picture` | yes | The picture: dot-matrix or split-flap, its colour, the map (a wizard) |
+| `zenithboard social look dots` · `flap` | yes | The dot-matrix wall with the track, or the split-flap board with a map |
+| `zenithboard social colour NAME` · `wall` | yes | amber, green, red, white, turquoise, blue, or the wall's own colour |
+| `zenithboard social map NAME` | yes | The split-flap look's map: normal, night, satellite, terrain or none |
 | `zenithboard social test [HEX]` | | Draw the picture and print the text for the best candidate (or that aircraft); post nothing. The picture is at `/social/preview` |
-| `zenithboard social on` · `off` · `status` | yes | Post the aircraft overhead as a picture of the wall (off by default). `off` keeps the accounts |
+| `zenithboard social on` · `off` · `status` | yes | Post the aircraft overhead as a picture of the wall (off by default). `off` keeps the account |
 | `zenithboard social post [HEX]` | | Post now, once, whatever the gap |
-| `zenithboard social check` | yes | Try the accounts: a session on Bluesky, `verify_credentials` on Mastodon |
-| `zenithboard social remove` | yes | Forget the accounts, stop the service, delete its state |
+| `zenithboard social check` | yes | Try the account: open a session on Bluesky |
+| `zenithboard social remove` | yes | Forget the account, stop the service, delete its state and its map tiles |
 | `zenithboard photos on` · `off` | yes | Aircraft photos from Planespotters. Off: the animated sky scene instead |
 | `zenithboard photos test [HEX]` | | Can this Pi reach Planespotters? One real request, and the answer |
 | `zenithboard routes on` · `off` | yes | Origin and destination, looked up by callsign. Off: no callsign leaves the Pi |

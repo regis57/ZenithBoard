@@ -2,7 +2,7 @@
 
 A Raspberry Pi that listens to the aircraft overhead and shows them on a tablet or a TV as a dot-matrix wall or an airport split-flap board. It can also feed what it hears to ADSB Exchange, FlightAware, Flightradar24 and Plane Finder, and collect ACARS messages.
 
-Current version: **0.18.3** · Licence: **GPL-3.0-or-later** · [Repository](https://github.com/regis57/ZenithBoard)
+Current version: **0.19.0** · Licence: **GPL-3.0-or-later** · [Repository](https://github.com/regis57/ZenithBoard)
 
 ## Installing it
 
@@ -31,7 +31,7 @@ Installation, the menus and every setting are in the [README](https://github.com
 
 * **[Code tour](Code-tour)** — a map of the modules and the systemd units.
 * **[Testing](Testing)** — the test suite and the two patterns it is built on.
-* **[Social sharing](Social-sharing)** — the aircraft worth a post, on Bluesky and Mastodon, as a picture of the wall; off by default.
+* **[Social sharing](Social-sharing)** — the aircraft worth a post, on Bluesky, as a picture of the wall: dot-matrix with the track, or split-flap with a map; off by default.
 * **[Statistics](Statistics)** — messages per hour, the farthest aircraft, aircraft per day; off by default.
 * **[Release process](Release-process)** — versions, changelog, and how a change reaches a Pi.
 * **[Contributing](Contributing)** — how to propose a change, and the house style.

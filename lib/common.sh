@@ -42,6 +42,14 @@ cfg_set() {  # cfg_set KEY VALUE
   install -m 644 "$tmp" "$ZB_CONFIG"; rm -f "$tmp"
 }
 
+cfg_del() {  # cfg_del KEY: the key gone from the file
+  local tmp
+  [ -f "$ZB_CONFIG" ] || return 0
+  tmp=$(mktemp)
+  grep -v -E "^$1=" "$ZB_CONFIG" > "$tmp" || true
+  install -m 644 "$tmp" "$ZB_CONFIG"; rm -f "$tmp"
+}
+
 cfg_defaults() {  # write any missing keys with defaults (never overwrites)
   local k v
   while IFS='=' read -r k v; do

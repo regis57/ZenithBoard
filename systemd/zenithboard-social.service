@@ -1,5 +1,5 @@
 [Unit]
-Description=ZenithBoard social sharing (posts the aircraft overhead to Bluesky / Mastodon as a picture of the wall)
+Description=ZenithBoard social sharing (posts the aircraft overhead to Bluesky as a picture of the wall)
 After=network-online.target zenithboard-flightinfo.service
 Wants=network-online.target
 
@@ -9,7 +9,8 @@ Restart=always
 RestartSec=10
 # Runs as the wall's own user: it reads the decoder's aircraft.json under /run, asks the wall on the loopback,
 # keeps its state under /var/lib/zenithboard/social and draws the picture in /run/zenithboard/social (memory,
-# deleted after each post). It needs the internet to post, and node to draw. Nothing here needs root.
+# deleted after each post), and caches map tiles under its state folder. It needs the internet to post and to
+# fetch the map, node or Pillow to draw. Nothing here needs root.
 User=zenithboard
 Group=zenithboard
 Environment=ZENITHBOARD_CONFIG=/etc/zenithboard/config.env

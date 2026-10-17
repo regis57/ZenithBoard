@@ -5,10 +5,13 @@
 // rows come from the wall's own code (app.js is read and its functions lifted, the way the tests do), the flags
 // from flags.js, the names from format.js, and the PNG is written here with Node's zlib.
 //
-//   node tools/social-render.js IN.json OUT.png
+//   node tools/social-render.js IN.json OUT.png      the dot-matrix picture
+//   node tools/social-render.js IN.json --lines      the split-flap board's rows and the colour, as JSON (the
+//                                                    board itself is drawn by flightinfo/social_card.py, Pillow)
 //
 // IN.json: { "plane": <one entry of /api/planes>, "trace": [[lat, lon, alt_ft, t_seconds], ...] (oldest first),
-//            "units": "metric"|"imperial", "theme": "amber", "clock": "09:50", "flags": true, "pitch": 10 }
+//            "units": "metric"|"imperial", "theme": "amber", "clock": "09:50 GMT+2", "flags": true, "pitch": 10,
+//            "cols": 14 (--lines only) }
 //
 // What is deliberately NOT in the picture: the distance and the direction from the receiver (the last row shows
 // the time instead), the receiver's position (the track is centred on the aircraft, north up, with no map), and
@@ -65,7 +68,14 @@ function pickScaleKm(extentKm) {
   return 500;
 }
 
-function drawTrack(g, trace, track) {
+// A colour of the theme at a given brightness, as a grid value (an RGB integer, not ON)
+function shade(hex, k) {
+  const r = (hex >> 16) & 255, gg = (hex >> 8) & 255, b = hex & 255;
+  return (Math.round(r * k) << 16) | (Math.round(gg * k) << 8) | Math.round(b * k);
+}
+
+function drawTrack(g, trace, track, themeHex) {
+  themeHex = themeHex == null ? THEMES.amber : themeHex;
   const P = PANEL, cx = P.x + Math.floor(P.w / 2), cy = P.y + Math.floor(P.h / 2) + 2;
   // frame
   for (let x = P.x; x < P.x + P.w; x++) { wall.put(g, x, P.y, DIM); wall.put(g, x, P.y + P.h - 1, DIM); }
@@ -90,12 +100,12 @@ function drawTrack(g, trace, track) {
     for (let y = P.y + 2; y < P.y + P.h - 2; y += 3) if (gx > P.x && gx < P.x + P.w - 1) wall.put(g, gx, y, FAINT);
     for (let x = P.x + 2; x < P.x + P.w - 2; x += 3) if (gy > P.y && gy < P.y + P.h - 1) wall.put(g, x, gy, FAINT);
   }
-  // the track, older dimmer, inside the frame only
+  // the track, older dimmer, in the picture's colour, inside the frame only
+  const trail = k => shade(themeHex, 0.44 + k * 0.44);
   pts.forEach((p, i) => {
     const x = Math.round(cx + p[0] * dotsPerKm), y = Math.round(cy - p[1] * dotsPerKm);
     if (x <= P.x || x >= P.x + P.w - 1 || y <= P.y || y >= P.y + P.h - 1) return;
-    const k = i / pts.length, lvl = Math.round(0x70 + k * 0x70);
-    wall.put(g, x, y, (lvl << 16) | (Math.round(lvl * 0.68) << 8));
+    wall.put(g, x, y, trail(i / pts.length));
   });
   // the aircraft: a small plan-view arrow along its track
   const hd = ((track == null ? 0 : track) - 90) * toR;             // track 0 = north = up
@@ -106,23 +116,43 @@ function drawTrack(g, trace, track) {
   for (let w = -4; w <= 4; w++) dot(side(0, w));
   for (let w = -2; w <= 2; w++) dot(side(-4, w));
   dot(fwd(6));
-  // legend
+  // the legend, as a key: a piece of the trail, then how long the trail is ("....... 10MIN"); the scale bar, then
+  // what it measures ("|------| 10KM"). 0.18 wrote "10 MIN" and "10KM" one above the other, and a reader asked
+  // what they meant (0.19.0).
   const minutes = Math.max(1, Math.round((last[3] - trace[0][3]) / 60));
-  wall.text(g, minutes + " MIN", P.x + 3, P.y + P.h - 17, 1);
-  wall.text(g, scaleKm + "KM", P.x + 3, P.y + P.h - 9, 1);
-  const bx = P.x + P.w - 2 - BAR;                                   // the bar against the right edge, inside the frame
-  for (let x = bx; x < bx + BAR; x++) wall.put(g, x, P.y + P.h - 6, ON);
-  wall.put(g, bx, P.y + P.h - 7, ON); wall.put(g, bx + BAR - 1, P.y + P.h - 7, ON);
+  const ly1 = P.y + P.h - 17, ly2 = P.y + P.h - 9, lx = P.x + 2;
+  for (let x = 0; x < BAR; x++) wall.put(g, lx + x, ly1 + 3, trail(x / BAR));
+  wall.text(g, minutes + "MIN", lx + BAR + 2, ly1, 1);
+  for (let x = 0; x < BAR; x++) wall.put(g, lx + x, ly2 + 3, ON);
+  wall.put(g, lx, ly2 + 2, ON); wall.put(g, lx + BAR - 1, ly2 + 2, ON);
+  wall.put(g, lx, ly2 + 4, ON); wall.put(g, lx + BAR - 1, ly2 + 4, ON);
+  wall.text(g, scaleKm + "KM", lx + BAR + 2, ly2, 1);
+}
+
+// ---- the two labelled rows the picture adds: "FLT  ETD11K" and "REG  A6-APD", lined up with "ALT  8500 M".
+// An aircraft without a callsign shows its hex code as "HEX", without a registration nothing.
+function rows(p, L) {
+  const flight = String(p.flight || "").trim().toUpperCase();
+  const reg = String(p.registration || "").trim().toUpperCase().slice(0, 9);
+  return { flight: flight ? "FLT  " + flight.slice(0, 7) : "HEX  " + String(p.hex || "").toUpperCase(),
+           reg: reg ? "REG  " + reg : "" };
+}
+
+// ---- the split-flap board's rows (social_card.py draws them): the dot-matrix rows, no flags, the time last
+function flapLines(p, units, clock, cols) {
+  const L = Fmt.planeLines(p, units, 0, 1, cols), R = rows(p, L);
+  return [R.flight, R.reg, L.airline, L.type, L.alt, L.spd, L.from, L.to, clock].map(s => String(s || "").slice(0, cols));
 }
 
 // ---- the wall rows, as buildScreen lays them out, without silhouette, photo, or distance
 function drawWall(g, p, units, clock, flags) {
   const cols = flags ? COLS_FLAGS : COLS, maxX = flags ? TEXT_MAX_X : 84;
   const L = Fmt.planeLines(p, units, 0, 1, cols);
-  // The tablet's big callsign takes two rows; the picture has it at the size of the others and the registration
-  // under it, so a reader sees which airframe it was (0.18.3)
-  wall.text(g, L.callsign, 0, 0, 1);
-  wall.text(g, String(p.registration || "").toUpperCase().slice(0, flags ? 12 : 14), 0, 8, 1);
+  // The tablet's big callsign takes two rows; the picture has the flight and the registration on one row each, at
+  // the size of the others and labelled like ALT and SPD under them (0.19.0, from the owner's mock-up)
+  const R = rows(p, L);
+  wall.text(g, R.flight, 0, 0, 1);
+  wall.text(g, R.reg, 0, 8, 1);
   wall.textRow(g, L.airline, 16, 0, maxX);
   wall.textRow(g, L.type, 25, 0, maxX);
   wall.text(g, L.alt, 0, 34, 1); wall.text(g, L.spd, 0, 43, 1); wall.text(g, L.from, 0, 52, 1); wall.text(g, L.to, 0, 61, 1);
@@ -135,7 +165,16 @@ function drawWall(g, p, units, clock, flags) {
 }
 
 // ---- dots to pixels: the look of the wall, a lit dot with a soft halo, an unlit dot faint
-const THEMES = { amber: 0xffb000, green: 0x33ff55, red: 0xff3b30, white: 0xf2f2f2, turquoise: 0x00d6d7, blue: 0x0404e2 };
+// The theme colours, read from the wall's own style.css so the picture is the colour the tablet shows
+const THEMES = (function () {
+  const css = fs.readFileSync(path.join(STATIC, "style.css"), "utf8"), out = {};
+  const amber = css.match(/body\s*\{[^}]*--dot:\s*#([0-9a-fA-F]{6})/);
+  out.amber = parseInt(amber ? amber[1] : "ffb000", 16);
+  const re = /body\[data-theme="([a-z]+)"\]\s*\{\s*--dot:\s*#([0-9a-fA-F]{6})/g;
+  let m;
+  while ((m = re.exec(css))) out[m[1]] = parseInt(m[2], 16);
+  return out;
+})();
 function render(g, pitch, themeHex) {
   const M = Math.round(pitch * 1.5);                                // a margin, as the tablet has around the grid
   const W = GW * pitch + 2 * M, H = GH * pitch + 2 * M, img = Buffer.alloc(W * H * 3, 0);
@@ -181,16 +220,22 @@ function png(W, H, rgb) {
 
 function main() {
   const [inFile, outFile] = process.argv.slice(2);
-  if (!inFile || !outFile) { console.error("usage: social-render.js IN.json OUT.png"); process.exit(2); }
+  if (!inFile || !outFile) { console.error("usage: social-render.js IN.json OUT.png | social-render.js IN.json --lines"); process.exit(2); }
   const spec = JSON.parse(fs.readFileSync(inFile, "utf8"));
+  const theme = THEMES[spec.theme] != null ? THEMES[spec.theme] : THEMES.amber;
+  if (outFile === "--lines") {
+    console.log(JSON.stringify({ lines: flapLines(spec.plane || {}, spec.units || "metric", spec.clock || "", spec.cols || 14),
+                                 color: "#" + ("000000" + theme.toString(16)).slice(-6) }));
+    return;
+  }
   const g = new Uint32Array(GW * GH);
   drawWall(g, spec.plane || {}, spec.units || "metric", spec.clock || "", spec.flags !== false);
-  drawTrack(g, spec.trace || [], (spec.plane || {}).track);
+  drawTrack(g, spec.trace || [], (spec.plane || {}).track, theme);
   const pitch = spec.pitch || 10;
-  const { W, H, img } = render(g, pitch, THEMES[spec.theme] || THEMES.amber);
+  const { W, H, img } = render(g, pitch, theme);
   fs.writeFileSync(outFile, png(W, H, img));
   console.log(JSON.stringify({ width: W, height: H, bytes: fs.statSync(outFile).size }));
 }
 
 if (require.main === module) main();
-module.exports = { drawWall, drawTrack, render, png, PANEL, pickScaleKm, BAR, HALF, GW, GH };
+module.exports = { drawWall, drawTrack, render, png, PANEL, pickScaleKm, BAR, HALF, GW, GH, THEMES, rows, flapLines };

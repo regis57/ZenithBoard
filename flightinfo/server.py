@@ -26,12 +26,23 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.18.3"
+VERSION = "0.19.0"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 STATS_DIR = os.environ.get("ZENITHBOARD_STATS_DIR", "/var/lib/zenithboard/stats")   # written by the stats timer
-SOCIAL_DIR = os.environ.get("ZENITHBOARD_SOCIAL_DIR", "/var/lib/zenithboard/social")   # `zenithboard social test` leaves preview.png here
+SOCIAL_DIR = os.environ.get("ZENITHBOARD_SOCIAL_DIR", "/var/lib/zenithboard/social")   # `zenithboard social test` leaves preview.png or preview.jpg here
+
+
+def social_preview_name():
+    """preview.png (the dot-matrix look) or preview.jpg (split-flap with a map): the newer, if both are there."""
+    got = []
+    for n in ("preview.png", "preview.jpg"):
+        try:
+            got.append((os.path.getmtime(os.path.join(SOCIAL_DIR, n)), n))
+        except OSError:
+            pass
+    return max(got)[1] if got else "preview.png"
 DEMO_DIR = os.path.join(BASE_DIR, "demo")
 DATA_DIR = os.path.join(BASE_DIR, "data")
 if BASE_DIR not in sys.path:
@@ -1001,7 +1012,7 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/stats":
             return self._file(STATIC_DIR, "stats.html")
         if path == "/social/preview":                 # the picture `zenithboard social test` drew, to look at before posting anything
-            return self._file(SOCIAL_DIR, "preview.png")
+            return self._file(SOCIAL_DIR, social_preview_name())
         if path.startswith("/api/photo/"):
             got = fetch_photo_bytes(path[len("/api/photo/"):].lower()) if cfg_bool(cfg, "SHOW_PHOTOS") else None
             return self._send(200, got[1], got[0], cache="max-age=3600") if got else self._send(404, b"", "text/plain")
