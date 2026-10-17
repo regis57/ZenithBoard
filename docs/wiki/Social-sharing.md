@@ -62,7 +62,7 @@ Each of these has its own command too, for a quick change: `social words`, `soci
 sudo zenithboard social test
 ```
 
-Waits up to half a minute for an aircraft with a track, draws the picture, and prints the text and the alt text. **Nothing is posted, ever, by `test`.** It always finds something to show (it adds the `any` rule for itself), so it also says plainly whether the service, under *your* rules, would post that aircraft — and if not, why not. The picture is at `http://PI-ADDRESS:8080/social/preview`, on your home network like the wall. `social test 4071f1` does it for one aircraft by its hex code.
+Waits up to half a minute for an aircraft with a track, draws the picture, and prints the text and the alt text. **Nothing is posted, ever, by `test`.** It always finds something to show (it adds the `all` rule for itself), so it also says plainly whether the service, under *your* rules, would post that aircraft — and if not, why not. The picture is at `http://PI-ADDRESS:8080/social/preview`, on your home network like the wall. `social test 4071f1` does it for one aircraft by its hex code.
 
 **Post now** (menu, or `sudo zenithboard social post`) is different: it posts the aircraft it finds at once, whatever the rules and the gap. Use it to see a real post; the service itself waits for an aircraft your rules pick.
 
@@ -124,7 +124,7 @@ The board as the wall's split-flap look draws it — the same nine rows, without
 | `helicopter` | a helicopter |
 | `heavy` | an A380, 747, Beluga, Antonov 124/225, C-5, C-17, A400M, or any four-engined airliner |
 | `farthest` | a new range record: farther than anything in the last thirty days, and over 50 km. Looked for in the whole sky, not only inside the sharing radius |
-| `any` | anything at all: the best-known aircraft of the moment, once per gap |
+| `all` | everything that flies over, the special aircraft included: ticking `all` is ticking every line. When several are there at once, the special one goes first; otherwise the best-known aircraft of the moment. One post per gap, as always. (Called `any` before 0.19.1; the old word still works) |
 
 `rare` and `farthest` judge against history, so they wait until the service has watched for **three days**; `zenithboard social status` says where it stands. The other rules work from the first minute.
 
@@ -183,7 +183,7 @@ sudo zenithboard social remove    # account, state, map tiles and service gone (
 |---|---|
 | `social check` says FAILED | The handle has no `@`, and the password is the *app* password, not the account's. Make a new app password if in doubt |
 | `social test` says nothing to show | No aircraft with thirty seconds of track inside the sharing radius right now. Try a wider radius, or `social test HEX` with an aircraft from `zenithboard status` |
-| It posts nothing | First: `test` never posts. Then `zenithboard social status` — is it *on*, is the account ready, is the gap still running? Then `zenithboard logs social`: the hourly line says how many looks found a candidate. `rare` and `farthest` start after three days. Add `any` to see it work, then take it out |
+| It posts nothing | First: `test` never posts. Then `zenithboard social status` — is it *on*, is the account ready, is the gap still running? Then `zenithboard logs social`: the hourly line says how many looks found a candidate. `rare` and `farthest` start after three days, so on the first days only `military`, `helicopter` and `heavy` can fire: tick `all` to see it post the ordinary traffic too (the special aircraft still go first) |
 | A post went out, but not by the service | *Post now* posts at once, whatever the rules. The service's own posts show in `zenithboard logs social` as `posted …` |
 | The split-flap picture has no map | The Pi could not reach `tiles.maps.eox.at` (no internet, or the service busy: EOX limits heavy load). `social test` says so; the next picture tries again. `social map none` stops asking |
 | `zenithboard logs social` shows `the wall did not answer` | The wall server is down: `zenithboard status`, `zenithboard logs flightinfo` |

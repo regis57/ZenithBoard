@@ -114,14 +114,16 @@ social_setup_words() {
   is_number "$radius" && cfg_set SOCIAL_RADIUS_KM "$radius"
   gap=$(wt_input "Minimum minutes between two posts (so the account is not flooded)." "$(cfg_get SOCIAL_GAP_MIN 120)") || return 1
   is_number "$gap" && cfg_set SOCIAL_GAP_MIN "$gap"
-  rules=$(whiptail --title "$WT_TITLE" --checklist "Post an aircraft when it is... (Space = tick)" 16 76 6 \
-      rare "a type seen twice or less in thirty days" "$(social_rule_on rare)" \
+  rules=$(whiptail --title "$WT_TITLE" --checklist "What is worth a post? Tick the special aircraft you want, or ALL (Space = tick, Enter = go).\n\nALL posts everything that flies over, one post per gap at most, the special aircraft first when there is one. Ticking ALL alone is the same as ticking every line." 20 76 6 \
       military "military" "$(social_rule_on military)" \
       helicopter "a helicopter" "$(social_rule_on helicopter)" \
       heavy "an A380, 747, Beluga, Antonov, C-17 and the like" "$(social_rule_on heavy)" \
-      farthest "a range record for 30 days (over 50 km)" "$(social_rule_on farthest)" \
-      any "anything at all (one post per gap, the best-known aircraft)" "$(social_rule_on any)" 3>&1 1>&2 2>&3) || return 1
-  rules=${rules//\"/}; cfg_set SOCIAL_RULES "${rules// /,}"
+      rare "a type seen twice or less in thirty days (after 3 days of history)" "$(social_rule_on rare)" \
+      farthest "a range record for 30 days, over 50 km (after 3 days of history)" "$(social_rule_on farthest)" \
+      all "ALL: everything that flies over, the special ones included" "$(social_rule_on all)" 3>&1 1>&2 2>&3) || return 1
+  rules=${rules//\"/}
+  case " $rules " in *" all "*) rules=all ;; esac       # ALL stands for every line: saved as the one word
+  cfg_set SOCIAL_RULES "${rules// /,}"
 }
 
 # ---- the picture: the look, its colour, the map (the flap look only)
@@ -170,7 +172,7 @@ social_setup_picture() {
   social_set_look "$look" >/dev/null || { read -rp "Press Enter to continue..." _; return 1; }
   wt_msg "Saved. Picture: $look, $(or_text "$(cfg_get SOCIAL_THEME "")" "the wall's colour")$( [ "$look" = flap ] && echo ", $(cfg_get SOCIAL_MAP normal) map").\n\nNext:  sudo zenithboard social test   draws the picture and shows the text, posts nothing.\nThen:  sudo zenithboard social on     starts posting." 12
 }
-social_rule_on() { case ",$(cfg_get SOCIAL_RULES "$(python3 -c 'import sys; sys.path.insert(0, sys.argv[1]); import social; print(social.DEFAULTS["SOCIAL_RULES"])' "$ZB_HOME/flightinfo")")," in *",$1,"*) echo ON ;; *) echo OFF ;; esac; }
+social_rule_on() { [ "$1" = all ] && case ",$(cfg_get SOCIAL_RULES "")," in *",all,"*|*",any,"*) echo ON; return ;; esac; case ",$(cfg_get SOCIAL_RULES "$(python3 -c 'import sys; sys.path.insert(0, sys.argv[1]); import social; print(social.DEFAULTS["SOCIAL_RULES"])' "$ZB_HOME/flightinfo")")," in *",$1,"*) echo ON ;; *) echo OFF ;; esac; }
 
 social_on() {
   [ -n "$(social_account)" ] || { echo "No Bluesky account yet: run  sudo zenithboard social setup  first."; return 1; }

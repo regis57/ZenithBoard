@@ -50,7 +50,7 @@ TRACE_SECONDS = 15 * 60          # how much track is kept per aircraft
 TRACE_MIN_POINTS = 6             # a post needs at least this much track (30 s at 5 s a sample)
 READ_EVERY_S = 5
 ASK_EVERY_S = 15
-RULES_ALL = ("rare", "military", "helicopter", "heavy", "farthest", "any")
+RULES_ALL = ("rare", "military", "helicopter", "heavy", "farthest", "all")   # "all" was "any" until 0.19.1
 DEFAULTS = {
     "SOCIAL": "0",
     "SOCIAL_RADIUS_KM": "15",
@@ -89,7 +89,12 @@ def account():
 
 
 def rules_of(c):
+    """The rules chosen. "all" (or "any", its name before 0.19.1) means everything that flies over, the special
+    aircraft included: so it brings every other rule with it, and a military aircraft under "all" is posted as
+    military, ahead of an airliner, not as "anything"."""
     want = {r.strip().lower() for r in str(c.get("SOCIAL_RULES", "")).split(",") if r.strip()}
+    if want & {"all", "any"}:
+        return set(RULES_ALL)
     return {r for r in want if r in RULES_ALL}
 
 
@@ -325,8 +330,8 @@ def interest(p, rules, state, now=None):
         reasons.append(("rare", 3))                # two other aircraft of this type in thirty days, at most
     if "farthest" in rules and p.get("_record"):
         reasons.append(("farthest", 2))            # set by the service: a new thirty-day range record
-    if "any" in rules:
-        reasons.append(("any", 1))
+    if "all" in rules:
+        reasons.append(("all", 1))                 # everything that flies over: the best-known aircraft, once per gap
     if not reasons:
         return 0, None
     reasons.sort(key=lambda r: -r[1])
@@ -831,7 +836,7 @@ def _collect_once(hex_code=None, seconds=35):
         if hex_code:
             if any(p.get("hex") == hex_code.lower() for p in planes) and len(tracks.of(hex_code)) >= TRACE_MIN_POINTS:
                 break
-        elif choose(planes, tracks, rules_of(c) | {"any"}, state, now):
+        elif choose(planes, tracks, rules_of(c) | {"all"}, state, now):
             break
         time.sleep(READ_EVERY_S)
     if hex_code:
@@ -839,7 +844,7 @@ def _collect_once(hex_code=None, seconds=35):
             if p.get("hex") == hex_code.lower():
                 return c, state, p, tracks.of(hex_code), "chosen"
         return c, state, None, [], None
-    best = choose(planes, tracks, rules_of(c) | {"any"}, state, time.time())
+    best = choose(planes, tracks, rules_of(c) | {"all"}, state, time.time())
     if not best:
         return c, state, None, [], None
     return c, state, best[2], tracks.of(best[2]["hex"]), best[1]
@@ -852,7 +857,7 @@ def cmd_test(hex_code=None):
         return 1
     r = publish(p, trace, why, c, {}, dry=True, keep=os.path.join(STATE_DIR, "preview"))
     print("Aircraft: %s %s (%s)" % (p.get("flight") or "", p.get("hex"), p.get("type") or "?"))
-    # The test always finds something to show (it adds "any"); say plainly whether the service would post it.
+    # The test always finds something to show (it adds "all"); say plainly whether the service would post it.
     score, real = interest(p, rules_of(c), state, time.time())
     if real:
         print("Would the service post it? Yes, under the rule '%s'." % real)

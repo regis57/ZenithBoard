@@ -20,7 +20,7 @@ Read the whole file with `zenithboard config`.
 | `SHOW_ROUTES` | `1` | `zenithboard routes on\|off` | Where the flight comes from and goes to. Needs internet |
 | `PORT` | `8080` | `zenithboard config-set PORT 8090` | The wall's port. Needs a restart of the service |
 | `BIND_ADDRESS` | `0.0.0.0` | `zenithboard config-set BIND_ADDRESS 127.0.0.1` | The interface the wall listens on. `127.0.0.1` keeps it to this Pi (behind a reverse proxy, say). Needs a restart of the service |
-| `ALLOW_FROM` | `private` | `zenithboard config-set ALLOW_FROM any` | Who may read the wall: `private` (home networks: 10/8, 172.16/12, 192.168/16, the Pi itself, link-local and their IPv6 equivalents), `any`, or a list of networks such as `10.8.0.0/24,100.64.0.0/10`. Anyone else gets a 403. An unreadable value means `private` |
+| `ALLOW_FROM` | `private` | `zenithboard config-set ALLOW_FROM any` | Who may read the wall: `private` (home networks: 10/8, 172.16/12, 192.168/16, the Pi itself, link-local and their IPv6 equivalents), `all`, or a list of networks such as `10.8.0.0/24,100.64.0.0/10`. Anyone else gets a 403. An unreadable value means `private` |
 
 ## Position and region
 
@@ -68,7 +68,7 @@ The dynamic-DNS **token is not stored here.** It is asked for interactively and 
 | `SOCIAL_RADIUS_KM` | `15` | `zenithboard social words` | An aircraft is a candidate while inside it. Separate from `RADIUS` |
 | `SOCIAL_AREA` | empty | same | The place named in the posts, in your words: a town name (`Trémery`) reads *above Trémery*, a phrase (`near Metz`) is kept. Never derived from the position |
 | `SOCIAL_GAP_MIN` | `120` | same | At least this many minutes between two posts |
-| `SOCIAL_RULES` | `rare,military,helicopter,heavy,farthest` | same | What is worth a post; `any` posts the best-known aircraft once per gap |
+| `SOCIAL_RULES` | `rare,military,helicopter,heavy,farthest` | same | What is worth a post; `all` is every rule at once: everything that flies over, the special aircraft first |
 | `SOCIAL_HASHTAGS` | `#ADSB #avgeek #ZenithBoard` | this line | Appended to every post |
 | `SOCIAL_STYLE` | `dots` | `zenithboard social look dots\|flap` | The picture: the dot-matrix wall with the track in dots, or the split-flap board with a map |
 | `SOCIAL_THEME` | empty | `zenithboard social colour NAME\|wall` | The picture's colour: `amber`, `green`, `red`, `white`, `turquoise`, `blue`; empty = the wall's `THEME` |

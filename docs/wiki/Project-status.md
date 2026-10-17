@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **17 October 2026**, version **0.19.0**.
+Last updated: **17 October 2026**, version **0.19.1**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -53,6 +53,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 17 October 2026, two o'clock | Service on, radius 50 km, nothing posted in an hour while `test` always showed something: no military, helicopter or heavy had passed, and `rare`/`farthest` were still warming up — as designed, but the rules list made it hard to see, and its last line, *any*, read like a sixth kind of aircraft. It is now *ALL* at the end of the list, and ALL is every line at once: the special aircraft first, the ordinary traffic otherwise (0.19.1) |
 | 17 October 2026, late afternoon | The first posts read on a phone: *10 670 m over Trémery* was taken for a distance from Trémery, and the track's legend (`10 MIN` over `10KM`) for a riddle. The text now says *altitude 10 670 m · above Trémery*, and the legend is a key. The owner sent a mock-up of the dot-matrix picture (flight and registration labelled), asked for the split-flap look with a map and a choice of map, and dropped Mastodon. The map could not come from OpenStreetMap's own servers — their policy rules out automated fetching — and EOX's tile service, free with attribution and a link back, took its place; the tiles were checked in a real browser, layer by layer, before the code used them. The split-flap picture is drawn with Pillow, not a browser, so it works on a Pi 3B (0.19.0) |
 | 17 October 2026, afternoon | The first real post went out on Bluesky (an Etihad A380, from *Post now*). Read on a phone, it asked for changes: the text now starts with the flight (`Flight Etihad #ETD11K`) and ends with the place (`above Trémery`); the picture has a smaller callsign with the registration under it, and the time with its GMT offset, summer time included. The scale bar's `10KM` had pushed it out of the frame, and an A380's ten minutes ran past the edge: the scale now goes to 500 km per bar and always fits (0.18.3) |
 | 17 October 2026, noon | No automatic post: reading the service again showed `rare` counting looks instead of aircraft and `farthest` comparing an aircraft with its own record — neither could fire, while `test`, which judges differently, said they would. Fixed in 0.18.2; the real service loop now posts a Dash 8 under `rare` in a test that feeds it a minute of a real-looking track |
