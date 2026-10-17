@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.19.2
+- **A post made by hand now counts for the running service.** *Post now* (`social post`) writes its post to the state file, but the service kept its own copy in memory and wrote it back every fifteen seconds, so the manual post was forgotten at once: the gap restarted from the service's own last post, and the aircraft posted by hand could be posted a second time. Seen on the real Pi: a Lufthansa A340 went out 48 minutes after a *Post now*, with a two-hour gap. The service now reads the file before each decision and keeps the latest post and every posted aircraft from both; `social post` merges in turn instead of overwriting.
+
 ## 0.19.1
 - **The rules list: the special aircraft, then ALL.** *ALL* means everything that flies over, the special ones included — ticking it alone is ticking every line, and a military aircraft under ALL is posted as military, ahead of an airliner. It was *any*, the last of six lines that read like a sixth kind of aircraft, and under *any* alone a tanker counted as "anything". The old word still works in `config.env`. The list says which rules wait for three days of history.
 

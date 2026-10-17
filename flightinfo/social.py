@@ -143,6 +143,30 @@ def save_state(s):
         print("social: cannot save state: %s" % exc, file=sys.stderr, flush=True)
 
 
+def merge_disk(state):
+    """What another process wrote since: `social post` (Post now) records its post in state.json while the service
+    runs. The service held its state in memory and wrote it back every fifteen seconds, so a post made by hand was
+    forgotten at once: the gap restarted from the service's own last post, and the aircraft posted by hand could be
+    posted again (seen on the real Pi, 0.19.2). Now the latest post and every posted aircraft are taken from both."""
+    disk = load_state()
+    lp = disk.get("last_post")
+    if isinstance(lp, (int, float)) and lp > state.get("last_post", 0):
+        state["last_post"] = lp
+    mine = state.setdefault("posted", {})
+    for h, t in (disk.get("posted") or {}).items():
+        if isinstance(t, (int, float)) and t > mine.get(h, 0):
+            mine[h] = t
+    return state
+
+
+def remember_post(hex_code, when):
+    """A post made from the command line, written so that the running service sees it (it merges the file)."""
+    state = prune_state(load_state(), when)
+    state["last_post"] = max(state.get("last_post", 0), when)
+    state.setdefault("posted", {})[hex_code] = when
+    save_state(state)
+
+
 def day_of(t):
     return time.strftime("%Y-%m-%d", time.localtime(t))
 
@@ -786,7 +810,7 @@ def cmd_run():
         tracks.feed(aircraft, now)
         if now - last_ask >= ASK_EVERY_S:
             last_ask = now
-            prune_state(state, now)
+            prune_state(merge_disk(state), now)        # a post made by hand counts for the gap and the aircraft
             planes, best = one_poll(c, state, tracks, aircraft, now)
             polls += 1
             candidates += 1 if best else 0
@@ -890,9 +914,7 @@ def cmd_post(hex_code=None):
     print("bluesky: %s" % results.get("bluesky", "?"))
     ok = not str(results.get("bluesky", "FAILED")).startswith("FAILED")
     if ok:
-        state["last_post"] = time.time()
-        state.setdefault("posted", {})[p["hex"]] = time.time()
-        save_state(state)
+        remember_post(p["hex"], time.time())
     return 0 if ok else 1
 
 
