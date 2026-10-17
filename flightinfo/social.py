@@ -145,7 +145,8 @@ def prune_state(s, now):
     """What the rules need, and no more:
       types    type code -> {hex: last day seen}, the latest KEEP_PER_TYPE distinct aircraft, thirty days ("rare")
       far      day -> farthest km that day, thirty days ("farthest")
-      posted   hex -> time, one day (an aircraft is posted once)
+      posted   hex -> when it was last seen, kept a day past that (an aircraft is posted once: never again while
+               it is still in the sky, nor for a day after it has gone, 0.19.0)
       since    the first day the service watched the sky (no history, no "rare", no "farthest")
     0.18.0 counted a type once per poll instead of once per aircraft; that history is dropped, not converted."""
     cut = day_of(now - 30 * 86400)
@@ -178,6 +179,16 @@ def warmed(state, now):
     except (TypeError, ValueError):
         return False
     return now - start >= WARMUP_DAYS * 86400
+
+
+def note_seen(state, aircraft, now):
+    """An aircraft already posted is remembered for as long as it is still seen, and a day beyond: a slow aircraft
+    crossing the zone for an hour is one post, not one per gap (0.19.0)."""
+    posted = state.get("posted", {})
+    for a in aircraft or ():
+        h = str(a.get("hex", "")).lower()
+        if h in posted:
+            posted[h] = now
 
 
 def note_types(state, planes, now):
@@ -703,6 +714,7 @@ def one_poll(c, state, tracks, aircraft, now):
     with a record it set itself (0.18.0 did, and "farthest" could never fire)."""
     radius = server.cfg_float(c, "SOCIAL_RADIUS_KM", 15)
     rules = rules_of(c)
+    note_seen(state, aircraft, now)
     planes = ask_wall(c, radius)
     far_hex, far_km = farthest_now(c, aircraft)
     if "farthest" in rules and far_hex and warmed(state, now) and far_km > max(RECORD_MIN_KM, range_best(state)):

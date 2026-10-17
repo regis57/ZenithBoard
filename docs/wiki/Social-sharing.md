@@ -84,7 +84,7 @@ zenithboard logs social
 
 ![The dot-matrix picture](https://github.com/regis57/ZenithBoard/raw/main/docs/images/social-dots.png)
 
-The wall's rows, with three differences from the tablet: the flight and the registration on one row each, labelled like the altitude and the speed under them (`FLT  ETD11K`, `REG  A6-APD`); the time on the last row with its offset from GMT as the Pi's time zone has it that day (`11:39 GMT+2` in a French summer, `GMT+1` in winter), where the tablet shows the distance and direction; and, in the right-hand column, the track.
+The wall's rows as the tablet shows them (`FLT  ETD11K`, `REG  A6-APD`, then airline, type, altitude, speed, route), with two differences: the time on the last row with its offset from GMT as the Pi's time zone has it that day (`11:39 GMT+2` in a French summer, `GMT+1` in winter), where the tablet shows the distance and direction; and, in the right-hand column, the track where the tablet has the silhouette and the photo.
 
 **Reading the track column.** North is up. The aircraft is the arrow in the middle, pointing where it flies; the dimmer dots behind it are where it was. Under them, a legend read as a key:
 
@@ -99,7 +99,7 @@ The scale is chosen for each picture, from 1 to 500 km per bar, the smallest tha
 
 ![The split-flap picture, normal map](https://github.com/regis57/ZenithBoard/raw/main/docs/images/social-flap.jpg)
 
-The board as the wall's split-flap look draws it — the same rows as the dot-matrix picture, without the flags, fourteen letters wide so the map gets the room — beside a map centred on the track. On the map: the track and the aircraft in the picture's colour, edged in black so they read on any background; a key in the corner (`LAST 10 MIN`, and a scale bar in km or miles); north; and the map's credit along the bottom.
+The board as the wall's split-flap look draws it — the same nine rows, without the flags, fourteen letters wide instead of sixteen so the map gets the room — beside a map centred on the track. On the map: the track and the aircraft in the picture's colour, edged in black so they read on any background; a key in the corner (`LAST 10 MIN`, and a scale bar in km or miles); north; and the map's credit along the bottom.
 
 | Map | What it is | Credit, on the picture and in the post |
 |---|---|---|
@@ -115,7 +115,7 @@ The board as the wall's split-flap look draws it — the same rows as the dot-ma
 
 ## What gets posted, and what never does
 
-**The rules.** An aircraft is a candidate while inside the sharing radius (except a range record, below), known (a type, a registration or an airline — an aircraft with nothing known is never posted), airborne, with at least thirty seconds of track, and not posted in the last day. Among the candidates, the rules say which are worth it:
+**The rules.** An aircraft is a candidate while inside the sharing radius (except a range record, below), known (a type, a registration or an airline — an aircraft with nothing known is never posted), airborne, with at least thirty seconds of track, and not already posted — an aircraft is posted once: never again while the receiver still sees it, nor for a day after it has gone. Among the candidates, the rules say which are worth it:
 
 | Rule | Posts an aircraft that is… |
 |---|---|

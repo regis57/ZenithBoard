@@ -129,14 +129,8 @@ function drawTrack(g, trace, track, themeHex) {
   wall.text(g, scaleKm + "KM", lx + BAR + 2, ly2, 1);
 }
 
-// ---- the two labelled rows the picture adds: "FLT  ETD11K" and "REG  A6-APD", lined up with "ALT  8500 M".
-// An aircraft without a callsign shows its hex code as "HEX", without a registration nothing.
-function rows(p, L) {
-  const flight = String(p.flight || "").trim().toUpperCase();
-  const reg = String(p.registration || "").trim().toUpperCase().slice(0, 9);
-  return { flight: flight ? "FLT  " + flight.slice(0, 7) : "HEX  " + String(p.hex || "").toUpperCase(),
-           reg: reg ? "REG  " + reg : "" };
-}
+// ---- the two top rows, "FLT  ETD11K" and "REG  A6-APD": the wall's own (format.js), the same on the tablet since 0.19.0
+function rows(p, L) { void L; return Fmt.topRows(p, 14); }
 
 // ---- the split-flap board's rows (social_card.py draws them): the dot-matrix rows, no flags, the time last
 function flapLines(p, units, clock, cols) {

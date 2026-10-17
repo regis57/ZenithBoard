@@ -559,6 +559,25 @@ class ClockTest(unittest.TestCase):
         self.assertEqual(self.at("America/New_York", winter), "07:00 GMT-5")
 
 
+class OncePerAircraftTest(unittest.TestCase):
+    def test_an_aircraft_is_posted_once_while_it_is_in_the_sky(self):
+        # a slow aircraft that stays an hour in the zone, with a 20-minute gap: before 0.19.0 the "posted" memory
+        # was a day from the post, which already held; now it is a day from the last time the aircraft was seen,
+        # so a restart of the service or a long loiter can never make a second post of the same airframe
+        st, t0 = warm(), time.time() - 3 * 86400
+        st["posted"] = {EZY["hex"]: t0}
+        for h in range(0, 50, 1):                               # seen every hour for two days
+            social.note_seen(st, [{"hex": EZY["hex"].upper()}], t0 + h * 3600)
+            social.prune_state(st, t0 + h * 3600)
+        self.assertIn(EZY["hex"], st["posted"])
+        tracks = social.Tracks()
+        for pt in trace(8, t0 + 49 * 3600 - 40):
+            tracks.feed([{"hex": EZY["hex"], "lat": pt[0], "lon": pt[1], "alt_baro": pt[2], "seen_pos": 0}], pt[3])
+        self.assertIsNone(social.choose([EZY], tracks, {"any"}, st, t0 + 49 * 3600))
+        social.prune_state(st, t0 + 49 * 3600 + 2 * 86400)   # a day after it was last seen: forgotten
+        self.assertNotIn(EZY["hex"], st["posted"])
+
+
 class ServiceLoopTest(unittest.TestCase):
     def test_a_failed_post_is_not_retried_at_every_look(self):
         # before 0.19.0 a failed post was tried again at the next look, fifteen seconds later, and each try signs in
