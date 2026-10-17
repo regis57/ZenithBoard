@@ -155,6 +155,33 @@ def save_state(s):
         print("social: cannot save state: %s" % exc, file=sys.stderr, flush=True)
 
 
+def memory_mb():
+    """The service's own memory, in MB: {now, peak, node, since}. Measured by the process itself, because
+    `systemctl status` cannot: Raspberry Pi OS boots with the kernel's memory controller off (cgroup_disable=memory),
+    so systemd shows no Memory line and does not enforce MemoryMax either (seen on the real Pi, 0.19.4).
+    peak is Python's (Pillow draws in it), node the largest drawing by Node."""
+    import resource
+    now = 0.0
+    try:
+        with open("/proc/self/status", "r") as fh:
+            for line in fh:
+                if line.startswith("VmRSS:"):
+                    now = int(line.split()[1]) / 1024.0
+                    break
+    except (OSError, ValueError, IndexError):
+        now = 0.0                                # not Linux: the peak alone
+    peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024.0      # kilobytes on Linux
+    node = resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss / 1024.0
+    return {"now": round(now), "peak": round(max(peak, now)), "node": round(node)}
+
+
+def memory_words(m):
+    if not m:
+        return ""
+    return "%d MB now, %d MB at most%s" % (m.get("now", 0), m.get("peak", 0),
+                                          (", Node %d MB at most" % m["node"]) if m.get("node") else "")
+
+
 def merge_disk(state):
     """What another process wrote since: `social post` (Post now) records its post in state.json while the service
     runs. The service held its state in memory and wrote it back every fifteen seconds, so a post made by hand was
@@ -807,6 +834,7 @@ def cmd_run():
     tracks = Tracks()
     state = prune_state(load_state(), time.time())
     last_ask, last_summary, last_fail = 0, time.time(), 0
+    started = time.time()
     polls = candidates = 0
     c = cfg()
     sec = account()
@@ -845,14 +873,15 @@ def cmd_run():
                     state.setdefault("posted", {})[p["hex"]] = now
                 else:
                     last_fail = now
+            state["memory"] = dict(memory_mb(), since=started)  # for `social status`: since this start
             save_state(state)
         if now - last_summary >= 3600:
             # once an hour, so the journal answers "why no post?" without a line every fifteen seconds
             lp = state.get("last_post")
             wait = max(0, int((lp + gap_min(c) * 60 - now) / 60)) if lp else 0
-            print("social: last hour: %d looks, %d with a candidate under the rules. Last post: %s.%s%s" % (
+            print("social: last hour: %d looks, %d with a candidate under the rules. Last post: %s.%s Memory: %s.%s" % (
                 polls, candidates, time.strftime("%H:%M", time.localtime(lp)) if lp else "never",
-                (" Next possible in %d min." % wait) if wait else "",
+                (" Next possible in %d min." % wait) if wait else "", memory_words(memory_mb()),
                 "" if bluesky_ready(account()) else " No Bluesky account set up: nothing can be posted."), flush=True)
             last_summary, polls, candidates = now, 0, 0
         time.sleep(READ_EVERY_S)
@@ -986,6 +1015,9 @@ def cmd_status():
         gap = gap_min(c) * 60
         if lp and now - lp < gap:
             print("Next post possible in %d min (the gap)." % int((lp + gap - now) / 60))
+        m = state.get("memory")
+        if m and server.cfg_bool(c, "SOCIAL"):
+            print("Memory (the service, since %s): %s" % (time.strftime("%H:%M", time.localtime(m.get("since", now))), memory_words(m)))
     if blind:
         print("For the whole picture:  sudo zenithboard social status")
     return 0
