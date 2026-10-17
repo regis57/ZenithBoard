@@ -33,6 +33,8 @@ social_remove_units() {
 social_prepare_dir() {
   [ -d "$SOCIAL_DIR" ] || install -d -m 750 "$SOCIAL_DIR" 2>/dev/null || return 1
   [ "$(id -u)" -ne 0 ] || chown "$ZB_USER:$ZB_USER" "$SOCIAL_DIR" 2>/dev/null || true
+  # the picture's folder in /run: systemd makes it for the service; `test` and `post` from the command line need it too
+  [ "$(id -u)" -ne 0 ] || install -d -m 700 -o "$ZB_USER" -g "$ZB_USER" "${ZENITHBOARD_SOCIAL_RUN:-/run/zenithboard/social}" 2>/dev/null || true
 }
 social_need_node() {
   command -v node >/dev/null 2>&1 && return 0

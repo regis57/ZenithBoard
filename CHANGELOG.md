@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.18.1
+- **`zenithboard social test` and `social post` no longer crash from the command line.** They draw the picture in `/run/zenithboard/social`, which systemd creates for the service only; run by hand as the `zenithboard` user, the folder did not exist and Python stopped with *Permission denied* (seen on the first real try). The folder is now made for the command line too, and when it still cannot be written, a private temporary folder stands in and is removed after the post. Tested as a user with no rights on a box without the folder.
+
 ## 0.18.0
 - **Social sharing, off by default: the aircraft worth a post, on Bluesky and Mastodon, as a picture of the wall.** `sudo zenithboard social setup` asks for a Bluesky app password or a Mastodon access token (never a real password), tries the accounts, then asks for the words: the place named in the posts, the sharing radius, the minimum gap between posts, and what is worth a post — a rare type, military, a helicopter, a heavy, the farthest of the day, or anything. `social test` draws the picture and prints the text without posting; `social on` starts the service. Menu: *4 Settings → 6 Social sharing*.
 - **The picture is the dot-matrix wall with the aircraft's track** over the last minutes in the right-hand column, drawn by the Pi itself from the wall's own code — no browser, no photo, under a second on a Pi 3B. Node is installed from Debian for it when sharing is switched on; nothing else is added.

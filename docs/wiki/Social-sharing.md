@@ -114,7 +114,7 @@ State lives in `/var/lib/zenithboard/social/state.json`: which types were seen o
 | Pi | Picture | Why |
 |---|---|---|
 | Pi 3B and up | Dot-matrix wall + track, as described | No browser, no library: Node draws dots |
-| Pi 4 and up, 2 GB or more | *Coming in 0.18.1:* the split-flap look, and the real tar1090 map in the right-hand column | Those need a headless Chromium: about 400 MB for ten seconds per post |
+| Pi 4 and up, 2 GB or more | *Coming in 0.19.0:* the split-flap look, and the real tar1090 map in the right-hand column | Those need a headless Chromium: about 400 MB for ten seconds per post |
 
 ---
 
