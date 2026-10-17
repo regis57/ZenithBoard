@@ -467,12 +467,16 @@ def choose(planes, tracks, rules, state, now, settle=True):
 
 
 # --------------------------------------------------------------------------- the words
+NBSP = "\u00a0"                  # between the thousands and before the unit: "8 600 m" never breaks across two lines
+                                 # (seen on a phone, 0.19.8: "altitude 8" at the end of one line, "600 m" on the next)
+
+
 def metres(alt_ft, units):
     if alt_ft is None:
         return None
     if units == "imperial":
-        return "{:,} ft".format(int(round(alt_ft / 100.0) * 100)).replace(",", " ")
-    return "{:,} m".format(int(round(alt_ft * 0.3048 / 10.0) * 10)).replace(",", " ")
+        return "{:,}".format(int(round(alt_ft / 100.0) * 100)).replace(",", NBSP) + NBSP + "ft"
+    return "{:,}".format(int(round(alt_ft * 0.3048 / 10.0) * 10)).replace(",", NBSP) + NBSP + "m"
 
 
 def nice_type(p):
@@ -533,7 +537,7 @@ def hashtag_callsign(flight):
 def range_words(km):
     """A range record, said without placing the antenna: rounded DOWN to 50 km ("over 300 km"), never the figure."""
     step = int(km // 50) * 50
-    return "over %d km out" % max(step, 50)
+    return "over %d%skm out" % (max(step, 50), NBSP)
 
 
 POST_MAX = 300                   # Bluesky's limit, in characters

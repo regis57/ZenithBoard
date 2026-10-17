@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.19.8
+- **An altitude no longer breaks across two lines** in a post: *altitude 8* at the end of one line and *600 m* on the next, seen on a phone. The thousands and the unit are joined by no-break spaces (`8 600 m`, `37 000 ft`, `over 300 km out`).
+
 ## 0.19.7
 - **The hashtags have a command:** `sudo zenithboard social hashtags ADSB avgeek Moselle`, and a question in `social words`. The `#` is optional — typed unquoted, the shell would take `#ADSB` for the start of a comment and pass nothing. `none` for no hashtags at all (not even `#helicopter`), `default` for the three; alone, it shows them. Eight at most, letters, digits and `_`, at least one letter. Until now the only way was to edit `config.env`.
 - `zenithboard social status | head` no longer ends with a Python error when the reader leaves early.
