@@ -12,6 +12,23 @@ The code is complete enough. What it lacks is proof.
 | Switch the Debian patches on | `zenithboard security` on the author's Pi reports it as the one warning still open that is a plain to-do (the other, SSH passwords, is a decision) | `sudo zenithboard patches on`, and a few weeks without a feeder disturbed |
 | Leave the gain alone | Settled at 48.0 dB, 4–5 % strong messages at rush hour | Nothing to do. Recorded so it is not re-opened |
 
+## What 1.0 takes
+
+1.0 means *validated on real hardware, no caveats in [Project status](Project-status)* ([Release process](Release-process)). Each open caveat ends one way or the other:
+
+| Caveat today | What lifts it |
+|---|---|
+| Plane Finder never fed | A night of feed confirmed on Plane Finder's own site — or a "not verified" caveat in the menu |
+| A fixed IP address never applied for real | `zenithboard net static …` on the reference Pi, then back to DHCP, with a keyboard and screen at hand |
+| ACARS + Grafana never run for long | A second dongle, a 131 MHz antenna and a week of messages — on a 2 GB board ([Hardware](Hardware)) |
+| 978 MHz UAT (United States) | Run by a US user — or marked *experimental, outside 1.0*, so it stops being a caveat |
+
+And three proofs of stability that no caveat names yet:
+
+* **Two to four weeks hands-off**, social sharing on: no crash in `zenithboard logs`, no reboot forced by a watchdog.
+* **A fresh install** on a blank card, following the README alone. Everything so far was proven on a Pi upgraded release after release; only a fresh install proves the README.
+* **An update from an old release** (0.19 to the latest, say) with nothing done by hand.
+
 ## Next — once the above is proven
 
 * **Enrich the statistics page**, later, once there are some weeks of real data to look at: coverage by direction (which side of the sky the antenna hears best) and the airlines seen most often. The page today shows messages per hour, the farthest aircraft and aircraft per day ([Statistics](Statistics)); nothing is added before the real figures show what is worth drawing.
@@ -33,7 +50,7 @@ Saying no here saves answering the same question twice.
 
 | Not planned | Why |
 |---|---|
-| **Airline and aircraft-maker logos** | They are trademarks, and redrawing one in dots is still the trademark. A free project cannot hand them out, and a wall of 90 logos is a licensing problem, not a feature. Flags stand in for them: the registration country next to the airline, the maker's country next to the model |
+| **Airline and aircraft-maker logos** | They are trademarks, and redrawing one in dots is still the trademark. A free project cannot hand them out, and a wall of 90 logos is a licensing problem, not a feature. Flags stand in for them: the registration country next to the registration (since 0.20.0), the maker's country next to the model |
 | **Sound on the wall** | An airport-hall ambience was tried (0.13.0) and removed an hour later (0.13.1): it did not sound good enough to keep. Nothing nobody has heard is shipped |
 | **A cloud account, a hosted dashboard, telemetry** | The Pi is yours. Nothing should need to phone home for the wall to work. |
 | **Turning off package signature checking** | It has been the quick fix for two different installer problems. It stays off the table: a signature that is not checked is not a signature. |
