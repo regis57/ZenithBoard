@@ -62,7 +62,9 @@ social_set_look dots >/dev/null
 
 # ---- on / off / remove
 out=$(social_on)
-check "on: setting, service enabled, says the rules" '[ "$(cfg_get SOCIAL)" = 1 ] && grep -q "enable --now zenithboard-social.service" "$t/systemctl.log" && printf "%s" "$out" | grep -q "rules:" && printf "%s" "$out" | grep -q "@zb.bsky.social"'
+check "on: setting, service enabled, says the rules" '[ "$(cfg_get SOCIAL)" = 1 ] && grep -q "enable zenithboard-social.service" "$t/systemctl.log" && printf "%s" "$out" | grep -q "rules:" && printf "%s" "$out" | grep -q "@zb.bsky.social"'
+: > "$t/systemctl.log"; social_install_units
+check "update: the running service is restarted, not just enabled" 'grep -q "restart zenithboard-social.service" "$t/systemctl.log"'
 check "on: unit installed, state folder made"      '[ -f "$t/sysd/zenithboard-social.service" ] && [ -d "$ZENITHBOARD_SOCIAL_DIR" ]'
 check "on: node present, apt not called"           '[ ! -f "$t/apt.log" ]'
 social_off >/dev/null

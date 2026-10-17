@@ -29,7 +29,10 @@ social_install_units() {
   [ -f "$ZB_HOME/systemd/$SOCIAL_UNIT.service" ] || return 0
   install -d -m 755 "$SOCIAL_UNIT_DIR"
   install -m 644 "$ZB_HOME/systemd/$SOCIAL_UNIT.service" "$SOCIAL_UNIT_DIR/"
-  systemctl daemon-reload; systemctl enable --now "$SOCIAL_UNIT.service" >/dev/null 2>&1 || true
+  systemctl daemon-reload; systemctl enable "$SOCIAL_UNIT.service" >/dev/null 2>&1 || true
+  # restart, not "enable --now": a running service keeps the code it started with, and an update that only
+  # enabled it left the Pi posting with the old code for hours (seen on the real Pi, 0.19.3)
+  systemctl restart "$SOCIAL_UNIT.service" >/dev/null 2>&1 || true
 }
 social_remove_units() {
   systemctl disable --now "$SOCIAL_UNIT.service" >/dev/null 2>&1 || true
@@ -112,8 +115,11 @@ social_setup_words() {
   cfg_set SOCIAL_AREA "$area"
   radius=$(wt_input "Sharing radius in km: an aircraft is a candidate while it is inside it. This is separate from the wall's radius." "$(cfg_get SOCIAL_RADIUS_KM 15)") || return 1
   is_number "$radius" && cfg_set SOCIAL_RADIUS_KM "$radius"
-  gap=$(wt_input "Minimum minutes between two posts (so the account is not flooded)." "$(cfg_get SOCIAL_GAP_MIN 120)") || return 1
-  is_number "$gap" && cfg_set SOCIAL_GAP_MIN "$gap"
+  gap=$(wt_input "Minimum minutes between two posts (so the account is not flooded). 10 at least: a bot that posts every minute is what gets reported." "$(cfg_get SOCIAL_GAP_MIN 120)") || return 1
+  if is_number "$gap"; then
+    awk -v g="$gap" 'BEGIN { exit !(g < 10) }' && { wt_msg "$gap minutes is under the floor: 10 minutes saved." 8; gap=10; }
+    cfg_set SOCIAL_GAP_MIN "$gap"
+  fi
   rules=$(whiptail --title "$WT_TITLE" --checklist "What is worth a post? Tick the special aircraft you want, or ALL (Space = tick, Enter = go).\n\nALL posts everything that flies over, one post per gap at most, the special aircraft first when there is one. Ticking ALL alone is the same as ticking every line." 20 76 6 \
       military "military" "$(social_rule_on military)" \
       helicopter "a helicopter" "$(social_rule_on helicopter)" \
@@ -188,9 +194,28 @@ social_remove() {
   rm -f "$SOCIAL_SECRETS"; rm -rf "$SOCIAL_DIR"
   echo "Social sharing removed: the account secret, the state, the map tiles and the service are gone. Node and Pillow stay (apt remove nodejs python3-pil to drop them)."
 }
+# Run as root, the status is read as the service's own user, who can read the account file and the state folder.
+# It ends with the service itself: since when it runs, and whether it runs the code installed now.
 social_status() {
-  python3 "$SOCIAL_PY" status
-  if [ -f "$SOCIAL_UNIT_DIR/$SOCIAL_UNIT.service" ]; then echo "Service: $(systemctl is-active "$SOCIAL_UNIT" 2>/dev/null || echo unknown)"; fi
+  if [ "$(id -u)" -eq 0 ] && id "$ZB_USER" >/dev/null 2>&1 && [ "$ZB_USER" != root ]; then
+    runuser -u "$ZB_USER" -- python3 "$SOCIAL_PY" status
+  else
+    python3 "$SOCIAL_PY" status
+  fi
+  [ -f "$SOCIAL_UNIT_DIR/$SOCIAL_UNIT.service" ] || return 0
+  local st since started code
+  st=$(systemctl is-active "$SOCIAL_UNIT" 2>/dev/null || echo unknown)
+  since=$(systemctl show -p ActiveEnterTimestamp --value "$SOCIAL_UNIT" 2>/dev/null || true)
+  if [ "$st" = active ] && [ -n "$since" ]; then
+    started=$(date -d "$since" +%s 2>/dev/null || echo 0)
+    code=$(stat -c %Y "$SOCIAL_PY" "$ZB_HOME/flightinfo/social_card.py" "$ZB_HOME/tools/social-render.js" "$ZB_HOME/flightinfo/static/format.js" 2>/dev/null | sort -n | tail -1)
+    echo "Service: active since $since"
+    if [ "${code:-0}" -gt "${started:-0}" ] && [ "${started:-0}" -gt 0 ]; then
+      echo "  It runs the code from before the last update. Restart it:  sudo systemctl restart $SOCIAL_UNIT"
+    fi
+  else
+    echo "Service: $st"
+  fi
 }
 
 # ---- the menu

@@ -37,16 +37,24 @@
   }
   // Words that say "this is an airport" but tell the reader nothing, so they are dropped to save room.
   var GENERIC = /\b(INTERNATIONAL|INTL|AIRPORT|AIRFIELD|AERODROME|REGIONAL|MUNICIPAL|AEROPORT|AEROPUERTO|AEROPORTO|FLUGHAFEN)\b/g;
+  // A word a cut place name must not end on: "FRANKFURT AM" says less than "FRANKFURT".
+  // One word at a time, in a loop: a repeated group here would backtrack (CodeQL); an open bracket and what follows go first.
+  var DANGLING = /\s+(?:AM|AN|DE|DES|DU|LA|LE|LES|DI|DEL|DELLA|EL|ST|STE|SUR|SOUS|EN|DER|VON|OF|THE|AND|ET|Y)$/;
   function cut(s, width) {                          // cut at a word boundary when that leaves something readable
     if (s.length <= width) return s;
     var i = s.lastIndexOf(" ", width);
-    return (i >= 5 ? s.slice(0, i) : s.slice(0, width)).replace(/[ \-]+$/, "");
+    var t = (i >= 5 ? s.slice(0, i) : s.slice(0, width)).replace(/[ \-]+$/, "");
+    var u = t, i0 = u.indexOf(" (");
+    if (i0 >= 0) u = u.slice(0, i0);
+    while (DANGLING.test(u)) u = u.replace(DANGLING, "");
+    return u.length >= 3 ? u : t;
   }
-  // The airport's name when it fits, otherwise its city, otherwise the name cut to size.
+  // The city when it fits, the way a departure board reads ("SAN JOSE", not the airport "JUAN SANTAMARIA"); else the
+  // airport's name; else the city cut at a word (0.19.3: the name came first, and the board showed "JUAN SANTAMAR").
   function placeName(ap, width) {
     if (!ap) return "";
     var name = plain(plain(ap.name).replace(GENERIC, " ")), city = plain(ap.city);
-    var options = [name, city].filter(Boolean);
+    var options = [city, name].filter(Boolean);
     for (var i = 0; i < options.length; i++) if (options[i].length <= width) return options[i];
     return cut(options[0] || plain(ap.iata || ap.icao), width);
   }

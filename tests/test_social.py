@@ -353,7 +353,7 @@ class PictureTest(unittest.TestCase):
         got = social._node({"plane": EZY, "units": "metric", "clock": "11:39 GMT+2", "theme": "green", "cols": 14}, None, "--lines")
         # the wall's own formatting (format.js), 14 letters a row: what the tablet's split-flap look would show
         self.assertEqual(got["lines"], ["FLT  EZY1234", "REG  G-UZHA", "EASYJET", "A-320NEO", "ALT  11280 M", "SPD  593 KMH",
-                                        "EDINBURGH", "\u2192EUROAIRPORT", "11:39 GMT+2"])
+                                        "EDINBURGH", "\u2192SAINT-LOUIS", "11:39 GMT+2"])
         self.assertEqual(got["color"], "#39ff6a")
 
     def test_the_picture_s_colour_setting(self):
@@ -726,6 +726,51 @@ class SharedStateTest(unittest.TestCase):
         st = social.load_state()
         self.assertIn(EZY["hex"], st["posted"], "the aircraft posted by hand is still remembered after the service saved")
         self.assertGreaterEqual(st["last_post"], start + 57)
+
+
+class LogFindingsTest(unittest.TestCase):
+    """From the real Pi's log, 0.19.3."""
+
+    def test_the_gap_has_a_floor_of_ten_minutes(self):
+        # the gap had been set to 1 minute for a test: with ALL, that is a post a minute
+        self.assertEqual(social.gap_min({"SOCIAL_GAP_MIN": "1"}), social.GAP_FLOOR_MIN)
+        self.assertEqual(social.gap_min({"SOCIAL_GAP_MIN": "120"}), 120)
+        self.assertIn("floor", social.gap_words({"SOCIAL_GAP_MIN": "1"}))
+        self.assertEqual(social.gap_words({"SOCIAL_GAP_MIN": "30"}), "30 min")
+
+    def test_status_says_when_it_cannot_read_rather_than_never(self):
+        # `zenithboard social status` as pi printed "no account" and "Last post: never" on a Pi that had just posted:
+        # pi cannot read the account file (root:zenithboard 0640) nor the service's state folder
+        import contextlib
+        import io
+        self.addCleanup(setattr, social, "unreadable", social.unreadable)
+        social.unreadable = lambda path: True
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            social.cmd_status()
+        text = out.getvalue()
+        self.assertIn("cannot read the account file", text)
+        self.assertIn("cannot read the service's state folder", text)
+        self.assertIn("sudo zenithboard social status", text)
+        self.assertNotIn("no account", text)
+        self.assertNotIn("Last post: never", text)
+
+    def test_the_service_says_which_version_it_runs(self):
+        # the log showed a service started before the update, still running the old code: its first line says now
+        import contextlib
+        import io
+
+        class Stop(Exception):
+            pass
+        self.addCleanup(setattr, time, "sleep", time.sleep)
+        time.sleep = lambda s: (_ for _ in ()).throw(Stop())
+        for name, fake in (("read_aircraft", lambda c: []), ("account", lambda: {}), ("one_poll", lambda *a: ([], None)),
+                           ("load_state", warm), ("save_state", lambda st: None), ("cfg", lambda: dict(CFG))):
+            self.addCleanup(setattr, social, name, getattr(social, name))
+            setattr(social, name, fake)
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            with self.assertRaises(Stop):
+                social.cmd_run()
+        self.assertIn("running ZenithBoard %s" % social.server.VERSION, out.getvalue())
 
 
 class PublishTest(unittest.TestCase):
