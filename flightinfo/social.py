@@ -549,6 +549,15 @@ def _node(spec, out, *extra):
             pass                                 # already gone: nothing to clean
 
 
+def flap_module():
+    """social_card (Pillow), or None when Pillow is not installed. Only the split-flap look needs it."""
+    try:
+        import social_card
+        return social_card
+    except ImportError:
+        return None
+
+
 def render(p, trace, c, out_base):
     """Draw the picture in the chosen look. out_base has no extension: .png for dots, .jpg for flap (a map in PNG
     would pass Bluesky's 1,000,000 bytes). Returns {path, mime, width, height, bytes, and for a map: credit, links,
@@ -556,18 +565,15 @@ def render(p, trace, c, out_base):
     look = style_of(c)
     spec = {"plane": p, "trace": trace, "units": c.get("UNITS", "metric"), "theme": theme_of(c),
             "clock": clock_label(), "flags": server.cfg_bool(c, "FLAGS", "1"), "pitch": 10}
-    if look == "flap":
-        social_card = None
-        try:
-            import social_card                   # Pillow: only this look needs it
-        except ImportError as exc:               # not installed (an offline `social look flap`): the dots, and a word
-            print("social: the split-flap picture needs Pillow (%s): drawing the dot-matrix picture instead. Run: sudo zenithboard social look flap" % exc, flush=True)
-            look = "flap-fallback"
-    if look == "flap":
-        got = _node(dict(spec, flags=False, cols=social_card.COLS), None, "--lines")
+    card = flap_module() if look == "flap" else None
+    if look == "flap" and card is None:          # Pillow not installed (an offline `social look flap`): the dots, and a word
+        print("social: the split-flap picture needs Pillow: drawing the dot-matrix picture instead. Run: sudo zenithboard social look flap", flush=True)
+        look = "flap-fallback"
+    if card is not None:
+        got = _node(dict(spec, flags=False, cols=card.COLS), None, "--lines")
         out = out_base + ".jpg"
-        info = social_card.render(got["lines"], trace, p, out, color=got.get("color", "#ffb000"),
-                                  units=spec["units"], map_mode=map_of(c), cache_dir=os.path.join(STATE_DIR, "tiles"))
+        info = card.render(got["lines"], trace, p, out, color=got.get("color", "#ffb000"),
+                           units=spec["units"], map_mode=map_of(c), cache_dir=os.path.join(STATE_DIR, "tiles"))
         info.update(path=out, mime="image/jpeg")
         return info
     out = out_base + ".png"
@@ -678,7 +684,7 @@ def keep_copy(src, keep_base):
             try:
                 os.unlink(keep_base + other)
             except OSError:
-                pass
+                pass                             # no preview of the other look to drop
     with open(src, "rb") as a, open(keep_base + ext, "wb") as b:
         b.write(a.read())
     return keep_base + ext
