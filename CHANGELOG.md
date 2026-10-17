@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.19.9
+- **A post waits for the second opinion on the route too.** RYR8526 and EWG6ZP went out with empty route rows. adsbdb had other flights under those callsigns (Berlin → Stansted, Salzburg → Aalborg), which the wall rightly refuses for an aircraft over Metz flying south-east or north; it then asks hexdb.io, which had the right ones (Charleroi → Reggio Calabria, Menorca → Cologne) — a few seconds after the post. `/api/planes` now reports that second lookup as pending as well, and social sharing waits for it like for the first (two minutes at most). Checked against both services' real answers for these two callsigns.
+
 ## 0.19.8
 - **An altitude no longer breaks across two lines** in a post: *altitude 8* at the end of one line and *600 m* on the next, seen on a phone. The thousands and the unit are joined by no-break spaces (`8 600 m`, `37 000 ft`, `over 300 km out`).
 
