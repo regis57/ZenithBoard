@@ -17,6 +17,7 @@
 * [Routes, photos and data](Routes-photos-and-data)
 * [Reliability and diagnostics](Reliability-and-diagnostics)
 * [Gain tuning](Gain-tuning)
+* [Hardware](Hardware)
 
 *Working on it*
 * [Code tour](Code-tour)

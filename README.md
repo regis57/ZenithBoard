@@ -54,7 +54,7 @@ The story behind the project: [ZenithBoard on regis-hennequin.info](https://regi
 
 | Item | Notes |
 |---|---|
-| Raspberry Pi **4 or newer** | 2 GB+ recommended (1 GB is enough without ACARS). Raspberry Pi OS **Lite** (Bookworm or newer). See [Which Raspberry Pi?](#which-raspberry-pi) |
+| Raspberry Pi **3B or newer** | 1 GB is enough for ADS-B, the feeders, the wall and social sharing — measured on a Pi 3B, see [Which Raspberry Pi?](#which-raspberry-pi). 2 GB or more only for ACARS + Grafana. Raspberry Pi OS **Lite** (Bookworm or newer) |
 | Micro-SD card 16 GB+ | |
 | **RTL-SDR dongle** + **1090 MHz antenna** | A dongle with a built-in 1090 filter (e.g. "ADS-B" or "FlightAware Pro Stick") gives the best range. |
 | *(optional)* a **second** RTL-SDR dongle + 131 MHz antenna | Only for ACARS. The ADS-B dongle cannot do both. See [docs/HARDWARE.md](docs/HARDWARE.md). |
@@ -63,16 +63,25 @@ The story behind the project: [ZenithBoard on regis-hennequin.info](https://regi
 
 ### Which Raspberry Pi?
 
-Estimates, not yet measured on real boards.
+**Do not buy a bigger Pi for this unless you want ACARS.** How far you hear depends on the antenna, the dongle and the gain; the processor plays no part in it. The project's reference Pi is a 3B with 1 GB, and it has room to spare:
 
-| Board | ADS-B + feeders + wall | + ACARS & Grafana |
+| The reference Pi 3B (1 GB, outdoors, on Wi-Fi), measured 17 October 2026 | |
+|---|---|
+| Running | readsb; ADS-B Exchange with its MLAT client, FlightAware, Flightradar24; the wall; DuckDNS; both watchdogs; persistent logs; social sharing posting every crossing |
+| Memory | **656 MB of 1 GB still available**, no swap used |
+| Social sharing | about 30–40 MB at rest; while it draws a picture, about 105 MB at most, plus Node up to 65 MB for a second or two |
+| Temperature, power | 36 °C; no under-voltage and no throttling since the last start |
+
+| Board | ADS-B + feeders + wall + social sharing | + ACARS & Grafana (a second dongle) |
 |---|---|---|
-| **Pi 5 / Pi 4, 2 GB or more** | Comfortable | Comfortable (Pi 4 with 2 GB: fine) |
-| **Pi 4, 1 GB** | Good (about 400–550 MB used). Keep to one or two extra feeders. | Not recommended: about 900 MB more needed |
-| **Pi 3B / 3B+ (1 GB)** | Works. Prefer Ethernet and a good power supply. | Not recommended (Grafana is slow, `acarsdec` takes long to build) |
-| Pi Zero 2 W / Pi 2 | ADS-B and the wall only, no extra feeders | No |
+| **Pi 3B / 3B+ (1 GB)** | **Measured: comfortable**, with ADS-B Exchange and two more feeders (a third, Plane Finder, not measured). Ethernet or a strong Wi-Fi signal, and the official power supply | Not recommended: about 900 MB more needed; Grafana is slow and `acarsdec` takes long to build |
+| **Pi 4, 1 GB** | Comfortable (estimate: the same software, a faster processor) | Not recommended: about 900 MB more needed |
+| **Pi 4, 2 GB or more / Pi 5** | Comfortable, and nothing more to gain for these over a Pi 3B (estimate) | **The board for ACARS** (estimate) |
+| Pi Zero 2 W (512 MB) / Pi 2 | ADS-B and the wall only, no extra feeders (estimate) | No |
 
-The installer detects the board and its memory, warns you once, and marks ACARS as *not recommended* in the menu on low-memory or older boards (you can still continue). `zenithboard status` shows the free memory.
+The installer detects the board and its memory, warns you once, and marks ACARS as *not recommended* in the menu on low-memory or older boards (you can still continue). `zenithboard status` and `zenithboard health` show the free memory.
+
+**Already running on a Pi 3B, with a Pi 4 in a drawer?** The SD card would boot in it with everything as it is — the same system, ZenithBoard reads the board when it needs to, and the feeders keep their identities, which live on the card. But it needs a USB-C supply, may get another address from your router, draws more power and runs warmer, and for ADS-B it brings nothing you would see. What changes, and how to go back, on the wiki: **[Hardware](https://github.com/regis57/ZenithBoard/wiki/Hardware)**.
 
 ---
 
@@ -80,7 +89,7 @@ The installer detects the board and its memory, warns you once, and marks ACARS 
 
 ### 1. Prepare the SD card
 1. Install **Raspberry Pi Imager** from <https://www.raspberrypi.com/software/>.
-2. Choose *Raspberry Pi 4*, then **Raspberry Pi OS Lite (64-bit)** (under "Raspberry Pi OS (other)"), then your SD card.
+2. Choose your board (*Raspberry Pi 3*, *4* or *5*), then **Raspberry Pi OS Lite (64-bit)** (under "Raspberry Pi OS (other)"), then your SD card.
 3. Click **Edit settings** and fill in: hostname (e.g. `zenithboard`), your username + password, your Wi-Fi (skip if you use Ethernet), time zone, and **enable SSH**.
 4. Write the card, put it in the Pi, plug in the dongle (a USB 2.0 port is best) and power on. Wait 2–3 minutes.
 
