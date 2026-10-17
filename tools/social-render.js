@@ -55,10 +55,14 @@ function haversineKm(a, b) {
   return 2 * R * Math.asin(Math.sqrt(h));
 }
 
-// A scale that keeps the whole track inside the panel: 5, 10, 20 or 50 km per bar, whichever fits.
+// A scale that keeps the whole track inside the panel: 1 to 500 km per bar, the smallest that fits.
+// The scale bar is BAR dots long and stands for one round distance; the track must fit HALF dots either side of the
+// aircraft (the panel is 42 dots wide). 0.18.2 used a 14-dot bar and let the track run twice past the edge, and a
+// "10KM" label pushed the bar out of the frame; an A380 covers 165 km in ten minutes, so "100KM" has to fit too.
+const BAR = 8, HALF = 18;
 function pickScaleKm(extentKm) {
-  for (const s of [2, 5, 10, 20, 50, 100]) if (extentKm <= s * 2.6) return s;
-  return 200;
+  for (const s of [1, 2, 5, 10, 20, 50, 100, 200]) if (extentKm * BAR / s <= HALF) return s;
+  return 500;
 }
 
 function drawTrack(g, trace, track) {
@@ -79,10 +83,10 @@ function drawTrack(g, trace, track) {
   let extent = 0;
   for (const p of pts) extent = Math.max(extent, Math.abs(p[0]), Math.abs(p[1]));
   const scaleKm = pickScaleKm(extent);
-  const dotsPerKm = 14 / scaleKm;                                   // the scale bar is 14 dots long
-  // graticule every scale bar, faint, clipped to the panel
-  for (let k = -3; k <= 3; k++) {
-    const gx = Math.round(cx + k * 14), gy = Math.round(cy + k * 14);
+  const dotsPerKm = BAR / scaleKm;
+  // graticule every two scale bars, faint, clipped to the panel
+  for (let k = -4; k <= 4; k++) {
+    const gx = Math.round(cx + k * 2 * BAR), gy = Math.round(cy + k * 2 * BAR);
     for (let y = P.y + 2; y < P.y + P.h - 2; y += 3) if (gx > P.x && gx < P.x + P.w - 1) wall.put(g, gx, y, FAINT);
     for (let x = P.x + 2; x < P.x + P.w - 2; x += 3) if (gy > P.y && gy < P.y + P.h - 1) wall.put(g, x, gy, FAINT);
   }
@@ -105,18 +109,20 @@ function drawTrack(g, trace, track) {
   // legend
   const minutes = Math.max(1, Math.round((last[3] - trace[0][3]) / 60));
   wall.text(g, minutes + " MIN", P.x + 3, P.y + P.h - 17, 1);
-  const label = scaleKm + "KM";
-  wall.text(g, label, P.x + 3, P.y + P.h - 9, 1);
-  const bx = P.x + 3 + label.length * 6 + 2;
-  for (let x = bx; x < bx + 14; x++) wall.put(g, x, P.y + P.h - 6, ON);
-  wall.put(g, bx, P.y + P.h - 7, ON); wall.put(g, bx + 13, P.y + P.h - 7, ON);
+  wall.text(g, scaleKm + "KM", P.x + 3, P.y + P.h - 9, 1);
+  const bx = P.x + P.w - 2 - BAR;                                   // the bar against the right edge, inside the frame
+  for (let x = bx; x < bx + BAR; x++) wall.put(g, x, P.y + P.h - 6, ON);
+  wall.put(g, bx, P.y + P.h - 7, ON); wall.put(g, bx + BAR - 1, P.y + P.h - 7, ON);
 }
 
 // ---- the wall rows, as buildScreen lays them out, without silhouette, photo, or distance
 function drawWall(g, p, units, clock, flags) {
   const cols = flags ? COLS_FLAGS : COLS, maxX = flags ? TEXT_MAX_X : 84;
   const L = Fmt.planeLines(p, units, 0, 1, cols);
-  wall.text(g, L.callsign, 0, 0, 2);
+  // The tablet's big callsign takes two rows; the picture has it at the size of the others and the registration
+  // under it, so a reader sees which airframe it was (0.18.3)
+  wall.text(g, L.callsign, 0, 0, 1);
+  wall.text(g, String(p.registration || "").toUpperCase().slice(0, flags ? 12 : 14), 0, 8, 1);
   wall.textRow(g, L.airline, 16, 0, maxX);
   wall.textRow(g, L.type, 25, 0, maxX);
   wall.text(g, L.alt, 0, 34, 1); wall.text(g, L.spd, 0, 43, 1); wall.text(g, L.from, 0, 52, 1); wall.text(g, L.to, 0, 61, 1);
@@ -187,4 +193,4 @@ function main() {
 }
 
 if (require.main === module) main();
-module.exports = { drawWall, drawTrack, render, png, PANEL, pickScaleKm, GW, GH };
+module.exports = { drawWall, drawTrack, render, png, PANEL, pickScaleKm, BAR, HALF, GW, GH };

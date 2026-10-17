@@ -43,7 +43,7 @@ Tick the networks, paste each secret (typed blind, as a password), and the wizar
 
 | Question | What it is for | Default |
 |---|---|---|
-| Where is this? | The place named in the posts. Your words: a bare name (`Trémery`) reads *over Trémery*, words that start with their own preposition (`near Metz`) are kept. The receiver's position is never used. A small village narrows your home down to a few kilometres; a city, a department or a region does not | nothing |
+| Where is this? | The place named in the posts. Your words: a town name (`Trémery`) reads *above Trémery*, words that start with their own preposition (`near Metz`, `over the Moselle`) are kept. The receiver's position is never used. A small village narrows your home down to a few kilometres; a city, a department or a region does not | nothing |
 | Sharing radius | An aircraft is a candidate while inside it. Separate from the wall's radius | 15 km |
 | Minimum minutes between posts | So the account is not a firehose | 120 |
 | What is worth a post | See the rules below | rare, military, helicopter, heavy, farthest |
@@ -85,23 +85,26 @@ zenithboard logs social
 
 Several rules can match; the best candidate is the one matching the most, and knowing the most (route, airline, model each count). One post per gap, at most.
 
-**The text.** Says what the wall knows, in English, and nothing it does not:
+**The text.** Says what the wall knows, in English, and nothing it does not. It starts with the flight and ends with the place you gave (here `Trémery`); an airline callsign is a hashtag, so the flight can be followed:
 
 | Case | Text |
 |---|---|
-| Airline flight, route known | `✈ easyJet EZY1234 · Airbus A320neo · Edinburgh → Saint-Louis · 11 280 m over Luxembourg` |
-| Airline flight, route unknown | `✈ British Airways BAW123 · Airbus A380-800 · 11 900 m over Luxembourg` |
-| No airline known | `✈ Airbus A330-743 Beluga XL · F-GXLH · BGA113J · 9 750 m over Luxembourg` |
-| Helicopter | `🚁 Airbus Helicopters H145 · D-HABC · low over Luxembourg` |
-| Military, no callsign | `✈ Military · Boeing KC-135R Stratotanker · 7 620 m over Luxembourg` |
-| Range record | `📡 Emirates UAE201 · Boeing 777 · … · range record for 30 days, over 300 km out` |
+| Airline flight, route known | `Flight Etihad #ETD11K · Airbus A380-800 · Paris → Abu Dhabi · 8 500 m above Trémery` |
+| Airline flight, route unknown | `Flight British Airways #BAW123 · Airbus A380-800 · 11 900 m above Trémery` |
+| Callsign, no airline known | `Flight #BGA113J · Airbus A330-743 Beluga XL · F-GXLH · 9 750 m above Trémery` |
+| Registration only | `Aircraft D-EABC · Cessna 172 · 910 m above Trémery` |
+| Helicopter | `Helicopter D-HABC · Airbus Helicopters H145 · low above Trémery` |
+| Military | `Military flight #RCH123 · Boeing KC-135R Stratotanker · 7 620 m above Trémery` |
+| Range record | `Flight Emirates #UAE201 · Boeing 777-300ER · … · 11 280 m · range record for 30 days: over 300 km out, seen from Trémery` |
 | Nothing known | no post |
 
-Then the hashtags (`#ADSB #avgeek #ZenithBoard` by default; `#helicopter` or `#military` replace `#avgeek` when they apply). The picture carries an alt text built from the same facts, for screen readers. Units follow the wall's setting.
+The registration is said when no airline is: an airline flight is known by its callsign, and the registration is on the picture. A range record ends with *seen from* rather than *above*: it was nowhere near overhead. Then the hashtags (`#ADSB #avgeek #ZenithBoard` by default; `#helicopter` or `#military` replace `#avgeek` when they apply). The picture carries an alt text built from the same facts, for screen readers. Units follow the wall's setting.
+
+**The picture.** The wall's rows, with two differences from the tablet: the callsign at the size of the other rows, with the aircraft's registration on the row under it, and on the last row the time of the post with its offset from GMT as the Pi's time zone has it that day — `11:39 GMT+2` in a French summer, `GMT+1` in winter — where the tablet shows the distance and direction. The track's scale bar says how many kilometres it stands for, from 1 to 500, whichever keeps the whole track inside the frame.
 
 **What never leaves the Pi:**
 
-* **The receiver's position**, and anything that gives it away: the posts carry no bearing and no distance — a range record says *over 300 km*, rounded down to 50, which tells the record and draws no useful circle — the picture's last row shows the time where the tablet shows `12KM NE`, and the track is centred on the aircraft, north up, with no map behind it. A hundred posts give nothing to triangulate.
+* **The receiver's position**, and anything that gives it away: the posts carry no bearing and no distance — a range record says *over 300 km*, rounded down to 50, which tells the record and draws no useful circle — the picture's last row shows the time (`11:39 GMT+2`) where the tablet shows `12KM NE`, and the track is centred on the aircraft, north up, with no map behind it. A hundred posts give nothing to triangulate.
 * **The Planespotters photo.** Their terms forbid re-hosting it. The track takes its place.
 * **The secrets.** They live in `/etc/zenithboard/social.env`, owned by root, readable by the `zenithboard` group (the service's user), mode 0640; never in `config.env`, never in a log, never in `zenithboard config`. `zenithboard security` checks the file's owner and mode.
 * **The picture itself**, after the post: it is drawn in `/run/zenithboard/social` — memory, not the card — and deleted once the networks have answered, whether they took it or not.

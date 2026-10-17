@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **15 October 2026**, version **0.18.2**.
+Last updated: **17 October 2026**, version **0.18.3**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -53,6 +53,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 17 October 2026, afternoon | The first real post went out on Bluesky (an Etihad A380, from *Post now*). Read on a phone, it asked for changes: the text now starts with the flight (`Flight Etihad #ETD11K`) and ends with the place (`above Trémery`); the picture has a smaller callsign with the registration under it, and the time with its GMT offset, summer time included. The scale bar's `10KM` had pushed it out of the frame, and an A380's ten minutes ran past the edge: the scale now goes to 500 km per bar and always fits (0.18.3) |
 | 17 October 2026, noon | No automatic post: reading the service again showed `rare` counting looks instead of aircraft and `farthest` comparing an aircraft with its own record — neither could fire, while `test`, which judges differently, said they would. Fixed in 0.18.2; the real service loop now posts a Dash 8 under `rare` in a test that feeds it a minute of a real-looking track |
 | 17 October 2026, late morning | The first `social test` on the real Pi stopped with *Permission denied* on `/run/zenithboard/social`: the folder is systemd's, made for the service, and the command line ran outside it. Fixed in 0.18.1 the same hour |
 | 17 October 2026 | Social sharing (0.18.0): Bluesky and Mastodon, a picture of the wall with the aircraft's track, drawn by the Pi without a browser. Decided against X (paid API since February 2026), Threads and Instagram (both fetch the picture from a public address). The Planespotters photo stays off the posts: their terms forbid re-hosting it. Mocked up in a browser and checked against the real renderer before being written; the networks are tested against fakes until the first real post |

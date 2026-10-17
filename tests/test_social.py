@@ -38,22 +38,40 @@ def trace(n=20, start=None):
 
 
 class WordsTest(unittest.TestCase):
+    # 0.18.3: the post starts with the flight ("Flight Etihad #ETD11K") and ends with the place ("above Trémery");
+    # no icon in front, the callsign a hashtag so the flight can be followed
     def test_airline_with_route(self):
         self.assertEqual(social.post_text(EZY, CFG).split("\n")[0],
-                         "✈ easyJet EZY1234 · Airbus A320neo · Edinburgh → Saint-Louis · 11 280 m over Luxembourg")
+                         "Flight easyJet #EZY1234 · Airbus A320neo · Edinburgh → Saint-Louis · 11 280 m over Luxembourg")
+
+    def test_starts_with_the_flight_and_ends_above_the_place(self):
+        t = social.post_text(EZY, dict(CFG, SOCIAL_AREA="Trémery")).split("\n")[0]
+        self.assertTrue(t.startswith("Flight easyJet #EZY1234 · "), t)
+        self.assertTrue(t.endswith(" above Trémery"), t)
 
     def test_unknown_airline_shows_callsign_and_model(self):
-        self.assertEqual(social.post_text(BELUGA, CFG).split("\n")[0], "✈ Airbus A330-743 Beluga XL · F-GXLH · BGA113J · 9 750 m over Luxembourg")
+        self.assertEqual(social.post_text(BELUGA, CFG).split("\n")[0], "Flight #BGA113J · Airbus A330-743 Beluga XL · F-GXLH · 9 750 m over Luxembourg")
+
+    def test_a_registration_used_as_callsign_is_an_aircraft_not_a_flight(self):
+        p = dict(BELUGA, flight="FGXLH", type_name="CESSNA 172", type="C172")
+        self.assertEqual(social.post_text(p, dict(CFG, SOCIAL_AREA="Trémery")).split("\n")[0], "Aircraft F-GXLH · Cessna 172 · 9 750 m above Trémery")
+
+    def test_only_airline_callsigns_become_hashtags(self):
+        self.assertEqual(social.hashtag_callsign("ETD11K"), "#ETD11K")
+        self.assertEqual(social.hashtag_callsign("DEABC"), "DEABC")
+        self.assertEqual(social.hashtag_callsign("SAMU57"), "SAMU57")
+        self.assertEqual(social.hashtag_callsign(""), "")
 
     def test_helicopter(self):
         t = social.post_text(HELI, CFG)
-        self.assertTrue(t.startswith("🚁 Airbus Helicopters H145 · D-HABC · low over Luxembourg"), t)
+        self.assertTrue(t.startswith("Helicopter D-HABC · Airbus Helicopters H145 · low over Luxembourg"), t)
         self.assertIn("#helicopter", t)
 
     def test_military_without_callsign(self):
         t = social.post_text(KC135, CFG)
-        self.assertTrue(t.startswith("✈ Military · Boeing KC-135R Stratotanker · 7 620 m over Luxembourg"), t)
+        self.assertTrue(t.startswith("Military flight · Boeing KC-135R Stratotanker · 7 620 m over Luxembourg"), t)
         self.assertIn("#military", t)
+        self.assertTrue(social.post_text(dict(KC135, flight="RCH123"), CFG).startswith("Military flight #RCH123 · "))
 
     def test_nothing_known_is_not_worth_a_post(self):
         self.assertFalse(social.known(NOTHING))
@@ -73,19 +91,23 @@ class WordsTest(unittest.TestCase):
     def test_a_range_record_is_said_without_the_figure(self):
         # rounded DOWN to 50 km: enough to tell a record, not enough to draw a circle around the antenna
         t = social.post_text(dict(EZY, distance_km=332.4), CFG, why="farthest")
-        self.assertTrue(t.startswith("📡 "), t)
-        self.assertIn("range record for 30 days, over 300 km out", t)
+        self.assertTrue(t.startswith("Flight easyJet #EZY1234 · "), t)
+        self.assertIn("· 11 280 m · range record for 30 days: over 300 km out", t)
         self.assertNotIn("332", t)
+        # far from overhead: the place is where it was seen from, not what it flew above
+        t = social.post_text(dict(EZY, distance_km=332.4), dict(CFG, SOCIAL_AREA="Trémery"), why="farthest").split("\n")[0]
+        self.assertTrue(t.endswith("range record for 30 days: over 300 km out, seen from Trémery"), t)
+        self.assertNotIn("above", t)
         self.assertEqual(social.range_words(51), "over 50 km out")
         self.assertEqual(social.range_words(149.9), "over 100 km out")
 
-    def test_a_bare_place_name_reads_over(self):
-        # reported from the real Pi: "1 750 m Trémery"
-        self.assertEqual(social.area_words({"SOCIAL_AREA": "Trémery"}), "over Trémery")
+    def test_a_bare_place_name_reads_above(self):
+        # reported from the real Pi: "1 750 m Trémery"; 0.18.3 asked for "above"
+        self.assertEqual(social.area_words({"SOCIAL_AREA": "Trémery"}), "above Trémery")
         self.assertEqual(social.area_words({"SOCIAL_AREA": "near Metz"}), "near Metz")
         self.assertEqual(social.area_words({"SOCIAL_AREA": "over the Moselle"}), "over the Moselle")
         self.assertEqual(social.area_words({"SOCIAL_AREA": "  "}), "")
-        self.assertIn("1 750 m over Trémery", social.post_text(dict(EZY, alt_ft=5740), dict(CFG, SOCIAL_AREA="Trémery")))
+        self.assertIn("1 750 m above Trémery", social.post_text(dict(EZY, alt_ft=5740), dict(CFG, SOCIAL_AREA="Trémery")))
 
     def test_de_havilland(self):
         # reported from the real Pi: "DE Havilland DHC-8-400 Dash 8"
@@ -94,6 +116,7 @@ class WordsTest(unittest.TestCase):
     def test_alt_text(self):
         a = social.alt_text(EZY, CFG, trace(20))
         self.assertIn("EZY1234", a); self.assertIn("easyJet", a); self.assertIn("from Edinburgh to Saint-Louis", a)
+        self.assertIn("registration G-UZHA", a)
         self.assertTrue(a.endswith("north up."), a)
 
 
@@ -239,6 +262,35 @@ class PictureTest(unittest.TestCase):
         self.assertLess(info["bytes"], 1000000)
         self.assertEqual((info["width"], info["height"]), (1310, 830))
 
+    def node(self, js):
+        if shutil.which(social.NODE) is None:
+            self.skipTest("node not installed here")
+        import subprocess
+        r = subprocess.run([social.NODE, "-e", "const R = require(%s);" % json.dumps(social.RENDERER) + js],
+                           capture_output=True, text=True, timeout=30)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        return json.loads(r.stdout)
+
+    def test_the_scale_keeps_the_track_inside_the_panel(self):
+        # 0.18.2 let an A380's ten minutes (165 km) run past the frame; every extent up to 500 km per bar fits now
+        out = self.node("const bad = []; for (let e = 0.1; e < 500 * R.HALF / R.BAR; e *= 1.07) {"
+                        " const s = R.pickScaleKm(e); if (e * R.BAR / s > R.HALF) bad.push([e, s]); }"
+                        " console.log(JSON.stringify({bad, a380: R.pickScaleKm(165)}));")
+        self.assertEqual(out["bad"], [])
+        self.assertEqual(out["a380"], 100)
+
+    def test_callsign_small_and_registration_under_it(self):
+        # 0.18.3: the callsign at the size of the other rows (7 dots high, not 14), the registration on the row under it
+        out = self.node("const g = new Uint32Array(R.GW * R.GH);"
+                        " R.drawWall(g, %s, 'metric', '11:39 GMT+2', true);"
+                        " const lit = y => { let n = 0; for (let x = 0; x < 70; x++) n += g[y * R.GW + x] ? 1 : 0; return n; };"
+                        " console.log(JSON.stringify({row: [...Array(16).keys()].map(lit), clock: lit(72)}));" % json.dumps(EZY))
+        rows = out["row"]
+        self.assertTrue(all(rows[y] for y in range(0, 7)), rows)          # the callsign
+        self.assertEqual(rows[7], 0, rows)                                  # one dark row
+        self.assertTrue(all(rows[y] for y in range(8, 15)), rows)          # G-UZHA
+        self.assertGreater(out["clock"], 0)
+
 
 class FakeResponse(object):
     def __init__(self, body, code=200):
@@ -323,6 +375,30 @@ class NetworksTest(unittest.TestCase):
         social.post_bluesky(sec, "hello", self.png, "alt", 1, 1)
         for url, hdr, data in self.sent[1:]:
             self.assertNotIn(b"aaaa-bbbb", data or b"")
+
+
+class ClockTest(unittest.TestCase):
+    """The picture's last row: the time, with its offset from GMT as the Pi's zone has it that day."""
+
+    def at(self, zone, when):
+        old = os.environ.get("TZ")
+        os.environ["TZ"] = zone; time.tzset()
+        try:
+            return social.clock_label(when)
+        finally:
+            if old is None:
+                os.environ.pop("TZ", None)
+            else:
+                os.environ["TZ"] = old
+            time.tzset()
+
+    def test_daylight_saving_follows_the_zone(self):
+        summer, winter = 1784280000, 1768478400          # 2026-07-17 09:20 UTC, 2026-01-15 12:00 UTC
+        self.assertEqual(self.at("Europe/Paris", summer), "11:20 GMT+2")
+        self.assertEqual(self.at("Europe/Paris", winter), "13:00 GMT+1")
+        self.assertEqual(self.at("UTC", winter), "12:00 GMT")
+        self.assertEqual(self.at("Asia/Kolkata", winter), "17:30 GMT+5:30")
+        self.assertEqual(self.at("America/New_York", winter), "07:00 GMT-5")
 
 
 class PublishTest(unittest.TestCase):
