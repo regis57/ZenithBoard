@@ -31,7 +31,8 @@ Every `zenithboard` command, grouped by what you are trying to do. `zenithboard`
 | `zenithboard stats on` · `off` · `status` | yes | Collect a sample every 15 minutes (off by default). `off` keeps the files |
 | `zenithboard stats csv` · `clear` | yes for clear | The raw samples as CSV; empty them |
 | `zenithboard social setup` | yes | The Bluesky account (an app password, never the real one), then the words and the picture. A wizard that tries the account before going on. See [Social sharing](Social-sharing) |
-| `zenithboard social words` | yes | The place name the posts carry, the sharing radius, the gap between posts, and what is worth a post |
+| `zenithboard social words` | yes | The place name the posts carry, the sharing radius, the gap between posts, the hashtags, and what is worth a post |
+| `zenithboard social hashtags [WORD...]` | yes to change | The hashtags ending each post: `social hashtags ADSB avgeek Moselle` (the `#` is optional — unquoted, the shell would take it for a comment), `none`, or `default`. Alone: shows them |
 | `zenithboard social picture` | yes | The picture: dot-matrix or split-flap, its colour, the map (a wizard) |
 | `zenithboard social look dots` · `flap` · `alternate` | yes | The dot-matrix wall with the track, the split-flap board with a map, or the two in turn (one post each) |
 | `zenithboard social colour NAME` · `wall` · `rotate` | yes | amber, green, red, white, turquoise, blue, the wall's own colour, or the colours in turn (all but blue) |

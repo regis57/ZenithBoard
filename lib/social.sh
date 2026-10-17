@@ -120,6 +120,14 @@ social_setup_words() {
     awk -v g="$gap" 'BEGIN { exit !(g < 10) }' && { wt_msg "$gap minutes is under the floor: 10 minutes saved." 8; gap=10; }
     cfg_set SOCIAL_GAP_MIN "$gap"
   fi
+  local tags
+  while true; do
+    tags=$(wt_input "Hashtags at the end of each post, separated by spaces (the # is optional). none for no hashtags.\n#avgeek becomes #helicopter or #military when one of those is posted." "$(cfg_get SOCIAL_HASHTAGS "$SOCIAL_TAGS_DEFAULT")") || return 1
+    if [ "$tags" = none ]; then cfg_set SOCIAL_HASHTAGS none; break; fi
+    local said
+    if said=$(social_hashtags_clean "$tags" 2>&1); then cfg_set SOCIAL_HASHTAGS "$said"; break; fi
+    wt_msg "$said" 8
+  done
   rules=$(whiptail --title "$WT_TITLE" --checklist "What is worth a post? Tick the special aircraft you want, or ALL (Space = tick, Enter = go).\n\nALL posts everything that flies over, one post per gap at most, the special aircraft first when there is one. Ticking ALL alone is the same as ticking every line." 20 76 6 \
       military "military" "$(social_rule_on military)" \
       helicopter "a helicopter" "$(social_rule_on helicopter)" \
@@ -130,6 +138,42 @@ social_setup_words() {
   rules=${rules//\"/}
   case " $rules " in *" all "*) rules=all ;; esac       # ALL stands for every line: saved as the one word
   cfg_set SOCIAL_RULES "${rules// /,}"
+}
+
+# ---- the hashtags (0.19.7): `social hashtags ADSB avgeek ZenithBoard`, with or without the #, which an unquoted
+# shell word would otherwise take for the start of a comment. "none" for no hashtags at all, "default" for the three.
+SOCIAL_TAGS_DEFAULT="#ADSB #avgeek #ZenithBoard"
+social_hashtags_clean() {   # words -> "#a #b" on stdout; returns 1 with the reason on stderr when a word will not do
+  local w arg parts found=() n=0
+  for arg in "$@"; do
+    read -r -a parts <<< "$arg"             # a quoted "#a #b" is split like separate words; read does no globbing
+    for w in "${parts[@]}"; do
+      w=${w##\#}; w=${w##\#}
+      [ -n "$w" ] || continue
+      if ! [[ $w =~ ^[A-Za-z0-9_]{1,40}$ ]] || ! [[ $w =~ [A-Za-z] ]]; then
+        echo "Not a hashtag: $w (letters, digits and _ only, at least one letter, 40 at most)" >&2; return 1
+      fi
+      found+=("#$w"); n=$((n + 1))
+    done
+  done
+  [ "$n" -gt 0 ] || { echo "No hashtag given" >&2; return 1; }
+  [ "$n" -le 8 ] || { echo "$n hashtags: 8 at most (a post has 300 characters)" >&2; return 1; }
+  w="${found[*]}"
+  [ "${#w}" -le 100 ] || { echo "${#w} characters of hashtags: 100 at most (a post has 300)" >&2; return 1; }
+  printf '%s' "$w"
+}
+social_set_hashtags() {
+  local tags
+  case "${1:-}" in
+    "") echo "Hashtags: $(cfg_get SOCIAL_HASHTAGS "$SOCIAL_TAGS_DEFAULT")"
+        echo "Change:  sudo zenithboard social hashtags ADSB avgeek ZenithBoard   (the # is optional), none, or default"; return 0 ;;
+    none) cfg_set SOCIAL_HASHTAGS none; echo "Hashtags: none. The posts end with the text (and the map's credit)."; return 0 ;;
+    default) cfg_set SOCIAL_HASHTAGS "$SOCIAL_TAGS_DEFAULT"; echo "Hashtags: $SOCIAL_TAGS_DEFAULT"; return 0 ;;
+  esac
+  tags=$(social_hashtags_clean "$@") || return 1
+  cfg_set SOCIAL_HASHTAGS "$tags"
+  echo "Hashtags: $tags"
+  case " $tags " in *" #avgeek "*) echo "(#avgeek becomes #helicopter or #military when one of those is posted.)" ;; esac
 }
 
 # ---- the picture: the look, its colour, the map (the flap look only)

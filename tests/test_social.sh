@@ -62,6 +62,15 @@ check "variety: alternate, rotate, rotate accepted" 'social_set_look alternate >
 social_set_colour wall >/dev/null; social_set_map normal >/dev/null
 social_set_look dots >/dev/null
 
+# ---- the hashtags (0.19.7): the # optional, so an unquoted shell word is not taken for a comment
+check "hashtags: words become #words"              'social_set_hashtags ADSB "#avgeek" Moselle >/dev/null && [ "$(cfg_get SOCIAL_HASHTAGS)" = "#ADSB #avgeek #Moselle" ]'
+check "hashtags: one quoted string works too"      'social_set_hashtags "#ADSB #Metz" >/dev/null && [ "$(cfg_get SOCIAL_HASHTAGS)" = "#ADSB #Metz" ]'
+check "hashtags: a bad word changes nothing"       '! social_set_hashtags ADSB "two-words" >/dev/null 2>&1 && ! social_set_hashtags 1234 >/dev/null 2>&1 && [ "$(cfg_get SOCIAL_HASHTAGS)" = "#ADSB #Metz" ]'
+check "hashtags: no glob, no injection"            'cd "$t" && touch zzz && ! social_set_hashtags "*" >/dev/null 2>&1 && ! social_set_hashtags "a;rm" >/dev/null 2>&1; cd - >/dev/null; [ "$(cfg_get SOCIAL_HASHTAGS)" = "#ADSB #Metz" ]'
+check "hashtags: 8 at most"                        '! social_set_hashtags a b c d e f g h i >/dev/null 2>&1'
+check "hashtags: none, then default"               'social_set_hashtags none >/dev/null && [ "$(cfg_get SOCIAL_HASHTAGS)" = none ] && social_set_hashtags default >/dev/null && [ "$(cfg_get SOCIAL_HASHTAGS)" = "#ADSB #avgeek #ZenithBoard" ]'
+check "hashtags: alone, it shows them"             'social_set_hashtags | grep -q "Hashtags: #ADSB #avgeek #ZenithBoard"'
+
 # ---- on / off / remove
 out=$(social_on)
 check "on: setting, service enabled, says the rules" '[ "$(cfg_get SOCIAL)" = 1 ] && grep -q "enable zenithboard-social.service" "$t/systemctl.log" && printf "%s" "$out" | grep -q "rules:" && printf "%s" "$out" | grep -q "@zb.bsky.social"'

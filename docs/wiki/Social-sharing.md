@@ -50,6 +50,7 @@ Give the handle and paste the app password (typed blind, as a password); the wiz
 | Where is this? | The place named at the end of the posts. Your words: a town name (`Trémery`) reads *above Trémery*, words that start with their own preposition (`near Metz`, `over the Moselle`) are kept. The receiver's position is never used. A small village narrows your home down to a few kilometres; a city, a department or a region does not | nothing |
 | Sharing radius | An aircraft is a candidate while inside it. Separate from the wall's radius | 15 km |
 | Minimum minutes between posts | So the account is not a firehose. Ten at least: a declared bot that posts every minute is what gets reported, so a smaller value is used as ten | 120 |
+| Hashtags | Ending every post. Change them any time with `sudo zenithboard social hashtags ADSB avgeek Moselle` — the `#` is optional, and left out the shell cannot take it for a comment; `none` for none at all, `default` for the three | `#ADSB #avgeek #ZenithBoard` |
 | What is worth a post | See the rules below | rare, military, helicopter, heavy, farthest |
 
 And then for the picture:
@@ -159,7 +160,7 @@ Several rules can match; the best candidate is the one matching the most, and kn
 | Range record | `Flight Emirates #UAE201 · Boeing 777-300ER · … · altitude 11 280 m · range record for 30 days: over 300 km out, seen from Trémery` |
 | Nothing known | no post |
 
-The registration is said when no airline is: an airline flight is known by its callsign, and the registration is on the picture. A range record ends with *seen from* rather than *above*: it was nowhere near overhead. Then the hashtags (`#ADSB #avgeek #ZenithBoard` by default; `#helicopter` or `#military` replace `#avgeek` when they apply), and last, when the picture has a map, its credit in one short line. The picture carries an alt text built from the same facts, for screen readers, with the map's full credit. Units follow the wall's setting.
+The registration is said when no airline is: an airline flight is known by its callsign, and the registration is on the picture. A range record ends with *seen from* rather than *above*: it was nowhere near overhead. Then the hashtags (`#ADSB #avgeek #ZenithBoard` by default, `sudo zenithboard social hashtags …` to change them; `#helicopter` or `#military` replace `#avgeek` when they apply, or are added when `#avgeek` is not there, unless the hashtags are `none`), and last, when the picture has a map, its credit in one short line. The picture carries an alt text built from the same facts, for screen readers, with the map's full credit. Units follow the wall's setting.
 
 **What never leaves the Pi:**
 
