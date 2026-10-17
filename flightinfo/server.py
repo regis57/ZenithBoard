@@ -26,7 +26,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.18.1"
+VERSION = "0.18.2"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -440,8 +440,9 @@ def describe_type(ac, types=None):
 
 # --------------------------------------------------------------------------- planes
 def build_planes(data, lat, lon, radius_km, airlines=None, photo_lookup=None, demo=False, types=None, route_lookup=None,
-                 aircraft_lookup=None, route_fallback=None):
-    """Return (planes_in_radius_sorted_by_distance, total_with_position)."""
+                 aircraft_lookup=None, route_fallback=None, only_hex=None):
+    """Return (planes_in_radius_sorted_by_distance, total_with_position). only_hex: that aircraft alone, so asking
+    about one far aircraft (social sharing's range record) does not set off lookups for everything in between."""
     airlines = airlines or {}
     planes, total = [], 0
     for ac in data.get("aircraft", []):
@@ -450,6 +451,8 @@ def build_planes(data, lat, lon, radius_km, airlines=None, photo_lookup=None, de
         if ac.get("seen_pos", 0) > MAX_POSITION_AGE_S:
             continue
         total += 1
+        if only_hex and str(ac.get("hex", "")).lower() != only_hex:
+            continue
         dist = haversine_km(lat, lon, ac["lat"], ac["lon"])
         if dist > radius_km:
             continue
@@ -1031,8 +1034,11 @@ class Handler(BaseHTTPRequestHandler):
         route_lookup = lookup_route if cfg_bool(cfg, "SHOW_ROUTES") and real_lookups else None
         aircraft_lookup = lookup_aircraft if cfg_bool(cfg, "SHOW_ROUTES") and real_lookups else None
         route_fallback = lookup_route_fallback if route_lookup is not None else None
+        only = (query.get("hex") or [""])[0].strip().lower()
+        only = only if re.match(r"^[0-9a-f]{6}$", only) else None     # an ICAO address or nothing: no other input reaches the loop
         planes, total = build_planes(data, cfg_float(cfg, "LAT", 0), cfg_float(cfg, "LON", 0), radius_km,
-                                     load_airlines(cfg), lookup, demo, load_types(cfg), route_lookup, aircraft_lookup, route_fallback)
+                                     load_airlines(cfg), lookup, demo, load_types(cfg), route_lookup, aircraft_lookup, route_fallback,
+                                     only_hex=only)
         return self._send(200, {"planes": planes, "total": total, "radius_km": radius_km,
                                 "server_id": SERVER_ID, "updated": time.time()})
 

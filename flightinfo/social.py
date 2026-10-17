@@ -59,6 +59,10 @@ DEFAULTS = {
     "SOCIAL_NETWORKS": "",           # "bluesky,mastodon": set by the wizard once an account has passed `check`
 }
 HEAVY = {"A388", "A124", "A225", "B748", "B744", "A337", "A3ST", "BLCF", "C5M", "C17", "A400"}   # worth a post on sight
+WARMUP_DAYS = 3                  # "rare" and "farthest" judge against history: none before this much of it
+KEEP_PER_TYPE = 4                # the latest distinct aircraft kept per type: enough to tell rare (<= 2 others) from not
+RECORD_MIN_KM = 50               # a range record under this is not one
+RECORD_RADIUS_KM = 500           # the wall answers out to this; farther than that is a position glitch anyway
 
 
 # --------------------------------------------------------------------------- settings and secrets
@@ -113,23 +117,81 @@ def save_state(s):
         print("social: cannot save state: %s" % exc, file=sys.stderr, flush=True)
 
 
+def day_of(t):
+    return time.strftime("%Y-%m-%d", time.localtime(t))
+
+
 def prune_state(s, now):
-    """Thirty days of type sightings (for "rare"), one day of posted aircraft, the farthest of today."""
-    day = time.strftime("%Y-%m-%d", time.localtime(now))
-    seen = s.setdefault("types", {})               # type code -> [day, count] per day, kept 30 days
-    cut = time.strftime("%Y-%m-%d", time.localtime(now - 30 * 86400))
-    for code in list(seen):
-        seen[code] = {d: n for d, n in seen[code].items() if d >= cut}
-        if not seen[code]:
-            del seen[code]
-    posted = s.setdefault("posted", {})            # hex -> time
+    """What the rules need, and no more:
+      types    type code -> {hex: last day seen}, the latest KEEP_PER_TYPE distinct aircraft, thirty days ("rare")
+      far      day -> farthest km that day, thirty days ("farthest")
+      posted   hex -> time, one day (an aircraft is posted once)
+      since    the first day the service watched the sky (no history, no "rare", no "farthest")
+    0.18.0 counted a type once per poll instead of once per aircraft; that history is dropped, not converted."""
+    cut = day_of(now - 30 * 86400)
+    s.setdefault("since", day_of(now))
+    types = s.setdefault("types", {})
+    for code in list(types):
+        seen = types[code]
+        if not isinstance(seen, dict) or any(re.match(r"^\d{4}-\d{2}-\d{2}$", str(k)) for k in seen):
+            del types[code]                        # the 0.18.0 format: per-day counts of polls, meaningless
+            continue
+        types[code] = {h: d for h, d in seen.items() if d >= cut}
+        if not types[code]:
+            del types[code]
+    far = s.setdefault("far", {})
+    for d in list(far):
+        if d < cut:
+            del far[d]
+    posted = s.setdefault("posted", {})
     for h in list(posted):
         if now - posted[h] > 86400:
             del posted[h]
-    if s.get("farthest_day") != day:
-        s["farthest_day"] = day
-        s["farthest_km"] = 0
+    s.pop("farthest_day", None); s.pop("farthest_km", None)
     return s
+
+
+def warmed(state, now):
+    """True once the service has watched for WARMUP_DAYS: before that, "rare" and "farthest" mean nothing."""
+    try:
+        start = time.mktime(time.strptime(state.get("since", day_of(now)), "%Y-%m-%d"))
+    except (TypeError, ValueError):
+        return False
+    return now - start >= WARMUP_DAYS * 86400
+
+
+def note_types(state, planes, now):
+    """Each aircraft once per type: the same aircraft seen at every poll is still one aircraft."""
+    day = day_of(now)
+    types = state.setdefault("types", {})
+    for p in planes:
+        code, h = str(p.get("type") or "").upper(), str(p.get("hex") or "").lower()
+        if not code or not h:
+            continue
+        seen = types.setdefault(code, {})
+        seen[h] = day
+        while len(seen) > KEEP_PER_TYPE:
+            del seen[min(seen, key=lambda k: seen[k])]
+
+
+def others_of_type(state, p, now):
+    """How many OTHER aircraft of this type were seen in the last thirty days (at most KEEP_PER_TYPE)."""
+    cut = day_of(now - 30 * 86400)
+    seen = state.get("types", {}).get(str(p.get("type") or "").upper(), {})
+    me = str(p.get("hex") or "").lower()
+    return sum(1 for h, d in seen.items() if h != me and d >= cut)
+
+
+def range_best(state):
+    """The farthest of the last thirty days so far, today included."""
+    return max([0] + list(state.get("far", {}).values()))
+
+
+def note_range(state, km, now):
+    day = day_of(now)
+    far = state.setdefault("far", {})
+    if km > far.get(day, 0):
+        far[day] = round(km, 1)
 
 
 # --------------------------------------------------------------------------- the track collector
@@ -180,13 +242,43 @@ def ask_wall(c, radius_km):
         return []
 
 
+def ask_wall_one(c, hex_code):
+    """Everything the wall knows about one aircraft, wherever it is (out to RECORD_RADIUS_KM)."""
+    port = int(server.cfg_float(c, "PORT", 8080))
+    url = "http://127.0.0.1:%d/api/planes?radius_km=%d&hex=%s" % (port, RECORD_RADIUS_KM, urllib.parse.quote(str(hex_code).lower()))
+    try:
+        with urllib.request.urlopen(url, timeout=5) as resp:
+            got = json.load(resp).get("planes") or []
+        return got[0] if got else None
+    except (urllib.error.URLError, ValueError, OSError):
+        return None
+
+
+def farthest_now(c, aircraft):
+    """(hex, km) of the farthest aircraft with a fresh position right now, from the receiver; (None, 0) if none."""
+    lat, lon = server.cfg_float(c, "LAT", 0), server.cfg_float(c, "LON", 0)
+    if not lat and not lon:
+        return None, 0
+    best = (None, 0)
+    for ac in aircraft or []:
+        if "lat" not in ac or "lon" not in ac or ac.get("seen_pos", 0) > 30:
+            continue
+        h = str(ac.get("hex", "")).lower()
+        if not h or h.startswith("~"):
+            continue
+        d = server.haversine_km(lat, lon, ac["lat"], ac["lon"])
+        if RECORD_MIN_KM < d <= RECORD_RADIUS_KM and d > best[1]:
+            best = (h, d)
+    return best
+
+
 # --------------------------------------------------------------------------- what is worth a post
 def known(p):
     """A post says what the wall knows. Nothing known, nothing to say."""
     return bool(p.get("type_name") or p.get("type") or p.get("registration") or p.get("airline"))
 
 
-def interest(p, rules, state):
+def interest(p, rules, state, now=None):
     """-> (score, reason) for one aircraft under the owner's rules; score 0 = not worth a post."""
     reasons = []
     code = str(p.get("type") or "").upper()
@@ -196,12 +288,11 @@ def interest(p, rules, state):
         reasons.append(("helicopter", 4))
     if "heavy" in rules and (code in HEAVY or p.get("shape") == "quad"):
         reasons.append(("heavy", 3))
-    if "rare" in rules and code:
-        days = state.get("types", {}).get(code, {})
-        if sum(days.values()) <= 2:                # seen twice or less in thirty days, this one included
-            reasons.append(("rare", 3))
-    if "farthest" in rules and p.get("distance_km", 0) > max(50, state.get("farthest_km", 0)):
-        reasons.append(("farthest", 2))
+    now = time.time() if now is None else now
+    if "rare" in rules and code and warmed(state, now) and others_of_type(state, p, now) <= 2:
+        reasons.append(("rare", 3))                # two other aircraft of this type in thirty days, at most
+    if "farthest" in rules and p.get("_record"):
+        reasons.append(("farthest", 2))            # set by the service: a new thirty-day range record
     if "any" in rules:
         reasons.append(("any", 1))
     if not reasons:
@@ -220,7 +311,7 @@ def choose(planes, tracks, rules, state, now):
             continue
         if len(tracks.of(p.get("hex"))) < TRACE_MIN_POINTS:
             continue
-        score, why = interest(p, rules, state)
+        score, why = interest(p, rules, state, now)
         if score <= 0:
             continue
         # more is known about it = a better post: route, airline, model each count a little
@@ -246,15 +337,37 @@ def nice_type(p):
         name = re.sub(r"\bA-(\d)", r"A\1", name)
         words = name.split()
         # makers are written in capitals (AIRBUS, BOEING, HELICOPTERS); model codes keep their letters (KC-135R, A320neo)
-        return " ".join(w.capitalize() if w.isupper() and w.isalpha() and len(w) > 3 else w for w in words)
+        out = []
+        for w in words:
+            if w == "DE":                           # "DE HAVILLAND" is De Havilland, not DE Havilland
+                out.append("De")
+            elif w.isupper() and w.isalpha() and len(w) > 3:
+                out.append(w.capitalize())
+            else:
+                out.append(w)
+        return " ".join(out)
     return p.get("type") or ""
+
+
+def area_words(c):
+    """The owner's place words. A bare place name ("Trémery") reads as "over Trémery"; words that already start
+    with a preposition ("near Metz", "over the Moselle") are kept as they are."""
+    area = re.sub(r"\s+", " ", str(c.get("SOCIAL_AREA", ""))).strip()
+    if area and area[0].isupper() and not re.match(r"^(Over|Near|Above|Around|Above|By)\b", area):
+        area = "over " + area
+    return area
+
+
+def range_words(km):
+    """A range record, said without placing the antenna: rounded DOWN to 50 km ("over 300 km"), never the figure."""
+    step = int(km // 50) * 50
+    return "over %d km out" % max(step, 50)
 
 
 def post_text(p, c, why=None):
     """The post. English, short, nothing the wall does not know."""
     units = c.get("UNITS", "metric")
-    area = str(c.get("SOCIAL_AREA", "")).strip()
-    where = (" " + area) if area else ""
+    where = (" " + area_words(c)) if area_words(c) else ""
     alt = metres(p.get("alt_ft"), units)
     flight = (p.get("flight") or "").strip()
     reg = p.get("registration") or ""
@@ -291,7 +404,8 @@ def post_text(p, c, why=None):
     elif where:
         parts.append(where.strip())
     if why == "farthest" and p.get("distance_km"):
-        parts.append("%d km out — farthest today" % round(p["distance_km"]))
+        icon = "📡"
+        parts.append("range record for 30 days, " + range_words(p["distance_km"]))
     text = icon + " " + " · ".join(x for x in parts if x)
     tags = str(c.get("SOCIAL_HASHTAGS", "")).strip()
     if heli:
@@ -512,19 +626,6 @@ def publish(p, trace, why, c, sec, networks, dry=False, keep_png=None):
                 pass
 
 
-def note_types(state, planes, now):
-    day = time.strftime("%Y-%m-%d", time.localtime(now))
-    types = state.setdefault("types", {})
-    for p in planes:
-        code = str(p.get("type") or "").upper()
-        if code:
-            types.setdefault(code, {})
-            types[code][day] = types[code].get(day, 0) + 1
-        d = p.get("distance_km") or 0
-        if d > state.get("farthest_km", 0):
-            state["farthest_km"] = d
-
-
 # --------------------------------------------------------------------------- commands
 def local_ip():
     import socket
@@ -538,36 +639,70 @@ def local_ip():
         return "PI-ADDRESS"
 
 
+def one_poll(c, state, tracks, aircraft, now):
+    """One look at the sky: the candidates under the rules, with the range record among them.
+    Returns (planes, best). Notes the types and the day's range AFTER choosing, so an aircraft is never compared
+    with a record it set itself (0.18.0 did, and "farthest" could never fire)."""
+    radius = server.cfg_float(c, "SOCIAL_RADIUS_KM", 15)
+    rules = rules_of(c)
+    planes = ask_wall(c, radius)
+    far_hex, far_km = farthest_now(c, aircraft)
+    if "farthest" in rules and far_hex and warmed(state, now) and far_km > max(RECORD_MIN_KM, range_best(state)):
+        rec = next((p for p in planes if p.get("hex") == far_hex), None) or ask_wall_one(c, far_hex)
+        if rec:
+            rec = dict(rec, _record=True)
+            planes = [p for p in planes if p.get("hex") != far_hex] + [rec]
+    best = choose(planes, tracks, rules, state, now)
+    note_types(state, planes, now)
+    if far_km:
+        note_range(state, far_km, now)
+    return planes, best
+
+
 def cmd_run():
     tracks = Tracks()
     state = prune_state(load_state(), time.time())
-    last_ask = 0
-    print("social: running", flush=True)
+    last_ask, last_summary = 0, time.time()
+    polls = candidates = 0
+    c = cfg()
+    print("social: running. Networks: %s. Radius %s km, gap %s min, rules: %s. History since %s%s." % (
+        ", ".join(networks_of(c, secrets())) or "NONE (run: sudo zenithboard social setup)",
+        c.get("SOCIAL_RADIUS_KM"), c.get("SOCIAL_GAP_MIN"), ", ".join(sorted(rules_of(c))) or "none",
+        state.get("since"), "" if warmed(state, time.time()) else
+        " (rare and farthest wait for %d days of it)" % WARMUP_DAYS), flush=True)
     while True:
         now = time.time()
         c = cfg()
-        tracks.feed(read_aircraft(c), now)
+        aircraft = read_aircraft(c)
+        tracks.feed(aircraft, now)
         if now - last_ask >= ASK_EVERY_S:
             last_ask = now
-            radius = server.cfg_float(c, "SOCIAL_RADIUS_KM", 15)
-            planes = ask_wall(c, radius)
-            note_types(state, planes, now)
             prune_state(state, now)
+            planes, best = one_poll(c, state, tracks, aircraft, now)
+            polls += 1
+            candidates += 1 if best else 0
             sec = secrets()
             networks = networks_of(c, sec)
             gap = server.cfg_float(c, "SOCIAL_GAP_MIN", 120) * 60
-            if networks and now - state.get("last_post", 0) >= gap:
-                best = choose(planes, tracks, rules_of(c), state, now)
-                if best:
-                    score, why, p = best
-                    results = publish(p, tracks.of(p["hex"]), why, c, sec, networks)
-                    ok = [n for n in networks if not str(results.get(n, "")).startswith("FAILED")]
-                    print("social: posted %s (%s, %s): %s" % (p.get("flight") or p.get("hex"), why, ", ".join(ok) or "nowhere",
-                                                               json.dumps(results)), flush=True)
-                    if ok:
-                        state["last_post"] = now
-                        state.setdefault("posted", {})[p["hex"]] = now
+            if best and networks and now - state.get("last_post", 0) >= gap:
+                score, why, p = best
+                results = publish(p, tracks.of(p["hex"]), why, c, sec, networks)
+                ok = [n for n in networks if not str(results.get(n, "")).startswith("FAILED")]
+                print("social: posted %s (%s) to %s: %s" % (p.get("flight") or p.get("hex"), why, ", ".join(ok) or "nowhere",
+                                                          json.dumps(results)), flush=True)
+                if ok:
+                    state["last_post"] = now
+                    state.setdefault("posted", {})[p["hex"]] = now
             save_state(state)
+        if now - last_summary >= 3600:
+            # once an hour, so the journal answers "why no post?" without a line every fifteen seconds
+            lp = state.get("last_post")
+            wait = max(0, int((lp + server.cfg_float(c, "SOCIAL_GAP_MIN", 120) * 60 - now) / 60)) if lp else 0
+            print("social: last hour: %d looks, %d with a candidate under the rules. Last post: %s.%s%s" % (
+                polls, candidates, time.strftime("%H:%M", time.localtime(lp)) if lp else "never",
+                (" Next possible in %d min." % wait) if wait else "",
+                "" if networks_of(c, secrets()) else " No network set up: nothing can be posted."), flush=True)
+            last_summary, polls, candidates = now, 0, 0
         time.sleep(READ_EVERY_S)
 
 
@@ -586,7 +721,7 @@ def _collect_once(hex_code=None, seconds=35):
         if hex_code:
             if any(p.get("hex") == hex_code.lower() for p in planes) and len(tracks.of(hex_code)) >= TRACE_MIN_POINTS:
                 break
-        elif choose(planes, tracks, rules_of(c) | {"any"}, {"types": state.get("types", {})}, now):
+        elif choose(planes, tracks, rules_of(c) | {"any"}, state, now):
             break
         time.sleep(READ_EVERY_S)
     if hex_code:
@@ -594,7 +729,7 @@ def _collect_once(hex_code=None, seconds=35):
             if p.get("hex") == hex_code.lower():
                 return c, state, p, tracks.of(hex_code), "chosen"
         return c, state, None, [], None
-    best = choose(planes, tracks, rules_of(c) | {"any"}, {"types": state.get("types", {})}, time.time())
+    best = choose(planes, tracks, rules_of(c) | {"any"}, state, time.time())
     if not best:
         return c, state, None, [], None
     return c, state, best[2], tracks.of(best[2]["hex"]), best[1]
@@ -607,7 +742,16 @@ def cmd_test(hex_code=None):
         return 1
     preview = os.path.join(STATE_DIR, "preview.png")
     r = publish(p, trace, why, c, {}, [], dry=True, keep_png=preview)
-    print("Aircraft: %s %s (%s)  rule: %s" % (p.get("flight") or "", p.get("hex"), p.get("type") or "?", why))
+    print("Aircraft: %s %s (%s)" % (p.get("flight") or "", p.get("hex"), p.get("type") or "?"))
+    # The test always finds something to show (it adds "any"); say plainly whether the service would post it.
+    score, real = interest(p, rules_of(c), state, time.time())
+    if real:
+        print("Would the service post it? Yes, under the rule '%s'." % real)
+    else:
+        why_not = "your rules (%s) do not pick it" % (", ".join(sorted(rules_of(c))) or "none")
+        if not warmed(state, time.time()) and rules_of(c) & {"rare", "farthest"}:
+            why_not += "; 'rare' and 'farthest' wait for %d days of history (since %s)" % (WARMUP_DAYS, state.get("since", "today"))
+        print("Would the service post it? No: %s. The test shows it anyway." % why_not)
     print("Picture: %s (%s bytes)" % (preview, r.get("bytes")))
     port = int(server.cfg_float(c, "PORT", 8080))
     print("See it:  http://%s:%d/social/preview" % (local_ip(), port))
@@ -662,7 +806,16 @@ def cmd_status():
     print("Hashtags: %s" % c.get("SOCIAL_HASHTAGS"))
     lp = state.get("last_post")
     print("Last post: %s" % (time.strftime("%Y-%m-%d %H:%M", time.localtime(lp)) if lp else "never"))
-    print("Posted today: %d aircraft   Types noted: %d" % (len(state.get("posted", {})), len(state.get("types", {}))))
+    now = time.time()
+    print("Posted in the last day: %d aircraft   Types noted: %d   Range record (30 days): %s" % (
+        len(state.get("posted", {})), len(state.get("types", {})),
+        ("%d km" % range_best(state)) if range_best(state) else "none yet"))
+    if state.get("since"):
+        print("History since %s: %s" % (state["since"], "rare and farthest are active" if warmed(state, now)
+                                          else "rare and farthest start after %d days" % WARMUP_DAYS))
+    gap = server.cfg_float(c, "SOCIAL_GAP_MIN", 120) * 60
+    if lp and now - lp < gap:
+        print("Next post possible in %d min (the gap)." % int((lp + gap - now) / 60))
     return 0
 
 
