@@ -38,12 +38,15 @@
   // Words that say "this is an airport" but tell the reader nothing, so they are dropped to save room.
   var GENERIC = /\b(INTERNATIONAL|INTL|AIRPORT|AIRFIELD|AERODROME|REGIONAL|MUNICIPAL|AEROPORT|AEROPUERTO|AEROPORTO|FLUGHAFEN)\b/g;
   // A word a cut place name must not end on: "FRANKFURT AM" says less than "FRANKFURT".
-  var DANGLING = /(?:\s+(?:AM|AN|DE|DES|DU|LA|LE|LES|DI|DEL|DELLA|EL|ST|STE|SUR|SOUS|EN|DER|VON|OF|THE|AND|ET|Y|\(.*))+$/;
+  // One word at a time, in a loop: a repeated group here would backtrack (CodeQL); an open bracket and what follows go first.
+  var DANGLING = /\s+(?:AM|AN|DE|DES|DU|LA|LE|LES|DI|DEL|DELLA|EL|ST|STE|SUR|SOUS|EN|DER|VON|OF|THE|AND|ET|Y)$/;
   function cut(s, width) {                          // cut at a word boundary when that leaves something readable
     if (s.length <= width) return s;
     var i = s.lastIndexOf(" ", width);
     var t = (i >= 5 ? s.slice(0, i) : s.slice(0, width)).replace(/[ \-]+$/, "");
-    var u = t.replace(DANGLING, "");
+    var u = t, i0 = u.indexOf(" (");
+    if (i0 >= 0) u = u.slice(0, i0);
+    while (DANGLING.test(u)) u = u.replace(DANGLING, "");
     return u.length >= 3 ? u : t;
   }
   // The city when it fits, the way a departure board reads ("SAN JOSE", not the airport "JUAN SANTAMARIA"); else the
