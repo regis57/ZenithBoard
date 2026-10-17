@@ -119,25 +119,37 @@ class WordsTest(unittest.TestCase):
         self.assertIn("altitude 37 000 ft", social.post_text(EZY, dict(CFG, UNITS="imperial")))
 
     def test_the_post_stays_inside_300_characters_without_cutting_a_hashtag(self):
-        # found in review: a range record with the satellite credit was 300 characters exactly, and Bluesky's cut
-        # at 300 turned #ZenithBoard into a clickable #ZenithBo
+        # found in review: a range record with a long credit was 300 characters exactly, and Bluesky's cut at 300
+        # turned #ZenithBoard into a clickable #ZenithBo
         body = "Flight Emirates #UAE225 · Boeing 777-300ER · Dubai → San Francisco · altitude 11 280 m · range record for 30 days: over 300 km out, seen from Trémery"
-        credit, short = "Map: EOxCloudless 2025 by EOX, cloudless.eox.at, Copernicus Sentinel data; labels © OpenStreetMap contributors, maps.eox.at", "Map: EOxCloudless 2025 by EOX, cloudless.eox.at; labels © OSM, maps.eox.at"
-        t = social.fit_post(body, credit, "#ADSB #military #ZenithBoard", short)
+        credit = "Map: EOxCloudless by EOX, © OpenStreetMap"
+        t = social.fit_post(body, credit, "#ADSB #military #ZenithBoard")
         self.assertLessEqual(len(t), 300)
-        self.assertEqual(t.split("\n"), [body, short, "#ADSB #military #ZenithBoard"])
-        t = social.fit_post(body + " · " + "x" * 120, credit, "#ADSB #military #ZenithBoard", short)
+        self.assertEqual(t.split("\n"), [body, "#ADSB #military #ZenithBoard", credit])
+        t = social.fit_post(body + " · " + "x" * 120, credit, "#ADSB #military #ZenithBoard")
         self.assertLessEqual(len(t), 300)
-        self.assertTrue(t.endswith("#ADSB") or t.endswith("#ZenithBoard") or t.endswith("#military") or "#" not in t.split("\n")[-1], t)
-        for tag in ("#ZenithBo", "#milit", "#AD\n"):
+        for tag in ("#ZenithBo\n", "#milit\n", "#AD\n"):
             self.assertNotIn(tag, t)
-        self.assertIn(short, t)
+        self.assertTrue(t.endswith(credit), "the credit is never cut")
         self.assertEqual(social.fit_post("short", None, "#ADSB"), "short\n#ADSB")
 
-    def test_the_map_credit_comes_before_the_hashtags(self):
-        t = social.post_text(EZY, CFG, credit="Map \u00a9 OpenStreetMap contributors, EOX maps.eox.at").split("\n")
-        self.assertEqual(t[1], "Map \u00a9 OpenStreetMap contributors, EOX maps.eox.at")
-        self.assertTrue(t[2].startswith("#ADSB"))
+    def test_the_map_credit_is_one_short_line_at_the_end(self):
+        # 0.19.6, from the owner after the first satellite post: the three lines of small print spoiled the post.
+        # The whole text stays on the picture and in the alt text; the post has the names, as links
+        import social_card
+        for mode, st in social_card.MAP_STYLES.items():
+            if st["credit"]:
+                self.assertLessEqual(len(st["credit"]), 45, mode)
+                self.assertIn("OpenStreetMap", st["credit"], mode)
+                for label, uri in st["links"]:
+                    self.assertIn(label, st["credit"], mode)
+                    self.assertTrue(uri.startswith("https://"), uri)
+                self.assertIn("OpenStreetMap contributors", st["credit_full"], mode)
+        self.assertIn("Copernicus Sentinel data", social_card.MAP_STYLES["satellite"]["credit_full"])
+        t = social.post_text(EZY, CFG, credit="Map \u00a9 OpenStreetMap, EOX").split("\n")
+        self.assertTrue(t[1].startswith("#ADSB"))
+        self.assertEqual(t[2], "Map \u00a9 OpenStreetMap, EOX")
+
 
     def test_de_havilland(self):
         # reported from the real Pi: "DE Havilland DHC-8-400 Dash 8"
@@ -458,8 +470,8 @@ class FlapPictureTest(unittest.TestCase):
         self.assertLess(info["bytes"], 1000000)
         self.assertEqual((info["width"], info["height"]), (1500, 900))
         self.assertEqual(info["map"], "satellite")
-        self.assertIn("cloudless.eox.at", info["credit"])
-        self.assertIn(("cloudless.eox.at", "https://cloudless.eox.at"), info["links"])
+        self.assertIn("EOxCloudless", info["credit"])
+        self.assertIn(("EOxCloudless", "https://cloudless.eox.at"), info["links"])
         self.assertEqual({a[0] for a in asked}, {"s2cloudless-%d_3857" % social_card.S2_YEAR, "overlay_bright_3857"})
 
     def test_no_tile_no_map_no_credit(self):
@@ -589,7 +601,7 @@ class FlapPictureTest(unittest.TestCase):
         old_dir = social.STATE_DIR; social.STATE_DIR = self.d; self.addCleanup(setattr, social, "STATE_DIR", old_dir)
         info = social.render(EZY, trace(60), c, os.path.join(self.d, "p"))
         self.assertEqual((info["mime"], info["path"][-4:], info["map"]), ("image/jpeg", ".jpg", "night"))
-        self.assertIn("maps.eox.at", social.post_text(EZY, c, None, info["credit"]))
+        self.assertIn("OpenStreetMap, EOX", social.post_text(EZY, c, None, info["credit"]))
 
 
 class FakeResponse(object):
@@ -647,15 +659,14 @@ class NetworksTest(unittest.TestCase):
 
     def test_a_jpeg_and_the_map_credit_as_a_link(self):
         sec = {"BLUESKY_HANDLE": "zb.bsky.social", "BLUESKY_APP_PASSWORD": "x"}
-        text = "Flight easyJet #EZY1234 \u00b7 altitude 11 280 m\nMap \u00a9 OpenStreetMap contributors, EOX maps.eox.at\n#ADSB"
-        social.post_bluesky(sec, text, self.png, "alt", 1500, 900, "image/jpeg", [("maps.eox.at", "https://maps.eox.at")])
+        text = "Flight easyJet #EZY1234 \u00b7 altitude 11 280 m\n#ADSB\nMap \u00a9 OpenStreetMap, EOX"
+        social.post_bluesky(sec, text, self.png, "alt", 1500, 900, "image/jpeg", [("OpenStreetMap", "https://www.openstreetmap.org/copyright"), ("EOX", "https://maps.eox.at")])
         self.assertEqual(self.sent[1][1]["Content-type"], "image/jpeg")
         rec = json.loads(self.sent[2][2])["record"]
         links = [f for f in rec["facets"] if f["features"][0]["$type"].endswith("#link")]
-        self.assertEqual(len(links), 1)
-        i = links[0]["index"]
-        self.assertEqual(rec["text"].encode("utf-8")[i["byteStart"]:i["byteEnd"]], b"maps.eox.at")
-        self.assertEqual(links[0]["features"][0]["uri"], "https://maps.eox.at")
+        self.assertEqual(len(links), 2)
+        got = {rec["text"].encode("utf-8")[f["index"]["byteStart"]:f["index"]["byteEnd"]]: f["features"][0]["uri"] for f in links}
+        self.assertEqual(got, {b"OpenStreetMap": "https://www.openstreetmap.org/copyright", b"EOX": "https://maps.eox.at"})
         starts = [f["index"]["byteStart"] for f in rec["facets"]]
         self.assertEqual(starts, sorted(starts))
 

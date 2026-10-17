@@ -115,15 +115,15 @@ The scale is chosen for each picture, from 1 to 500 km per bar, the smallest tha
 
 The board as the wall's split-flap look draws it — the same nine rows, without the flags, fourteen letters wide instead of sixteen so the map gets the room — beside a map centred on the track. On the map: the track and the aircraft in the picture's colour, edged in black so they read on any background; a key in the corner (`LAST 10 MIN`, and a scale bar in km or miles); north; and the map's credit along the bottom.
 
-| Map | What it is | Credit, on the picture and in the post |
-|---|---|---|
-| `normal` | OpenStreetMap, rendered by EOX | © OpenStreetMap contributors, EOX maps.eox.at |
-| `night` | The same, darkened on the Pi | the same |
-| `satellite` | Sentinel-2 cloudless 2025 by EOX, with EOX's labels | EOxCloudless 2025 by EOX, cloudless.eox.at, Copernicus Sentinel data; labels © OpenStreetMap contributors |
-| `terrain` | EOX's terrain rendering, with its labels | © OpenStreetMap contributors and others, EOX maps.eox.at |
-| `none` | No map: the track on black, over a faint grid. Nothing is fetched | none |
+| Map | What it is | Credit on the picture (in full) | Credit in the post (names as links) |
+|---|---|---|---|
+| `normal` | OpenStreetMap, rendered by EOX | © OpenStreetMap contributors, rendering © EOX (maps.eox.at) | Map © [OpenStreetMap](https://www.openstreetmap.org/copyright), [EOX](https://maps.eox.at) |
+| `night` | The same, darkened on the Pi | the same | the same |
+| `satellite` | Sentinel-2 cloudless 2025 by EOX, with EOX's labels | EOxCloudless 2025 https://cloudless.eox.at by EOX IT Services GmbH (Contains modified Copernicus Sentinel data 2025); labels © OpenStreetMap contributors, rendering © EOX | Map: [EOxCloudless](https://cloudless.eox.at) by [EOX](https://eox.at), © [OpenStreetMap](https://www.openstreetmap.org/copyright) |
+| `terrain` | EOX's terrain rendering, with its labels | Terrain: data © OpenStreetMap contributors and others, rendering © EOX (maps.eox.at) | Map © [OpenStreetMap](https://www.openstreetmap.org/copyright) and others, [EOX](https://maps.eox.at) |
+| `none` | No map: the track on black, over a faint grid. Nothing is fetched | none | none |
 
-**Where the map comes from, and why there.** The tiles come from [EOX::Maps](https://maps.eox.at), whose layers are free to use with attribution and a link back; every post carries both, as a clickable link. OpenStreetMap's own tile servers are not used: their [usage policy](https://operations.osmfoundation.org/policies/tiles/) rules out automated fetching that nobody is looking at, which is what a service posting by itself does. The satellite layer is licensed CC BY-NC-SA 4.0: free for a hobby account like this one, **not for commercial use**, and a picture made with it is shared under the same licence. The Pi asks only for the few tiles under the picture, names itself in every request, and keeps them for a month under its state folder, so the tiles over your area are fetched once, not at every post. If the tile service does not answer, the picture is drawn with no map and no credit, and `social test` says so.
+**Where the map comes from, and why there.** The tiles come from [EOX::Maps](https://maps.eox.at), whose layers are free to use with attribution and a link back. The whole required text is drawn on the picture and read in its alt text; the post ends with one short line whose names are links — *Map © OpenStreetMap, EOX* — which is what OpenStreetMap's [attribution guideline](https://osmfoundation.org/wiki/Attribution) accepts (the name, linked to its copyright page) and what EOX asks of an online publication (the name and the link). Until 0.19.6 the post repeated the whole text, three lines of small print under every aircraft. OpenStreetMap's own tile servers are not used: their [usage policy](https://operations.osmfoundation.org/policies/tiles/) rules out automated fetching that nobody is looking at, which is what a service posting by itself does. The satellite layer is licensed CC BY-NC-SA 4.0: free for a hobby account like this one, **not for commercial use**, and a picture made with it is shared under the same licence. The Pi asks only for the few tiles under the picture, names itself in every request, and keeps them for a month under its state folder, so the tiles over your area are fetched once, not at every post. If the tile service does not answer, the picture is drawn with no map and no credit, and `social test` says so.
 
 ---
 
@@ -159,7 +159,7 @@ Several rules can match; the best candidate is the one matching the most, and kn
 | Range record | `Flight Emirates #UAE201 · Boeing 777-300ER · … · altitude 11 280 m · range record for 30 days: over 300 km out, seen from Trémery` |
 | Nothing known | no post |
 
-The registration is said when no airline is: an airline flight is known by its callsign, and the registration is on the picture. A range record ends with *seen from* rather than *above*: it was nowhere near overhead. When the picture has a map, the map's credit follows on its own line. Then the hashtags (`#ADSB #avgeek #ZenithBoard` by default; `#helicopter` or `#military` replace `#avgeek` when they apply). The picture carries an alt text built from the same facts, for screen readers, with the map's full credit. Units follow the wall's setting.
+The registration is said when no airline is: an airline flight is known by its callsign, and the registration is on the picture. A range record ends with *seen from* rather than *above*: it was nowhere near overhead. Then the hashtags (`#ADSB #avgeek #ZenithBoard` by default; `#helicopter` or `#military` replace `#avgeek` when they apply), and last, when the picture has a map, its credit in one short line. The picture carries an alt text built from the same facts, for screen readers, with the map's full credit. Units follow the wall's setting.
 
 **What never leaves the Pi:**
 
