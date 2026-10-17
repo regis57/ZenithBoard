@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.19.4
+- **The social service reports its own memory**: in its hourly journal line and in `sudo zenithboard social status` (now, at most, and the largest drawing by Node). 0.19.3 said `systemctl status` would show it: it does not on Raspberry Pi OS, which boots with the kernel's memory controller off (`cgroup_disable=memory`), and for the same reason the unit's `MemoryMax=300M` only applies where that controller is on. Seen on the real Pi right after the 0.19.3 update; ZenithBoard does not change the boot command line for it.
+
 ## 0.19.3
 From the real Pi's log.
 - **An update restarts the social service.** It only made sure it was enabled, and a running service keeps the code it started with: the Pi ran 0.19.0 for hours after installing 0.19.2. The service's first journal line now says which version it runs, and `social status` says when it runs code older than what is installed.

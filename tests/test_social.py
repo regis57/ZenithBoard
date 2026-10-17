@@ -754,6 +754,21 @@ class LogFindingsTest(unittest.TestCase):
         self.assertNotIn("no account", text)
         self.assertNotIn("Last post: never", text)
 
+    def test_the_service_measures_its_own_memory(self):
+        # systemctl showed no Memory line on the Pi: the kernel's memory controller is off on Raspberry Pi OS
+        m = social.memory_mb()
+        self.assertGreater(m["now"], 0); self.assertGreaterEqual(m["peak"], m["now"])
+        self.assertEqual(social.memory_words({"now": 38, "peak": 131, "node": 44}), "38 MB now, 131 MB at most, Node 44 MB at most")
+        import contextlib
+        import io
+        for name, fake in (("load_state", lambda: dict(warm(), memory={"now": 38, "peak": 131, "node": 44, "since": time.time()})),
+                           ("cfg", lambda: dict(CFG, SOCIAL="1")), ("unreadable", lambda p: False)):
+            self.addCleanup(setattr, social, name, getattr(social, name))
+            setattr(social, name, fake)
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            social.cmd_status()
+        self.assertIn("131 MB at most", out.getvalue())
+
     def test_the_service_says_which_version_it_runs(self):
         # the log showed a service started before the update, still running the old code: its first line says now
         import contextlib
