@@ -118,6 +118,22 @@ class WordsTest(unittest.TestCase):
             self.assertRegex(line, r"· altitude [0-9 ]+ m · above Trémery$")
         self.assertIn("altitude 37 000 ft", social.post_text(EZY, dict(CFG, UNITS="imperial")))
 
+    def test_the_post_stays_inside_300_characters_without_cutting_a_hashtag(self):
+        # found in review: a range record with the satellite credit was 300 characters exactly, and Bluesky's cut
+        # at 300 turned #ZenithBoard into a clickable #ZenithBo
+        body = "Flight Emirates #UAE225 · Boeing 777-300ER · Dubai → San Francisco · altitude 11 280 m · range record for 30 days: over 300 km out, seen from Trémery"
+        credit, short = "Map: EOxCloudless 2025 by EOX, cloudless.eox.at, Copernicus Sentinel data; labels © OpenStreetMap contributors, maps.eox.at", "Map: EOxCloudless 2025 by EOX, cloudless.eox.at; labels © OSM, maps.eox.at"
+        t = social.fit_post(body, credit, "#ADSB #military #ZenithBoard", short)
+        self.assertLessEqual(len(t), 300)
+        self.assertEqual(t.split("\n"), [body, short, "#ADSB #military #ZenithBoard"])
+        t = social.fit_post(body + " · " + "x" * 120, credit, "#ADSB #military #ZenithBoard", short)
+        self.assertLessEqual(len(t), 300)
+        self.assertTrue(t.endswith("#ADSB") or t.endswith("#ZenithBoard") or t.endswith("#military") or "#" not in t.split("\n")[-1], t)
+        for tag in ("#ZenithBo", "#milit", "#AD\n"):
+            self.assertNotIn(tag, t)
+        self.assertIn(short, t)
+        self.assertEqual(social.fit_post("short", None, "#ADSB"), "short\n#ADSB")
+
     def test_the_map_credit_comes_before_the_hashtags(self):
         t = social.post_text(EZY, CFG, credit="Map \u00a9 OpenStreetMap contributors, EOX maps.eox.at").split("\n")
         self.assertEqual(t[1], "Map \u00a9 OpenStreetMap contributors, EOX maps.eox.at")
@@ -424,8 +440,43 @@ class FlapPictureTest(unittest.TestCase):
         path = os.path.join(cache, "osm_3857", "11", "1", "2.jpg")
         old = time.time() - 40 * 86400
         os.utime(path, (old, old))
+        social_card.fetch_tile("osm_3857", "jpg", 11, 1, 2, cache, "ZenithBoard/test", opener)
+        self.assertEqual(len(calls), 2, "over a month old: fetched again")
+        os.utime(path, (old - 40 * 86400, old - 40 * 86400))
         social_card.prune_cache(cache)
-        self.assertFalse(os.path.exists(path), "a tile over a month old is dropped")
+        self.assertFalse(os.path.exists(path), "a tile over two months old is dropped")
+
+    def test_a_tile_that_is_not_256_square_or_came_over_http_is_refused(self):
+        class Resp(object):
+            def __init__(self, data, url="https://tiles.maps.eox.at/x"): self.data, self.url = data, url
+            def read(self, n=-1): return self.data
+            def geturl(self): return self.url
+            def __enter__(self): return self
+            def __exit__(self, *a): return False
+        import io
+        big = io.BytesIO(); Image.new("RGB", (4000, 4000)).save(big, "PNG")
+        self.assertIsNone(social_card.fetch_tile("osm_3857", "jpg", 3, 1, 2, None, "UA", lambda r, timeout=None: Resp(big.getvalue())))
+        self.assertIsNone(social_card.fetch_tile("osm_3857", "jpg", 3, 1, 2, None, "UA", lambda r, timeout=None: Resp(fake_tile("osm_3857", "jpg", 3, 1, 2), "http://elsewhere/x")))
+        self.assertIsNotNone(social_card.fetch_tile("osm_3857", "jpg", 3, 1, 2, None, "UA", lambda r, timeout=None: Resp(fake_tile("osm_3857", "jpg", 3, 1, 2))))
+
+    def test_a_stale_tile_is_still_a_map_when_eox_is_down(self):
+        cache = os.path.join(self.d, "tiles")
+        path = os.path.join(cache, "osm_3857", "11", "1", "2.jpg")
+        os.makedirs(os.path.dirname(path))
+        with open(path, "wb") as fh:
+            fh.write(fake_tile("osm_3857", "jpg", 11, 1, 2))
+        old = time.time() - 40 * 86400
+        os.utime(path, (old, old))
+        social_card.prune_cache(cache)                                      # between one and two months: kept
+        self.assertTrue(os.path.exists(path))
+        down = lambda r, timeout=None: (_ for _ in ()).throw(OSError("down"))
+        self.assertIsNotNone(social_card.fetch_tile("osm_3857", "jpg", 11, 1, 2, cache, "UA", down))
+
+    def test_the_legend_boxes_are_see_through(self):
+        img, shown = social_card.draw_map(trace(60), EZY, "#ffb000", fetch=lambda *a: fake_tile("osm_3857", "jpg", 1, 1, 1))
+        # the legend box sits bottom-left over a light tile: dark but not black
+        px = img.getpixel((20, social_card.MAP_H - 60))
+        self.assertGreater(sum(px), 60, px); self.assertLess(sum(px), 400, px)
 
     def test_an_error_page_is_not_a_tile(self):
         class Resp(object):
@@ -442,6 +493,22 @@ class FlapPictureTest(unittest.TestCase):
         a = social_card.draw_board(["\u00c9TOILE"], "#ffb000")
         b = social_card.draw_board([" TOILE"], "#ffb000")
         self.assertEqual(a.tobytes(), b.tobytes())
+
+    def test_without_pillow_the_flap_look_falls_back_to_dots(self):
+        if shutil.which(social.NODE) is None:
+            self.skipTest("node not installed here")
+        import builtins
+        real = builtins.__import__
+        def no_pil(name, *a, **k):
+            if name == "social_card":
+                raise ImportError("no PIL")
+            return real(name, *a, **k)
+        builtins.__import__ = no_pil; self.addCleanup(setattr, builtins, "__import__", real)
+        import contextlib, io
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            info = social.render(EZY, trace(30), dict(CFG, SOCIAL_STYLE="flap"), os.path.join(self.d, "p"))
+        self.assertEqual((info["mime"], info["fallback"]), ("image/png", True))
+        self.assertIn("Pillow", out.getvalue())
 
     def test_social_render_in_the_flap_look(self):
         if shutil.which(social.NODE) is None:

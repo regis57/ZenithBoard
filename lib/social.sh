@@ -63,7 +63,8 @@ social_migrate() {
   if [ -f "$SOCIAL_SECRETS" ] && grep -q '^MASTODON_' "$SOCIAL_SECRETS" 2>/dev/null; then
     local h p
     h=$(social_secret_get BLUESKY_HANDLE); p=$(social_secret_get BLUESKY_APP_PASSWORD)
-    if [ -n "$h" ]; then social_secrets_write "BLUESKY_HANDLE=$h" "BLUESKY_APP_PASSWORD=$p"; else rm -f "$SOCIAL_SECRETS"; fi
+    if [ -n "$h" ]; then social_secrets_write "BLUESKY_HANDLE=$h" "BLUESKY_APP_PASSWORD=$p"
+    else rm -f "$SOCIAL_SECRETS"; cfg_set SOCIAL 0; social_remove_units; log "Social sharing switched off: no Bluesky account. Set one up with  sudo zenithboard social setup"; fi
     log "Social sharing: Mastodon is no longer supported; its token was removed from $SOCIAL_SECRETS (revoke it on your instance too)."
   fi
   return 0
@@ -124,15 +125,17 @@ social_setup_words() {
 }
 
 # ---- the picture: the look, its colour, the map (the flap look only)
-social_valid_in() { local v=$1; shift; [[ " $* " == *" $v "* ]]; }
+social_valid_in() { local v=$1; shift; [[ $v =~ ^[a-z]+$ ]] && [[ " $* " == *" $v "* ]]; }   # exactly one of the words
 social_set_look() {
   social_valid_in "$1" dots flap || { echo "Look: dots or flap"; return 1; }
+  [ "$1" != flap ] || social_need_pil || return 1       # install first: a look that cannot be drawn is not saved
   cfg_set SOCIAL_STYLE "$1"
-  [ "$1" != flap ] || social_need_pil || return 1
   echo "Picture: $1. Try it:  sudo zenithboard social test"
 }
 social_set_colour() {
-  local c=$1; [ "$c" != wall ] || c=""
+  local c=${1:-}
+  [ -n "$c" ] || { echo "Colour: $SOCIAL_THEMES, or wall (the wall's own, $(cfg_get THEME amber))"; return 1; }
+  [ "$c" != wall ] || c=""
   [ -z "$c" ] || social_valid_in "$c" $SOCIAL_THEMES || { echo "Colour: $SOCIAL_THEMES, or wall (the wall's own, $(cfg_get THEME amber))"; return 1; }
   cfg_set SOCIAL_THEME "$c"
   echo "Picture colour: $(or_text "$c" "the wall's ($(cfg_get THEME amber))")."

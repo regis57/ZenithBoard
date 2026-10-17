@@ -42,20 +42,21 @@ S2_YEAR = 2025                               # the newest Sentinel-2 cloudless l
 EOX_LINK = ("maps.eox.at", "https://maps.eox.at")
 MAP_STYLES = {
     "normal": {"layers": [("osm_3857", "jpg")], "words": "an OpenStreetMap map",
-               "credit": "Map © OpenStreetMap contributors, EOX maps.eox.at", "links": [EOX_LINK],
+               "credit": "Map © OpenStreetMap contributors, EOX maps.eox.at", "links": [EOX_LINK], "credit_short": "Map © OSM, EOX maps.eox.at",
                "credit_full": "© OpenStreetMap contributors, rendering © EOX (maps.eox.at)"},
     "night": {"layers": [("osm_3857", "jpg")], "night": True, "words": "a darkened OpenStreetMap map",
-              "credit": "Map © OpenStreetMap contributors, EOX maps.eox.at", "links": [EOX_LINK],
+              "credit": "Map © OpenStreetMap contributors, EOX maps.eox.at", "links": [EOX_LINK], "credit_short": "Map © OSM, EOX maps.eox.at",
               "credit_full": "© OpenStreetMap contributors, rendering © EOX (maps.eox.at)"},
     "terrain": {"layers": [("terrain_3857", "jpg"), ("overlay_3857", "png")], "words": "a terrain map",
-                "credit": "Map © OpenStreetMap contributors and others, EOX maps.eox.at", "links": [EOX_LINK],
+                "credit": "Map © OpenStreetMap contributors and others, EOX maps.eox.at", "links": [EOX_LINK], "credit_short": "Map © OSM and others, EOX maps.eox.at",
                 "credit_full": "Terrain: data © OpenStreetMap contributors and others, rendering © EOX (maps.eox.at)"},
     "satellite": {"layers": [("s2cloudless-%d_3857" % S2_YEAR, "jpg"), ("overlay_bright_3857", "png")], "words": "a satellite map",
                   "credit": "Map: EOxCloudless %d by EOX, cloudless.eox.at, Copernicus Sentinel data; labels © OpenStreetMap contributors, maps.eox.at" % S2_YEAR,
                   "links": [("cloudless.eox.at", "https://cloudless.eox.at"), EOX_LINK],
+                  "credit_short": "Map: EOxCloudless %d by EOX, cloudless.eox.at; labels © OSM, maps.eox.at" % S2_YEAR,
                   "credit_full": "EOxCloudless %d https://cloudless.eox.at by EOX IT Services GmbH (Contains modified Copernicus Sentinel data %d); "
                                  "labels © OpenStreetMap contributors, rendering © EOX" % (S2_YEAR, S2_YEAR)},
-    "none": {"layers": [], "words": "", "credit": None, "links": [], "credit_full": None},
+    "none": {"layers": [], "words": "", "credit": None, "credit_short": None, "links": [], "credit_full": None},
 }
 MAX_ZOOM, MIN_ZOOM = 12, 4                   # 12: about 18 km across the map at 49 degrees north
 FIT = 0.7                                    # the track takes at most this share of the map, so the aircraft is never on the edge
@@ -186,10 +187,16 @@ def fetch_tile(layer, ext, z, x, y, cache_dir=None, user_agent="ZenithBoard", op
     req = urllib.request.Request(tile_url(layer, ext, z, x, y), headers={"User-Agent": user_agent})
     try:
         with (opener or urllib.request.urlopen)(req, timeout=10) as resp:
+            final = getattr(resp, "geturl", lambda: "https://")()
+            if not str(final).startswith("https://"):           # a redirect off HTTPS is not followed
+                return stale
             data = resp.read(TILE_MAX_BYTES + 1)
         if len(data) > TILE_MAX_BYTES:
             return stale
-        Image.open(io.BytesIO(data)).verify()        # an image, not an error page
+        im = Image.open(io.BytesIO(data))
+        if im.size != (256, 256):                     # a tile, not an error page nor a decompression bomb
+            return stale
+        im.verify()
     except Exception:
         return stale
     if path:
@@ -205,7 +212,8 @@ def fetch_tile(layer, ext, z, x, y, cache_dir=None, user_agent="ZenithBoard", op
 
 
 def prune_cache(cache_dir, now=None):
-    """Tiles over a month old go, then the oldest until the cache is under CACHE_MAX_BYTES."""
+    """Tiles over two months old go, then the oldest until the cache is under CACHE_MAX_BYTES. A tile between one
+    and two months is stale — fetched again when EOX answers — but still a map when it does not."""
     if not cache_dir or not os.path.isdir(cache_dir):
         return
     now = now or time.time()
@@ -217,7 +225,7 @@ def prune_cache(cache_dir, now=None):
                 st = os.stat(p)
             except OSError:
                 continue
-            if now - st.st_mtime > CACHE_DAYS * 86400:
+            if now - st.st_mtime > 2 * CACHE_DAYS * 86400:
                 try:
                     os.unlink(p)
                 except OSError:
@@ -354,10 +362,10 @@ def draw_map(trace, plane, color, units="metric", mode="normal", cache_dir=None,
     if pts:
         _icon(d, pts[-1][0], pts[-1][1], plane.get("track"), 22 * S, color, heli=plane.get("shape") == "heli")
     ov = ov.resize((w, h), LANCZOS)
-    img = Image.alpha_composite(img.convert("RGBA"), ov)
+    img = Image.alpha_composite(img.convert("RGBA"), ov).convert("RGB")
 
-    # legend, north, credit: drawn at their size, on dark boxes so they read on any map
-    d = ImageDraw.Draw(img)
+    # legend, north, credit: drawn at their size, on see-through dark boxes so they read on any map
+    d = ImageDraw.Draw(img, "RGBA")
     f = font(20)
     fs = font(15, bold=False)
     credit = style["credit_full"] if shown != "none" else None
@@ -388,7 +396,7 @@ def draw_map(trace, plane, color, units="metric", mode="normal", cache_dir=None,
     d.polygon([(nx + 17, ny + 6), (nx + 26, ny + 22), (nx + 8, ny + 22)], fill=(255, 255, 255, 255))
     d.text((nx + 17, ny + 37), "N", font=f, fill=(255, 255, 255, 255), anchor="mm")
     d.rectangle([0, 0, w - 1, h - 1], outline=color + (255,), width=2)
-    return img.convert("RGB"), shown
+    return img, shown
 
 
 # --------------------------------------------------------------------------- the picture
@@ -420,5 +428,5 @@ def render(lines, trace, plane, out, color="#ffb000", units="metric", map_mode="
     img.paste(mp, (MAP_X, M))
     size = save_jpeg(img, out)
     st = MAP_STYLES.get(shown) or MAP_STYLES["none"]
-    return {"width": W, "height": H, "bytes": size, "map": shown, "credit": st["credit"], "links": list(st["links"]),
+    return {"width": W, "height": H, "bytes": size, "map": shown, "credit": st["credit"], "credit_short": st["credit_short"], "links": list(st["links"]),
             "credit_full": st["credit_full"], "map_words": st["words"] or "a plain dark background"}

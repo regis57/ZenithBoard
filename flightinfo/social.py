@@ -422,7 +422,27 @@ def range_words(km):
     return "over %d km out" % max(step, 50)
 
 
-def post_text(p, c, why=None, credit=None):
+POST_MAX = 300                   # Bluesky's limit, in characters
+
+
+def fit_post(body, credit, tags, credit_short=None):
+    """The three lines inside Bluesky's 300 characters: first the credit shortened, then hashtags dropped from the
+    end, then the body cut at a separator. Never a hashtag cut in the middle (a wrong, clickable tag) and never a
+    credit cut (0.19.0, found in review: a range record with the satellite map was 300 characters exactly)."""
+    def join(b, cr, t):
+        return "\n".join(x for x in (b, cr or "", t) if x)
+    if len(join(body, credit, tags)) > POST_MAX and credit_short:
+        credit = credit_short
+    words = tags.split()
+    while len(join(body, credit, " ".join(words))) > POST_MAX and words:
+        words.pop()
+    tags = " ".join(words)
+    while len(join(body, credit, tags)) > POST_MAX and " \u00b7 " in body:
+        body = body.rsplit(" \u00b7 ", 1)[0]
+    return join(body, credit, tags)[:POST_MAX]
+
+
+def post_text(p, c, why=None, credit=None, credit_short=None):
     """The post. English, short, nothing the wall does not know. Starts with the flight ("Flight Etihad #ETD11K"),
     ends with the place ("above Trémery"); a range record ends with where it was seen from instead, since it was
     nowhere near overhead. credit: the map's credit line, when the picture has a map."""
@@ -472,7 +492,7 @@ def post_text(p, c, why=None, credit=None):
         tags = tags.replace("#avgeek", "#helicopter") if "#avgeek" in tags else tags + " #helicopter"
     if p.get("military"):
         tags = tags.replace("#avgeek", "#military") if "#avgeek" in tags else tags + " #military"
-    return "\n".join(x for x in (text, credit or "", tags.strip()) if x)
+    return fit_post(text, credit, tags.strip(), credit_short)
 
 
 def alt_text(p, c, trace, look="dots", info=None):
@@ -511,7 +531,7 @@ def alt_text(p, c, trace, look="dots", info=None):
 # --------------------------------------------------------------------------- the picture
 def _node(spec, out, *extra):
     """Run the dot-matrix renderer (or ask it for the board's rows, --lines). Returns its JSON answer."""
-    where = os.path.dirname(out) if out else work_dir()
+    where = os.path.dirname(out) if out else None     # --lines: the system's temporary folder, nothing left behind
     fd, spec_path = tempfile.mkstemp(prefix="social-", suffix=".json", dir=where or None)
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
@@ -536,7 +556,12 @@ def render(p, trace, c, out_base):
     spec = {"plane": p, "trace": trace, "units": c.get("UNITS", "metric"), "theme": theme_of(c),
             "clock": clock_label(), "flags": server.cfg_bool(c, "FLAGS", "1"), "pitch": 10}
     if look == "flap":
-        import social_card                       # Pillow: only this look needs it
+        try:
+            import social_card                   # Pillow: only this look needs it
+        except ImportError as exc:               # not installed (an offline `social look flap`): the dots, and a word
+            print("social: the split-flap picture needs Pillow (%s): drawing the dot-matrix picture instead. Run: sudo zenithboard social look flap" % exc, flush=True)
+            look = "flap-fallback"
+    if look == "flap":
         got = _node(dict(spec, flags=False, cols=social_card.COLS), None, "--lines")
         out = out_base + ".jpg"
         info = social_card.render(got["lines"], trace, p, out, color=got.get("color", "#ffb000"),
@@ -545,7 +570,7 @@ def render(p, trace, c, out_base):
         return info
     out = out_base + ".png"
     info = _node(spec, out)
-    info.update(path=out, mime="image/png")
+    info.update(path=out, mime="image/png", fallback=(look == "flap-fallback"))
     return info
 
 
@@ -663,7 +688,7 @@ def publish(p, trace, why, c, sec, dry=False, keep=None):
     results = {}
     try:
         info = render(p, trace, c, base)
-        text = post_text(p, c, why, info.get("credit"))
+        text = post_text(p, c, why, info.get("credit"), info.get("credit_short"))
         alt = alt_text(p, c, trace, style_of(c), info)
         if keep:
             try:

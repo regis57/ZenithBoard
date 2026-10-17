@@ -74,7 +74,7 @@ zenithboard social status
 zenithboard logs social
 ```
 
-`on` installs what the chosen look needs from Debian if it is missing — Node for the dot-matrix picture (about 30 MB), and Pillow with the DejaVu fonts for the split-flap one (a few MB) — starts the service, and says the rules it will follow. `off` stops it and keeps the account; `remove` forgets the account too.
+`on` installs what the picture needs from Debian if it is missing — Node (about 30 MB; it draws the dot-matrix picture and formats the rows of both), plus Pillow with the DejaVu fonts for the split-flap one (a few MB) — starts the service, and says the rules it will follow. `off` stops it and keeps the account; `remove` forgets the account too.
 
 ---
 
