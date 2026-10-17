@@ -30,6 +30,10 @@ Every `zenithboard` command, grouped by what you are trying to do. `zenithboard`
 | `zenithboard stats` | | Today, yesterday, the 30-day average and best, and messages per hour as a sparkline. See [Statistics](Statistics) |
 | `zenithboard stats on` · `off` · `status` | yes | Collect a sample every 15 minutes (off by default). `off` keeps the files |
 | `zenithboard stats csv` · `clear` | yes for clear | The raw samples as CSV; empty them |
+| `zenithboard stats gaps` | | Over thirty days: callsign prefixes shown without an airline name, and type codes drawn with the generic silhouette, each counted in distinct aircraft. Needs statistics on and the wall running. What to paste into an issue so the next airline lookup or silhouette is chosen on figures |
+| `zenithboard settings export [FILE]` | | Your settings as one file, `zenithboard-settings-HOST-DATE.env` by default (`-` for the terminal). Never a secret: the Bluesky app password, feeder keys and passwords stay out |
+| `zenithboard settings import FILE` | yes | Every setting in the file replaces the current one; lines that are not `KEY=VALUE`, or look like a secret, are skipped and counted. The file from before is kept as `config.env.bak-DATE`, importable the same way. The wall reads the new settings at once; the social service is restarted |
+| `zenithboard preset list` · `add NAME key=value…` · `del NAME` | yes to change | A name for a tablet's own choices (`units radius cycle theme mode flags`), kept as `PRESET_NAME` in `config.env`. That tablet opens `http://PI:8080/?p=NAME`: the preset's keys are applied at every load, what it does not name the tablet keeps. Names: a letter then up to 15 letters or digits |
 | `zenithboard social setup` | yes | The Bluesky account (an app password, never the real one), then the words and the picture. A wizard that tries the account before going on. See [Social sharing](Social-sharing) |
 | `zenithboard social words` | yes | The place name the posts carry, the sharing radius, the gap between posts, the hashtags, and what is worth a post |
 | `zenithboard social hashtags [WORD...]` | yes to change | The hashtags ending each post: `social hashtags ADSB avgeek Moselle` (the `#` is optional — unquoted, the shell would take it for a comment), `none`, or `default`. Alone: shows them |
@@ -82,6 +86,7 @@ How to read a day of the gain log, and why a quiet hour cannot judge the gain: [
 | `zenithboard wifi on` · `off` | yes | Radio on or off, kept after a reboot |
 | `zenithboard wifi country XX` | yes | Regulatory country, e.g. `FR`, kept after a reboot |
 | `zenithboard wifi install-nm` | yes | Install NetworkManager on a Pi that lacks it. Run with the cable plugged in |
+| `zenithboard wifi harden on` · `off` · `status` | yes to change | Two settings of the saved Wi-Fi profile: `connection.autoconnect-retries 0` (keep trying to rejoin after a loss; NetworkManager stops after four tries by itself) and `802-11-wireless.powersave 2` (the radio's power saving off, a known cause of short losses on a Pi). Off by default; `on` notes the values it found, `off` puts them back. Taken at the next connection |
 | `zenithboard ddns set duckdns` · `noip` · `freedns NAME` | yes | A name for your wall. Asks for the token; it never goes on the command line |
 | `zenithboard ddns status` | | Provider, name, last result |
 | `zenithboard ddns update` · `test` | yes | Refresh now / show exactly what the provider answers |
@@ -115,6 +120,7 @@ All three are off until you turn them on. How they decide, and how to read a bad
 | Command | sudo | What it is for |
 |---|---|---|
 | `sudo zenithboard update` | yes | **The normal way to update.** ZenithBoard first — after checking the signature on the new code, see below — then the decoder, the feeders, ACARS and Grafana |
+| `zenithboard update quick` | yes | ZenithBoard and the wall only, in seconds: the code is pulled, the wall restarted, the feeders left as they are (no `apt`). The menu's first Update entry since 0.21.0 |
 | `zenithboard update list` | | What is installed, and the names `update only` accepts |
 | `zenithboard update only NAME…` | yes | Just those, e.g. `readsb flightinfo`. Names: `zenithboard readsb dump1090 adsbx piaware fr24 planefinder flightinfo acars` |
 | `zenithboard data update` | yes | Refresh the aircraft-model list now |

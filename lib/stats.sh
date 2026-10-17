@@ -44,7 +44,7 @@ stats_on()  { stats_prepare_dir || { echo "Could not make $STATS_DIR"; return 1;
               echo "Statistics are ON: one line every 15 minutes in $STATS_FILE, $STATS_DAYS days kept."
               echo "Read them with 'zenithboard stats' or at http://$(local_ip):$(cfg_get PORT 8080)/stats"; }
 stats_off() { cfg_set STATS 0; stats_remove_units; echo "Statistics are OFF. The files are kept in $STATS_DIR (empty them: zenithboard stats clear)."; }
-stats_clear() { rm -f "$STATS_DIR"/seen-* 2>/dev/null; [ -d "$STATS_DIR" ] && echo "$STATS_HEADER" > "$STATS_FILE"; echo "Statistics emptied ($STATS_DIR)."; }
+stats_clear() { rm -f "$STATS_DIR"/seen-* "$STATS_DIR"/gaps-* 2>/dev/null; [ -d "$STATS_DIR" ] && echo "$STATS_HEADER" > "$STATS_FILE"; echo "Statistics emptied ($STATS_DIR)."; }
 
 # One sample. Reads the decoder's two files; writes one CSV line and today's aircraft. Silent when there is
 # nothing to read: a decoder that is not running is not an error worth a journal line every quarter hour.
@@ -93,19 +93,70 @@ PY
   ) || return 0
   read -r msgs far pos seen <<<"$n"
   printf '%s,%s,%s,%s,%s\n' "$now" "$msgs" "$far" "$pos" "$seen" >> "$STATS_FILE"
+  stats_gaps_sample "$day"
   stats_prune
+}
+
+# ---- what the wall cannot name or draw (0.21.0): the two counters the roadmap items "airline names for bare
+# callsigns" and "more silhouettes" are decided on. At each sample the wall is asked, on the loopback, about the
+# aircraft inside its radius; each aircraft shown with a callsign but no airline name is noted once under its
+# three-letter prefix, and each aircraft drawn with the generic silhouette once under its type code.
+# Files: gaps-YYYY-MM-DD, lines "airline<TAB>PREFIX<TAB>hex" and "shape<TAB>TYPE<TAB>hex"; thirty days like the rest.
+stats_gaps_sample() {   # stats_gaps_sample YYYY-MM-DD
+  local port f
+  port=$(cfg_get PORT 8080); f="$STATS_DIR/gaps-$1"
+  python3 - "$port" "$(cfg_get RADIUS 10)" "$f" <<'PY' 2>/dev/null || true
+import json, os, sys, urllib.request
+port, radius, out = sys.argv[1], sys.argv[2], sys.argv[3]
+try:
+    with urllib.request.urlopen("http://127.0.0.1:%s/api/planes?radius_km=%s" % (port, radius), timeout=5) as r:
+        planes = json.load(r).get("planes") or []
+except Exception:
+    sys.exit(0)
+lines = set()
+try:
+    lines = set(x.rstrip("\n") for x in open(out) if x.strip())
+except FileNotFoundError:
+    pass
+for p in planes:
+    h = str(p.get("hex", "")).lower()
+    cs = str(p.get("flight") or "").strip().upper()
+    if h and cs and not p.get("airline") and cs[:3].isalpha():
+        lines.add("airline\t%s\t%s" % (cs[:3], h))
+    if h and (p.get("shape") or "generic") == "generic" and p.get("type"):
+        lines.add("shape\t%s\t%s" % (str(p["type"]).upper(), h))
+tmp = out + ".tmp"
+with open(tmp, "w") as fh:
+    fh.write("\n".join(sorted(lines)) + ("\n" if lines else ""))
+os.replace(tmp, out)
+PY
+}
+
+# The counters over the thirty days, most frequent first: "zenithboard stats gaps" is what to paste in an issue
+stats_gaps() {
+  local days
+  days=$(ls "$STATS_DIR"/gaps-* 2>/dev/null | wc -l)
+  [ "$days" -gt 0 ] || { echo "Nothing noted yet. Statistics are $(stats_state); the wall must be running, and the first sample comes on the next quarter hour."; return 1; }
+  echo "What the wall could not name or draw, over $days day(s) of samples (distinct aircraft; a sample every 15 minutes misses some)"
+  echo
+  echo "Callsign prefixes shown without an airline name:"
+  cat "$STATS_DIR"/gaps-* | awk -F'\t' '$1=="airline" {print $2 "\t" $3}' | sort -u | cut -f1 | sort | uniq -c | sort -rn | awk '{printf "  %-6s %s aircraft\n", $2, $1}' | head -40
+  echo
+  echo "Type codes drawn with the generic silhouette:"
+  cat "$STATS_DIR"/gaps-* | awk -F'\t' '$1=="shape" {print $2 "\t" $3}' | sort -u | cut -f1 | sort | uniq -c | sort -rn | awk '{printf "  %-6s %s aircraft\n", $2, $1}' | head -40
 }
 
 # Thirty days of lines, thirty day files. Timestamps are YYYY-MM-DD HH:MM, which compare correctly as text.
 stats_prune() {
-  local cut tmp f
+  local cut tmp f d
   [ -f "$STATS_FILE" ] || return 0
   cut=$(date -d "$STATS_DAYS days ago" '+%Y-%m-%d %H:%M' 2>/dev/null) || return 0
   tmp="$STATS_FILE.tmp"
   { echo "$STATS_HEADER"; awk -F, -v c="$cut" 'NR>1 && $1 >= c' "$STATS_FILE"; } > "$tmp" && mv "$tmp" "$STATS_FILE"
-  for f in "$STATS_DIR"/seen-*; do
+  for f in "$STATS_DIR"/seen-* "$STATS_DIR"/gaps-*; do
     [ -f "$f" ] || continue
-    [ "${f##*/seen-}" \< "${cut%% *}" ] && rm -f "$f"
+    d=${f##*/}; d=${d#seen-}; d=${d#gaps-}            # the YYYY-MM-DD after the prefix
+    [ "$d" \< "${cut%% *}" ] && rm -f "$f"
   done
   return 0
 }

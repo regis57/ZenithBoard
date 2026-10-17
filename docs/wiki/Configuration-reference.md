@@ -63,6 +63,8 @@ The dynamic-DNS **token is not stored here.** It is asked for interactively and 
 | `LOG_AUTOCLEAN` | `0` | `zenithboard logs auto on\|off` | Daily clean-up keeping the last 7 days |
 | `NETWATCH` | `0` | `zenithboard netwatch on\|off` | The network watchdog. See [Reliability](Reliability-and-diagnostics) |
 | `GAINLOG` | `0` | `zenithboard gain log on\|off` | The 24-hour gain log. See [Gain tuning](Gain-tuning) |
+| `WIFI_HARDEN` | `0` | `zenithboard wifi harden on\|off` | The two Wi-Fi profile settings above are applied. `WIFI_HARDEN_PREV` keeps what they were, for `off` |
+| `PRESET_NAME` | — | `zenithboard preset add\|del` | A tablet preset, e.g. `PRESET_KITCHEN="theme=green mode=flap"`; `?p=kitchen` applies it. Comes along in `settings export` |
 | `STATS` | `0` | `zenithboard stats on\|off` | A sample every 15 minutes for the `/stats` page and `zenithboard stats`. See [Statistics](Statistics) |
 | `SOCIAL` | `0` | `zenithboard social on\|off` | Post the aircraft overhead to Bluesky. See [Social sharing](Social-sharing). The account's secret is in `social.env`, not here |
 | `SOCIAL_RADIUS_KM` | `15` | `zenithboard social words` | An aircraft is a candidate while inside it. Separate from `RADIUS` |

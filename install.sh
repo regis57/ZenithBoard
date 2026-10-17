@@ -27,6 +27,8 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$ROOT/lib/wifi.sh"
 . "$ROOT/lib/network.sh"
 . "$ROOT/lib/ddns.sh"
+# shellcheck source=lib/settings.sh
+. "$ROOT/lib/settings.sh"
 . "$ROOT/lib/update.sh"
 
 zb_tmp_init   # the private folder for downloads, made here in the main shell (see zb_tmp in lib/common.sh)
@@ -175,6 +177,7 @@ settings_wall_menu() {
       photos "5  Aircraft photos on/off" \
       routes "6  Flight origin/destination on/off" \
       data "7  Monthly aircraft-data refresh on/off" \
+      presets "8  Presets: a name for a tablet's own choices (?p=NAME in its address)" \
       back "Return to the previous menu") || return 0
     case "$c" in
       style) settings_style && restart_flightinfo && wt_msg "Look saved: $(cfg_get DISPLAY_MODE dots).\n\nThis is the default for every screen. A tablet that chose its own look (?mode=... or the gear icon) keeps it until you press Reset in its gear panel." 11 ;;
@@ -186,6 +189,26 @@ settings_wall_menu() {
       data)
         if wt_yesno "Refresh the aircraft model list automatically once a month?\n\n(Downloads a free list of aircraft names from GitHub. Needs internet on the Pi; the wall works without it.)" 12; then cfg_set AUTO_DATA_REFRESH 1; else cfg_set AUTO_DATA_REFRESH 0; fi
         data_refresh_apply ;;
+      presets) presets_menu ;;
+      *) return 0 ;;
+    esac
+  done
+}
+
+presets_menu() {
+  local c n v out pairs
+  while true; do
+    c=$(wt_menu "Presets: a second screen opens  http://PI:8080/?p=NAME  and gets these choices, with no long address to type.\nKeys: $PRESET_KEYS   (mode dots|flap, units metric|imperial, flags 0|1)\n\n$(preset_list | head -8)" \
+      add "Add or change a preset" \
+      del "Forget a preset" \
+      back "Return to the previous menu") || return 0
+    case "$c" in
+      add)
+        n=$(wt_input "Preset name (letters and digits, 16 at most): kitchen, tv2, bedroom" "") || continue
+        v=$(wt_input "What it sets, as key=value separated by spaces.\nExample:  theme=green mode=flap radius=5 cycle=8" "$(cfg_get "$(preset_key_of "$n")" "")") || continue
+        read -r -a pairs <<<"$v"
+        if out=$(preset_add "$n" "${pairs[@]}" 2>&1); then wt_msg "$out" 10; else wt_msg "$out" 9; fi ;;
+      del) n=$(wt_input "Preset to forget" "") || continue; out=$(preset_del "$n" 2>&1); wt_msg "$out" 8 ;;
       *) return 0 ;;
     esac
   done
@@ -214,8 +237,13 @@ settings_menu() {
   done
 }
 
+# The one step that cannot be undone asks for the word, not a key: a Yes one Enter too many (seen as a risk in
+# the menu review of 0.21.0) must not take a working receiver down. Your settings are offered as a file first.
 uninstall_all() {
-  wt_yesno "UNINSTALL EVERYTHING?\n\nThis removes FlightInfo, ACARS, all feeders and the decoder installed through this menu." 12 || return 0
+  local word
+  wt_yesno "UNINSTALL EVERYTHING?\n\nThis removes FlightInfo, ACARS, all feeders and the decoder installed through this menu.\n\nFirst, keep your settings as a file? (Maintenance -> Save settings, or: zenithboard settings export)" 14 || return 0
+  word=$(wt_input "To go on, type the word  uninstall  (anything else cancels)." "") || return 0
+  [ "$word" = uninstall ] || { wt_msg "Not uninstalled: nothing was changed." 7; return 0; }
   clear
   wifi_remove_unit
   ddns_remove_units
@@ -237,7 +265,33 @@ uninstall_all() {
   log "Everything removed."; exit 0
 }
 
-weak_hw_tag() { if is_low_mem || is_old_pi; then echo "  [NOT recommended on this Pi]"; fi; }
+maintenance_menu() {
+  local c f out
+  while true; do
+    c=$(wt_menu "Maintenance\n\nSettings file: $ZB_CONFIG   (secrets are in their own root-only files and never leave with it)" \
+      save "Save my settings to a file (to keep, or to move to another Pi)" \
+      restore "Restore settings from a file (the ones from before are kept as .bak)" \
+      uninstall "Uninstall everything (asks you to type the word)" \
+      back "Return to the previous menu") || return 0
+    case "$c" in
+      save)
+        f=$(wt_input "Where to write the settings file." "/home/${SUDO_USER:-pi}/zenithboard-settings-$(hostname)-$(date +%Y%m%d).env") || continue
+        if out=$(settings_export "$f" 2>&1); then
+          [ -n "${SUDO_USER:-}" ] && chown "$SUDO_USER" "$f" 2>/dev/null
+          wt_msg "Saved: $out\n\nCopy it off the Pi (scp, a USB stick). On another Pi:  sudo zenithboard settings import FILE" 12
+        else wt_msg "$out" 8; fi ;;
+      restore)
+        f=$(wt_input "The settings file to restore." "") || continue
+        [ -f "$f" ] || { wt_msg "No such file: $f" 7; continue; }
+        wt_yesno "Restore the settings in $f?\n\nEvery setting in it replaces the current one. The current file is kept first as $ZB_CONFIG.bak-DATE, so this can be undone the same way." 12 || continue
+        clear; settings_import "$f" && settings_apply; read -rp "Press Enter to continue..." _ ;;
+      uninstall) uninstall_all ;;
+      *) return 0 ;;
+    esac
+  done
+}
+
+weak_hw_tag() { if is_low_mem || is_old_pi; then echo " [not for this Pi]"; fi; }
 
 main_menu() {
   local c
@@ -248,8 +302,8 @@ main_menu() {
       3 "ACARS       - optional ACARS messages in Grafana (2nd dongle)$(weak_hw_tag)" \
       4 "Settings    - network (Wi-Fi, IP, domain), receiver, wall, logs" \
       5 "Status      - what is running" \
-      6 "Update      - everything at once, or pick components" \
-      7 "Uninstall everything" \
+      6 "Update      - ZenithBoard and the wall in seconds, or everything" \
+      7 "Maintenance - save or restore your settings, uninstall" \
       0 "Exit") || exit 0
     case "$c" in
       1) adsb_menu ;;
@@ -258,7 +312,7 @@ main_menu() {
       4) settings_menu ;;
       5) clear; "$ROOT/bin/zenithboard" status; read -rp "Press Enter..." _ ;;
       6) update_menu ;;
-      7) uninstall_all ;;
+      7) maintenance_menu ;;
       *) exit 0 ;;
     esac
   done

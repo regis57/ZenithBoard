@@ -26,7 +26,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.20.1"
+VERSION = "0.21.0"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -112,6 +112,26 @@ def load_config():
         except OSError:
             return dict(DEFAULTS)
     return _cfg_cache["data"]
+
+
+PRESET_KEYS = ("units", "radius", "cycle", "theme", "mode", "flags")
+
+
+def presets_of(cfg):
+    """The per-tablet presets (0.21.0): PRESET_KITCHEN="theme=green mode=flap" -> {"kitchen": {"theme": "green", ...}}.
+    Only the tablet's own keys, so a preset can never set anything of the server's."""
+    out = {}
+    for k, v in cfg.items():
+        if not k.startswith("PRESET_") or not re.match(r"^PRESET_[A-Z][A-Z0-9]{0,15}$", k):
+            continue
+        pairs = {}
+        for pair in str(v).split():
+            name, _, val = pair.partition("=")
+            if name in PRESET_KEYS and val:
+                pairs[name] = val[:32]
+        if pairs:
+            out[k[7:].lower()] = pairs
+    return out
 
 
 def cfg_float(cfg, key, default):
@@ -997,6 +1017,7 @@ def public_config(cfg):
         "stats": cfg_bool(cfg, "STATS"),           # the gear panel offers the /stats page only when there is one
         "display_mode": "flap" if str(cfg.get("DISPLAY_MODE", "dots")).lower() == "flap" else "dots",
         "demo": cfg_bool(cfg, "DEMO"),
+        "presets": presets_of(cfg),                # ?p=NAME on a tablet applies one (0.21.0)
     }
 
 

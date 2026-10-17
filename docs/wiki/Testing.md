@@ -36,6 +36,7 @@ Run the whole set before pushing. It takes well under a minute, and the shell te
 | `test_menus.sh` | Every menu has exactly one `back` entry and no dead item |
 | `test_format.js` | Formatting and unit conversion on the wall |
 | `test_shapes.js`, `test_scene.js`, `test_flap.js` | Silhouettes, the animated scene, the split-flap board |
+| `test_settings.sh` | Settings export never carries a secret, import takes only `KEY=VALUE` and keeps a way back; preset names, keys and what the wall serves; Wi-Fi hardening sets two things and `off` puts them back (against an `nmcli` stub); the `stats gaps` counters against a wall stub on the loopback; the typed word before each destructive menu step |
 | `test_social.py`, `test_social.sh` | The posts' words for every case (the altitude never read as a distance), the choice under the rules, the track memory, both real renderers — Node's PNG with its labelled rows and the wall's colours, Pillow's split-flap JPEG with fake map tiles, the tile address, cache and fallbacks — the exact requests sent to Bluesky (against fakes shaped like the real answers), the secrets file's mode and contents, the 0.19.0 clean-up of a Mastodon token, the picture settings, on/off/remove, and the audit's line |
 | `test_statsjs.js` | The statistics charts' axis: a handful of round lines whatever the size, from ten to billions of messages |
 | `test_layout.js` | The settings gear clears the photo and the silhouette on 15 screen sizes |

@@ -351,6 +351,7 @@ wifi_menu() {
       hidden "Connect to a hidden network" \
       saved "Saved networks: connect, change password, forget" \
       status "Status and wired / Wi-Fi priority" \
+      harden "Hardening: retry without end, no radio power saving ($(wifi_harden_state))" \
       back "Return to the previous menu") || return 0
     case "$c" in
       toggle) wifi_toggle ;;
@@ -359,6 +360,12 @@ wifi_menu() {
       hidden) wifi_hidden_menu ;;
       saved) wifi_require_on && wifi_saved_menu ;;
       status) clear; wifi_status; echo; read -rp "Press Enter to continue..." _ ;;
+      harden)
+        if [ "$(wifi_harden_state)" = on ]; then
+          wt_yesno "Wi-Fi hardening is ON. Switch it off and put the profile's two settings back as they were?" 9 && { clear; wifi_harden_off; read -rp "Press Enter to continue..." _; }
+        else
+          wt_yesno "Two settings of the saved Wi-Fi network, both free:\n\n- keep trying to rejoin after a loss, without end (NetworkManager gives up after four tries by itself)\n- the radio's power saving off, a known cause of short losses on a Pi\n\nTaken at the next connection. Off again at any time, which puts back what was there. Switch them on?" 16 && { clear; wifi_harden_on; read -rp "Press Enter to continue..." _; }
+        fi ;;
       *) return 0 ;;
     esac
   done

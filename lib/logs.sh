@@ -93,7 +93,7 @@ logs_menu() {
         v=$(wt_input "Maximum size of ALL system logs in MB ($LOG_LIMIT_MIN_MB-$LOG_LIMIT_MAX_MB).\nOlder entries are dropped automatically. 50 is plenty on a small SD card." "${mb:-50}") || continue
         clear; logs_set_limit "$v" || true; read -rp "Press Enter to continue..." _ ;;
       default) clear; logs_set_limit default; read -rp "Press Enter to continue..." _ ;;
-      cleanall) wt_yesno "Delete ALL system logs now, including the last 7 days?\n\nThis only removes old messages; nothing stops working." 10 && { clear; logs_clean all; read -rp "Press Enter to continue..." _; } ;;
+      cleanall) wt_yesno "Delete ALL system logs now, including the last 7 days?\n\nThis only removes old messages; nothing stops working. The cause of a crash from last night goes with them." 11 && [ "$(wt_input "To delete every log, type the word  delete  (anything else cancels)." "")" = delete ] && { clear; logs_clean all; read -rp "Press Enter to continue..." _; } ;;
       *) return 0 ;;
     esac
   done

@@ -35,6 +35,8 @@ HERE="$(dirname "$(readlink -f "$0")")"
 . "$HERE/../lib/ddns.sh"
 # shellcheck source=lib/update.sh
 . "$HERE/../lib/update.sh"
+# shellcheck source=lib/settings.sh
+. "$HERE/../lib/settings.sh"
 
 zb_tmp_init   # the private folder for downloads, made here in the main shell (see zb_tmp in lib/common.sh)
 
@@ -74,6 +76,12 @@ ZenithBoard $ZB_VERSION - ADSB Flight Info
   zenithboard stats                     today, yesterday, 30 days, and messages per hour as a sparkline
   zenithboard stats on|off|status       collect a sample every 15 minutes (off by default; the page is /stats)
   zenithboard stats csv|clear           the raw samples / empty them
+  zenithboard stats gaps                callsigns shown without an airline, types drawn with the generic silhouette (30 days)
+  zenithboard settings export [FILE]    your settings as one file (no secrets), to keep or to move to another Pi
+  zenithboard settings import FILE      put them on this Pi (the ones from before are kept in a .bak file)
+  zenithboard preset list|add|del       a name for a tablet's own choices: ?p=NAME in its address (add NAME theme=green mode=flap ...)
+  zenithboard update quick              ZenithBoard and the wall only, in seconds (the feeders are left as they are)
+  zenithboard wifi harden on|off|status retry without end after a loss and no radio power saving (off by default)
   zenithboard social setup              the Bluesky account (a wizard; asks for an app password, never the real one)
   zenithboard social words              the place name, the radius, the gap, the hashtags, what is worth a post
   zenithboard social hashtags [WORD...] the hashtags ending each post (# optional), none, or default; alone: show them
@@ -120,7 +128,7 @@ cmd_status() {
   echo "${C_B}ZenithBoard $ZB_VERSION${C_0}   units: $(cfg_get UNITS metric)   position: $(cfg_get LAT ?) , $(cfg_get LON ?)"
   if wifi_has_nm && [ -n "$(wifi_iface)" ]; then echo "Wi-Fi: $(wifi_summary)   (details: zenithboard wifi status)"; fi
   if [ "$(cfg_get DDNS_PROVIDER none)" != none ]; then echo "Domain name: $(ddns_summary)   (details: zenithboard ddns status)"; fi
-  echo "Hardware: $(pi_model || true)  RAM: $(mem_avail_mb) / $(mem_total_mb) MB free$(is_low_mem && echo '  (low-memory board: skip ACARS/Grafana)')"
+  echo "Hardware: $(pi_model || true)  RAM: $(mem_avail_mb) / $(mem_total_mb) MB free$(is_low_mem && echo '  (1 GB: everything but ACARS/Grafana, see wiki Hardware)')"
   echo "Decoder / feeders:"
   if [ -n "$dec" ]; then show_state "Decoder ($dec)" true "$dec"; else echo "  Decoder                    not installed"; fi
   show_state "ADSB Exchange" is_adsbx adsbexchange-feed
@@ -203,6 +211,19 @@ case "${1:-}" in
       status) data_refresh_status ;;
       *) die "Usage: zenithboard data update | auto on|off | status" ;;
     esac ;;
+  settings)
+    case "${2:-}" in
+      export) settings_export "${3:-}" ;;
+      import) root_or_die; [ -n "${3:-}" ] || die "Usage: sudo zenithboard settings import FILE"; settings_import "$3" && settings_apply ;;
+      *) die "Usage: zenithboard settings export [FILE]   |   sudo zenithboard settings import FILE" ;;
+    esac ;;
+  preset|presets)
+    case "${2:-list}" in
+      list) preset_list ;;
+      add) root_or_die; [ -n "${3:-}" ] || die "Usage: sudo zenithboard preset add NAME key=value...   (keys: $PRESET_KEYS)"; preset_add "${@:3}" ;;
+      del|rm|forget) root_or_die; [ -n "${3:-}" ] || die "Usage: sudo zenithboard preset del NAME"; preset_del "$3" ;;
+      *) die "Usage: zenithboard preset list | add NAME key=value... | del NAME" ;;
+    esac ;;
   config-set)
     root_or_die; [ -n "${2:-}" ] || die "Usage: zenithboard config-set KEY VALUE"; cfg_set "$2" "${3:-}"; restart_flightinfo ;;
   mode|style)
@@ -223,8 +244,9 @@ case "${1:-}" in
       run)    root_or_zb; stats_run ;;
       status) stats_status ;;
       csv)    stats_csv ;;
+      gaps)   stats_gaps ;;
       clear)  root_or_die; stats_clear ;;
-      *) die "Usage: zenithboard stats [on|off|status|csv|clear]" ;;
+      *) die "Usage: zenithboard stats [on|off|status|csv|gaps|clear]" ;;
     esac ;;
   social)
     case "${2:-status}" in
@@ -276,6 +298,7 @@ case "${1:-}" in
   update)
     case "${2:-}" in
       list) zb_update_list ;;
+      quick) root_or_die; if is_flightinfo; then zb_update --only zenithboard flightinfo; else zb_update --only zenithboard; fi ;;
       only) root_or_die; [ -n "${3:-}" ] || die "Usage: sudo zenithboard update only NAME...   (names: zenithboard readsb dump1090 adsbx piaware fr24 planefinder flightinfo acars; see: zenithboard update list)"; shift 2; zb_update --only "$@" ;;
       *) root_or_die; zb_update "${2:-}" ;;
     esac ;;
@@ -362,6 +385,13 @@ case "${1:-}" in
         [ -n "$u" ] || die "No saved network called $3 (see: zenithboard wifi list)"
         wifi_forget "$u" && echo "Forgotten: $3" ;;
       install-nm) root_or_die; wifi_install_nm ;;
+      harden)
+        case "${3:-status}" in
+          on)  root_or_die; wifi_has_nm || die "Wi-Fi hardening needs NetworkManager."; wifi_harden_on ;;
+          off) root_or_die; wifi_harden_off ;;
+          status) wifi_harden_status ;;
+          *) die "Usage: zenithboard wifi harden on|off|status" ;;
+        esac ;;
       apply) root_or_die; wifi_apply ;;
       *) die "Usage: zenithboard wifi status|on|off|country XX|scan|connect SSID|list|forget SSID" ;;
     esac ;;

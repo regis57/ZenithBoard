@@ -36,6 +36,16 @@
     try { prefs = JSON.parse(localStorage.getItem("zenithboard") || "{}") || {}; } catch (e) { prefs = {}; }
     var q = new URLSearchParams(location.search);       // ?units=imperial&radius=5&cycle=8&theme=green&mode=flap
     ["units", "radius", "cycle", "theme", "mode", "flags"].forEach(function (k) { if (q.has(k)) prefs[k] = q.get(k); });
+    if (q.has("p")) prefs.preset = String(q.get("p")).toLowerCase();   // a named preset of the Pi's (0.21.0), applied once /api/config is in
+    savePrefs();
+  }
+  // ?p=kitchen: the Pi's preset of that name sets this tablet's choices, as if they had been in the address.
+  // Applied at every load, so changing the preset on the Pi changes the tablet at its next reload; a key the
+  // preset does not name keeps whatever the tablet chose itself.
+  function applyPreset() {
+    var p = prefs.preset && server.presets ? server.presets[prefs.preset] : null;
+    if (!p) return;
+    Object.keys(p).forEach(function (k) { prefs[k] = p[k]; });
     savePrefs();
   }
   function savePrefs() { try { localStorage.setItem("zenithboard", JSON.stringify(prefs)); } catch (e) {} }
@@ -399,7 +409,7 @@
   }
   function loadServerConfig() {
     return fetch("/api/config", { cache: "no-store" }).then(function (r) { return r.json(); })
-      .then(function (c) { server = c; serverId = c.server_id; }).catch(function () {});
+      .then(function (c) { server = c; serverId = c.server_id; applyPreset(); }).catch(function () {});
   }
 
   // ------------------------------------------------------------------ settings panel
