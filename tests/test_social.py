@@ -165,6 +165,15 @@ def warm(**kw):
 
 
 class ChoiceTest(unittest.TestCase):
+    def test_all_means_every_rule_and_the_special_aircraft_first(self):
+        # 0.19.1, from the owner: ticking ALL alone must still treat a military aircraft as military
+        self.assertEqual(social.rules_of({"SOCIAL_RULES": "all"}), set(social.RULES_ALL))
+        self.assertEqual(social.rules_of({"SOCIAL_RULES": "any"}), set(social.RULES_ALL), "the 0.18 word still works")
+        self.assertEqual(social.rules_of({"SOCIAL_RULES": "military,heavy"}), {"military", "heavy"})
+        score, why = social.interest(KC135, social.rules_of({"SOCIAL_RULES": "all"}), warm(), time.time())
+        self.assertEqual(why, "military")
+        self.assertEqual(social.interest(EZY, {"all"}, warm(), time.time())[1], "all")
+
     def setUp(self):
         self.tracks = social.Tracks()
         now = time.time()
@@ -216,11 +225,11 @@ class ChoiceTest(unittest.TestCase):
         self.assertNotIn("farthest_km", st)
 
     def test_nothing_known_never_posts_even_under_any(self):
-        self.assertIsNone(social.choose([NOTHING], self.tracks, {"any"}, warm(), time.time()))
+        self.assertIsNone(social.choose([NOTHING], self.tracks, {"all"}, warm(), time.time()))
 
     def test_already_posted_and_no_track_are_skipped(self):
-        self.assertIsNone(social.choose([EZY], self.tracks, {"any"}, warm(posted={EZY["hex"]: time.time()}), time.time()))
-        self.assertIsNone(social.choose([EZY], social.Tracks(), {"any"}, warm(), time.time()))
+        self.assertIsNone(social.choose([EZY], self.tracks, {"all"}, warm(posted={EZY["hex"]: time.time()}), time.time()))
+        self.assertIsNone(social.choose([EZY], social.Tracks(), {"all"}, warm(), time.time()))
 
     def test_heavy_by_code_or_shape(self):
         self.assertEqual(social.interest(BELUGA, {"heavy"}, warm())[1], "heavy")
@@ -640,7 +649,7 @@ class OncePerAircraftTest(unittest.TestCase):
         tracks = social.Tracks()
         for pt in trace(8, t0 + 49 * 3600 - 40):
             tracks.feed([{"hex": EZY["hex"], "lat": pt[0], "lon": pt[1], "alt_baro": pt[2], "seen_pos": 0}], pt[3])
-        self.assertIsNone(social.choose([EZY], tracks, {"any"}, st, t0 + 49 * 3600))
+        self.assertIsNone(social.choose([EZY], tracks, {"all"}, st, t0 + 49 * 3600))
         social.prune_state(st, t0 + 49 * 3600 + 2 * 86400)   # a day after it was last seen: forgotten
         self.assertNotIn(EZY["hex"], st["posted"])
 
@@ -663,7 +672,7 @@ class ServiceLoopTest(unittest.TestCase):
             if clock[0] > start + 30 * 60:
                 raise Stop()
         for name, fake in (("read_aircraft", lambda c: []), ("account", lambda: {"BLUESKY_HANDLE": "h", "BLUESKY_APP_PASSWORD": "p"}),
-                           ("one_poll", lambda c, st, tr, ac, now: ([EZY], (5, "any", EZY))), ("load_state", warm),
+                           ("one_poll", lambda c, st, tr, ac, now: ([EZY], (5, "all", EZY))), ("load_state", warm),
                            ("save_state", lambda st: None), ("cfg", lambda: dict(CFG)),
                            ("publish", lambda *a, **k: tries.append(clock[0]) or {"bluesky": "FAILED: 503 down"})):
             self.addCleanup(setattr, social, name, getattr(social, name))
@@ -685,7 +694,7 @@ class PublishTest(unittest.TestCase):
         if shutil.which(social.NODE) is None:
             self.skipTest("node not installed here")
         old = social.RUN_DIR; social.RUN_DIR = "/proc/no-such-place/social"; self.addCleanup(setattr, social, "RUN_DIR", old)
-        r = social.publish(EZY, trace(30), "any", CFG, {}, dry=True)
+        r = social.publish(EZY, trace(30), "all", CFG, {}, dry=True)
         self.assertIn("text", r)
         self.assertFalse([d for d in os.listdir(tempfile.gettempdir()) if d.startswith("zenithboard-social-")], "the stand-in folder must be removed")
 
@@ -701,7 +710,7 @@ class PublishTest(unittest.TestCase):
         os.makedirs(os.path.dirname(keep), exist_ok=True)
         with open(keep + ".jpg", "wb") as fh:          # a flap preview from before
             fh.write(b"old")
-        r = social.publish(EZY, trace(30), "any", CFG, {"BLUESKY_HANDLE": "h", "BLUESKY_APP_PASSWORD": "p"}, keep=keep)
+        r = social.publish(EZY, trace(30), "all", CFG, {"BLUESKY_HANDLE": "h", "BLUESKY_APP_PASSWORD": "p"}, keep=keep)
         self.assertTrue(r["bluesky"].startswith("FAILED"))
         self.assertEqual([f for f in os.listdir(d) if f.startswith("post-")], [], "the picture must not stay on the Pi")
         self.assertTrue(os.path.exists(keep + ".png"))

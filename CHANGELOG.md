@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.19.1
+- **The rules list: the special aircraft, then ALL.** *ALL* means everything that flies over, the special ones included — ticking it alone is ticking every line, and a military aircraft under ALL is posted as military, ahead of an airliner. It was *any*, the last of six lines that read like a sixth kind of aircraft, and under *any* alone a tanker counted as "anything". The old word still works in `config.env`. The list says which rules wait for three days of history.
+
 ## 0.19.0
 Social sharing, after the first real posts were read on a phone.
 - **Bluesky only.** Mastodon is taken out: the wizard, the menu, the commands and the service know one network. An update removes a Mastodon token left on the Pi and the list of networks from `config.env`, and keeps the Bluesky account; revoke the token on your instance too.
