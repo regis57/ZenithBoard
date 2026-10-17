@@ -23,6 +23,8 @@ Every quarter hour, as the `zenithboard` user and inside the same sandbox as the
 
 It also notes every aircraft's address into a file for the day, `seen-YYYY-MM-DD`, one per line, so the day's count is the number of distinct aircraft. About 6 KB a day on the card. After thirty days a line, or a day file, is removed.
 
+**What the wall could not name or draw (0.21.0).** Each sample also asks the wall, on the loopback, which aircraft are inside its radius, and notes once per aircraft the callsign prefixes shown without an airline name and the type codes drawn with the generic silhouette, in `gaps-YYYY-MM-DD` files kept thirty days. `zenithboard stats gaps` prints the counts; what they are for is on the [Roadmap](Roadmap#deciding-the-airline-lookup-and-the-new-silhouettes-on-figures).
+
 **The daily aircraft count is a floor.** A sample every fifteen minutes misses an aircraft that crossed in less than that. Both the page and the command say so. Sampling more often would catch more of them and write to the SD card more often; fifteen minutes is the same trade the gain log makes.
 
 ## The page
