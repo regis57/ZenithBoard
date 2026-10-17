@@ -9,8 +9,9 @@
   "use strict";
   var COLS = 14;                                   // characters per text row on the left
   var COLS_FLAGS = 12;                             // ... and with the two flags, which take the last two
-  var FLAG_X = 75, FLAG_Y1 = 16, FLAG_Y2 = 25;     // the flags: registration beside the airline, maker beside the model
+  var FLAG_X = 75, FLAG_Y1 = 8, FLAG_Y2 = 25;      // the flags: registration beside the REG row (0.20.0), maker beside the model
   var TEXT_MAX_X = 74;                             // text stops here when the flags are shown (the outline starts at 74)
+  var ROW_MAX_X = 84;                              // without the flags: a whole row, fourteen letters, before the right-hand column
   var GW = 128, GH = 80;
   var RX = 90, RW = 38;                            // right-hand column
   var SIL_BOX = { x: RX, y: 0, w: RW, h: 34 };
@@ -127,8 +128,9 @@
     }
   }
 
-  // The two flags: where the aircraft is registered, beside the airline, and where it was built, beside the
-  // model. A country we have no flag for falls back to its two letters, which is still better than a hole.
+  // The two flags: where the aircraft is registered, beside its registration (the REG row, since 0.20.0: it sat
+  // beside the airline, which read as the airline's country), and where it was built, beside the model. A country
+  // we have no flag for falls back to its two letters, which is still better than a hole.
   function badges(g, p) {
     var reg = window.Flags ? Flags.country(p.registration) : null;
     var made = window.Flags ? Flags.origin(p.type_name) : null;
@@ -157,10 +159,14 @@
       return { g: g, sig: "empty" + total + clock() + radius() + u, plane: null,
                lines: ["", centered("NO FLIGHTS"), "", centered(within), centered("SEEN " + total + " AIRCRAFT"), "", centered(clock()), ""] };
     }
-    var on = flagsOn(), maxX = on ? TEXT_MAX_X : GW;
+    // With the flags, both rows stop before the flag column: the airline row has no flag beside it since 0.20.0,
+    // but the REG row's flag can carry a one-dot outline whose last row is the one just above the airline's
+    // letters. Without the flags, both stop before the right-hand column: before 0.20.0 they went on to the wall's
+    // edge, and a long name ran under the silhouette rather than turning.
+    var on = flagsOn(), maxX = on ? TEXT_MAX_X : ROW_MAX_X;
     var L = Fmt.planeLines(p, u, planes.indexOf(p), planes.length, cols());
     scroll.prepare(p.hex + "|" + L.airlineFull + "|" + L.typeFull + "|" + maxX,
-                   [{ y: 16, text: L.airlineFull }, { y: 25, text: L.typeFull }], maxX);
+                   [{ y: 16, text: L.airlineFull, mx: maxX }, { y: 25, text: L.typeFull, mx: maxX }]);
     text(g, L.flight, 0, 0, 1); text(g, L.reg, 0, 8, 1);                 // 0.19.0: FLT and REG rows, not a two-row callsign
     textRow(g, scroll.text(0, L.airlineFull), 16, scroll.off(0), maxX);
     textRow(g, scroll.text(1, L.typeFull), 25, scroll.off(1), maxX);
@@ -178,7 +184,7 @@
   // never the whole wall, so an old tablet is not asked to redraw ten thousand dots nine times a second.
   var scroll = (function () {
     var STEP_MS = 110, GAP = "   ";                // one dot every 110 ms, three spaces between the two passes
-    var rows = [], key = "", maxX = GW, timer = 0;
+    var rows = [], key = "", maxX = GW, timer = 0;   // maxX: a row's own limit when it gives none
     function need() { return mode() === "dots" && rows.some(function (r) { return r.cycle > 0; }); }
     function tick() {
       var moved = [];
@@ -188,27 +194,27 @@
         moved.push(r);
       });
       moved.forEach(function (r) {
-        for (var y = r.y; y < r.y + 7; y++) for (var x = 0; x < maxX; x++) put(grid, x, y, 0);
-        textRow(grid, r.draw, r.y, r.off, maxX);
-        drawRect(0, r.y, maxX, r.y + 7);
+        for (var y = r.y; y < r.y + 7; y++) for (var x = 0; x < r.mx; x++) put(grid, x, y, 0);
+        textRow(grid, r.draw, r.y, r.off, r.mx);
+        drawRect(0, r.y, r.mx, r.y + 7);
       });
     }
     function sync() {
       if (timer) { clearInterval(timer); timer = 0; }
       if (need()) timer = setInterval(tick, STEP_MS);
     }
-    function row(y, text) {
+    function row(y, text, mx) {
       // A name that does not fit turns continuously: the row holds the name, a gap, then the name again, and
       // the window walks one length before starting over. What leaves on the left is already arriving on the
       // right, so there is nothing to jump back from.
-      var scrolls = rowWidth(text) > maxX;
-      return { y: y, off: 0, cycle: scrolls ? (text.length + GAP.length) * 6 : 0,
+      mx = mx || maxX;
+      var scrolls = rowWidth(text) > mx;
+      return { y: y, off: 0, mx: mx, cycle: scrolls ? (text.length + GAP.length) * 6 : 0,
                draw: scrolls ? text + GAP + text : text };
     }
     return {
-      prepare: function (k, items, mx) {
-        maxX = mx;
-        if (k !== key) { key = k; rows = items.map(function (it) { return row(it.y, it.text); }); }
+      prepare: function (k, items) {
+        if (k !== key) { key = k; rows = items.map(function (it) { return row(it.y, it.text, it.mx); }); }
         sync();
       },
       off: function (i) { return rows[i] ? rows[i].off : 0; },

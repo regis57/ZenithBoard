@@ -114,6 +114,19 @@ assert.ok(COLS * 6 - 1 <= MAXX, COLS + " characters do not fit before the flags"
 assert.ok(FLAG_X + Flags.W <= RX - 1, "the flags must stay clear of the aircraft silhouette");
 assert.ok(Y2 + Flags.H < PH[1], "the flags must stay above the photo");
 assert.ok(Y1 + Flags.H <= Y2 - 1, "the two flags must not touch each other");
+// 0.20.0: the registration's flag beside the REG row (y 8 to 14), its outline clear of the FLT row above (0 to 6)
+// and of the airline row below (16 to 22); the REG text, twelve characters, ends before the outline
+assert.strictEqual(Y1, 8, "the registration flag sits on the REG row");
+assert.ok(Y1 - 1 >= 7 && Y1 + Flags.H <= 15, "the outline stays between the FLT row and the airline row");
+const Fmt = require(path.join(dir, "format.js"));
+assert.ok(Fmt.topRows({ flight: "EZY1234", registration: "RA-123456789" }, COLS).reg.length * 6 - 1 <= MAXX, "a long registration stops before the flag");
+// the REG flag's outline takes the dark row above the airline row: the airline row still stops before the flags
+assert.ok(Y1 + Flags.H === 15, "the outline's last row is the one just above the airline row");
+assert.ok(/y: 16, text: L\.airlineFull, mx: maxX/.test(app) && /maxX = on \? TEXT_MAX_X : ROW_MAX_X/.test(app),
+          "with the flags, the airline row stops before the flag column");
+// without the flags, a row stops before the right-hand column: before 0.20.0 it went on to the wall's edge
+const ROWX = n(/ROW_MAX_X = (\d+)/), COLS_ALL = n(/var COLS = (\d+)/);
+assert.ok(ROWX >= COLS_ALL * 6 - 1 && ROWX <= RX, "a whole row of " + COLS_ALL + " letters, short of the right-hand column");
 
 console.log("flags ok: " + REG.length + " registrations, " + MADE.length + " makers, " + codes.length +
             " flags all distinct and inside the grid, black left black, outlines only where a flag would otherwise be invisible");

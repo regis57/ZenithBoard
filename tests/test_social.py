@@ -5,6 +5,7 @@ The network is not called: a fake urlopen records what would have been sent and 
 copied from its API documentation). The renderers are real: node for the dot-matrix picture, Pillow for the split-flap
 one, which is given fake map tiles.
 """
+import io
 import json
 import os
 import shutil
@@ -12,6 +13,7 @@ import sys
 import tempfile
 import time
 import unittest
+import urllib.error
 import urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -206,8 +208,8 @@ class VarietyTest(unittest.TestCase):
     def test_a_post_moves_the_picture_on_even_one_made_by_hand(self):
         d = tempfile.mkdtemp(); self.addCleanup(shutil.rmtree, d, True)
         self.addCleanup(setattr, social, "STATE_DIR", social.STATE_DIR); social.STATE_DIR = d
-        social.remember_post("aaaaaa", time.time())
-        social.remember_post("bbbbbb", time.time())
+        social.remember_post({"hex": "aaaaaa"}, time.time())
+        social.remember_post({"hex": "bbbbbb"}, time.time())
         self.assertEqual(social.load_state()["pictures"], 2)
         st = {"pictures": 1}
         self.assertEqual(social.merge_disk(st)["pictures"], 2)
@@ -435,13 +437,28 @@ class PictureTest(unittest.TestCase):
         self.assertEqual(out[1], {"flight": "HEX  3C0001", "reg": ""})
         out = self.node("const g = new Uint32Array(R.GW * R.GH);"
                         " R.drawWall(g, %s, 'metric', '11:39 GMT+2', true);"
-                        " const lit = y => { let n = 0; for (let x = 0; x < 84; x++) n += g[y * R.GW + x] ? 1 : 0; return n; };"
-                        " console.log(JSON.stringify({row: [...Array(16).keys()].map(lit), clock: lit(72)}));" % json.dumps(EZY))
+                        " const lit = (y, a, b) => { let n = 0; for (let x = a; x < b; x++) n += g[y * R.GW + x] ? 1 : 0; return n; };"
+                        " console.log(JSON.stringify({row: [...Array(16).keys()].map(y => lit(y, 0, 72)), clock: lit(72, 0, 72),"
+                        " flag: [...Array(17).keys()].map(y => lit(y, 74, 87))}));" % json.dumps(EZY))
         rows = out["row"]
+        # 0.20.0: the registration's flag (G-UZHA: the United Kingdom) beside the REG row, nothing beside the FLT row
+        self.assertTrue(all(out["flag"][y] for y in range(7, 16)), out["flag"])
+        self.assertTrue(not any(out["flag"][y] for y in range(0, 7)), out["flag"])
         self.assertTrue(all(rows[y] for y in range(0, 7)), rows)          # FLT  EZY1234
         self.assertEqual(rows[7], 0, rows)                                  # one dark row
         self.assertTrue(all(rows[y] for y in range(8, 15)), rows)          # REG  G-UZHA
         self.assertGreater(out["clock"], 0)
+
+    def test_a_long_airline_stays_clear_of_the_registration_flag_s_outline(self):
+        # 0.20.0: G-UZHA's flag (the United Kingdom, outlined) beside the REG row; its outline's last row is just
+        # above the airline row, so a fourteen-letter airline must still stop before the flag column
+        out = self.node("const g = new Uint32Array(R.GW * R.GH);"
+                        " R.drawWall(g, %s, 'metric', '11:39 GMT+2', true);"
+                        " let last = -1; for (let y = 16; y < 23; y++) for (let x = 0; x < R.GW; x++) if (g[y * R.GW + x]) last = Math.max(last, x);"
+                        " let outline = 0; for (let x = 74; x < 87; x++) outline += g[15 * R.GW + x] ? 1 : 0;"
+                        " console.log(JSON.stringify({last: last, outline: outline}));" % json.dumps(dict(EZY, airline="Virgin Atlantic")))
+        self.assertGreater(out["outline"], 0, "the outline is drawn on the row above the airline")
+        self.assertLess(out["last"], 74, "the airline's letters stop before it")
 
     def test_colours_are_the_wall_s_own(self):
         # read from style.css, so a theme added to the wall is a theme of the picture
@@ -653,14 +670,23 @@ class NetworksTest(unittest.TestCase):
 
     def setUp(self):
         self.sent = []
+        self.refuse = []                                # urls to answer once with an expired token
         self.old = urllib.request.urlopen
+        social._SESSION.clear()
+        self.addCleanup(social._SESSION.clear)
         test = self
 
         def fake(req, timeout=None):
             url = req.full_url
             test.sent.append((url, dict(req.header_items()), req.data))
+            name = url.split("/")[-1]
+            if name in test.refuse:
+                test.refuse.remove(name)
+                raise urllib.error.HTTPError(url, 400, "Bad Request", {}, io.BytesIO(b'{"error":"ExpiredToken","message":"Token has expired"}'))
             if url.endswith("createSession"):
-                return FakeResponse({"accessJwt": "jwt-abc", "did": "did:plc:xyz", "handle": "zb.bsky.social"})
+                return FakeResponse({"accessJwt": "jwt-abc", "refreshJwt": "ref-1", "did": "did:plc:xyz", "handle": "zb.bsky.social"})
+            if url.endswith("refreshSession"):
+                return FakeResponse({"accessJwt": "jwt-new", "refreshJwt": "ref-2", "did": "did:plc:xyz", "handle": "zb.bsky.social"})
             if url.endswith("uploadBlob"):
                 return FakeResponse({"blob": {"$type": "blob", "ref": {"$link": "bafy"}, "mimeType": "image/png", "size": 5}})
             if url.endswith("createRecord"):
@@ -703,6 +729,44 @@ class NetworksTest(unittest.TestCase):
         starts = [f["index"]["byteStart"] for f in rec["facets"]]
         self.assertEqual(starts, sorted(starts))
 
+    def names(self):
+        return [s[0].split("/")[-1].split(".")[-1] for s in self.sent]
+
+    def test_one_sign_in_for_many_posts(self):
+        # Bluesky allows 300 sign-ins a day: with every crossing posted, signing in for each post could pass it
+        sec = {"BLUESKY_HANDLE": "zb.bsky.social", "BLUESKY_APP_PASSWORD": "x"}
+        for _ in range(5):
+            social.post_bluesky(sec, "a post", self.png, "alt", 1310, 830)
+        self.assertEqual(self.names().count("createSession"), 1)
+        self.assertEqual(self.names().count("createRecord"), 5)
+
+    def test_after_an_hour_the_session_is_refreshed_not_signed_in_again(self):
+        sec = {"BLUESKY_HANDLE": "zb.bsky.social", "BLUESKY_APP_PASSWORD": "x"}
+        social.post_bluesky(sec, "a post", self.png, "alt", 1310, 830)
+        social._SESSION["at"] -= social.SESSION_REUSE_S + 1
+        social.post_bluesky(sec, "a post", self.png, "alt", 1310, 830)
+        self.assertEqual(self.names().count("createSession"), 1)
+        self.assertEqual(self.names().count("refreshSession"), 1)
+        refresh = next(s for s in self.sent if s[0].endswith("refreshSession"))
+        self.assertEqual(refresh[1]["Authorization"], "Bearer ref-1")
+        self.assertEqual(self.sent[-1][1]["Authorization"], "Bearer jwt-new")
+
+    def test_a_refused_token_signs_in_again_once(self):
+        sec = {"BLUESKY_HANDLE": "zb.bsky.social", "BLUESKY_APP_PASSWORD": "x"}
+        social.post_bluesky(sec, "a post", self.png, "alt", 1310, 830)
+        self.refuse.append("com.atproto.repo.uploadBlob")
+        self.assertTrue(social.post_bluesky(sec, "a post", self.png, "alt", 1310, 830).startswith("at://"))
+        self.assertEqual(self.names().count("createSession"), 2)
+        self.refuse.extend(["com.atproto.repo.uploadBlob", "com.atproto.repo.uploadBlob"])
+        with self.assertRaises(urllib.error.HTTPError):
+            social.post_bluesky(sec, "a post", self.png, "alt", 1310, 830)   # refused twice: not a loop of sign-ins
+        self.assertEqual(self.names().count("createSession"), 3)
+
+    def test_another_account_in_the_file_signs_in_again(self):
+        social.post_bluesky({"BLUESKY_HANDLE": "zb.bsky.social", "BLUESKY_APP_PASSWORD": "x"}, "a", self.png, "alt", 1, 1)
+        social.post_bluesky({"BLUESKY_HANDLE": "zb.bsky.social", "BLUESKY_APP_PASSWORD": "new-one"}, "a", self.png, "alt", 1, 1)
+        self.assertEqual(self.names().count("createSession"), 2)
+
     def test_check_the_account(self):
         self.assertTrue(social.check_bluesky({"BLUESKY_HANDLE": "zb.bsky.social", "BLUESKY_APP_PASSWORD": "x"}).startswith("ok"))
         self.assertFalse(social.bluesky_ready({"MASTODON_URL": "https://m.example", "MASTODON_TOKEN": "t"}),
@@ -739,23 +803,123 @@ class ClockTest(unittest.TestCase):
         self.assertEqual(self.at("America/New_York", winter), "07:00 GMT-5")
 
 
-class OncePerAircraftTest(unittest.TestCase):
-    def test_an_aircraft_is_posted_once_while_it_is_in_the_sky(self):
-        # a slow aircraft that stays an hour in the zone, with a 20-minute gap: before 0.19.0 the "posted" memory
-        # was a day from the post, which already held; now it is a day from the last time the aircraft was seen,
-        # so a restart of the service or a long loiter can never make a second post of the same airframe
-        st, t0 = warm(), time.time() - 3 * 86400
-        st["posted"] = {EZY["hex"]: t0}
-        for h in range(0, 50, 1):                               # seen every hour for two days
-            social.note_seen(st, [{"hex": EZY["hex"].upper()}], t0 + h * 3600)
-            social.prune_state(st, t0 + h * 3600)
-        self.assertIn(EZY["hex"], st["posted"])
-        tracks = social.Tracks()
-        for pt in trace(8, t0 + 49 * 3600 - 40):
+class CrossingTest(unittest.TestCase):
+    """One post per crossing of the sharing radius (0.20.0): never twice for the same crossing, again for the next."""
+
+    def setUp(self):
+        self.t0 = time.time() - 3 * 86400
+        self.st = warm()
+        self.tracks = social.Tracks()
+        for pt in trace(8, self.t0 - 40):
+            self.tracks.feed([{"hex": EZY["hex"], "lat": pt[0], "lon": pt[1], "alt_baro": pt[2], "seen_pos": 0}], pt[3])
+
+    def feed_at(self, t):
+        for pt in trace(8, t - 40):
+            self.tracks.feed([{"hex": EZY["hex"], "lat": pt[0] + (t - self.t0) * 1e-7, "lon": pt[1], "alt_baro": pt[2], "seen_pos": 0}], pt[3])
+
+    def wanted(self, p, t):
+        self.feed_at(t)
+        return social.choose([p], self.tracks, {"all"}, self.st, t)
+
+    def test_a_slow_aircraft_inside_for_an_hour_and_a_half_is_one_post(self):
+        social.remember(self.st, EZY, self.t0)
+        for m in range(0, 90):                                  # inside the radius, seen every minute
+            t = self.t0 + m * 60
+            social.note_seen(self.st, [{"hex": EZY["hex"].upper()}], t)
+            social.prune_state(self.st, t)
+        self.assertIsNone(self.wanted(EZY, self.t0 + 90 * 60))
+
+    def test_out_of_the_radius_a_few_minutes_and_back_is_the_same_crossing(self):
+        # the owner's words: the same aircraft must not be posted again five minutes after it left the radius
+        social.remember(self.st, EZY, self.t0)
+        social.note_seen(self.st, [EZY], self.t0 + 120)          # last seen inside two minutes after the post
+        for t in (self.t0 + 120 + 5 * 60, self.t0 + 120 + 30 * 60, self.t0 + 120 + 59 * 60):
+            social.prune_state(self.st, t)
+            self.assertIsNone(self.wanted(EZY, t), "back %d min after it left: the same crossing" % ((t - self.t0 - 120) / 60))
+
+    def test_the_next_day_or_after_an_hour_away_is_a_new_crossing(self):
+        social.remember(self.st, EZY, self.t0)
+        social.note_seen(self.st, [EZY], self.t0 + 120)
+        later = self.t0 + 120 + social.CROSSING_GAP_S + 60
+        social.prune_state(self.st, later)
+        self.assertIsNotNone(self.wanted(EZY, later), "an hour out of the radius: this is another crossing")
+        self.assertIsNotNone(self.wanted(EZY, self.t0 + 86400), "the next day")
+
+    def test_the_return_flight_under_another_callsign_is_a_new_crossing(self):
+        social.remember(self.st, EZY, self.t0)
+        back = dict(EZY, flight="EZY1235")
+        self.assertIsNotNone(self.wanted(back, self.t0 + 600), "a new callsign is another flight, even soon after")
+        self.assertIsNone(self.wanted(dict(EZY, flight=""), self.t0 + 600), "the callsign lost for a while: the same flight")
+        st2 = warm(); social.remember(st2, dict(EZY, flight=""), self.t0)
+        self.assertTrue(social.already_posted(st2, EZY), "the callsign found later: the same flight")
+
+    def test_the_memory_of_0_19_is_read(self):
+        self.st["posted"] = {EZY["hex"]: self.t0}
+        social.prune_state(self.st, self.t0 + 60)
+        self.assertEqual(self.st["posted"][EZY["hex"]], {"t": self.t0, "flight": ""})
+        self.assertIsNone(self.wanted(EZY, self.t0 + 60))
+
+    def test_no_cap_every_crossing_is_posted(self):
+        self.assertEqual(social.DEFAULTS["SOCIAL_GAP_MIN"], "0")
+        self.assertEqual(social.gap_min(social.DEFAULTS), 0)
+        self.assertEqual(social.gap_min({"SOCIAL_GAP_MIN": "1"}), 1, "no floor any more: what is set is what holds")
+        self.assertEqual(social.gap_min({"SOCIAL_GAP_MIN": "-5"}), 0)
+        self.assertIn("every crossing", social.gap_words({"SOCIAL_GAP_MIN": "0"}))
+        self.assertEqual(social.gap_words({"SOCIAL_GAP_MIN": "30"}), "30 min")
+
+    def test_a_busy_sky_is_posted_in_the_order_it_flew_over(self):
+        other = dict(EZY, hex="4071f2", flight="EZY999")
+        for pt in trace(8, self.t0 - 40):
+            self.tracks.feed([{"hex": other["hex"], "lat": pt[0], "lon": pt[1], "alt_baro": pt[2], "seen_pos": 0}], pt[3])
+        self.tracks.note_inside([other], self.t0 - 30)
+        self.tracks.note_inside([EZY, other], self.t0)
+        self.assertEqual(social.choose([EZY, other], self.tracks, {"all"}, self.st, self.t0)[2]["hex"], other["hex"],
+                         "the same score: the one inside first goes first")
+
+
+class LatePostTest(unittest.TestCase):
+    """An aircraft that left the radius before its turn is still posted, once (0.20.0)."""
+
+    def test_one_that_left_is_asked_about_and_posted(self):
+        st, tracks, now = warm(), social.Tracks(), time.time()
+        for pt in trace(8, now - 40):
             tracks.feed([{"hex": EZY["hex"], "lat": pt[0], "lon": pt[1], "alt_baro": pt[2], "seen_pos": 0}], pt[3])
-        self.assertIsNone(social.choose([EZY], tracks, {"all"}, st, t0 + 49 * 3600))
-        social.prune_state(st, t0 + 49 * 3600 + 2 * 86400)   # a day after it was last seen: forgotten
-        self.assertNotIn(EZY["hex"], st["posted"])
+        asked = []
+        walls = [[dict(EZY, pending=["route"])], []]              # inside at the first look, its route on the way;
+        for name, fake in (("ask_wall", lambda c, r: walls.pop(0)),  # gone at the second
+                           ("ask_wall_one", lambda c, h: asked.append(h) or dict(EZY, distance_km=18))):
+            self.addCleanup(setattr, social, name, getattr(social, name))
+            setattr(social, name, fake)
+        c = dict(CFG, SOCIAL_RULES="all", LAT="0", LON="0")
+        planes, best = social.one_poll(c, st, tracks, [], now)
+        self.assertIsNone(best, "its route is still being looked up: it waits")
+        planes, best = social.one_poll(c, st, tracks, [], now + 15)
+        self.assertEqual(asked, [EZY["hex"]])
+        self.assertIsNotNone(best, "it left the radius: asked where it is, and posted")
+        self.assertTrue(best[2].get("_late"))
+        social.remember(st, best[2], now + 20)
+        asked.clear()
+        social.ask_wall = lambda c, r: []
+        social.one_poll(c, st, tracks, [], now + 30)
+        self.assertEqual(asked, [], "posted: not asked about again")
+
+    def test_one_not_worth_a_post_is_not_followed(self):
+        st, tracks, now = warm(), social.Tracks(), time.time()
+        asked = []
+        walls = [[dict(EZY)], []]
+        for name, fake in (("ask_wall", lambda c, r: walls.pop(0)), ("ask_wall_one", lambda c, h: asked.append(h))):
+            self.addCleanup(setattr, social, name, getattr(social, name))
+            setattr(social, name, fake)
+        c = dict(CFG, SOCIAL_RULES="military", LAT="0", LON="0")
+        social.one_poll(c, st, tracks, [], now)
+        social.one_poll(c, st, tracks, [], now + 15)
+        self.assertEqual(asked, [], "an airliner under the military rule: nothing to follow once it has left")
+
+    def test_forgotten_after_late_s(self):
+        tracks = social.Tracks()
+        tracks.note_inside([EZY], 1000.0)
+        tracks.note_inside([], 1000.0 + social.LATE_S + 1)
+        self.assertEqual(tracks.inside, {})
 
 
 class ServiceLoopTest(unittest.TestCase):
@@ -791,6 +955,49 @@ class ServiceLoopTest(unittest.TestCase):
         self.assertTrue(all(b - a >= social.RETRY_AFTER_FAIL_S for a, b in zip(tries, tries[1:])))
 
 
+class NoCapTest(unittest.TestCase):
+    def test_two_aircraft_one_after_the_other_are_both_posted_and_each_once(self):
+        import contextlib
+        import io
+        start = 1800000000.0
+        clock = [start]
+        posted = []
+
+        class Stop(Exception):
+            pass
+
+        def fake_sleep(sec):
+            clock[0] += sec
+            if clock[0] > start + 10 * 60:
+                raise Stop()
+
+        def poll(c, st, tr, ac, now):
+            planes = [EZY, BELUGA] if now < start + 5 * 60 else [BELUGA]
+            return planes, social.choose(planes, FakeTracks(), {"all"}, st, now)
+        for name, fake in (("read_aircraft", lambda c: []), ("account", lambda: {"BLUESKY_HANDLE": "h", "BLUESKY_APP_PASSWORD": "p"}),
+                           ("one_poll", poll), ("load_state", warm), ("save_state", lambda st: None), ("cfg", lambda: dict(CFG)),
+                           ("publish", lambda p, *a, **k: posted.append((clock[0], p["hex"])) or {"bluesky": "at://x"})):
+            self.addCleanup(setattr, social, name, getattr(social, name))
+            setattr(social, name, fake)
+        self.addCleanup(setattr, time, "time", time.time); time.time = lambda: clock[0]
+        self.addCleanup(setattr, time, "sleep", time.sleep); time.sleep = fake_sleep
+        with contextlib.redirect_stdout(io.StringIO()):
+            with self.assertRaises(Stop):
+                social.cmd_run()
+        self.assertEqual(sorted(h for _, h in posted), sorted([EZY["hex"], BELUGA["hex"]]), "each crossing once, none skipped")
+        self.assertLess(posted[1][0] - posted[0][0], 15, "no gap by default: the second straight after the first")
+
+
+class FakeTracks(object):
+    def of(self, h):
+        return trace(8)
+
+    def entered(self, h):
+        return 0
+
+    pending_since = {}
+
+
 class SharedStateTest(unittest.TestCase):
     def test_a_post_made_by_hand_counts_for_the_running_service(self):
         # seen on the real Pi (0.19.2): "Post now" at 13:34, then the service posted again at 14:22 with a two-hour
@@ -810,7 +1017,7 @@ class SharedStateTest(unittest.TestCase):
         def fake_sleep(sec):
             clock[0] += sec
             if abs(clock[0] - (start + 60)) < 3:            # one minute in, someone posts EZY by hand
-                social.remember_post(EZY["hex"], clock[0])
+                social.remember_post(EZY, clock[0])
             if clock[0] > start + 60 * 60:
                 raise Stop()
         social.save_state(dict(warm(), last_post=start - 3 * 3600))   # the last post long ago: the gap is open
@@ -834,13 +1041,6 @@ class SharedStateTest(unittest.TestCase):
 
 class LogFindingsTest(unittest.TestCase):
     """From the real Pi's log, 0.19.3."""
-
-    def test_the_gap_has_a_floor_of_ten_minutes(self):
-        # the gap had been set to 1 minute for a test: with ALL, that is a post a minute
-        self.assertEqual(social.gap_min({"SOCIAL_GAP_MIN": "1"}), social.GAP_FLOOR_MIN)
-        self.assertEqual(social.gap_min({"SOCIAL_GAP_MIN": "120"}), 120)
-        self.assertIn("floor", social.gap_words({"SOCIAL_GAP_MIN": "1"}))
-        self.assertEqual(social.gap_words({"SOCIAL_GAP_MIN": "30"}), "30 min")
 
     def test_status_says_when_it_cannot_read_rather_than_never(self):
         # `zenithboard social status` as pi printed "no account" and "Last post: never" on a Pi that had just posted:

@@ -33,13 +33,14 @@ Every `zenithboard` command, grouped by what you are trying to do. `zenithboard`
 | `zenithboard social setup` | yes | The Bluesky account (an app password, never the real one), then the words and the picture. A wizard that tries the account before going on. See [Social sharing](Social-sharing) |
 | `zenithboard social words` | yes | The place name the posts carry, the sharing radius, the gap between posts, the hashtags, and what is worth a post |
 | `zenithboard social hashtags [WORD...]` | yes to change | The hashtags ending each post: `social hashtags ADSB avgeek Moselle` (the `#` is optional — unquoted, the shell would take it for a comment), `none`, or `default`. Alone: shows them |
+| `zenithboard social gap [MINUTES]` | yes to change | The least time between two posts. `0`, the default since 0.20.0, is none: every crossing of the sharing radius is posted, once. Whole minutes up to 1440; taken by the running service at its next look. Alone: shows it |
 | `zenithboard social picture` | yes | The picture: dot-matrix or split-flap, its colour, the map (a wizard) |
 | `zenithboard social look dots` · `flap` · `alternate` | yes | The dot-matrix wall with the track, the split-flap board with a map, or the two in turn (one post each) |
 | `zenithboard social colour NAME` · `wall` · `rotate` | yes | amber, green, red, white, turquoise, blue, the wall's own colour, or the colours in turn (all but blue) |
 | `zenithboard social map NAME` · `rotate` | yes | The split-flap look's map: normal, night, satellite, terrain, none, or the four maps in turn |
 | `zenithboard social test [HEX]` | | Draw the picture and print the text for the best candidate (or that aircraft); post nothing. The picture is at `/social/preview` |
 | `zenithboard social on` · `off` · `status` | yes | Post the aircraft overhead as a picture of the wall (off by default). `off` keeps the account |
-| `zenithboard social post [HEX]` | | Post now, once, whatever the gap |
+| `zenithboard social post [HEX]` | | Post now, once, whatever the gap. That aircraft then counts as posted for its crossing |
 | `zenithboard social check` | yes | Try the account: open a session on Bluesky |
 | `zenithboard social remove` | yes | Forget the account, stop the service, delete its state and its map tiles |
 | `zenithboard photos on` · `off` | yes | Aircraft photos from Planespotters. Off: the animated sky scene instead |

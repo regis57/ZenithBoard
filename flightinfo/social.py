@@ -56,7 +56,7 @@ DEFAULTS = {
     "SOCIAL": "0",
     "SOCIAL_RADIUS_KM": "15",
     "SOCIAL_AREA": "",               # "Trémery" (read "above Trémery") or "near Metz": the owner's words, never the position
-    "SOCIAL_GAP_MIN": "120",         # at least this long between two posts
+    "SOCIAL_GAP_MIN": "0",           # at least this long between two posts; 0 = none: every crossing is posted (0.20.0)
     "SOCIAL_RULES": "rare,military,helicopter,heavy,farthest",
     "SOCIAL_HASHTAGS": "#ADSB #avgeek #ZenithBoard",
     "SOCIAL_STYLE": "dots",          # the picture: dots (the dot-matrix wall + track) | flap (split-flap board + map)
@@ -78,8 +78,11 @@ WARMUP_DAYS = 3                  # "rare" and "farthest" judge against history: 
 KEEP_PER_TYPE = 4                # the latest distinct aircraft kept per type: enough to tell rare (<= 2 others) from not
 RECORD_MIN_KM = 50               # a range record under this is not one
 RECORD_RADIUS_KM = 500           # the wall answers out to this; farther than that is a position glitch anyway
-GAP_FLOOR_MIN = 10               # whatever is set, never more than one post every ten minutes: a declared bot that
-                                 # posts every minute is what gets an account reported (0.19.3; seen set to 1 for a test)
+LATE_S = 600                     # an aircraft that left the radius before it could be posted (its route still being looked
+                                 # up, another one posted first) is still posted this long after: every crossing counts
+LATE_ASKS = 6                    # at most this many of those asked about per look, to keep the Pi light
+CROSSING_GAP_S = 3600            # one crossing ends when the aircraft has been outside the sharing radius this long:
+                                 # back inside sooner, it is the same crossing and is not posted again (0.20.0)
 RETRY_AFTER_FAIL_S = 600         # a post that failed is not tried again for ten minutes: Bluesky limits sign-ins
 
 
@@ -115,13 +118,13 @@ def bluesky_ready(sec):
 
 
 def gap_min(c):
-    """The minutes between two posts: the setting, never under GAP_FLOOR_MIN."""
-    return max(GAP_FLOOR_MIN, server.cfg_float(c, "SOCIAL_GAP_MIN", 120))
+    """The minutes between two posts: the setting, 0 for none. 0.19.3 to 0.19.10 never went under ten minutes; the
+    owner wants the feed to be every crossing, uncapped, so there is no floor any more (0.20.0)."""
+    return max(0.0, server.cfg_float(c, "SOCIAL_GAP_MIN", 0))
 
 
 def gap_words(c):
-    set_to = server.cfg_float(c, "SOCIAL_GAP_MIN", 120)
-    return "%g min" % gap_min(c) if set_to >= GAP_FLOOR_MIN else "%g min (set to %g: the floor is %d)" % (gap_min(c), set_to, GAP_FLOOR_MIN)
+    return "none (every crossing is posted)" if gap_min(c) <= 0 else "%g min" % gap_min(c)
 
 
 def picture_for(c, n):
@@ -228,17 +231,20 @@ def merge_disk(state):
     if isinstance(disk.get("pictures"), int) and disk["pictures"] > int(state.get("pictures", 0)):
         state["pictures"] = disk["pictures"]
     mine = state.setdefault("posted", {})
-    for h, t in (disk.get("posted") or {}).items():
-        if isinstance(t, (int, float)) and t > mine.get(h, 0):
-            mine[h] = t
+    for h, v in (disk.get("posted") or {}).items():
+        theirs = posted_entry(v)
+        if h not in mine or theirs["t"] > posted_entry(mine[h])["t"]:
+            mine[h] = theirs
+    times = set(state.get("posts", [])) | {t for t in disk.get("posts", []) if isinstance(t, (int, float))}
+    state["posts"] = sorted(times)
     return state
 
 
-def remember_post(hex_code, when):
+def remember_post(p, when):
     """A post made from the command line, written so that the running service sees it (it merges the file)."""
     state = prune_state(load_state(), when)
     state["last_post"] = max(state.get("last_post", 0), when)
-    state.setdefault("posted", {})[hex_code] = when
+    remember(state, p, when)
     state["pictures"] = int(state.get("pictures", 0)) + 1
     save_state(state)
 
@@ -251,8 +257,10 @@ def prune_state(s, now):
     """What the rules need, and no more:
       types    type code -> {hex: last day seen}, the latest KEEP_PER_TYPE distinct aircraft, thirty days ("rare")
       far      day -> farthest km that day, thirty days ("farthest")
-      posted   hex -> when it was last seen, kept a day past that (an aircraft is posted once: never again while
-               it is still in the sky, nor for a day after it has gone, 0.19.0)
+      posted   hex -> {t: last time it was inside the sharing radius, flight: its callsign when posted}. One post per
+               crossing (0.20.0): kept while the aircraft is inside, and an hour after it last was; the same airframe
+               back later (the return flight, the next day) is a new crossing, and so is a new callsign
+      posts    the times of the posts of the last day, for `social status`
       since    the first day the service watched the sky (no history, no "rare", no "farthest")
     0.18.0 counted a type once per poll instead of once per aircraft; that history is dropped, not converted."""
     cut = day_of(now - 30 * 86400)
@@ -272,8 +280,12 @@ def prune_state(s, now):
             del far[d]
     posted = s.setdefault("posted", {})
     for h in list(posted):
-        if now - posted[h] > 86400:
+        e = posted_entry(posted[h])
+        if now - e["t"] > CROSSING_GAP_S:
             del posted[h]
+        else:
+            posted[h] = e
+    s["posts"] = [t for t in s.get("posts", []) if isinstance(t, (int, float)) and now - t <= 86400]
     s.pop("farthest_day", None); s.pop("farthest_km", None)
     return s
 
@@ -287,14 +299,40 @@ def warmed(state, now):
     return now - start >= WARMUP_DAYS * 86400
 
 
-def note_seen(state, aircraft, now):
-    """An aircraft already posted is remembered for as long as it is still seen, and a day beyond: a slow aircraft
-    crossing the zone for an hour is one post, not one per gap (0.19.0)."""
+def posted_entry(v):
+    """A posted record in the 0.20.0 form, from that form or from the bare time 0.19 kept."""
+    if isinstance(v, dict):
+        return {"t": float(v.get("t", 0) or 0), "flight": str(v.get("flight", "") or "")}
+    return {"t": float(v or 0), "flight": ""}
+
+
+def note_seen(state, planes, now):
+    """An aircraft already posted, still inside the sharing radius: its crossing goes on (0.20.0). Called with the
+    aircraft the wall answered for that radius, so leaving the radius is what starts the hour that ends it."""
     posted = state.get("posted", {})
-    for a in aircraft or ():
-        h = str(a.get("hex", "")).lower()
+    for p in planes or ():
+        h = str(p.get("hex", "")).lower()
         if h in posted:
-            posted[h] = now
+            e = posted_entry(posted[h])
+            e["t"] = now
+            posted[h] = e
+
+
+def already_posted(state, p):
+    """Posted during this crossing. A different callsign on the same airframe is another flight (a return leg
+    straight after a turnaround nearby): not this crossing. A callsign that appears or disappears is the same one."""
+    e = state.get("posted", {}).get(str(p.get("hex", "")).lower())
+    if e is None:
+        return False
+    e = posted_entry(e)
+    now_cs, then_cs = (p.get("flight") or "").strip().upper(), e["flight"].strip().upper()
+    return not (now_cs and then_cs and now_cs != then_cs)
+
+
+def remember(state, p, when):
+    """This aircraft is posted: its crossing starts being remembered, and the post is counted."""
+    state.setdefault("posted", {})[str(p.get("hex", "")).lower()] = {"t": when, "flight": (p.get("flight") or "").strip()}
+    state.setdefault("posts", []).append(when)
 
 
 def note_types(state, planes, now):
@@ -336,6 +374,20 @@ class Tracks(object):
     def __init__(self):
         self.by_hex = {}                           # hex -> list of [lat, lon, alt_ft, t]
         self.pending_since = {}                    # hex -> when the wall was first seen still looking it up
+        self.inside = {}                           # hex -> [first, last] time seen inside the sharing radius, worth a post
+
+    def note_inside(self, planes, now):
+        """Inside the radius at this look; forgets what left it longer ago than LATE_S."""
+        for p in planes or ():
+            h = str(p.get("hex", "")).lower()
+            if h:
+                self.inside.setdefault(h, [now, now])[1] = now
+        for h in [k for k, v in self.inside.items() if now - v[1] > LATE_S]:
+            del self.inside[h]
+
+    def entered(self, hex_code):
+        v = self.inside.get(str(hex_code).lower())
+        return v[0] if v else 0
 
     def feed(self, aircraft, now):
         for ac in aircraft or []:
@@ -410,6 +462,22 @@ def farthest_now(c, aircraft):
     return best
 
 
+def inside_now(c, aircraft, radius_km):
+    """The receiver's own aircraft inside the sharing radius right now, from their positions: a crossing goes on
+    while the aircraft is there, even at a look where the wall did not answer (restarting, busy)."""
+    lat, lon = server.cfg_float(c, "LAT", 0), server.cfg_float(c, "LON", 0)
+    if not lat and not lon:
+        return []
+    out = []
+    for ac in aircraft or []:
+        h = str(ac.get("hex", "")).lower()
+        if not h or h.startswith("~") or "lat" not in ac or "lon" not in ac or ac.get("seen_pos", 0) > 30:
+            continue
+        if server.haversine_km(lat, lon, ac["lat"], ac["lon"]) <= radius_km:
+            out.append({"hex": h, "flight": str(ac.get("flight") or "").strip()})
+    return out
+
+
 # --------------------------------------------------------------------------- what is worth a post
 def known(p):
     """A post says what the wall knows. Nothing known, nothing to say."""
@@ -441,11 +509,11 @@ def interest(p, rules, state, now=None):
 
 def choose(planes, tracks, rules, state, now, settle=True):
     """The best candidate right now, or None. settle=False: do not wait for lookups still on their way."""
-    best = None
+    best, best_first = None, 0
     for p in planes:
         if not known(p) or p.get("on_ground"):
             continue
-        if p.get("hex") in state.get("posted", {}):
+        if already_posted(state, p):
             continue
         trace = tracks.of(p.get("hex"))
         if len(trace) < TRACE_MIN_POINTS:
@@ -465,8 +533,10 @@ def choose(planes, tracks, rules, state, now, settle=True):
             continue
         # more is known about it = a better post: route, airline, model each count a little
         score += (1 if p.get("route") else 0) + (1 if p.get("airline") else 0) + (1 if p.get("type_name") else 0)
-        if best is None or score > best[0]:
-            best = (score, why, p)
+        # equal scores: the one that came into the radius first, so a busy sky is posted in the order it flew over
+        first = tracks.entered(p.get("hex")) if hasattr(tracks, "entered") else 0
+        if best is None or score > best[0] or (score == best[0] and first and (not best_first or first < best_first)):
+            best, best_first = (score, why, p), first
     return best
 
 
@@ -720,19 +790,61 @@ def _json_request(url, data=None, headers=None, method=None, timeout=30):
         return json.loads(raw.decode("utf-8")) if raw else {}
 
 
+def _error_body(exc):
+    """The body of an HTTP error, read once and kept: it can only be read once."""
+    if not hasattr(exc, "zb_body"):
+        try:
+            exc.zb_body = exc.read().decode("utf-8", "replace")
+        except Exception:
+            exc.zb_body = ""
+    return exc.zb_body
+
+
 def _http_error_text(exc):
     try:
-        return "%s %s" % (exc.code, exc.read().decode("utf-8", "replace")[:300])
+        return "%s %s" % (exc.code, _error_body(exc)[:300])
     except Exception:
         return str(exc)
 
 
 BLUESKY_PDS = "https://bsky.social"
+SESSION_REUSE_S = 3600           # an access token is used this long, then refreshed (Bluesky's last about two hours)
+_SESSION = {}                    # the service's session, in memory only: never written anywhere
 
 
-def bluesky_session(sec):
-    return _json_request(BLUESKY_PDS + "/xrpc/com.atproto.server.createSession",
-                         {"identifier": sec["BLUESKY_HANDLE"], "password": sec["BLUESKY_APP_PASSWORD"]})
+def bluesky_session(sec, fresh=False):
+    """Signed in to Bluesky, reusing the session (0.20.0). Bluesky allows an account 300 sign-ins a day, 30 in five
+    minutes; signing in for every post, as 0.19 did, was fine with a gap between posts and is not with every
+    crossing posted. The access token is reused for an hour, then renewed with the refresh token; a new sign-in
+    only when that is refused, when the account in the file changed, or when asked (fresh: `social check`)."""
+    key = (sec.get("BLUESKY_HANDLE"), sec.get("BLUESKY_APP_PASSWORD"))
+    ses, now = _SESSION.get("ses"), time.time()
+    if not fresh and ses and _SESSION.get("key") == key:
+        if now - _SESSION.get("at", 0) < SESSION_REUSE_S:
+            return ses
+        if ses.get("refreshJwt"):
+            try:
+                new = _json_request(BLUESKY_PDS + "/xrpc/com.atproto.server.refreshSession", b"",
+                                    {"Authorization": "Bearer " + ses["refreshJwt"]}, method="POST")
+                if new.get("accessJwt"):
+                    new.setdefault("did", ses.get("did"))
+                    _SESSION.update(ses=new, at=now)
+                    return new
+            except urllib.error.HTTPError:
+                pass                             # refused (expired, revoked): sign in again below
+    _SESSION.clear()
+    ses = _json_request(BLUESKY_PDS + "/xrpc/com.atproto.server.createSession",
+                        {"identifier": sec["BLUESKY_HANDLE"], "password": sec["BLUESKY_APP_PASSWORD"]})
+    _SESSION.update(key=key, ses=ses, at=now)
+    return ses
+
+
+def token_refused(exc):
+    """Bluesky no longer takes the session's token (expired early, revoked): worth one new sign-in."""
+    if not isinstance(exc, urllib.error.HTTPError) or exc.code not in (400, 401):
+        return False
+    body = _error_body(exc)
+    return exc.code == 401 or "ExpiredToken" in body or "InvalidToken" in body
 
 
 def _byte_span(text, start, end):
@@ -757,12 +869,21 @@ def bluesky_facets(text, links=None):
 
 
 def post_bluesky(sec, text, path, alt, width, height, mime="image/png", links=None):
-    ses = bluesky_session(sec)
-    auth = {"Authorization": "Bearer " + ses["accessJwt"]}
+    """The post, with the session kept from the last one; a token refused on the way: one new sign-in, once."""
     with open(path, "rb") as fh:
         data = fh.read()
     if len(data) > 1000000:
         raise RuntimeError("picture is %d bytes, Bluesky takes 1,000,000 at most" % len(data))
+    try:
+        return _post_once(bluesky_session(sec), text, data, alt, width, height, mime, links)
+    except urllib.error.HTTPError as exc:
+        if not token_refused(exc):
+            raise
+    return _post_once(bluesky_session(sec, fresh=True), text, data, alt, width, height, mime, links)
+
+
+def _post_once(ses, text, data, alt, width, height, mime, links):
+    auth = {"Authorization": "Bearer " + ses["accessJwt"]}
     blob = _json_request(BLUESKY_PDS + "/xrpc/com.atproto.repo.uploadBlob", data,
                          dict(auth, **{"Content-Type": mime}))["blob"]
     text = text[:300]
@@ -777,7 +898,7 @@ def post_bluesky(sec, text, path, alt, width, height, mime="image/png", links=No
 def check_bluesky(sec):
     """'ok, signed in as ...' or 'FAILED: ...'"""
     try:
-        ses = bluesky_session(sec)
+        ses = bluesky_session(sec, fresh=True)
         return "ok, signed in as %s" % ses.get("handle", sec["BLUESKY_HANDLE"])
     except urllib.error.HTTPError as exc:
         return "FAILED: " + _http_error_text(exc)
@@ -872,8 +993,19 @@ def one_poll(c, state, tracks, aircraft, now):
     with a record it set itself (0.18.0 did, and "farthest" could never fire)."""
     radius = server.cfg_float(c, "SOCIAL_RADIUS_KM", 15)
     rules = rules_of(c)
-    note_seen(state, aircraft, now)
     planes = ask_wall(c, radius)
+    note_seen(state, planes + inside_now(c, aircraft, radius), now)   # inside: a crossing already posted goes on
+    # every crossing is posted (0.20.0): one worth a post that left the radius before its turn is asked about
+    # where it is now. Only those worth it are followed, so the wall is not asked about every aircraft that leaves
+    tracks.note_inside([p for p in planes if known(p) and not p.get("on_ground") and interest(p, rules, state, now)[0] > 0], now)
+    here = {str(p.get("hex", "")).lower() for p in planes}
+    calls = {str(a.get("hex", "")).lower(): str(a.get("flight") or "").strip() for a in aircraft or []}
+    late = sorted((v[0], h) for h, v in tracks.inside.items()
+                  if h not in here and not already_posted(state, {"hex": h, "flight": calls.get(h, "")}))
+    for _, h in late[:LATE_ASKS]:
+        p = ask_wall_one(c, h)
+        if p:
+            planes = planes + [dict(p, _late=True)]
     far_hex, far_km = farthest_now(c, aircraft)
     if "farthest" in rules and far_hex and warmed(state, now) and far_km > max(RECORD_MIN_KM, range_best(state)):
         rec = next((p for p in planes if p.get("hex") == far_hex), None) or ask_wall_one(c, far_hex)
@@ -927,8 +1059,9 @@ def cmd_run():
                                                   json.dumps(results)), flush=True)
                 if ok:
                     state["last_post"] = now
-                    state.setdefault("posted", {})[p["hex"]] = now
+                    remember(state, p, now)
                     state["pictures"] = int(state.get("pictures", 0)) + 1     # the next one varies, when asked to
+                    last_ask = 0                         # another one may be waiting its turn: look again at the next read
                 else:
                     last_fail = now
             state["memory"] = dict(memory_mb(), since=started)  # for `social status`: since this start
@@ -1016,7 +1149,7 @@ def cmd_post(hex_code=None):
     print("bluesky: %s" % results.get("bluesky", "?"))
     ok = not str(results.get("bluesky", "FAILED")).startswith("FAILED")
     if ok:
-        remember_post(p["hex"], time.time())
+        remember_post(p, time.time())
     return 0 if ok else 1
 
 
@@ -1076,9 +1209,12 @@ def cmd_status():
         lp = state.get("last_post")
         print("Last post: %s" % (time.strftime("%Y-%m-%d %H:%M", time.localtime(lp)) if lp else "never"))
         now = time.time()
-        print("Posted in the last day: %d aircraft   Types noted: %d   Range record (30 days): %s" % (
-            len(state.get("posted", {})), len(state.get("types", {})),
-            ("%d km" % range_best(state)) if range_best(state) else "none yet"))
+        posts = [t for t in state.get("posts", []) if isinstance(t, (int, float)) and now - t <= 86400]
+        crossing = [h for h, v in (state.get("posted") or {}).items() if now - posted_entry(v)["t"] <= CROSSING_GAP_S]
+        print("Posts in the last day: %d   Types noted: %d   Range record (30 days): %s" % (
+            len(posts), len(state.get("types", {})), ("%d km" % range_best(state)) if range_best(state) else "none yet"))
+        print("Crossings remembered: %d (posted, still inside the radius or left it less than %d min ago:"
+              " not posted again until then)" % (len(crossing), CROSSING_GAP_S // 60))
         if state.get("since"):
             print("History since %s: %s" % (state["since"], "rare and farthest are active" if warmed(state, now)
                                               else "rare and farthest start after %d days" % WARMUP_DAYS))
