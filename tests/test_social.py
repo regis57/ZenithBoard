@@ -687,6 +687,47 @@ class ServiceLoopTest(unittest.TestCase):
         self.assertTrue(all(b - a >= social.RETRY_AFTER_FAIL_S for a, b in zip(tries, tries[1:])))
 
 
+class SharedStateTest(unittest.TestCase):
+    def test_a_post_made_by_hand_counts_for_the_running_service(self):
+        # seen on the real Pi (0.19.2): "Post now" at 13:34, then the service posted again at 14:22 with a two-hour
+        # gap. The service kept its state in memory and wrote it back every fifteen seconds over what `social post`
+        # had written: the manual post, and the aircraft it posted, were forgotten.
+        import contextlib
+        import io
+        d = tempfile.mkdtemp(); self.addCleanup(shutil.rmtree, d, True)
+        self.addCleanup(setattr, social, "STATE_DIR", social.STATE_DIR); social.STATE_DIR = d
+        start = 1800000000.0
+        clock = [start]
+        tries = []
+
+        class Stop(Exception):
+            pass
+
+        def fake_sleep(sec):
+            clock[0] += sec
+            if abs(clock[0] - (start + 60)) < 3:            # one minute in, someone posts EZY by hand
+                social.remember_post(EZY["hex"], clock[0])
+            if clock[0] > start + 60 * 60:
+                raise Stop()
+        social.save_state(dict(warm(), last_post=start - 3 * 3600))   # the last post long ago: the gap is open
+        for name, fake in (("read_aircraft", lambda c: []), ("account", lambda: {"BLUESKY_HANDLE": "h", "BLUESKY_APP_PASSWORD": "p"}),
+                           # nothing worth a post for two minutes, then a Beluga: after a manual post a minute in
+                           ("one_poll", lambda c, st, tr, ac, now: ([BELUGA], None if now < start + 120 else (5, "all", BELUGA))),
+                           ("cfg", lambda: dict(CFG, SOCIAL_GAP_MIN="120")),
+                           ("publish", lambda *a, **k: tries.append(clock[0]) or {"bluesky": "at://x"})):
+            self.addCleanup(setattr, social, name, getattr(social, name))
+            setattr(social, name, fake)
+        self.addCleanup(setattr, time, "time", time.time); time.time = lambda: clock[0]
+        self.addCleanup(setattr, time, "sleep", time.sleep); time.sleep = fake_sleep
+        with contextlib.redirect_stdout(io.StringIO()):
+            with self.assertRaises(Stop):
+                social.cmd_run()
+        self.assertEqual(tries, [], "the manual post opened a two-hour gap: the service waits")
+        st = social.load_state()
+        self.assertIn(EZY["hex"], st["posted"], "the aircraft posted by hand is still remembered after the service saved")
+        self.assertGreaterEqual(st["last_post"], start + 57)
+
+
 class PublishTest(unittest.TestCase):
     def test_an_unwritable_run_folder_does_not_stop_a_picture(self):
         # 0.18.1: `social test` from the command line crashed with PermissionError on /run/zenithboard/social,

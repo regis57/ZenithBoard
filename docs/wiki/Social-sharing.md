@@ -64,7 +64,7 @@ sudo zenithboard social test
 
 Waits up to half a minute for an aircraft with a track, draws the picture, and prints the text and the alt text. **Nothing is posted, ever, by `test`.** It always finds something to show (it adds the `all` rule for itself), so it also says plainly whether the service, under *your* rules, would post that aircraft — and if not, why not. The picture is at `http://PI-ADDRESS:8080/social/preview`, on your home network like the wall. `social test 4071f1` does it for one aircraft by its hex code.
 
-**Post now** (menu, or `sudo zenithboard social post`) is different: it posts the aircraft it finds at once, whatever the rules and the gap. Use it to see a real post; the service itself waits for an aircraft your rules pick.
+**Post now** (menu, or `sudo zenithboard social post`) is different: it posts the aircraft it finds at once, whatever the rules and the gap. Use it to see a real post; the service itself waits for an aircraft your rules pick. A post made by hand counts for the service like its own: the gap starts again from it, and that aircraft is not posted twice.
 
 ### 4. Switch it on
 
