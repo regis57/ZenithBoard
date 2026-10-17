@@ -43,7 +43,7 @@ function constant(re) { const m = app.match(re); if (!m) throw new Error("consta
 const GW = constant(/var GW = (\d+)/), GH = constant(/GW = \d+, GH = (\d+)/), ON = constant(/var ON = (\d+)/);
 const COLS = constant(/var COLS = (\d+)/), COLS_FLAGS = constant(/var COLS_FLAGS = (\d+)/);
 const FLAG_X = constant(/var FLAG_X = (\d+)/), FLAG_Y1 = constant(/FLAG_Y1 = (\d+)/), FLAG_Y2 = constant(/FLAG_Y2 = (\d+)/);
-const TEXT_MAX_X = constant(/TEXT_MAX_X = (\d+)/);
+const TEXT_MAX_X = constant(/TEXT_MAX_X = (\d+)/), ROW_MAX_X = constant(/ROW_MAX_X = (\d+)/);
 const wall = new Function("Font5x7", "GW", "GH", "ON",
   lift("put") + lift("text") + lift("textRow") + "return { put: put, text: text, textRow: textRow };")(Font5x7, GW, GH, ON);
 
@@ -130,7 +130,7 @@ function drawTrack(g, trace, track, themeHex) {
 }
 
 // ---- the two top rows, "FLT  ETD11K" and "REG  A6-APD": the wall's own (format.js), the same on the tablet since 0.19.0
-function rows(p, L) { void L; return Fmt.topRows(p, 14); }
+function rows(p, L, cols) { void L; return Fmt.topRows(p, cols || 14); }
 
 // ---- the split-flap board's rows (social_card.py draws them): the dot-matrix rows, no flags, the time last
 function flapLines(p, units, clock, cols) {
@@ -140,11 +140,11 @@ function flapLines(p, units, clock, cols) {
 
 // ---- the wall rows, as buildScreen lays them out, without silhouette, photo, or distance
 function drawWall(g, p, units, clock, flags) {
-  const cols = flags ? COLS_FLAGS : COLS, maxX = flags ? TEXT_MAX_X : 84;
+  const cols = flags ? COLS_FLAGS : COLS, maxX = flags ? TEXT_MAX_X : ROW_MAX_X;
   const L = Fmt.planeLines(p, units, 0, 1, cols);
   // The tablet's big callsign takes two rows; the picture has the flight and the registration on one row each, at
   // the size of the others and labelled like ALT and SPD under them (0.19.0, from the owner's mock-up)
-  const R = rows(p, L);
+  const R = rows(p, L, cols);                    // twelve letters with the flags: the REG row has its flag beside it
   wall.text(g, R.flight, 0, 0, 1);
   wall.text(g, R.reg, 0, 8, 1);
   wall.textRow(g, L.airline, 16, 0, maxX);

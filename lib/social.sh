@@ -70,6 +70,10 @@ social_migrate() {
     else rm -f "$SOCIAL_SECRETS"; cfg_set SOCIAL 0; social_remove_units; log "Social sharing switched off: no Bluesky account. Set one up with  sudo zenithboard social setup"; fi
     log "Social sharing: Mastodon is no longer supported; its token was removed from $SOCIAL_SECRETS (revoke it on your instance too)."
   fi
+  # 0.20.0: no gap by default, every crossing posted once. A gap set before is the owner's and is kept; say it.
+  if [ "$(cfg_get SOCIAL 0)" = 1 ] && [ "$(social_gap_words)" != "none, every crossing" ]; then
+    log "Social sharing: since 0.20.0 every crossing of the radius is posted, once, with no gap by default. Yours is still $(social_gap_words) between posts: sudo zenithboard social gap 0  to post every crossing."
+  fi
   return 0
 }
 
@@ -107,6 +111,12 @@ social_setup() {
   social_setup_words && social_setup_picture
 }
 
+# The gap as words: 0 (the default since 0.20.0) is no gap at all, every crossing posted.
+social_gap_words() {
+  local g; g=$(cfg_get SOCIAL_GAP_MIN 0)
+  if awk -v g="$g" 'BEGIN { exit !(g + 0 <= 0) }'; then echo "none, every crossing"; else echo "$g min"; fi
+}
+
 # The words of the posts: the area named in them (the owner's words, never derived from the antenna's position),
 # the radius, the gap, the rules.
 social_setup_words() {
@@ -115,11 +125,8 @@ social_setup_words() {
   cfg_set SOCIAL_AREA "$area"
   radius=$(wt_input "Sharing radius in km: an aircraft is a candidate while it is inside it. This is separate from the wall's radius." "$(cfg_get SOCIAL_RADIUS_KM 15)") || return 1
   is_number "$radius" && cfg_set SOCIAL_RADIUS_KM "$radius"
-  gap=$(wt_input "Minimum minutes between two posts (so the account is not flooded). 10 at least: a bot that posts every minute is what gets reported." "$(cfg_get SOCIAL_GAP_MIN 120)") || return 1
-  if is_number "$gap"; then
-    awk -v g="$gap" 'BEGIN { exit !(g < 10) }' && { wt_msg "$gap minutes is under the floor: 10 minutes saved." 8; gap=10; }
-    cfg_set SOCIAL_GAP_MIN "$gap"
-  fi
+  gap=$(wt_input "Minimum minutes between two posts. 0 = none: every aircraft crossing the radius is posted once, as it happens.\nThe same crossing is never posted twice; the return flight or the next day is a new crossing." "$(cfg_get SOCIAL_GAP_MIN 0)") || return 1
+  is_number "$gap" && cfg_set SOCIAL_GAP_MIN "$gap"
   local tags
   while true; do
     tags=$(wt_input "Hashtags at the end of each post, separated by spaces (the # is optional). none for no hashtags.\n#avgeek becomes #helicopter or #military when one of those is posted." "$(cfg_get SOCIAL_HASHTAGS "$SOCIAL_TAGS_DEFAULT")") || return 1
@@ -128,7 +135,7 @@ social_setup_words() {
     if said=$(social_hashtags_clean "$tags" 2>&1); then cfg_set SOCIAL_HASHTAGS "$said"; break; fi
     wt_msg "$said" 8
   done
-  rules=$(whiptail --title "$WT_TITLE" --checklist "What is worth a post? Tick the special aircraft you want, or ALL (Space = tick, Enter = go).\n\nALL posts everything that flies over, one post per gap at most, the special aircraft first when there is one. Ticking ALL alone is the same as ticking every line." 20 76 6 \
+  rules=$(whiptail --title "$WT_TITLE" --checklist "What is worth a post? Tick the special aircraft you want, or ALL (Space = tick, Enter = go).\n\nALL posts everything that crosses the radius, once per crossing, the special aircraft first when there is one. Ticking ALL alone is the same as ticking every line." 20 76 6 \
       military "military" "$(social_rule_on military)" \
       helicopter "a helicopter" "$(social_rule_on helicopter)" \
       heavy "an A380, 747, Beluga, Antonov, C-17 and the like" "$(social_rule_on heavy)" \
@@ -174,6 +181,17 @@ social_set_hashtags() {
   cfg_set SOCIAL_HASHTAGS "$tags"
   echo "Hashtags: $tags"
   case " $tags " in *" #avgeek "*) echo "(#avgeek becomes #helicopter or #military when one of those is posted.)" ;; esac
+}
+
+# ---- the gap (0.20.0): none by default, every crossing posted once; `social gap 30` for half an hour at least
+social_set_gap() {
+  if [ -z "${1:-}" ]; then
+    echo "Gap between posts: $(social_gap_words)"
+    echo "Change:  sudo zenithboard social gap MINUTES   (0 = none: every crossing of the radius is posted, once)"; return 0
+  fi
+  [[ $1 =~ ^[0-9]{1,4}$ ]] && [ "$((10#$1))" -le 1440 ] || { echo "Gap: whole minutes, 0 to 1440 (0 = none)" >&2; return 1; }
+  cfg_set SOCIAL_GAP_MIN "$((10#$1))"
+  echo "Gap between posts: $(social_gap_words). The service takes it at its next look, no restart needed."
 }
 
 # ---- the picture: the look, its colour, the map (the flap look only)
@@ -235,7 +253,7 @@ social_on() {
   social_need_tools || return 1
   social_prepare_dir || { echo "Could not make $SOCIAL_DIR"; return 1; }
   cfg_set SOCIAL 1; social_install_units
-  echo "Social sharing is ON: Bluesky @$(social_account), radius $(cfg_get SOCIAL_RADIUS_KM) km, at most one post every $(cfg_get SOCIAL_GAP_MIN) min, rules: $(cfg_get SOCIAL_RULES)."
+  echo "Social sharing is ON: Bluesky @$(social_account), radius $(cfg_get SOCIAL_RADIUS_KM) km, once per crossing, gap between posts: $(social_gap_words), rules: $(cfg_get SOCIAL_RULES)."
   echo "Watch it:  zenithboard logs social      Stop it:  sudo zenithboard social off"
 }
 social_off() { cfg_set SOCIAL 0; social_remove_units; echo "Social sharing is OFF. The accounts are kept (remove them: sudo zenithboard social remove)."; }
@@ -272,7 +290,7 @@ social_status() {
 social_menu() {
   local c
   while true; do
-    c=$(wt_menu "Social sharing: $(social_state)    Bluesky: $(or_text "$(social_account)" "no account")    Picture: $(cfg_get SOCIAL_STYLE dots)\nRadius: $(cfg_get SOCIAL_RADIUS_KM 15) km    Gap: $(cfg_get SOCIAL_GAP_MIN 120) min    Area: $(or_text "$(cfg_get SOCIAL_AREA "")" "(none)")\nRules: $(cfg_get SOCIAL_RULES rare,military,helicopter,heavy,farthest)\n\nPosts a picture of the wall and a short text when something worth it flies over. Nothing leaves the Pi until you switch it on." \
+    c=$(wt_menu "Social sharing: $(social_state)    Bluesky: $(or_text "$(social_account)" "no account")    Picture: $(cfg_get SOCIAL_STYLE dots)\nRadius: $(cfg_get SOCIAL_RADIUS_KM 15) km    Gap: $(social_gap_words)    Area: $(or_text "$(cfg_get SOCIAL_AREA "")" "(none)")\nRules: $(cfg_get SOCIAL_RULES rare,military,helicopter,heavy,farthest)\n\nPosts a picture of the wall and a short text when something worth it flies over. Nothing leaves the Pi until you switch it on." \
       setup "1  Set up or change the Bluesky account" \
       words "2  Words and rules: place name, radius, gap, what is worth a post" \
       picture "3  The picture: dot-matrix or split-flap, colour, map" \

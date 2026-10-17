@@ -69,6 +69,11 @@ check "hashtags: a bad word changes nothing"       '! social_set_hashtags ADSB "
 check "hashtags: no glob, no injection"            'cd "$t" && touch zzz && ! social_set_hashtags "*" >/dev/null 2>&1 && ! social_set_hashtags "a;rm" >/dev/null 2>&1; cd - >/dev/null; [ "$(cfg_get SOCIAL_HASHTAGS)" = "#ADSB #Metz" ]'
 check "hashtags: 8 at most"                        '! social_set_hashtags a b c d e f g h i >/dev/null 2>&1'
 check "hashtags: none, then default"               'social_set_hashtags none >/dev/null && [ "$(cfg_get SOCIAL_HASHTAGS)" = none ] && social_set_hashtags default >/dev/null && [ "$(cfg_get SOCIAL_HASHTAGS)" = "#ADSB #avgeek #ZenithBoard" ]'
+# ---- the gap (0.20.0): none by default, whole minutes, no floor
+check "gap: none by default"                       '[ "$(social_gap_words)" = "none, every crossing" ]'
+check "gap: set, shown, back to none"              'social_set_gap 30 >/dev/null && [ "$(cfg_get SOCIAL_GAP_MIN)" = 30 ] && social_set_gap | grep -q "30 min" && social_set_gap 0 >/dev/null && [ "$(social_gap_words)" = "none, every crossing" ]'
+check "gap: under ten is kept (no floor)"          'social_set_gap 3 >/dev/null && [ "$(cfg_get SOCIAL_GAP_MIN)" = 3 ] && social_set_gap 08 >/dev/null && [ "$(cfg_get SOCIAL_GAP_MIN)" = 8 ]'
+check "gap: nonsense changes nothing"              '! social_set_gap -5 2>/dev/null && ! social_set_gap 1.5 2>/dev/null && ! social_set_gap 99999 2>/dev/null && ! social_set_gap "1;rm" 2>/dev/null && ! social_set_gap 2000 2>/dev/null && [ "$(cfg_get SOCIAL_GAP_MIN)" = 8 ]'
 check "hashtags: alone, it shows them"             'social_set_hashtags | grep -q "Hashtags: #ADSB #avgeek #ZenithBoard"'
 
 # ---- on / off / remove

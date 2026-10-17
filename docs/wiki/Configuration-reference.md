@@ -67,7 +67,7 @@ The dynamic-DNS **token is not stored here.** It is asked for interactively and 
 | `SOCIAL` | `0` | `zenithboard social on\|off` | Post the aircraft overhead to Bluesky. See [Social sharing](Social-sharing). The account's secret is in `social.env`, not here |
 | `SOCIAL_RADIUS_KM` | `15` | `zenithboard social words` | An aircraft is a candidate while inside it. Separate from `RADIUS` |
 | `SOCIAL_AREA` | empty | same | The place named in the posts, in your words: a town name (`Trémery`) reads *above Trémery*, a phrase (`near Metz`) is kept. Never derived from the position |
-| `SOCIAL_GAP_MIN` | `120` | same | At least this many minutes between two posts; never under 10, whatever is set (a value under it is used as 10 and `social status` says so) |
+| `SOCIAL_GAP_MIN` | `0` | same | At least this many minutes between two posts; `0`, the default since 0.20.0, is none: every crossing of the sharing radius is posted, once. (0.19.x defaulted to 120 and never went under 10.) A config file that still says `120` keeps it: set `0` with `social words` for every crossing |
 | `SOCIAL_RULES` | `rare,military,helicopter,heavy,farthest` | same | What is worth a post; `all` is every rule at once: everything that flies over, the special aircraft first |
 | `SOCIAL_HASHTAGS` | `#ADSB #avgeek #ZenithBoard` | `zenithboard social hashtags WORD...` or `social words` | Ending every post; `none` for none at all. Eight at most, letters, digits and `_`. `#avgeek` becomes `#helicopter` or `#military` when one of those is posted |
 | `SOCIAL_STYLE` | `dots` | `zenithboard social look dots\|flap\|alternate` | The picture: the dot-matrix wall with the track in dots, the split-flap board with a map, or the two in turn |
