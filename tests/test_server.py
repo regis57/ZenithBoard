@@ -230,6 +230,20 @@ class LearnedAirlineTests(unittest.TestCase):
         self.assertEqual(planes[0]["airline_icao"], "EZY")
 
 
+class OnlyHexTest(unittest.TestCase):
+    """0.18.2: social sharing asks the wall about one far aircraft (a range record) without setting off lookups
+    for everything in between."""
+
+    def test_only_that_aircraft_and_no_lookup_for_the_others(self):
+        asked = []
+        data = {"aircraft": [{"hex": "aaaaaa", "lat": 49.61, "lon": 6.13, "seen_pos": 1, "flight": "AAA1"},
+                             {"hex": "bbbbbb", "lat": 49.62, "lon": 6.14, "seen_pos": 1, "flight": "BBB2"}]}
+        planes, total = server.build_planes(data, 49.6, 6.13, 500, route_lookup=lambda cs: asked.append(cs), only_hex="bbbbbb")
+        self.assertEqual([p["hex"] for p in planes], ["bbbbbb"])
+        self.assertEqual(asked, ["BBB2"])
+        self.assertEqual(total, 2)
+
+
 class RouteTests(unittest.TestCase):
     def test_parse_real_adsbdb_answer(self):
         r = server.parse_route(ADSBDB_SAMPLE)

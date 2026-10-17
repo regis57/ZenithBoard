@@ -70,13 +70,40 @@ class WordsTest(unittest.TestCase):
             self.assertNotIn("km", t.replace("km/h", ""))
             self.assertNotIn("NE", t.split("\n")[0].replace("NEO", "").replace("Beluga", ""))
 
-    def test_farthest_says_so(self):
-        self.assertIn("40 km out — farthest today", social.post_text(KC135, CFG, why="farthest"))
+    def test_a_range_record_is_said_without_the_figure(self):
+        # rounded DOWN to 50 km: enough to tell a record, not enough to draw a circle around the antenna
+        t = social.post_text(dict(EZY, distance_km=332.4), CFG, why="farthest")
+        self.assertTrue(t.startswith("📡 "), t)
+        self.assertIn("range record for 30 days, over 300 km out", t)
+        self.assertNotIn("332", t)
+        self.assertEqual(social.range_words(51), "over 50 km out")
+        self.assertEqual(social.range_words(149.9), "over 100 km out")
+
+    def test_a_bare_place_name_reads_over(self):
+        # reported from the real Pi: "1 750 m Trémery"
+        self.assertEqual(social.area_words({"SOCIAL_AREA": "Trémery"}), "over Trémery")
+        self.assertEqual(social.area_words({"SOCIAL_AREA": "near Metz"}), "near Metz")
+        self.assertEqual(social.area_words({"SOCIAL_AREA": "over the Moselle"}), "over the Moselle")
+        self.assertEqual(social.area_words({"SOCIAL_AREA": "  "}), "")
+        self.assertIn("1 750 m over Trémery", social.post_text(dict(EZY, alt_ft=5740), dict(CFG, SOCIAL_AREA="Trémery")))
+
+    def test_de_havilland(self):
+        # reported from the real Pi: "DE Havilland DHC-8-400 Dash 8"
+        self.assertEqual(social.nice_type({"type_name": "DE HAVILLAND DHC-8-400 Dash 8"}), "De Havilland DHC-8-400 Dash 8")
 
     def test_alt_text(self):
         a = social.alt_text(EZY, CFG, trace(20))
         self.assertIn("EZY1234", a); self.assertIn("easyJet", a); self.assertIn("from Edinburgh to Saint-Louis", a)
         self.assertTrue(a.endswith("north up."), a)
+
+
+OLD = time.time() - 10 * 86400                     # a service that has watched for ten days
+
+
+def warm(**kw):
+    s = {"since": social.day_of(OLD), "types": {}, "far": {}, "posted": {}}
+    s.update(kw)
+    return s
 
 
 class ChoiceTest(unittest.TestCase):
@@ -89,25 +116,101 @@ class ChoiceTest(unittest.TestCase):
 
     def test_rules_rank_military_over_an_airliner(self):
         rules = {"military", "helicopter", "heavy", "rare"}
-        best = social.choose([EZY, KC135, HELI], self.tracks, rules, {"types": {"A20N": {"d": 40}}}, time.time())
+        st = warm(types={"A20N": {"a1": social.day_of(time.time()), "a2": social.day_of(time.time()), "a3": social.day_of(time.time())}})
+        best = social.choose([EZY, KC135, HELI], self.tracks, rules, st, time.time())
         self.assertEqual(best[2]["hex"], KC135["hex"]); self.assertEqual(best[1], "military")
 
+    def test_rare_counts_aircraft_not_looks(self):
+        # 0.18.0 counted a type at every 15-second look, so an aircraft visible for thirty seconds had already been
+        # counted three times when its track was long enough: "rare" never fired in the service. One aircraft, many looks:
+        st, now = warm(), time.time()
+        for i in range(12):
+            social.note_types(st, [EZY], now + i * 15)
+        self.assertEqual(social.others_of_type(st, EZY, now), 0)
+        self.assertEqual(social.interest(EZY, {"rare"}, st, now)[1], "rare")
+
     def test_a_common_type_is_not_rare(self):
-        state = {"types": {"A20N": {"2026-10-16": 30, "2026-10-17": 12}}}
-        self.assertEqual(social.interest(EZY, {"rare"}, state), (0, None))
-        self.assertGreater(social.interest(EZY, {"rare"}, {"types": {"A20N": {"2026-10-17": 1}}})[0], 0)
+        st, now = warm(), time.time()
+        for h in ("aa0001", "aa0002", "aa0003", "aa0004", "aa0005"):
+            social.note_types(st, [dict(EZY, hex=h)], now)
+        self.assertEqual(len(st["types"]["A20N"]), social.KEEP_PER_TYPE, "only the latest few are kept per type")
+        self.assertEqual(social.interest(EZY, {"rare"}, st, now), (0, None))
+        self.assertEqual(social.interest(dict(EZY, hex="aa0001"), {"rare"}, st, now), (0, None))
+
+    def test_two_others_in_thirty_days_is_still_rare_three_is_not(self):
+        st, now = warm(), time.time()
+        social.note_types(st, [dict(EZY, hex="bb0001"), dict(EZY, hex="bb0002")], now - 5 * 86400)
+        self.assertEqual(social.interest(EZY, {"rare"}, st, now)[1], "rare")
+        social.note_types(st, [dict(EZY, hex="bb0003")], now - 86400)
+        self.assertEqual(social.interest(EZY, {"rare"}, st, now), (0, None))
+
+    def test_no_rare_and_no_record_before_three_days_of_history(self):
+        now = time.time()
+        fresh = {"since": social.day_of(now), "types": {}, "far": {}}
+        self.assertFalse(social.warmed(fresh, now))
+        self.assertEqual(social.interest(EZY, {"rare"}, fresh, now), (0, None))
+        self.assertTrue(social.warmed(fresh, now + 3 * 86400 + 60))
+
+    def test_the_0_18_0_history_is_dropped(self):
+        st = social.prune_state({"types": {"A20N": {"2026-10-17": 40}, "DH8D": {"4d00c6": social.day_of(time.time())}},
+                                 "farthest_day": "2026-10-17", "farthest_km": 12}, time.time())
+        self.assertNotIn("A20N", st["types"]); self.assertIn("DH8D", st["types"])
+        self.assertNotIn("farthest_km", st)
 
     def test_nothing_known_never_posts_even_under_any(self):
-        self.assertIsNone(social.choose([NOTHING], self.tracks, {"any"}, {}, time.time()))
+        self.assertIsNone(social.choose([NOTHING], self.tracks, {"any"}, warm(), time.time()))
 
     def test_already_posted_and_no_track_are_skipped(self):
-        self.assertIsNone(social.choose([EZY], self.tracks, {"any"}, {"posted": {EZY["hex"]: time.time()}}, time.time()))
-        self.assertIsNone(social.choose([EZY], social.Tracks(), {"any"}, {}, time.time()))
+        self.assertIsNone(social.choose([EZY], self.tracks, {"any"}, warm(posted={EZY["hex"]: time.time()}), time.time()))
+        self.assertIsNone(social.choose([EZY], social.Tracks(), {"any"}, warm(), time.time()))
 
     def test_heavy_by_code_or_shape(self):
-        self.assertEqual(social.interest(BELUGA, {"heavy"}, {})[1], "heavy")
-        self.assertEqual(social.interest(KC135, {"heavy"}, {})[1], "heavy")     # quad shape
-        self.assertEqual(social.interest(EZY, {"heavy"}, {}), (0, None))
+        self.assertEqual(social.interest(BELUGA, {"heavy"}, warm())[1], "heavy")
+        self.assertEqual(social.interest(KC135, {"heavy"}, warm())[1], "heavy")     # quad shape
+        self.assertEqual(social.interest(EZY, {"heavy"}, warm()), (0, None))
+
+
+class RangeRecordTest(unittest.TestCase):
+    """0.18.0: "farthest" compared an aircraft with a record it had just set itself, and only looked inside the
+    sharing radius (15 km by default) for something over 50 km: it could never fire."""
+
+    def setUp(self):
+        self.c = dict(CFG, LAT="49.20", LON="6.20", SOCIAL_RULES="farthest", SOCIAL_RADIUS_KM="15")
+        self.tracks = social.Tracks()
+        self.far = {"hex": "4b1801", "flight": "SWR18", "type": "A21N", "type_name": "AIRBUS A-321neo", "airline": "Swiss",
+                    "registration": "HB-JPA", "shape": "narrow", "alt_ft": 38000, "on_ground": False, "track": 90, "distance_km": 210}
+        now = time.time()
+        # its track: the collector saw it for a minute
+        for pt in trace(12, now - 60):
+            self.tracks.feed([{"hex": "4b1801", "lat": pt[0], "lon": pt[1], "alt_baro": 38000, "seen_pos": 0}], pt[3])
+        self.old = (social.ask_wall, social.ask_wall_one)
+        social.ask_wall = lambda c, r: []                       # nothing inside the sharing radius
+        social.ask_wall_one = lambda c, h: dict(self.far) if h == "4b1801" else None
+        self.addCleanup(setattr, social, "ask_wall", self.old[0]); self.addCleanup(setattr, social, "ask_wall_one", self.old[1])
+        # 210 km from the receiver at 49.20 N 6.20 E: due east, ~2.86 degrees of longitude
+        self.sky = [{"hex": "4b1801", "lat": 49.20, "lon": 6.20 + 210 / (111.32 * 0.6534), "seen_pos": 1}]
+
+    def test_a_new_thirty_day_record_is_a_candidate_once(self):
+        now = time.time()
+        st = warm(far={social.day_of(now - 86400): 180.0})
+        planes, best = social.one_poll(self.c, st, self.tracks, self.sky, now)
+        self.assertIsNotNone(best, "a new record must be a candidate even outside the sharing radius")
+        self.assertEqual(best[1], "farthest"); self.assertEqual(best[2]["hex"], "4b1801")
+        self.assertAlmostEqual(st["far"][social.day_of(now)], 210, delta=1)
+        # the next look: same aircraft, same distance: it set the record, it does not beat it
+        planes, best = social.one_poll(self.c, st, self.tracks, self.sky, now + 15)
+        self.assertIsNone(best)
+
+    def test_not_a_record_when_the_month_had_farther(self):
+        now = time.time()
+        st = warm(far={social.day_of(now - 2 * 86400): 260.0})
+        self.assertIsNone(social.one_poll(self.c, st, self.tracks, self.sky, now)[1])
+
+    def test_no_record_before_three_days_of_history(self):
+        now = time.time()
+        st = {"since": social.day_of(now), "types": {}, "far": {}, "posted": {}}
+        self.assertIsNone(social.one_poll(self.c, st, self.tracks, self.sky, now)[1])
+        self.assertAlmostEqual(st["far"][social.day_of(now)], 210, delta=1, msg="the history is built even before")
 
 
 class TracksTest(unittest.TestCase):

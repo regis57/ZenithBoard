@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.18.2
+Social sharing could hardly ever post: two of its five default rules could not fire in the service, though `social test` said they would.
+- **`rare` counted looks, not aircraft.** The service asked the wall every fifteen seconds and counted the type each time; by the time an aircraft had thirty seconds of track it had been counted three times, so no type was ever "seen twice or less". It now keeps, per type, the last few distinct aircraft and the day; rare means at most two *other* aircraft of that type in thirty days. The 0.18.0 history is dropped, not converted.
+- **`farthest` compared an aircraft with the record it had just set**, and only looked inside the sharing radius (15 km by default) for something over 50 km. It is now a thirty-day range record, looked for in the whole sky from `aircraft.json`, and the wall is asked about that one aircraft alone (`/api/planes?hex=`, so nothing in between sets off a lookup). The post says the distance rounded down to 50 km — *over 300 km out* — not the figure.
+- `rare` and `farthest` wait for three days of history; `social status` says where it stands. The other rules work at once.
+- **`social test` says whether the service would post** what it shows, and why not — it adds `any` for itself and so always shows something, which was the source of the confusion.
+- The service writes one line an hour to its journal (looks, candidates, last post, next possible), and says at start what it will do.
+- A bare place name reads *over Trémery*, not *1 750 m Trémery*; *De Havilland*, not *DE Havilland*. Both seen on the first real test.
+
 ## 0.18.1
 - **`zenithboard social test` and `social post` no longer crash from the command line.** They draw the picture in `/run/zenithboard/social`, which systemd creates for the service only; run by hand as the `zenithboard` user, the folder did not exist and Python stopped with *Permission denied* (seen on the first real try). The folder is now made for the command line too, and when it still cannot be written, a private temporary folder stands in and is removed after the post. Tested as a user with no rights on a box without the folder.
 

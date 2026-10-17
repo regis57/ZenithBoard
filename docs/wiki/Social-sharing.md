@@ -43,7 +43,7 @@ Tick the networks, paste each secret (typed blind, as a password), and the wizar
 
 | Question | What it is for | Default |
 |---|---|---|
-| Where is this? | The place named in the posts — *over Luxembourg*. Your words. The receiver's position is never used, and never sent | nothing |
+| Where is this? | The place named in the posts. Your words: a bare name (`Trémery`) reads *over Trémery*, words that start with their own preposition (`near Metz`) are kept. The receiver's position is never used. A small village narrows your home down to a few kilometres; a city, a department or a region does not | nothing |
 | Sharing radius | An aircraft is a candidate while inside it. Separate from the wall's radius | 15 km |
 | Minimum minutes between posts | So the account is not a firehose | 120 |
 | What is worth a post | See the rules below | rare, military, helicopter, heavy, farthest |
@@ -54,7 +54,7 @@ Tick the networks, paste each secret (typed blind, as a password), and the wizar
 sudo zenithboard social test
 ```
 
-Waits up to half a minute for an aircraft with a track, draws the picture, and prints the text and the alt text. Nothing is posted. The picture is at `http://PI-ADDRESS:8080/social/preview`, on your home network like the wall. `social test 4071f1` does it for one aircraft by its hex code.
+Waits up to half a minute for an aircraft with a track, draws the picture, and prints the text and the alt text. **Nothing is posted, ever, by `test`.** It always finds something to show (it adds the `any` rule for itself), so it also says plainly whether the service, under *your* rules, would post that aircraft — and if not, why not. The picture is at `http://PI-ADDRESS:8080/social/preview`, on your home network like the wall. `social test 4071f1` does it for one aircraft by its hex code.
 
 ### 4. Switch it on
 
@@ -70,16 +70,18 @@ zenithboard logs social
 
 ## What gets posted, and what never does
 
-**The rules.** An aircraft is a candidate while inside the sharing radius, known (a type, a registration or an airline — an aircraft with nothing known is never posted), airborne, with at least thirty seconds of track, and not posted in the last day. Among the candidates, the rules say which are worth it:
+**The rules.** An aircraft is a candidate while inside the sharing radius (except a range record, below), known (a type, a registration or an airline — an aircraft with nothing known is never posted), airborne, with at least thirty seconds of track, and not posted in the last day. Among the candidates, the rules say which are worth it:
 
 | Rule | Posts an aircraft that is… |
 |---|---|
-| `rare` | of a type seen twice or less in the last thirty days (this sighting included) |
+| `rare` | of a type that at most two *other* aircraft have flown in the last thirty days. Counted per aircraft, not per look |
 | `military` | military, by the decoder's database flag or by its type |
 | `helicopter` | a helicopter |
 | `heavy` | an A380, 747, Beluga, Antonov 124/225, C-5, C-17, A400M, or any four-engined airliner |
-| `farthest` | farther than anything today, and more than 50 km out |
+| `farthest` | a new range record: farther than anything in the last thirty days, and over 50 km. Looked for in the whole sky, not only inside the sharing radius |
 | `any` | anything at all: the best-known aircraft of the moment, once per gap |
+
+`rare` and `farthest` judge against history, so they wait until the service has watched for **three days**; `zenithboard social status` says where it stands. The other rules work from the first minute.
 
 Several rules can match; the best candidate is the one matching the most, and knowing the most (route, airline, model each count). One post per gap, at most.
 
@@ -92,14 +94,14 @@ Several rules can match; the best candidate is the one matching the most, and kn
 | No airline known | `✈ Airbus A330-743 Beluga XL · F-GXLH · BGA113J · 9 750 m over Luxembourg` |
 | Helicopter | `🚁 Airbus Helicopters H145 · D-HABC · low over Luxembourg` |
 | Military, no callsign | `✈ Military · Boeing KC-135R Stratotanker · 7 620 m over Luxembourg` |
-| Farthest of the day | `… · 332 km out — farthest today` |
+| Range record | `📡 Emirates UAE201 · Boeing 777 · … · range record for 30 days, over 300 km out` |
 | Nothing known | no post |
 
 Then the hashtags (`#ADSB #avgeek #ZenithBoard` by default; `#helicopter` or `#military` replace `#avgeek` when they apply). The picture carries an alt text built from the same facts, for screen readers. Units follow the wall's setting.
 
 **What never leaves the Pi:**
 
-* **The receiver's position**, and anything that gives it away: the posts carry no distance and no bearing, the picture's last row shows the time where the tablet shows `12KM NE`, and the track is centred on the aircraft, north up, with no map behind it. A hundred posts give nothing to triangulate.
+* **The receiver's position**, and anything that gives it away: the posts carry no bearing and no distance — a range record says *over 300 km*, rounded down to 50, which tells the record and draws no useful circle — the picture's last row shows the time where the tablet shows `12KM NE`, and the track is centred on the aircraft, north up, with no map behind it. A hundred posts give nothing to triangulate.
 * **The Planespotters photo.** Their terms forbid re-hosting it. The track takes its place.
 * **The secrets.** They live in `/etc/zenithboard/social.env`, owned by root, readable by the `zenithboard` group (the service's user), mode 0640; never in `config.env`, never in a log, never in `zenithboard config`. `zenithboard security` checks the file's owner and mode.
 * **The picture itself**, after the post: it is drawn in `/run/zenithboard/social` — memory, not the card — and deleted once the networks have answered, whether they took it or not.
@@ -114,7 +116,7 @@ The picture is `tools/social-render.js`: Node reads `app.js` and lifts the wall'
 
 The networks are four requests each, standard library only: Bluesky `createSession → uploadBlob → createRecord` (hashtags as facets, so they are clickable; the alt text and the aspect ratio with the image); Mastodon `POST /api/v2/media` (multipart, with the description) then `POST /api/v1/statuses` with an idempotency key, so a retry cannot post twice.
 
-State lives in `/var/lib/zenithboard/social/state.json`: which types were seen on which days (for `rare`), which aircraft were posted today, the farthest of the day, and the last post's time. `social remove` deletes it.
+State lives in `/var/lib/zenithboard/social/state.json`: for each type, the last few distinct aircraft seen and the day (for `rare`), the farthest aircraft of each of the last thirty days (for `farthest`), the day the service started watching, which aircraft were posted in the last day, and the last post's time. Once an hour the service writes one line to its journal — how many looks, how many found a candidate, when the next post is possible — so `zenithboard logs social` answers *why no post?* `social remove` deletes it.
 
 ---
 
@@ -145,6 +147,6 @@ sudo zenithboard social remove    # accounts, state and service gone (Node stays
 | `social check` says FAILED for Bluesky | The handle has no `@`, and the password is the *app* password, not the account's. Make a new app password if in doubt |
 | `social check` says FAILED for Mastodon | The address starts with `https://` and has no path; the token is from an application with `write:media` and `write:statuses` |
 | `social test` says nothing to show | No aircraft with thirty seconds of track inside the sharing radius right now. Try a wider radius, or `social test HEX` with an aircraft from `zenithboard status` |
-| It posts nothing for days | Look at `zenithboard social status` — the rules may be strict for your sky. `rare` needs a month of history to mean anything. Add `any` to see it work, then take it out |
+| It posts nothing | First: `test` never posts. Then `zenithboard social status` — is it *on*, is a network ready, is the gap still running? Then `zenithboard logs social`: the hourly line says how many looks found a candidate. `rare` and `farthest` start after three days. Add `any` to see it work, then take it out |
 | `zenithboard logs social` shows `the wall did not answer` | The wall server is down: `zenithboard status`, `zenithboard logs flightinfo` |
 | A post went out that you would rather not have | Delete it on the network. Narrow the rules with `social words`. Nothing posted can be recalled by the Pi |
