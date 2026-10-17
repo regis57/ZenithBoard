@@ -75,7 +75,8 @@ ZenithBoard $ZB_VERSION - ADSB Flight Info
   zenithboard stats on|off|status       collect a sample every 15 minutes (off by default; the page is /stats)
   zenithboard stats csv|clear           the raw samples / empty them
   zenithboard social setup              the Bluesky account (a wizard; asks for an app password, never the real one)
-  zenithboard social words              the place name, the radius, the gap between posts, what is worth a post
+  zenithboard social words              the place name, the radius, the gap, the hashtags, what is worth a post
+  zenithboard social hashtags [WORD...] the hashtags ending each post (# optional), none, or default; alone: show them
   zenithboard social picture            the picture: dot-matrix or split-flap, its colour, the map (a wizard)
   zenithboard social look dots|flap|alternate   dot-matrix with the track, split-flap with a map, or the two in turn
   zenithboard social colour NAME|wall|rotate   amber, green, red, white, turquoise, blue, the wall's own, or in turn
@@ -229,6 +230,7 @@ case "${1:-}" in
       setup)  root_or_die; social_setup ;;
       words)  root_or_die; social_setup_words && echo "Saved." ;;
       picture) root_or_die; social_setup_picture ;;
+      hashtags|tags) if [ -n "${3:-}" ]; then root_or_die; fi; social_set_hashtags "${@:3}" ;;
       look)   root_or_die; social_set_look "${3:-}" ;;
       colour|color) root_or_die; social_set_colour "${3:-}" ;;
       map)    root_or_die; social_set_map "${3:-}" ;;
@@ -239,7 +241,7 @@ case "${1:-}" in
       check)  root_or_die; python3 "$SOCIAL_PY" check ;;
       status) social_status ;;
       remove) root_or_die; social_remove ;;
-      *) die "Usage: zenithboard social setup|words|picture|look dots|flap|alternate|colour NAME|map NAME|on|off|test [HEX]|post [HEX]|check|status|remove" ;;
+      *) die "Usage: zenithboard social setup|words|hashtags [WORD...]|picture|look dots|flap|alternate|colour NAME|map NAME|on|off|test [HEX]|post [HEX]|check|status|remove" ;;
     esac ;;
   patches)
     case "${2:-status}" in

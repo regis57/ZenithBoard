@@ -69,7 +69,7 @@ The dynamic-DNS **token is not stored here.** It is asked for interactively and 
 | `SOCIAL_AREA` | empty | same | The place named in the posts, in your words: a town name (`Trémery`) reads *above Trémery*, a phrase (`near Metz`) is kept. Never derived from the position |
 | `SOCIAL_GAP_MIN` | `120` | same | At least this many minutes between two posts; never under 10, whatever is set (a value under it is used as 10 and `social status` says so) |
 | `SOCIAL_RULES` | `rare,military,helicopter,heavy,farthest` | same | What is worth a post; `all` is every rule at once: everything that flies over, the special aircraft first |
-| `SOCIAL_HASHTAGS` | `#ADSB #avgeek #ZenithBoard` | this line | Appended to every post |
+| `SOCIAL_HASHTAGS` | `#ADSB #avgeek #ZenithBoard` | `zenithboard social hashtags WORD...` or `social words` | Ending every post; `none` for none at all. Eight at most, letters, digits and `_`. `#avgeek` becomes `#helicopter` or `#military` when one of those is posted |
 | `SOCIAL_STYLE` | `dots` | `zenithboard social look dots\|flap\|alternate` | The picture: the dot-matrix wall with the track in dots, the split-flap board with a map, or the two in turn |
 | `SOCIAL_THEME` | empty | `zenithboard social colour NAME\|wall\|rotate` | The picture's colour: `amber`, `green`, `red`, `white`, `turquoise`, `blue`; empty = the wall's `THEME`; `rotate` = the colours in turn, all but blue |
 | `SOCIAL_MAP` | `normal` | `zenithboard social map NAME` | The split-flap picture's map: `normal`, `night`, `satellite`, `terrain`, `none` (no map, nothing fetched), `rotate` (the four maps in turn) |

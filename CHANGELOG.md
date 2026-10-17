@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.19.7
+- **The hashtags have a command:** `sudo zenithboard social hashtags ADSB avgeek Moselle`, and a question in `social words`. The `#` is optional — typed unquoted, the shell would take `#ADSB` for the start of a comment and pass nothing. `none` for no hashtags at all (not even `#helicopter`), `default` for the three; alone, it shows them. Eight at most, letters, digits and `_`, at least one letter. Until now the only way was to edit `config.env`.
+- `zenithboard social status | head` no longer ends with a Python error when the reader leaves early.
+
 ## 0.19.6
 - **The map credit in a post is one short line, at the end:** *Map © OpenStreetMap, EOX* (satellite: *Map: EOxCloudless by EOX, © OpenStreetMap*), each name a link — to OpenStreetMap's copyright page, to EOX. It was three lines of small print between the text and the hashtags. The whole required text is still drawn on the picture and read in the alt text; OpenStreetMap's attribution guideline accepts the name linked to its copyright page, and EOX asks an online publication for its name and a link. Asked for after the first satellite post.
 

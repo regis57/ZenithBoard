@@ -133,6 +133,14 @@ class WordsTest(unittest.TestCase):
         self.assertTrue(t.endswith(credit), "the credit is never cut")
         self.assertEqual(social.fit_post("short", None, "#ADSB"), "short\n#ADSB")
 
+    def test_hashtags_none_means_none_at_all(self):
+        # 0.19.7: `social hashtags none` — not even #helicopter or #military added back
+        for p in (EZY, HELI, KC135):
+            t = social.post_text(p, dict(CFG, SOCIAL_HASHTAGS="none"))
+            self.assertNotIn("#", t.replace("#EZY1234", ""), t)
+        t = social.post_text(HELI, dict(CFG, SOCIAL_HASHTAGS="#ADSB #Moselle"))
+        self.assertTrue(t.endswith("#ADSB #Moselle #helicopter"), t)
+
     def test_the_map_credit_is_one_short_line_at_the_end(self):
         # 0.19.6, from the owner after the first satellite post: the three lines of small print spoiled the post.
         # The whole text stays on the picture and in the alt text; the post has the names, as links

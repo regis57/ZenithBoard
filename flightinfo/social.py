@@ -600,9 +600,11 @@ def post_text(p, c, why=None, credit=None):
         parts.append(area_words(c))
     text = " · ".join(x for x in parts if x)          # starts with the flight itself: no icon in front of it
     tags = str(c.get("SOCIAL_HASHTAGS", "")).strip()
-    if heli:
+    if tags.lower() == "none":                   # set so: no hashtags at all, not even #helicopter
+        tags = ""
+    if heli and tags:
         tags = tags.replace("#avgeek", "#helicopter") if "#avgeek" in tags else tags + " #helicopter"
-    if p.get("military"):
+    if p.get("military") and tags:
         tags = tags.replace("#avgeek", "#military") if "#avgeek" in tags else tags + " #military"
     return fit_post(text, credit, tags.strip())
 
@@ -1053,7 +1055,7 @@ def cmd_status():
     print("Picture: %s" % picture_words(c, None if state_blind else load_state()))
     print("Radius: %s km   Area: %s   Gap: %s   Rules: %s" % (c.get("SOCIAL_RADIUS_KM"), c.get("SOCIAL_AREA") or "(none)",
                                                                gap_words(c), ", ".join(sorted(rules_of(c))) or "none"))
-    print("Hashtags: %s" % c.get("SOCIAL_HASHTAGS"))
+    print("Hashtags: %s   (change: sudo zenithboard social hashtags ...)" % c.get("SOCIAL_HASHTAGS"))
     if unreadable(STATE_DIR) or unreadable(os.path.join(STATE_DIR, "state.json")):
         blind.append(STATE_DIR)
         print("History: %s cannot read the service's state folder" % who)
@@ -1105,4 +1107,8 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv))
+    try:
+        sys.exit(main(sys.argv))
+    except BrokenPipeError:                      # `social status | head`: the reader left, nothing went wrong
+        os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())
+        sys.exit(0)
