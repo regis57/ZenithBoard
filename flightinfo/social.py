@@ -189,7 +189,9 @@ def memory_mb():
     """The service's own memory, in MB: {now, peak, node, since}. Measured by the process itself, because
     `systemctl status` cannot: Raspberry Pi OS boots with the kernel's memory controller off (cgroup_disable=memory),
     so systemd shows no Memory line and does not enforce MemoryMax either (seen on the real Pi, 0.19.4).
-    peak is Python's (Pillow draws in it), node the largest drawing by Node."""
+    peak is Python's (Pillow draws in it), node the largest drawing by Node, as Node itself reports it: from outside,
+    the kernel credits a child started by vfork with the parent's peak, so RUSAGE_CHILDREN said "Node 104 MB" when
+    104 MB was Python's (0.19.10, seen on the real Pi)."""
     import resource
     now = 0.0
     try:
@@ -201,8 +203,10 @@ def memory_mb():
     except (OSError, ValueError, IndexError):
         now = 0.0                                # not Linux: the peak alone
     peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024.0      # kilobytes on Linux
-    node = resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss / 1024.0
-    return {"now": round(now), "peak": round(max(peak, now)), "node": round(node)}
+    return {"now": round(now), "peak": round(max(peak, now)), "node": round(NODE_PEAK_KB[0] / 1024.0)}
+
+
+NODE_PEAK_KB = [0]                               # the largest maxrss_kb Node has reported since the service started
 
 
 def memory_words(m):
@@ -658,7 +662,11 @@ def _node(spec, out, *extra):
         r = subprocess.run(args, capture_output=True, text=True, timeout=60)
         if r.returncode != 0:
             raise RuntimeError("renderer failed: %s" % (r.stderr.strip() or r.stdout.strip()))
-        return json.loads(r.stdout.strip() or "{}")
+        got = json.loads(r.stdout.strip() or "{}")
+        kb = got.get("maxrss_kb")
+        if isinstance(kb, (int, float)) and kb > NODE_PEAK_KB[0]:
+            NODE_PEAK_KB[0] = kb
+        return got
     finally:
         try:
             os.unlink(spec_path)

@@ -212,6 +212,12 @@ function png(W, H, rgb) {
     chunk("IDAT", zlib.deflateSync(raw, { level: 9 })), chunk("IEND", Buffer.alloc(0))]);
 }
 
+// Node's own peak memory, said by Node: the service cannot measure it from outside, because Python starts it with
+// vfork and the kernel then credits the child with the parent's peak (0.19.10: "Node 104 MB" was Python's 104 MB)
+function maxRssKb() {
+  try { return process.resourceUsage().maxRSS; } catch (e) { return 0; }
+}
+
 function main() {
   const [inFile, outFile] = process.argv.slice(2);
   if (!inFile || !outFile) { console.error("usage: social-render.js IN.json OUT.png | social-render.js IN.json --lines"); process.exit(2); }
@@ -219,7 +225,7 @@ function main() {
   const theme = THEMES[spec.theme] != null ? THEMES[spec.theme] : THEMES.amber;
   if (outFile === "--lines") {
     console.log(JSON.stringify({ lines: flapLines(spec.plane || {}, spec.units || "metric", spec.clock || "", spec.cols || 14),
-                                 color: "#" + ("000000" + theme.toString(16)).slice(-6) }));
+                                 color: "#" + ("000000" + theme.toString(16)).slice(-6), maxrss_kb: maxRssKb() }));
     return;
   }
   const g = new Uint32Array(GW * GH);
@@ -228,7 +234,7 @@ function main() {
   const pitch = spec.pitch || 10;
   const { W, H, img } = render(g, pitch, theme);
   fs.writeFileSync(outFile, png(W, H, img));
-  console.log(JSON.stringify({ width: W, height: H, bytes: fs.statSync(outFile).size }));
+  console.log(JSON.stringify({ width: W, height: H, bytes: fs.statSync(outFile).size, maxrss_kb: maxRssKb() }));
 }
 
 if (require.main === module) main();
