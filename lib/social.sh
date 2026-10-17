@@ -22,7 +22,7 @@ or_text() { if [ -n "$1" ]; then printf '%s' "$1"; else printf '%s' "$2"; fi; } 
 social_state() { [ "$(cfg_get SOCIAL 0)" = 1 ] && echo on || echo off; }
 social_account() { social_secret_get BLUESKY_HANDLE; }
 SOCIAL_THEMES="amber green red white turquoise blue"
-SOCIAL_MAPS="normal night satellite terrain none"
+SOCIAL_MAPS="normal night satellite terrain none rotate"
 
 # ---- the service
 social_install_units() {
@@ -56,7 +56,7 @@ social_need_pil() {      # the split-flap look: Pillow paints the board and the 
 }
 social_need_tools() {    # what the chosen look needs: Node always (the dot-matrix picture, and the flap board's rows), Pillow for flap
   social_need_node || return 1
-  [ "$(cfg_get SOCIAL_STYLE dots)" != flap ] || social_need_pil
+  [ "$(cfg_get SOCIAL_STYLE dots)" = dots ] || social_need_pil       # flap, or alternate
 }
 
 # 0.19.0 took Mastodon out. A Pi set up before that keeps its Bluesky account; the Mastodon token and the list of
@@ -135,48 +135,54 @@ social_setup_words() {
 # ---- the picture: the look, its colour, the map (the flap look only)
 social_valid_in() { local v=$1; shift; [[ $v =~ ^[a-z]+$ ]] && [[ " $* " == *" $v "* ]]; }   # exactly one of the words
 social_set_look() {
-  social_valid_in "$1" dots flap || { echo "Look: dots or flap"; return 1; }
-  [ "$1" != flap ] || social_need_pil || return 1       # install first: a look that cannot be drawn is not saved
+  social_valid_in "$1" dots flap alternate || { echo "Look: dots, flap, or alternate (the two in turn)"; return 1; }
+  [ "$1" = dots ] || social_need_pil || return 1        # install first: a look that cannot be drawn is not saved
   cfg_set SOCIAL_STYLE "$1"
   echo "Picture: $1. Try it:  sudo zenithboard social test"
 }
 social_set_colour() {
   local c=${1:-}
-  [ -n "$c" ] || { echo "Colour: $SOCIAL_THEMES, or wall (the wall's own, $(cfg_get THEME amber))"; return 1; }
+  [ -n "$c" ] || { echo "Colour: $SOCIAL_THEMES, rotate (in turn, all but blue), or wall (the wall's own, $(cfg_get THEME amber))"; return 1; }
   [ "$c" != wall ] || c=""
-  [ -z "$c" ] || social_valid_in "$c" $SOCIAL_THEMES || { echo "Colour: $SOCIAL_THEMES, or wall (the wall's own, $(cfg_get THEME amber))"; return 1; }
+  [ -z "$c" ] || social_valid_in "$c" $SOCIAL_THEMES rotate || { echo "Colour: $SOCIAL_THEMES, rotate (in turn, all but blue), or wall (the wall's own, $(cfg_get THEME amber))"; return 1; }
   cfg_set SOCIAL_THEME "$c"
-  echo "Picture colour: $(or_text "$c" "the wall's ($(cfg_get THEME amber))")."
+  case "$c" in
+    rotate) echo "Picture colour: the colours in turn, one step per post (all but blue, which reads poorly on a phone)." ;;
+    *) echo "Picture colour: $(or_text "$c" "the wall's ($(cfg_get THEME amber))")." ;;
+  esac
 }
 social_set_map() {
-  social_valid_in "$1" $SOCIAL_MAPS || { echo "Map: $SOCIAL_MAPS"; return 1; }
+  social_valid_in "$1" $SOCIAL_MAPS || { echo "Map: $SOCIAL_MAPS (rotate: the four maps in turn)"; return 1; }
   cfg_set SOCIAL_MAP "$1"
-  echo "Map: $1 (the split-flap look). $( [ "$(cfg_get SOCIAL_STYLE dots)" = flap ] || echo 'The picture is the dot-matrix look now; switch with  sudo zenithboard social look flap')"
+  echo "Map: $1 (the split-flap look). $( [ "$(cfg_get SOCIAL_STYLE dots)" != dots ] || echo 'The picture is the dot-matrix look now; switch with  sudo zenithboard social look flap  (or alternate)')"
 }
 social_setup_picture() {
   local look col map cur on
   cur=$(cfg_get SOCIAL_STYLE dots)
   look=$(wt_radio "The picture each post carries. (Space = choose, Enter = go)" \
       dots "Dot-matrix wall, the track drawn in dots beside it" "$( [ "$cur" = dots ] && echo ON || echo OFF )" \
-      flap "Split-flap board, a map with the track beside it" "$( [ "$cur" = flap ] && echo ON || echo OFF )") || return 1
+      flap "Split-flap board, a map with the track beside it" "$( [ "$cur" = flap ] && echo ON || echo OFF )" \
+      alternate "The two in turn, one post each: varied posts" "$( [ "$cur" = alternate ] && echo ON || echo OFF )") || return 1
   cur=$(cfg_get SOCIAL_THEME ""); [ -n "$cur" ] || cur=wall
   local items=(wall "The wall's own colour ($(cfg_get THEME amber))" "$( [ "$cur" = wall ] && echo ON || echo OFF )")
   for c in $SOCIAL_THEMES; do on=OFF; [ "$cur" = "$c" ] && on=ON; items+=("$c" "${c^}" "$on"); done
+  items+=(rotate "In turn, one step per post (all but blue)" "$( [ "$cur" = rotate ] && echo ON || echo OFF )")
   col=$(wt_radio "Colour of the letters and the track" "${items[@]}") || return 1
-  if [ "$look" = flap ]; then
+  if [ "$look" != dots ]; then
     cur=$(cfg_get SOCIAL_MAP normal)
     map=$(wt_radio "The map beside the board (from EOX's map service, credited on every post)" \
         normal "OpenStreetMap" "$( [ "$cur" = normal ] && echo ON || echo OFF )" \
         night "OpenStreetMap, darkened" "$( [ "$cur" = night ] && echo ON || echo OFF )" \
         satellite "Satellite (Sentinel-2 cloudless, non-commercial use)" "$( [ "$cur" = satellite ] && echo ON || echo OFF )" \
         terrain "Terrain: relief, forests, rivers" "$( [ "$cur" = terrain ] && echo ON || echo OFF )" \
-        none "No map: the track on black, nothing fetched" "$( [ "$cur" = none ] && echo ON || echo OFF )") || return 1
+        none "No map: the track on black, nothing fetched" "$( [ "$cur" = none ] && echo ON || echo OFF )" \
+        rotate "The four maps in turn (not none), one step per flap post" "$( [ "$cur" = rotate ] && echo ON || echo OFF )") || return 1
     social_set_map "$map" >/dev/null
   fi
   clear
   social_set_colour "$col" >/dev/null
   social_set_look "$look" >/dev/null || { read -rp "Press Enter to continue..." _; return 1; }
-  wt_msg "Saved. Picture: $look, $(or_text "$(cfg_get SOCIAL_THEME "")" "the wall's colour")$( [ "$look" = flap ] && echo ", $(cfg_get SOCIAL_MAP normal) map").\n\nNext:  sudo zenithboard social test   draws the picture and shows the text, posts nothing.\nThen:  sudo zenithboard social on     starts posting." 12
+  wt_msg "Saved. Picture: $look, $(or_text "$(cfg_get SOCIAL_THEME "")" "the wall's colour")$( [ "$look" != dots ] && echo ", $(cfg_get SOCIAL_MAP normal) map").\n\nNext:  sudo zenithboard social test   draws the picture and shows the text, posts nothing.\nThen:  sudo zenithboard social on     starts posting." 12
 }
 social_rule_on() { [ "$1" = all ] && case ",$(cfg_get SOCIAL_RULES "")," in *",all,"*|*",any,"*) echo ON; return ;; esac; case ",$(cfg_get SOCIAL_RULES "$(python3 -c 'import sys; sys.path.insert(0, sys.argv[1]); import social; print(social.DEFAULTS["SOCIAL_RULES"])' "$ZB_HOME/flightinfo")")," in *",$1,"*) echo ON ;; *) echo OFF ;; esac; }
 

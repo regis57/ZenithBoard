@@ -164,6 +164,66 @@ def warm(**kw):
     return s
 
 
+class VarietyTest(unittest.TestCase):
+    def test_alternate_and_rotate_meet_every_colour_in_both_looks(self):
+        c = dict(CFG, SOCIAL_STYLE="alternate", SOCIAL_THEME="rotate", SOCIAL_MAP="rotate")
+        seen = [social.picture_for(c, n) for n in range(10)]
+        looks = [s["SOCIAL_STYLE"] for s in seen]
+        self.assertEqual(looks, ["dots", "flap"] * 5)
+        for look in ("dots", "flap"):
+            self.assertEqual({s["SOCIAL_THEME"] for s in seen if s["SOCIAL_STYLE"] == look}, set(social.ROTATE_THEMES), look)
+        self.assertNotIn("blue", social.ROTATE_THEMES, "dark blue reads poorly on a phone: a fixed choice only")
+        self.assertEqual([s["SOCIAL_MAP"] for s in seen if s["SOCIAL_STYLE"] == "flap"][:4], list(social.ROTATE_MAPS))
+        self.assertIn("next: flap", social.picture_words(c, {"pictures": 1}))
+
+    def test_fixed_settings_stay_fixed(self):
+        c = dict(CFG, SOCIAL_STYLE="flap", SOCIAL_THEME="green", SOCIAL_MAP="night")
+        self.assertEqual(social.picture_for(c, 7), c)
+        self.assertEqual(social.picture_words(c, {"pictures": 3}), "flap, green, night map")
+
+    def test_a_post_moves_the_picture_on_even_one_made_by_hand(self):
+        d = tempfile.mkdtemp(); self.addCleanup(shutil.rmtree, d, True)
+        self.addCleanup(setattr, social, "STATE_DIR", social.STATE_DIR); social.STATE_DIR = d
+        social.remember_post("aaaaaa", time.time())
+        social.remember_post("bbbbbb", time.time())
+        self.assertEqual(social.load_state()["pictures"], 2)
+        st = {"pictures": 1}
+        self.assertEqual(social.merge_disk(st)["pictures"], 2)
+
+
+class SettleTest(unittest.TestCase):
+    def test_an_aircraft_the_wall_is_still_looking_up_waits(self):
+        # seen on the real Pi (0.19.5): KLM24V posted with no registration, no model and no route. Its track was
+        # five minutes long (followed from far out), but the wall had only just been asked about it
+        tracks, now = social.Tracks(), time.time()
+        for pt in trace(60, now - 300):
+            tracks.feed([{"hex": EZY["hex"], "lat": pt[0], "lon": pt[1], "alt_baro": pt[2], "seen_pos": 0}], pt[3])
+        bare = dict(EZY, registration=None, type=None, type_name=None, route=None, pending=["route", "model"])
+        self.assertIsNone(social.choose([bare], tracks, {"all"}, warm(), now), "just asked: wait")
+        self.assertIsNone(social.choose([bare], tracks, {"all"}, warm(), now + 60), "a minute on: still waiting")
+        self.assertEqual(social.choose([dict(EZY, pending=[])], tracks, {"all"}, warm(), now + 75)[2]["hex"], EZY["hex"],
+                         "the answers came: posted, complete")
+        self.assertIsNotNone(social.choose([bare], tracks, {"all"}, warm(), now + social.SETTLE_S + 1), "past the wait: what is known")
+        fresh = social.Tracks(); fresh.by_hex = dict(tracks.by_hex)
+        self.assertIsNotNone(social.choose([bare], fresh, {"all"}, warm(), now, settle=False), "`social test` at the end of its half minute")
+
+    def test_the_wall_says_what_is_still_on_its_way(self):
+        srv = social.server
+        lk = srv.ThrottledLookup(lambda key: (None, True), gap=0, retry=600, miss_retry=600)
+        self.assertFalse(lk.pending("X"))
+        with lk.lock:
+            lk.cache["X"] = {"value": None, "retry_at": 0, "queued": True}
+        self.assertTrue(lk.pending("X"), "asked, not answered")
+        with lk.lock:
+            lk.cache["X"] = {"value": None, "retry_at": 1e12, "queued": False}
+        self.assertFalse(lk.pending("X"), "answered 'not found' (or failed): nothing to wait for")
+        route = lambda cs: None
+        route.pending = lambda cs: True
+        planes, _ = srv.build_planes({"aircraft": [{"hex": "484b6c", "flight": "KLM24V", "lat": 49.25, "lon": 6.2, "alt_baro": 38000}]},
+                                     49.25, 6.2, 10, route_lookup=route)
+        self.assertEqual(planes[0]["pending"], ["route"])
+
+
 class ChoiceTest(unittest.TestCase):
     def test_all_means_every_rule_and_the_special_aircraft_first(self):
         # 0.19.1, from the owner: ticking ALL alone must still treat a military aircraft as military

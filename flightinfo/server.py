@@ -26,7 +26,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.19.4"
+VERSION = "0.19.5"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -489,6 +489,12 @@ def build_planes(data, lat, lon, radius_km, airlines=None, photo_lookup=None, de
                     if checked:
                         break
             route = checked
+        # What is still on its way from adsbdb for this aircraft: the wall ignores it (it shows the rows when they
+        # come); social sharing waits for it rather than post a board with empty rows (0.19.5, seen on the real Pi:
+        # KLM24V posted with no registration, no model and no route, thirty seconds after it appeared)
+        pending = []
+        if route is None and route_lookup is not None and getattr(route_lookup, "pending", None) and route_lookup.pending(flight):
+            pending.append("route")
         # The decoder only knows the type and the registration when its aircraft database has the airframe. When it
         # does not, ask adsbdb.com (by the aircraft's hex code) so the model is still shown and the silhouette fits.
         reg, code, found = ac.get("r"), ac.get("t"), None
@@ -497,6 +503,8 @@ def build_planes(data, lat, lon, radius_km, airlines=None, photo_lookup=None, de
             if found:
                 reg = reg or found.get("registration")
                 code = code or found.get("icao_type")
+            elif getattr(aircraft_lookup, "pending", None) and aircraft_lookup.pending(ac.get("hex")):
+                pending.append("model")
         kind = describe_type(dict(ac, t=code) if code != ac.get("t") else ac, types)
         if not kind["type_name"] and found and found.get("type"):
             kind["type_name"] = " ".join(x for x in (found.get("manufacturer"), found.get("type")) if x)
@@ -522,6 +530,7 @@ def build_planes(data, lat, lon, radius_km, airlines=None, photo_lookup=None, de
             "photo_credit": credit,
             "photo_link": link,
             "route": route,
+            "pending": pending,
         })
     planes.sort(key=lambda p: p["distance_km"])
     return planes, total
@@ -573,6 +582,13 @@ class ThrottledLookup(object):
                 if key in self.cache:
                     self.cache[key]["queued"] = False
         return value
+
+    def pending(self, key):
+        """True while the first answer for this key is on its way (asked, not yet answered). A key answered once,
+        found or not, or whose request failed, is not pending: there is nothing to wait for."""
+        with self.lock:
+            e = self.cache.get(key)
+            return bool(e and e["queued"] and e["value"] is None)
 
     def _loop(self):
         last = 0.0
@@ -829,6 +845,9 @@ def lookup_route(callsign):
     return _routes.get(cs) if CALLSIGN_RE.match(cs) else None
 
 
+lookup_route.pending = lambda callsign: _routes.pending((callsign or "").strip().upper())
+
+
 # --------------------------------------------------------------------------- routes, second opinion (hexdb.io, optional)
 # Asked ONLY when adsbdb gave a route that cannot be this flight, once per callsign (answers kept for hours). hexdb gives
 # airport codes only, so the position of each airport is asked once and kept for good. Several legs ("EGNX-ELLX-EGNX")
@@ -946,6 +965,9 @@ def lookup_aircraft(hex_code):
     """Non-blocking: what we already know about this airframe; a request is queued when it is missing."""
     h = (hex_code or "").strip().upper()
     return _aircraft.get(h) if HEX_RE.match(h) else None
+
+
+lookup_aircraft.pending = lambda hex_code: _aircraft.pending((hex_code or "").strip().upper())
 
 
 # --------------------------------------------------------------------------- HTTP
