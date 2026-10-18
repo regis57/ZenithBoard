@@ -153,11 +153,15 @@ class WordsTest(unittest.TestCase):
         for mode, st in social_card.MAP_STYLES.items():
             if st["credit"]:
                 self.assertLessEqual(len(st["credit"]), 45, mode)
-                self.assertIn("OpenStreetMap", st["credit"], mode)
                 for label, uri in st["links"]:
                     self.assertIn(label, st["credit"], mode)
                     self.assertTrue(uri.startswith("https://"), uri)
-                self.assertIn("OpenStreetMap contributors", st["credit_full"], mode)
+                if "OpenStreetMap" in st["credit_full"]:                     # every map drawn from OSM's data says so
+                    self.assertIn("OpenStreetMap", st["credit"], mode)
+                    self.assertIn("OpenStreetMap contributors", st["credit_full"], mode)
+                if st.get("names"):                                           # 0.24.4: the town names are GeoNames'
+                    self.assertIn("GeoNames", st["credit"], mode)
+                    self.assertIn("GeoNames (CC BY 4.0)", st["credit_full"], mode)
         self.assertIn("Copernicus Sentinel data", social_card.MAP_STYLES["satellite"]["credit_full"])
         t = social.post_text(EZY, CFG, credit="Map \u00a9 OpenStreetMap, EOX").split("\n")
         self.assertTrue(t[1].startswith("#ADSB"))
@@ -595,7 +599,26 @@ class FlapPictureTest(unittest.TestCase):
         self.assertEqual(info["map"], "satellite")
         self.assertIn("EOxCloudless", info["credit"])
         self.assertIn(("EOxCloudless", "https://cloudless.eox.at"), info["links"])
-        self.assertEqual({a[0] for a in asked}, {"s2cloudless-%d_3857" % social_card.S2_YEAR, "overlay_bright_3857"})
+        self.assertEqual({a[0] for a in asked}, {"s2cloudless-%d_3857" % social_card.S2_YEAR})    # names: ours (0.24.4)
+
+    def test_the_towns_are_named_on_the_satellite_and_terrain_maps(self):
+        # 0.24.4, from real posts over Metz: EOX's label layer named one village (Amnéville) in forty kilometres. The
+        # towns of 5 000 or more from GeoNames are named instead, the largest first, never under another name
+        names = []
+        real = social_card.ImageDraw.ImageDraw.text
+        def spy(d, xy, text, *a, **k):
+            names.append(text)
+            return real(d, xy, text, *a, **k)
+        self.addCleanup(setattr, social_card.ImageDraw.ImageDraw, "text", real)
+        social_card.ImageDraw.ImageDraw.text = spy
+        metz = [[48.95 + i * 0.0125, 6.2, 30000, i * 5] for i in range(37)]
+        img, shown = social_card.draw_map(metz, dict(EZY, track=2), "#ff0000", mode="terrain",
+                                          fetch=lambda *a: fake_tile("terrain_3857", "jpg", 1, 1, 1))
+        self.assertEqual(shown, "terrain")
+        self.assertTrue({"Metz", "Thionville", "Hayange", "Woippy"} <= set(names), names)
+        del names[:]
+        social_card.draw_map(metz, EZY, "#ff0000", mode="normal", fetch=lambda *a: fake_tile("osm_3857", "jpg", 1, 1, 1))
+        self.assertNotIn("Metz", names, "the OpenStreetMap map names its towns itself")
 
     def _dots(self, **kw):
         if shutil.which(social.NODE) is None:

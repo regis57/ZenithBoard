@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.24.4
+- **The towns are named on every map.** The satellite and terrain maps relied on EOX's label layer, which named one village in forty kilometres on a real post over Metz. They now carry the names ZenithBoard draws itself: the places of 5 000 inhabitants or more (GeoNames, CC BY 4.0, shipped with ZenithBoard, nothing looked up), the largest first, never over another name, the aircraft, north or the key. The credit names GeoNames; the satellite map's credit no longer names OpenStreetMap, whose labels it no longer carries. The OpenStreetMap maps already name their towns.
+- Checked at the owner's question: the scale bar and the track agree with the real distances and speeds. A Transavia at 997 km/h over three minutes flies 50 km; its track measured 48 km against the 10 km bar on the post; Metz to Thionville (28 km) measures 27 km on a preview.
+
 ## 0.24.3
 - **The posts can have their own units.** `sudo zenithboard social units imperial` (or `metric`, or `wall`, the default: the wall's own `UNITS`, as before), and a question in the picture wizard (menu *Social sharing → Picture*): the altitude, speed and scale on the picture and the altitude in the text, in ft, knots and miles, whatever the wall shows. Asked for by the owner.
 
