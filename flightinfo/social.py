@@ -22,8 +22,8 @@ photo, and the account secret (a Bluesky app password), which lives in /etc/zeni
     social.py check          try the account: open a session on Bluesky
     social.py status         what it would do right now
 
-Standard library only for the service and the network, like the rest of the wall; Pillow only for the split-flap
-look, imported when that look is chosen.
+Standard library only for the service and the network, like the rest of the wall; Pillow only for the looks with a
+map (dotmap, flap), imported when one of them is chosen.
 """
 import datetime
 import json
@@ -751,7 +751,7 @@ def _node(spec, out, *extra):
 
 
 def flap_module():
-    """social_card (Pillow), or None when Pillow is not installed. Only the split-flap look needs it."""
+    """social_card (Pillow), or None when Pillow is not installed. Only the looks with a map (dotmap, flap) need it."""
     try:
         import social_card
         return social_card

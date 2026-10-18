@@ -90,7 +90,7 @@ zenithboard social status
 zenithboard logs social
 ```
 
-`on` installs what the picture needs from Debian if it is missing — Node (about 30 MB; it draws the dot-matrix picture and formats the rows of both), plus Pillow with the DejaVu fonts for the split-flap one (a few MB) — starts the service, and says the rules it will follow. `off` stops it and keeps the account; `remove` forgets the account too.
+`on` installs what the picture needs from Debian if it is missing — Node (about 30 MB; it draws the dot-matrix picture and formats the rows of both), plus Pillow with the DejaVu fonts for the two looks with a map, `dotmap` and `flap` (a few MB) — starts the service, and says the rules it will follow. `off` stops it and keeps the account; `remove` forgets the account too.
 
 ---
 
@@ -115,7 +115,7 @@ The scale is chosen for each picture, from 1 to 500 km per bar, the smallest tha
 
 ![The dot-matrix picture with a map, drawn here without its tiles](https://github.com/regis57/ZenithBoard/raw/main/docs/images/social-dotmap.jpg)
 
-`sudo zenithboard social look dotmap` (0.23.0, asked for by the owner): the dot-matrix wall as above, and in the right-hand column, instead of the track in dots, the map of the split-flap look below — the same four maps, the same credit, the same `social map` setting and its `rotate` — with the track, the aircraft, the key and north. Node draws the dots with that column left dark and says where it is; Pillow lays the map there and writes a JPEG under Bluesky's limit. The map is a strip 400 pixels wide and 800 high, so the view is chosen in the part above the key and the credit: an aircraft flying south ends above the key, not under it. With `social map none` the look draws the track in dots, as `dots` does, and fetches nothing.
+`sudo zenithboard social look dotmap` (0.23.0, asked for by the owner): the dot-matrix wall as above, and in the right-hand column, instead of the track in dots, the map of the split-flap look below — the same four maps, the same credit, the same `social map` setting and its `rotate` — with the track, the aircraft, the key and north. Node draws the dots with that column left dark and says where it is; Pillow lays the map there and writes a JPEG under Bluesky's limit. The map is a strip 400 pixels wide and 800 high, so when the aircraft would land under the key, the view is chosen in the part above the key and the credit: an aircraft flying south ends above the key, not under it. With `social map none` the look draws the track in dots, as `dots` does, and fetches nothing.
 
 *The picture above was made where the tile service cannot be reached: it is what the Pi posts when the tiles do not come, the track on a dark grid, with no credit. With the tiles, the strip is the map of the split-flap picture.*
 

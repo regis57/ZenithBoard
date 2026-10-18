@@ -305,7 +305,7 @@ zb_retired_colours() {
   # command with theme=turquoise alone would drop its other settings
   for p in $(grep -E '^PRESET_[A-Z0-9]+="?([^"]* )?theme=blue( |"|$)' "$ZB_CONFIG" 2>/dev/null | cut -d= -f1); do
     n=$(printf '%s' "${p#PRESET_}" | tr '[:upper:]' '[:lower:]')
-    v=$(cfg_get "$p" "" | sed -E 's/(^| )theme=blue( |$)/\1theme=turquoise\2/')
+    v=$(cfg_get "$p" "" | sed -E ':a; s/(^| )theme=blue( |$)/\1theme=turquoise\2/; ta')
     warn "The preset $n sets theme=blue, taken out in 0.23.0: that tablet shows the wall's colour meanwhile. Set it again (turquoise, or another colour):  sudo zenithboard preset add $n $v"
   done
   return 0

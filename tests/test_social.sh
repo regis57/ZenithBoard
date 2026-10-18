@@ -49,7 +49,14 @@ check "migrate: a blue picture colour is named, not changed" 'social_migrate 2>&
 cfg_set THEME blue
 check "migrate: the colour the posts take is the one named" 'social_migrate 2>&1 | grep -q "the wall.s colour (amber)" && [ "$(cfg_get THEME)" = blue ]'
 check "colour: the wall's colour as it shows"       '[ "$(wall_theme)" = amber ] && social_set_colour wall | grep -q "the wall.s (amber)"'
-cfg_del THEME; cfg_set SOCIAL_THEME ""
+# the picture wizard on a Pi left on blue: the wall's colour ticked and named as it shows, the closing screen too.
+# The stand-in whiptail answers Enter: the item ticked ON, or nothing when none is
+wizard=$( wt_radio() { local t=$1 on=""; shift; echo "$t: $*" >> "$t_log"; while [ $# -ge 3 ]; do [ "$3" = ON ] && on=$1; shift 3; done; [ -n "$on" ] && echo "$on"; }
+          wt_msg() { echo "MSG $1" >> "$t_log"; }; clear() { :; }; t_log="$t/wizard.log"; : > "$t_log"
+          cfg_set SOCIAL_THEME blue; cfg_set SOCIAL_STYLE dots; social_setup_picture >/dev/null 2>&1; echo "rc=$?"; cat "$t_log" )
+check "wizard: a blue picture colour shows the wall's ticked, as amber" 'echo "$wizard" | grep -q "^Colour.*wall The wall.s own colour (amber) ON"'
+check "wizard: it saves and says the colour drawn"   'echo "$wizard" | grep -q "^rc=0" && echo "$wizard" | grep -q "MSG Saved. Picture: dots, the wall.s colour (amber)" && [ -z "$(cfg_get SOCIAL_THEME "")" ] && [ "$(cfg_get THEME)" = blue ]'
+cfg_del THEME; cfg_set SOCIAL_THEME ""; cfg_del SOCIAL_STYLE
 check "migrate: no blue, no word about it"          '! social_migrate 2>&1 | grep -q "0.23.0"'
 social_secrets_write "MASTODON_URL=https://mastodon.social" "MASTODON_TOKEN=tok_123"
 cfg_set SOCIAL 1

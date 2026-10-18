@@ -67,6 +67,7 @@ MAP_STYLES = {
     "none": {"layers": [], "words": "", "credit": None, "links": [], "credit_full": None},
 }
 MAX_ZOOM, MIN_ZOOM = 12, 4                   # 12: about 18 km across the map at 49 degrees north
+LEGEND_W = 340                               # the legend box's widest (a 100 km bar and its label): what the aircraft must clear
 FIT = 0.7                                    # the track takes at most this share of the map, so the aircraft is never on the edge
 CACHE_DAYS = 30
 CACHE_MAX_BYTES = 60 * 1024 * 1024
@@ -315,12 +316,17 @@ def draw_map(trace, plane, color, units="metric", mode="normal", cache_dir=None,
     color = rgb(color)
     f = font(20)
     fs = font(15, bold=False)
-    # The legend and the credit take a band at the foot of the map; the track is centred in the area above it, so
-    # the aircraft is never under the legend. A north-south track on the narrow dotmap map put it there (0.23.0).
+    # The legend and the credit take a band at the foot of the map. When the aircraft would land under the legend,
+    # the track is centred in the area above that band instead: a north-south track on the narrow dotmap map put it
+    # there (0.23.0). Only then, so that the wide split-flap map keeps its zoom for the tracks that were clear.
     planned = _wrap(ImageDraw.Draw(Image.new("RGB", (1, 1))), style["credit_full"], fs, w - 24) \
         if style["credit_full"] else []
     band = 19 * len(planned) + (10 if planned else 0) + 12 + 74 + 12
-    z, ox, oy = choose_view(trace, w, h - band)
+    z, ox, oy = choose_view(trace, w, h)
+    if trace:
+        ax, ay = world_px(trace[-1][0], trace[-1][1], z)
+        if ay - oy + 30 > h - band and ax - ox - 30 < 12 + LEGEND_W:
+            z, ox, oy = choose_view(trace, w, h - band)
     img = Image.new("RGB", (w, h), (16, 16, 16))
     n = 2 ** z
     tiles = [(tx, ty) for ty in range(oy // 256, (oy + h - 1) // 256 + 1) for tx in range(ox // 256, (ox + w - 1) // 256 + 1)

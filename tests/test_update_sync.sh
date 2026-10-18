@@ -76,6 +76,8 @@ cmd=$(printf '%s\n' "$out" | sed -n -E 's/.*sudo zenithboard preset add (.*)$/\1
 # shellcheck disable=SC2086  # the words of the printed command, as a shell would split them
 ( . "$HERE/lib/settings.sh"; preset_add $cmd ) >/dev/null 2>&1
 check "retired blue: the preset command works as printed" "$?:$(cfg_get PRESET_TV)" "0:theme=turquoise mode=flap"
+cfg_set PRESET_TV "mode=flap theme=blue radius=5 theme=blue"       # written twice by a pre-0.23.0 preset add
+check "retired blue: every theme=blue replaced, wherever it stands" "$(zb_retired_colours 2>&1 | sed -n -E 's/.*preset add (.*)$/\1/p')" "tv mode=flap theme=turquoise radius=5 theme=turquoise"
 cfg_set THEME green; cfg_del PRESET_TV
 check "retired blue: silent otherwise"            "$(zb_retired_colours 2>&1)" ""
 # ---- the wall is asked what it is actually running, and restarted when it is not the installed version.
