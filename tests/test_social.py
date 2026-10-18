@@ -538,6 +538,15 @@ class PictureTest(unittest.TestCase):
                                         "EDINBURGH", "\u2192SAINT-LOUIS", "11:39 GMT+2"])
         self.assertEqual(got["color"], "#39ff6a")
 
+    def test_the_posts_have_their_own_units(self):
+        # 0.24.3, asked for by the owner: imperial posts whatever the wall shows, or the wall's own units by default
+        self.assertEqual(social.units_of({"UNITS": "metric"}), "metric")
+        self.assertEqual(social.units_of({"UNITS": "metric", "SOCIAL_UNITS": "imperial"}), "imperial")
+        self.assertEqual(social.units_of({"UNITS": "imperial", "SOCIAL_UNITS": ""}), "imperial")
+        self.assertEqual(social.units_of({"SOCIAL_UNITS": "feet"}), "metric")
+        t = social.post_text(EZY, dict(CFG, UNITS="metric", SOCIAL_UNITS="imperial"))
+        self.assertIn("altitude 37\u00a0000\u00a0ft", t)
+
     def test_the_picture_s_colour_setting(self):
         self.assertEqual(social.theme_of({"THEME": "red"}), "red")                          # the wall's, by default
         self.assertEqual(social.theme_of({"THEME": "red", "SOCIAL_THEME": "turquoise"}), "turquoise")

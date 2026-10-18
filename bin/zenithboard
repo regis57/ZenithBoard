@@ -89,6 +89,7 @@ ZenithBoard $ZB_VERSION - ADSB Flight Info
   zenithboard social picture            the picture: dot-matrix or split-flap, its colour, the map (a wizard)
   zenithboard social look dotmap|flap|alternate   the dot-matrix wall with a map, the split-flap board with a map, or the two in turn
   zenithboard social colour NAME|wall|rotate   amber, green, red, white, turquoise, the wall's own, or in turn
+  zenithboard social units metric|imperial|wall   the posts' units, or the wall's own
   zenithboard social map NAME|rotate    the map of the dotmap and flap looks: normal, night, satellite, terrain, none, or in turn
   zenithboard social test [HEX]         draw the picture and print the text, post nothing (see it at /social/preview)
   zenithboard social on|off|status      post the aircraft overhead as a picture of the wall (off by default)
@@ -257,6 +258,7 @@ case "${1:-}" in
       gap)    if [ -n "${3:-}" ]; then root_or_die; fi; social_set_gap "${3:-}" ;;
       look)   root_or_die; social_set_look "${3:-}" ;;
       colour|color) root_or_die; social_set_colour "${3:-}" ;;
+      units) root_or_die; social_set_units "${3:-}" ;;
       map)    root_or_die; social_set_map "${3:-}" ;;
       on)     root_or_die; social_on ;;
       off)    root_or_die; social_off ;;
@@ -265,7 +267,7 @@ case "${1:-}" in
       check)  root_or_die; python3 "$SOCIAL_PY" check ;;
       status) social_status ;;
       remove) root_or_die; social_remove ;;
-      *) die "Usage: zenithboard social setup|words|hashtags [WORD...]|gap [MINUTES]|picture|look dotmap|flap|alternate|colour NAME|map NAME|on|off|test [HEX]|post [HEX]|check|status|remove" ;;
+      *) die "Usage: zenithboard social setup|words|hashtags [WORD...]|gap [MINUTES]|picture|look dotmap|flap|alternate|colour NAME|units metric|imperial|wall|map NAME|on|off|test [HEX]|post [HEX]|check|status|remove" ;;
     esac ;;
   patches)
     case "${2:-status}" in

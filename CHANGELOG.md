@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.24.3
+- **The posts can have their own units.** `sudo zenithboard social units imperial` (or `metric`, or `wall`, the default: the wall's own `UNITS`, as before), and a question in the picture wizard (menu *Social sharing → Picture*): the altitude, speed and scale on the picture and the altitude in the text, in ft, knots and miles, whatever the wall shows. Asked for by the owner.
+
 ## 0.24.2
 - Code scanning (CodeQL) findings put right: `social status | head` no longer leaves a file handle open when the reader leaves; an unused distance function went from the dot renderer; an empty `except` says why; a test imported the map module twice.
 
