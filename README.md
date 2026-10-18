@@ -163,6 +163,7 @@ Menu *4 Settings → Network → 1 Wi-Fi* sets up the Pi's Wi-Fi without leaving
 | **Hidden network** | `sudo zenithboard wifi connect "My network" --hidden` |
 | **Saved networks**: connect, change password, auto-connect on/off, forget | `zenithboard wifi list` · `sudo zenithboard wifi forget "My network"` |
 | **Status** (radio, country, network, wired/Wi-Fi priority) | `zenithboard wifi status` |
+| **Hardening** (optional, off by default): keep rejoining after a loss, and the radio's power saving off | `sudo zenithboard wifi harden on` · `off` · `status` |
 
 What is kept after a crash, a power cut or a reboot: each network is a NetworkManager profile file (root only, readable by nobody else, `/etc/NetworkManager/system-connections/zenithboard-wifi-*.nmconnection`), joined automatically at boot. The on/off choice and the country are saved in the ZenithBoard settings and re-applied at every boot by a small service (`zenithboard-wifi`). A Pi that was set up some other way is not touched until you use this menu once. The password is typed in a hidden field and goes straight into the protected file: it never appears on a command line.
 
@@ -284,7 +285,7 @@ Not convincing? Nothing to undo: the dot matrix stays the default until you chan
 
 ## Colours
 
-The dots are **amber by default**. Pick amber, green, red, white or turquoise (`#00d6d7`). One colour at a time: the point is a lit sign, not a screenshot of a map. (A dark blue was offered until 0.22.0; it read poorly, on the wall and on a phone, and was taken out. A wall still set to it shows amber until you choose: the update says so.)
+The dots are **amber by default**. Pick amber, green, red, white or turquoise (`#00d6d7`). One colour at a time: the point is a lit sign, not a screenshot of a map. (A dark blue was offered until 0.23.0; it read poorly, on the wall and on a phone, and was taken out. A wall still set to it shows amber until you choose: the update says so.)
 
 | Where | How |
 |---|---|
@@ -481,6 +482,15 @@ sudo zenithboard menu                                 # add or remove any compon
 sudo /opt/zenithboard/install.sh --uninstall-all      # remove everything
 ```
 
+**Keep your settings as a file**, to put them back after a fresh install or to move them to another Pi — menu *7 Maintenance*, or:
+
+```bash
+zenithboard settings export                    # zenithboard-settings-HOST-DATE.env, no secret in it
+sudo zenithboard settings import FILE          # the file from before is kept as config.env.bak-DATE
+```
+
+Nothing that looks like a secret leaves with it: the Bluesky app password and the feeders' keys stay in their own root-only files. An import takes only `KEY=VALUE` lines and says how many it skipped.
+
 **One exception: readsb is never removed automatically.** Its installer builds it from source and provides no way back, so ZenithBoard says so and prints the commands to run by hand rather than deleting system files it did not put there. Everything else is removed normally.
 
 ### When FlightAware, ADSB Exchange, Flightradar24 or Plane Finder change something
@@ -512,7 +522,7 @@ The limit applies to all system logs (it is a journald setting, written to `/etc
 
 ## Statistics: messages per hour, range, aircraft per day (optional)
 
-Off by default. `sudo zenithboard stats on` (or menu 4 → Receiver → 5) takes one sample every fifteen minutes and keeps thirty days of them. Then `http://<pi-address>:8080/stats` shows today's numbers and three charts, and `zenithboard stats` prints the same in the terminal with a sparkline of the day's hours. The daily aircraft count is a floor: a sample every fifteen minutes misses an aircraft that crossed in less. About 6 KB a day on the card; `stats off` stops it and keeps the files. Details on the wiki: [Statistics](https://github.com/regis57/ZenithBoard/wiki/Statistics).
+Off by default. `sudo zenithboard stats on` (or menu 4 → Receiver → 5) takes one sample every fifteen minutes and keeps thirty days of them. Then `http://<pi-address>:8080/stats` shows today's numbers and three charts, and `zenithboard stats` prints the same in the terminal with a sparkline of the day's hours. The daily aircraft count is a floor: a sample every fifteen minutes misses an aircraft that crossed in less. About 6 KB a day on the card; `stats off` stops it and keeps the files. `zenithboard stats gaps` lists what the wall could not name or draw over those thirty days — callsign prefixes shown without an airline name, type codes drawn with the generic silhouette — which is how the next airline lookup and the next silhouettes get chosen on figures rather than guesses. Details on the wiki: [Statistics](https://github.com/regis57/ZenithBoard/wiki/Statistics).
 
 Under the four numbers, two lines name **the farthest aircraft of the day and of the thirty days**: when, the airline and flight number, where it flew from and to, the model, the altitude, the distance, and the city of 100 000 inhabitants or more nearest to it (`18/10 14:32 · easyJet U21234 (EZY1234) · Edinburgh (EDI) → Saint-Louis (BSL) · … · 329 km, 55 km from Lille, FR`). The decoder only says how far, so with statistics on the wall watches its aircraft list every five seconds and keeps the farthest one; the route comes from the same lookup as the wall's, the city from a list shipped with ZenithBoard ([GeoNames](https://www.geonames.org/), CC BY 4.0), with nothing asked of the internet for it.
 
