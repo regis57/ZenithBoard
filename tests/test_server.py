@@ -736,11 +736,12 @@ class FarthestTest(unittest.TestCase):
 
     def test_the_city_list_names_cities_not_their_districts(self):
         names = {c[0] for c in server.load_cities()}
-        self.assertTrue({"Paris", "Berlin", "Lyon", "Metz", "Trier", "Saarbrücken"} <= names)
-        self.assertFalse({"Paris 15 Vaugirard", "Neukölln", "Lyon 03", "Kreuzberg"} & names)
+        # set differences, so a failure names the cities concerned (CodeQL: an assertTrue(a <= b) says nothing)
+        self.assertEqual(set(), {"Paris", "Berlin", "Lyon", "Metz", "Trier", "Saarbrücken"} - names)
+        self.assertEqual(set(), {"Paris 15 Vaugirard", "Neukölln", "Lyon 03", "Kreuzberg"} & names)
         # GeoNames gives these two an administrative area's population (checked, see tools/make_cities.py): the
         # preview named a point over the Channel "near Saint Peters", a part of Broadstairs of 7 000 people
-        self.assertFalse({"Saint Peters", "Mendip"} & names)
+        self.assertEqual(set(), {"Saint Peters", "Mendip"} & names)
         self.assertEqual(server.nearest_city(51.25, 2.0), {"name": "Brugge", "country": "BE", "km": 85})
         self.assertGreater(len(names), 4000)
         with open(server.CITIES_FILE, encoding="utf-8") as fh:
