@@ -34,6 +34,7 @@ Run the whole set before pushing. It takes well under a minute, and the shell te
 | `test_update_sync.sh`, `test_versions.sh` | That the updater knows every component, that every unit file is refreshed, that the wall is asked which version it is actually running and restarted when it is behind, and that the two version numbers agree |
 | `test_fr24_key.sh` | The Flightradar24 signing key, by fingerprint |
 | `test_menus.sh` | Every menu has exactly one `back` entry and no dead item |
+| `test_install.sh` | `install.sh` run as a newcomer runs it, against a whiptail that answers from a script and records every screen: the flags, the first-run wizard from a blank settings file to the main menu, a bad latitude or altitude asked again, the hardware notice once, a clear stop when whiptail cannot be installed, no error on a machine that is not a Pi, the six colours and the six settings groups the README names |
 | `test_format.js` | Formatting and unit conversion on the wall |
 | `test_shapes.js`, `test_scene.js`, `test_flap.js` | Silhouettes, the animated scene, the split-flap board |
 | `test_settings.sh` | Settings export never carries a secret, import takes only `KEY=VALUE` and keeps a way back; preset names, keys and what the wall serves; Wi-Fi hardening sets two things and `off` puts them back (against an `nmcli` stub); the `stats gaps` counters against a wall stub on the loopback; the typed word before each destructive menu step |
@@ -56,7 +57,7 @@ PATH="$STUB_DIR:$PATH"
 
 **2. Environment overrides for every path.** No module hard-codes a system path. Each one reads an override first, so a test can point it at a temporary directory:
 
-`ZB_SYSTEMD_CONF_DIR`, `ZB_JOURNALD_DIR`, `ZB_RUN_DIR`, `ZB_VAR_DIR`, `ZB_JOURNAL_DIR`, `ZB_WATCHDOG_DEV`, `ZB_UPTIME_FILE`, `ZB_NETWATCH_SLEEP`, `ZB_DEFAULT_DIR`, `ZB_STATS_DIR`, `ZB_PI_MODEL_FILE`.
+`ZB_SYSTEMD_CONF_DIR`, `ZB_JOURNALD_DIR`, `ZB_RUN_DIR`, `ZB_VAR_DIR`, `ZB_JOURNAL_DIR`, `ZB_WATCHDOG_DEV`, `ZB_UPTIME_FILE`, `ZB_NETWATCH_SLEEP`, `ZB_DEFAULT_DIR`, `ZB_STATS_DIR`, `ZB_PI_MODEL_FILE`, and for the installer as a whole `ZENITHBOARD_ETC`, `ZENITHBOARD_HOME` and `ZENITHBOARD_BIN_DIR` (the settings folder, `/opt/zenithboard` and where the `zenithboard` command is linked).
 
 `ZB_NETWATCH_SLEEP=0` is the one that makes testing a watchdog bearable: a test for the 12-minute reboot decision runs instantly.
 

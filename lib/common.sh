@@ -4,7 +4,8 @@
 
 ZB_ETC="${ZENITHBOARD_ETC:-/etc/zenithboard}"   # override only for testing
 ZB_CONFIG="$ZB_ETC/config.env"
-ZB_HOME="/opt/zenithboard"; export ZB_HOME
+ZB_HOME="${ZENITHBOARD_HOME:-/opt/zenithboard}"; export ZB_HOME     # override only for testing (tests/test_install.sh)
+ZB_BIN_DIR="${ZENITHBOARD_BIN_DIR:-/usr/local/bin}"; export ZB_BIN_DIR   # where the zenithboard command is linked
 ZB_DATA="/var/lib/zenithboard"; export ZB_DATA
 ZB_USER="zenithboard"; export ZB_USER
 RADIUS_PRESETS="1 2 5 10 15 30 50"
@@ -144,7 +145,7 @@ zb_tmp_clean() { [ -z "${ZB_TMPDIR:-}" ] || rm -rf "$ZB_TMPDIR"; ZB_TMPDIR=""; }
 fetch() {  # fetch URL DEST   (fails loudly)
   # https only, and a redirection cannot drop to plain http on the way
   curl -fsSL --proto '=https' --proto-redir '=https' --tlsv1.2 --retry 3 --connect-timeout 15 --max-time 900 \
-       -o "$2" "$1" || { err "Download failed: $1"; return 1; }
+       -o "$2" "$1" || { err "Download failed: $1   (no internet on the Pi, or the address moved: see lib/versions.sh)"; return 1; }
 }
 
 ini_set() {  # ini_set FILE KEY VALUE  -> KEY="VALUE" (replace or append)
@@ -194,7 +195,9 @@ LOW_MEM_MB=1500          # boards below this (a "1 GB" Pi reports ~900 MB) are t
 mem_total_mb() { awk '/^MemTotal:/ {printf "%d", $2/1024}' "${ZB_MEMINFO:-/proc/meminfo}"; }
 mem_avail_mb() { awk '/^MemAvailable:/ {printf "%d", $2/1024}' "${ZB_MEMINFO:-/proc/meminfo}"; }
 is_low_mem()   { [ "$(mem_total_mb)" -lt "$LOW_MEM_MB" ]; }
-pi_model()     { tr -d '\0' < "${ZB_PI_MODEL_FILE:-/proc/device-tree/model}" 2>/dev/null; }
+# On a machine that is not a Pi the file does not exist, and bash reports a missing input file before 2>/dev/null
+# applies (seen in the fresh-install check, 0.21.1): test for it first, so a non-Pi gets an empty model, not an error.
+pi_model()     { local f="${ZB_PI_MODEL_FILE:-/proc/device-tree/model}"; [ -r "$f" ] && tr -d '\0' < "$f"; }
 is_old_pi()    { pi_model | grep -qE 'Raspberry Pi (Zero|[0-3]|Model)'; }   # Zero, 1, 2, 3 (any variant)
 
 local_ip() { hostname -I 2>/dev/null | awk '{print $1}'; }

@@ -282,7 +282,10 @@ adsb_menu() {
   clear
   if [ "$dec_now" != "$dec_sel" ]; then
     [ -n "$dec_now" ] && remove_decoder
-    install_decoder "$dec_sel" || { err "Decoder installation failed"; read -rp "Press Enter to continue..." _; return 0; }
+    install_decoder "$dec_sel" || {
+      err "Decoder installation failed, so nothing else was installed: ADSB Exchange and the feeders need the decoder."
+      err "Fix the cause (the line above says what failed: usually no internet) and come back to menu 1."
+      read -rp "Press Enter to continue..." _; return 0; }
   else
     cfg_set DECODER "$dec_sel"
   fi

@@ -47,7 +47,7 @@ Two *Later* items are to be built from what the reference Pi measures, not from 
 And three proofs of stability that no caveat names yet:
 
 * **Two to four weeks hands-off**, social sharing on: no crash in `zenithboard logs`, no reboot forced by a watchdog.
-* **A fresh install** on a blank card, following the README alone. Everything so far was proven on a Pi upgraded release after release; only a fresh install proves the README.
+* **A fresh install** on a blank card, following the README alone. Everything so far was proven on a Pi upgraded release after release; only a fresh install proves the README. Since 0.21.1 the installer is walked end to end against stand-ins at every change (`tests/test_install.sh`: flags, wizard, menus), which found a handful of small things, fixed in that release; the blank card itself is what remains.
 * **An update from an old release** (0.19 to the latest, say) with nothing done by hand.
 
 ## Next — once the above is proven

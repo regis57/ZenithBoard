@@ -154,6 +154,7 @@ And the things you may need to do by hand:
 | Command | sudo | What it is for |
 |---|---|---|
 | `sudo ./install.sh` | yes | First install, from the clone |
+| `./install.sh --help` · `./install.sh --version` | no | The flags, and the version of the clone |
 | `sudo /opt/zenithboard/install.sh --uninstall-all` | yes | Remove everything ZenithBoard installed. **readsb is the one exception**: it has no uninstaller, so the commands to remove it by hand are printed instead |
 | `./bin/zenithboard-demo` | | A fake sky on port 8081: no dongle, no Pi needed |
 | `REAL_PHOTOS=1 ./bin/zenithboard-demo` | | The same, with real photos and routes |

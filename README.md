@@ -122,7 +122,7 @@ The first run asks, once:
 <p align="center"><img src="docs/images/install-2-units.png" alt="Choosing metric or imperial units" width="400"></p>
 
 ### 5. Use the menu
-After the questions, the installer shows its main menu. *4 Settings* is organised in the order of a first setup, in four groups: **1 Network** (Wi-Fi, fixed IP, domain name), **2 Receiver** (region, units, antenna position, dongle gain: what the dongle and its antenna are used for), **3 ZenithBoard wall** (radius, look, colour, seconds per aircraft, photos, routes, monthly data refresh) and **4 Logs** and **5 Reliability** (watchdogs, saved logs, health check). *6 Update* has a quick entry first — ZenithBoard and the wall in seconds, the feeders left alone — then everything at once, or the components you tick. *7 Maintenance* saves your settings to a file (no secrets in it), restores them from one, and holds the uninstall, which asks you to type the word `uninstall` rather than press Enter once too often. You can come back to it at any time with `sudo ./install.sh` (or `sudo zenithboard menu`) to add or remove things.
+After the questions, the installer shows its main menu. *4 Settings* is organised in the order of a first setup, in six groups: **1 Network** (Wi-Fi, fixed IP, domain name), **2 Receiver** (region, units, antenna position, dongle gain, statistics: what the dongle and its antenna are used for), **3 ZenithBoard wall** (radius, look, colour, seconds per aircraft, photos, routes, monthly data refresh, presets), **4 Logs**, **5 Reliability** (watchdogs, saved logs, health check, Debian patches) and **6 Social sharing** (Bluesky). *6 Update* has a quick entry first — ZenithBoard and the wall in seconds, the feeders left alone — then everything at once, or the components you tick. *7 Maintenance* saves your settings to a file (no secrets in it), restores them from one, and holds the uninstall, which asks you to type the word `uninstall` rather than press Enter once too often. You can come back to it at any time with `sudo ./install.sh` (or `sudo zenithboard menu`) to add or remove things.
 
 Everything in the menus also exists as a command, which is quicker once you know what you want: `zenithboard status`, `sudo zenithboard update`, `zenithboard gain check`… The full list, grouped by subject with what each command is for, is the **[Command reference](https://github.com/regis57/ZenithBoard/wiki/Command-reference)** in the wiki.
 
@@ -135,7 +135,7 @@ Everything in the menus also exists as a command, which is quicker once you know
 **3 · ACARS** *(optional)* — asks for the second dongle's serial number and your frequencies, builds `acarsdec`, installs Grafana and a ready-made dashboard at `http://<pi-address>:3000/` (login `admin`; the password ZenithBoard set is shown by `sudo zenithboard acars password`).
 
 ### 6. Put the wall on the tablet
-Open the address from step 2 in the tablet's browser. Tap the browser's *Add to Home Screen* for a full-screen app look, or tap the faint gear in the bottom-right corner → **Full screen**. The screen stays awake and the page reloads itself if the Pi restarts.
+Open the address that menu *2 FlightInfo* printed at the end (`http://<pi-address>:8080/`, also shown by `zenithboard status`) in the tablet's browser. Tap the browser's *Add to Home Screen* for a full-screen app look, or tap the faint gear in the bottom-right corner → **Full screen**. The screen stays awake and the page reloads itself if the Pi restarts.
 
 Check that everything is healthy at any time:
 

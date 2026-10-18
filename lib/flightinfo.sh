@@ -36,7 +36,7 @@ deploy_files() {
     printf '%s\n' "$src" > "$ZB_HOME/.source"      # where to `git pull` from when updating
   fi
   chmod +x "$ZB_HOME/install.sh" "$ZB_HOME"/bin/*
-  ln -sf "$ZB_HOME/bin/zenithboard" /usr/local/bin/zenithboard
+  ln -sf "$ZB_HOME/bin/zenithboard" "$ZB_BIN_DIR/zenithboard"
 }
 
 install_flightinfo() {

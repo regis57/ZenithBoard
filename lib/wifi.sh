@@ -190,7 +190,10 @@ wifi_wired_note() {
 wifi_summary() {   # one short line for the Settings menu
   wifi_has_nm || { printf 'not managed by NetworkManager'; return; }
   [ -n "$(wifi_iface)" ] || { printf 'no adapter'; return; }
-  if wifi_radio_on; then printf 'ON, %s' "$(wifi_active_ssid | sed 's/^$/not connected/')"; else printf 'OFF'; fi
+  local s; s=$(wifi_active_ssid)
+  # nmcli prints nothing (not an empty line) when no network is active, so a sed on that output never ran and the
+  # summary read "ON, " (fresh-install check, 0.21.1)
+  if wifi_radio_on; then printf 'ON, %s' "${s:-not connected}"; else printf 'OFF'; fi
 }
 wifi_status() {
   if ! wifi_has_nm; then echo "Wi-Fi: NetworkManager is not running (Raspberry Pi OS Bookworm or newer uses it)."; return 0; fi
@@ -344,7 +347,7 @@ wifi_menu() {
   [ -n "$(wifi_iface)" ] || { wt_msg "No Wi-Fi adapter found on this Pi." 7; return 0; }
   wt_msg "$(wifi_wired_note)" 13
   while true; do
-    c=$(wt_menu "Wi-Fi\n\nRadio: $(wifi_radio_on && echo ON || echo OFF)    Country: $(wifi_country_now | sed 's/^$/not set/')\nConnected to: $(wifi_active_ssid | sed 's/^$/(no Wi-Fi network)/')    Ethernet: $( [ -n "$(wifi_eth_dev)" ] && echo cable || echo none )\nEverything here is saved and comes back after a crash or a reboot." \
+    c=$(wt_menu "Wi-Fi\n\nRadio: $(wifi_radio_on && echo ON || echo OFF)    Country: $(wifi_country_now | sed 's/^$/not set/')\nConnected to: $(s=$(wifi_active_ssid); printf '%s' "${s:-(no Wi-Fi network)}")    Ethernet: $( [ -n "$(wifi_eth_dev)" ] && echo cable || echo none )\nEverything here is saved and comes back after a crash or a reboot." \
       toggle "Wi-Fi: turn $(wifi_radio_on && echo OFF || echo ON)" \
       country "Country (regulatory domain)" \
       connect "Find and connect to a network (with signal strength)" \
