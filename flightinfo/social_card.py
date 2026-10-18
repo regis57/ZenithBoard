@@ -2,6 +2,9 @@
 """The split-flap picture for social sharing (0.19.0): the board, as the wall's split-flap look draws it, beside a
 map with the aircraft's track. Pillow draws it on the Pi itself, in a second or two on a Pi 3B: no browser.
 
+The same map also goes beside the dot-matrix wall (the "dotmap" look, 0.23.0): tools/social-render.js draws the
+dots with the right-hand column left dark, and render_dotmap() lays the map in that column.
+
 The board's rows come from the wall's own formatting (tools/social-render.js --lines), so they read exactly like
 the tablet; this file only paints them. The map comes from EOX's tile service (maps.eox.at), whose layers are
 "free to use" with a link back and the attribution, both of which every picture and every post carry:
@@ -64,6 +67,7 @@ MAP_STYLES = {
     "none": {"layers": [], "words": "", "credit": None, "links": [], "credit_full": None},
 }
 MAX_ZOOM, MIN_ZOOM = 12, 4                   # 12: about 18 km across the map at 49 degrees north
+LEGEND_W = 340                               # the legend box's widest (a 100 km bar and its label): what the aircraft must clear
 FIT = 0.7                                    # the track takes at most this share of the map, so the aircraft is never on the edge
 CACHE_DAYS = 30
 CACHE_MAX_BYTES = 60 * 1024 * 1024
@@ -310,7 +314,19 @@ def draw_map(trace, plane, color, units="metric", mode="normal", cache_dir=None,
     """The map with the track, the aircraft, the legend, north and the credit. Returns (image, shown_mode)."""
     style = MAP_STYLES.get(mode) or MAP_STYLES["normal"]
     color = rgb(color)
+    f = font(20)
+    fs = font(15, bold=False)
+    # The legend and the credit take a band at the foot of the map. When the aircraft would land under the legend,
+    # the track is centred in the area above that band instead: a north-south track on the narrow dotmap map put it
+    # there (0.23.0). Only then, so that the wide split-flap map keeps its zoom for the tracks that were clear.
+    planned = _wrap(ImageDraw.Draw(Image.new("RGB", (1, 1))), style["credit_full"], fs, w - 24) \
+        if style["credit_full"] else []
+    band = 19 * len(planned) + (10 if planned else 0) + 12 + 74 + 12
     z, ox, oy = choose_view(trace, w, h)
+    if trace:
+        ax, ay = world_px(trace[-1][0], trace[-1][1], z)
+        if ay - oy + 30 > h - band and ax - ox - 30 < 12 + LEGEND_W:
+            z, ox, oy = choose_view(trace, w, h - band)
     img = Image.new("RGB", (w, h), (16, 16, 16))
     n = 2 ** z
     tiles = [(tx, ty) for ty in range(oy // 256, (oy + h - 1) // 256 + 1) for tx in range(ox // 256, (ox + w - 1) // 256 + 1)
@@ -371,8 +387,6 @@ def draw_map(trace, plane, color, units="metric", mode="normal", cache_dir=None,
 
     # legend, north, credit: drawn at their size, on see-through dark boxes so they read on any map
     d = ImageDraw.Draw(img, "RGBA")
-    f = font(20)
-    fs = font(15, bold=False)
     credit = style["credit_full"] if shown != "none" else None
     clines = _wrap(d, credit, fs, w - 24) if credit else []
     ch = 19 * len(clines) + (10 if clines else 0)
@@ -422,18 +436,43 @@ def render(lines, trace, plane, out, color="#ffb000", units="metric", map_mode="
            user_agent=None):
     """The whole picture, written to `out` as a JPEG. Returns {width, height, bytes, map, credit, links,
     credit_full, map_words}: what the post and the alt text say about the map actually shown."""
-    if user_agent is None:
-        try:
-            import server
-            user_agent = server.USER_AGENT
-        except Exception:
-            user_agent = "ZenithBoard (+https://github.com/regis57/ZenithBoard)"
+    user_agent = _user_agent(user_agent)
     prune_cache(cache_dir)
     img = Image.new("RGB", (W, H), (0, 0, 0))
     img.paste(draw_board(lines, color), (M, BOARD_Y))
     mp, shown = draw_map(trace, plane, color, units, map_mode, cache_dir, fetch, user_agent)
     img.paste(mp, (MAP_X, M))
     size = save_jpeg(img, out)
+    return _info(W, H, size, shown)
+
+
+def _info(w, h, size, shown):
+    """What the post and the alt text say about the map actually shown: none of it shown, nothing credited."""
     st = MAP_STYLES.get(shown) or MAP_STYLES["none"]
-    return {"width": W, "height": H, "bytes": size, "map": shown, "credit": st["credit"], "links": list(st["links"]),
+    return {"width": w, "height": h, "bytes": size, "map": shown, "credit": st["credit"], "links": list(st["links"]),
             "credit_full": st["credit_full"], "map_words": st["words"] or "a plain dark background"}
+
+
+def _user_agent(user_agent):
+    if user_agent is not None:
+        return user_agent
+    try:
+        import server
+        return server.USER_AGENT
+    except Exception:
+        return "ZenithBoard (+https://github.com/regis57/ZenithBoard)"
+
+
+def render_dotmap(dots_png, box, trace, plane, out, color="#ffb000", units="metric", map_mode="normal", cache_dir=None,
+                  fetch=None, user_agent=None):
+    """The dot-matrix picture with a map in its right-hand column (0.23.0). dots_png is what tools/social-render.js
+    drew with "map": true, box its [x, y, w, h] for the map, in pixels. Written to `out` as a JPEG (a map in a PNG
+    would pass Bluesky's 1,000,000 bytes). Returns what render() returns."""
+    user_agent = _user_agent(user_agent)
+    prune_cache(cache_dir)
+    img = Image.open(dots_png).convert("RGB")
+    x, y, w, h = (int(v) for v in box)
+    mp, shown = draw_map(trace, plane, color, units, map_mode, cache_dir, fetch, user_agent, w=w, h=h)
+    img.paste(mp, (x, y))
+    size = save_jpeg(img, out)
+    return _info(img.width, img.height, size, shown)

@@ -64,6 +64,22 @@ check "refresh: the old unit is replaced by the repository's" "$(cmp -s systemd/
 check "refresh: a unit the Pi does not have is not installed" "$([ -e "$ud/zenithboard-netwatch.service" ] && echo yes || echo no)" "no"
 check "refresh: an identical unit is not rewritten" "$(stat -c %Y "$ud/zenithboard-flightinfo.service")" "$old_mtime"
 check "refresh: systemd is told once" "$(grep -c daemon-reload "$T/systemctl.log")" "1"
+# ---- 0.23.0: the dark blue is gone. A wall or a preset still set to it is not changed: the update names it, with
+#      the command; nothing is said to a Pi that never chose it
+cfg_set THEME blue; cfg_set PRESET_TV "theme=blue mode=flap"
+out=$(zb_retired_colours 2>&1)
+check "retired blue: the wall's colour named, with the command" "$(printf '%s' "$out" | grep -c 'taken out in 0.23.0.*zenithboard color turquoise')" "1"
+check "retired blue: the preset named"            "$(printf '%s' "$out" | grep -c 'preset tv sets theme=blue')" "1"
+check "retired blue: the settings themselves kept" "$(cfg_get THEME):$(cfg_get PRESET_TV)" "blue:theme=blue mode=flap"
+# the command printed for the preset is run as given: it is accepted and keeps the preset's other settings
+cmd=$(printf '%s\n' "$out" | sed -n -E 's/.*sudo zenithboard preset add (.*)$/\1/p')
+# shellcheck disable=SC2086  # the words of the printed command, as a shell would split them
+( . "$HERE/lib/settings.sh"; preset_add $cmd ) >/dev/null 2>&1
+check "retired blue: the preset command works as printed" "$?:$(cfg_get PRESET_TV)" "0:theme=turquoise mode=flap"
+cfg_set PRESET_TV "mode=flap theme=blue radius=5 theme=blue"       # written twice by a pre-0.23.0 preset add
+check "retired blue: every theme=blue replaced, wherever it stands" "$(zb_retired_colours 2>&1 | sed -n -E 's/.*preset add (.*)$/\1/p')" "tv mode=flap theme=turquoise radius=5 theme=turquoise"
+cfg_set THEME green; cfg_del PRESET_TV
+check "retired blue: silent otherwise"            "$(zb_retired_colours 2>&1)" ""
 # ---- the wall is asked what it is actually running, and restarted when it is not the installed version.
 #      Seen on a real Pi: the menu said 0.17.2 while the gear panel said 0.17.1, because that update had deployed
 #      the new files without passing through the FlightInfo step, which is what restarts the server process.

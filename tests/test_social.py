@@ -189,16 +189,25 @@ def warm(**kw):
 
 
 class VarietyTest(unittest.TestCase):
-    def test_alternate_and_rotate_meet_every_colour_in_both_looks(self):
+    def test_alternate_and_rotate_meet_every_colour_and_every_map_in_both_looks(self):
+        # 0.23.0: the turn is the two looks with a map, the dot-matrix wall and the split-flap board, both with the
+        # four maps; the dots-only track left it. Five colours (the dark blue is gone) against two looks: ten posts
         c = dict(CFG, SOCIAL_STYLE="alternate", SOCIAL_THEME="rotate", SOCIAL_MAP="rotate")
-        seen = [social.picture_for(c, n) for n in range(10)]
+        seen = [social.picture_for(c, n) for n in range(40)]
         looks = [s["SOCIAL_STYLE"] for s in seen]
-        self.assertEqual(looks, ["dots", "flap"] * 5)
-        for look in ("dots", "flap"):
-            self.assertEqual({s["SOCIAL_THEME"] for s in seen if s["SOCIAL_STYLE"] == look}, set(social.ROTATE_THEMES), look)
-        self.assertNotIn("blue", social.ROTATE_THEMES, "dark blue reads poorly on a phone: a fixed choice only")
-        self.assertEqual([s["SOCIAL_MAP"] for s in seen if s["SOCIAL_STYLE"] == "flap"][:4], list(social.ROTATE_MAPS))
+        self.assertEqual(looks[:10], ["dotmap", "flap"] * 5)
+        self.assertEqual(social.ROTATE_THEMES, ("amber", "green", "red", "white", "turquoise"))
+        for look in ("dotmap", "flap"):
+            self.assertEqual({s["SOCIAL_THEME"] for s in seen[:10] if s["SOCIAL_STYLE"] == look}, set(social.ROTATE_THEMES), look)
+            self.assertEqual([s["SOCIAL_MAP"] for s in seen[:8] if s["SOCIAL_STYLE"] == look], list(social.ROTATE_MAPS), look)
         self.assertIn("next: flap", social.picture_words(c, {"pictures": 1}))
+        self.assertIn("next: dotmap, red, night map", social.picture_words(c, {"pictures": 2}))
+
+    def test_the_dotmap_look_alone_turns_its_maps_at_every_post(self):
+        c = dict(CFG, SOCIAL_STYLE="dotmap", SOCIAL_THEME="white", SOCIAL_MAP="rotate")
+        self.assertEqual([social.picture_for(c, n)["SOCIAL_MAP"] for n in range(4)], list(social.ROTATE_MAPS))
+        self.assertEqual(social.picture_words(dict(c, SOCIAL_MAP="terrain")), "dotmap, white, terrain map")
+        self.assertEqual(social.picture_words(dict(c, SOCIAL_MAP="none")), "dots, white")     # no map: the track in dots
 
     def test_fixed_settings_stay_fixed(self):
         c = dict(CFG, SOCIAL_STYLE="flap", SOCIAL_THEME="green", SOCIAL_MAP="night")
@@ -460,6 +469,52 @@ class PictureTest(unittest.TestCase):
         self.assertGreater(out["outline"], 0, "the outline is drawn on the row above the airline")
         self.assertLess(out["last"], 74, "the airline's letters stop before it")
 
+    def test_the_flags_are_whole_beside_the_track_panel(self):
+        # 0.23.0, from a post: Eurowings D-AIDO, an Airbus. The German flag's white outline ends at dot 86, where the
+        # track panel's frame was drawn over it; the panel now starts at 88. The EU flag (no outline) at 75 to 85.
+        dido = dict(EZY, flight="EWG11S", registration="D-AIDO", type="A321", type_name="AIRBUS A-321", airline="Eurowings")
+        out = self.node("const g = new Uint32Array(R.GW * R.GH);"
+                        " R.drawWall(g, %s, 'metric', '12:16 GMT+2', true); R.drawTrack(g, %s, 110, R.THEMES.red);"
+                        " const at = (x, y) => g[y * R.GW + x];"
+                        " console.log(JSON.stringify({edge: [...Array(9).keys()].map(i => at(86, 7 + i)), eu: [...Array(7).keys()].map(i => at(80, 25 + i)),"
+                        " gap: [...Array(68).keys()].map(y => at(87, y)), frame: at(88, 30), panel: R.PANEL}));" % (json.dumps(dido), json.dumps(trace(60))))
+        self.assertEqual(out["edge"], [0xffffff] * 9, "the outline's right-hand column, top to bottom")
+        self.assertTrue(all(out["eu"]), out["eu"])
+        self.assertEqual(out["gap"], [0] * 68, "a dark column between the flags and the panel")
+        self.assertTrue(out["frame"])
+        self.assertEqual(out["panel"]["x"], 88)
+
+    def test_the_legend_and_no_track_stay_inside_the_frame(self):
+        # "100KM" is 29 dots: with the panel at 88 it must still end before the frame (dot 127); "NO TRACK" is 47 dots,
+        # the panel 40, so it is two lines
+        far = [[49.0, 4.0 + i * 0.02, 30000, i * 5] for i in range(121)]      # about 150 km in ten minutes: 100 km a bar
+        out = self.node("const box = (t) => { const g = new Uint32Array(R.GW * R.GH); R.drawTrack(g, t, 90, R.THEMES.amber);"
+                        " let lo = 999, hi = -1; for (let y = 1; y < 67; y++) for (let x = 0; x < R.GW; x++) { const v = g[y * R.GW + x];"
+                        " if (v && v !== 0x404040 && v !== 0x2a2a2a) { lo = Math.min(lo, x); hi = Math.max(hi, x); } } return [lo, hi]; };"
+                        " console.log(JSON.stringify({far: box(%s), none: box([]), scale: R.pickScaleKm(150)}));" % json.dumps(far))
+        self.assertEqual(out["scale"], 100)
+        self.assertGreater(out["far"][0], 88); self.assertLess(out["far"][1], 127)
+        self.assertGreater(out["none"][0], 88); self.assertLess(out["none"][1], 127)
+
+    def test_with_a_map_the_column_is_left_dark_and_its_place_is_given(self):
+        if shutil.which(social.NODE) is None or social_card is None:
+            self.skipTest("node or Pillow not installed here")
+        d = tempfile.mkdtemp(); self.addCleanup(shutil.rmtree, d, True)
+        got = social._node({"plane": EZY, "trace": trace(60), "units": "metric", "theme": "turquoise", "clock": "12:16 GMT+2",
+                            "flags": True, "pitch": 10, "map": True}, os.path.join(d, "dots.png"))
+        self.assertEqual(got["map_box"], [15 + 880, 15, 400, 800])    # dots 88 to 127, the whole height, at pitch 10
+        self.assertEqual(got["color"], "#00d6d7")
+        lit = lambda path: sum(1 for p in Image.open(path).convert("RGB").crop((895, 15, 1295, 815)).getdata()
+                               if p[0] < 90 and p[1] > 150 and p[2] > 150)
+        self.assertEqual(lit(os.path.join(d, "dots.png")), 0, "no track in dots where the map goes")
+        social._node({"plane": EZY, "trace": trace(60), "units": "metric", "theme": "turquoise", "clock": "12:16 GMT+2",
+                      "flags": True, "pitch": 10}, os.path.join(d, "track.png"))
+        self.assertGreater(lit(os.path.join(d, "track.png")), 0, "without a map, the track is drawn there")
+        out = self.node("const g = new Uint32Array(R.GW * R.GH); R.drawWall(g, %s, 'metric', '12:16 GMT+2', true);"
+                        " let lit = 0; for (let y = 0; y < R.GH; y++) for (let x = R.MAP_BOX.x; x < R.GW; x++) lit += g[y * R.GW + x] ? 1 : 0;"
+                        " console.log(JSON.stringify({lit: lit}));" % json.dumps(dict(EZY, airline="Virgin Atlantic Airways")))
+        self.assertEqual(out["lit"], 0, "nothing of the wall reaches the map's column")
+
     def test_colours_are_the_wall_s_own(self):
         # read from style.css, so a theme added to the wall is a theme of the picture
         out = self.node("console.log(JSON.stringify(Object.keys(R.THEMES).sort().map(k => [k, R.THEMES[k].toString(16)])));")
@@ -480,9 +535,11 @@ class PictureTest(unittest.TestCase):
 
     def test_the_picture_s_colour_setting(self):
         self.assertEqual(social.theme_of({"THEME": "red"}), "red")                          # the wall's, by default
-        self.assertEqual(social.theme_of({"THEME": "red", "SOCIAL_THEME": "blue"}), "blue")
+        self.assertEqual(social.theme_of({"THEME": "red", "SOCIAL_THEME": "turquoise"}), "turquoise")
+        self.assertEqual(social.theme_of({"THEME": "red", "SOCIAL_THEME": "blue"}), "red")   # gone in 0.23.0: the wall's
         self.assertEqual(social.theme_of({"THEME": "red", "SOCIAL_THEME": "pink"}), "red")  # not a colour: ignored
         self.assertEqual(social.style_of({"SOCIAL_STYLE": "FLAP"}), "flap")
+        self.assertEqual(social.style_of({"SOCIAL_STYLE": "dotmap"}), "dotmap")
         self.assertEqual(social.style_of({"SOCIAL_STYLE": "photo"}), "dots")
         self.assertEqual(social.map_of({"SOCIAL_MAP": "satellite"}), "satellite")
         self.assertEqual(social.map_of({"SOCIAL_MAP": "google"}), "normal")
@@ -524,13 +581,79 @@ class FlapPictureTest(unittest.TestCase):
         self.assertIn(("EOxCloudless", "https://cloudless.eox.at"), info["links"])
         self.assertEqual({a[0] for a in asked}, {"s2cloudless-%d_3857" % social_card.S2_YEAR, "overlay_bright_3857"})
 
+    def _dots(self, **kw):
+        if shutil.which(social.NODE) is None:
+            self.skipTest("node not installed here")
+        png = os.path.join(self.d, "dots.png")
+        spec = dict({"plane": dict(EZY, registration="D-AIDO", type_name="AIRBUS A-321"), "trace": trace(60), "units": "metric",
+                     "theme": "red", "clock": "12:16 GMT+2", "flags": True, "pitch": 10, "map": True}, **kw)
+        return png, social._node(spec, png)
+
+    def test_the_dot_matrix_wall_beside_a_map(self):
+        # 0.23.0, asked for by the owner: the dots-only map mock-up gives way to the real map, beside the dot wall
+        png, got = self._dots()
+        out = os.path.join(self.d, "p.jpg")
+        asked = []
+        info = social_card.render_dotmap(png, got["map_box"], trace(60), EZY, out, got["color"], map_mode="night",
+                                         fetch=lambda *a: asked.append(a) or fake_tile(*a))
+        with open(out, "rb") as fh:
+            self.assertEqual(fh.read(3), b"\xff\xd8\xff")
+        self.assertEqual((info["width"], info["height"]), (1310, 830))
+        self.assertLess(info["bytes"], 1000000)
+        self.assertEqual(info["map"], "night"); self.assertEqual(info["credit"], "Map \u00a9 OpenStreetMap, EOX")
+        self.assertEqual({a[0] for a in asked}, {"osm_3857"})
+        im = Image.open(out).convert("RGB")
+        x, y, w, h = got["map_box"]
+        self.assertGreater(sum(im.getpixel((x + w // 2, y + 40))), 60, "the map is there, not the dark column")
+        self.assertGreater(min(im.getpixel((15 + 865, 15 + 105))), 190, "the German flag's outline, right edge, still white")
+
+    def test_the_service_draws_it_and_posts_the_jpeg_alone(self):
+        orig, social_card.fetch_tile = social_card.fetch_tile, (lambda layer, ext, z, x, y, *a, **k: fake_tile(layer, ext, z, x, y))
+        self.addCleanup(setattr, social_card, "fetch_tile", orig)
+        self.addCleanup(setattr, social, "STATE_DIR", social.STATE_DIR); social.STATE_DIR = self.d
+        if shutil.which(social.NODE) is None:
+            self.skipTest("node not installed here")
+        base = os.path.join(self.d, "post")
+        info = social.render(EZY, trace(60), dict(CFG, SOCIAL_STYLE="dotmap", SOCIAL_MAP="terrain"), base)
+        self.assertEqual((info["mime"], info["path"]), ("image/jpeg", base + ".jpg"))
+        self.assertFalse(os.path.exists(base + ".png"), "the dots alone are not left behind")
+        self.assertEqual(info["map"], "terrain")
+        a = social.alt_text(EZY, CFG, trace(60), "dotmap", info)
+        self.assertTrue(a.startswith("Dot-matrix flight board"), a)
+        self.assertIn("Beside it, a terrain map with the aircraft's track", a)
+        # no map wanted: the dot-matrix wall with its track in dots, nothing fetched
+        asked = []
+        social_card.fetch_tile = lambda *a, **k: asked.append(a)
+        info = social.render(EZY, trace(60), dict(CFG, SOCIAL_STYLE="dotmap", SOCIAL_MAP="none"), os.path.join(self.d, "q"))
+        self.assertEqual(info["mime"], "image/png")
+        self.assertEqual(asked, [], "map none fetches nothing")
+
+    def test_the_aircraft_is_never_under_the_legend(self):
+        # 0.23.0: on the dotmap's narrow map (400 by 800) a southbound track ended under the legend box, the aircraft
+        # hidden; the view is now chosen above the legend and credit band. The flap map is held to the same.
+        south = [[49.9 - i * 0.008, 6.2, 36000, 1000 + i * 5] for i in range(120)]
+        at = []
+        icon = social_card._icon
+        self.addCleanup(setattr, social_card, "_icon", icon)
+        social_card._icon = lambda d, x, y, *a, **k: at.append(y / 3.0) or icon(d, x, y, *a, **k)   # drawn 3x, reduced
+        light = lambda *a: fake_tile("osm_3857", "jpg", 1, 1, 1)
+        for w, h in ((400, 800), (social_card.MAP_W, social_card.MAP_H)):
+            del at[:]
+            img, shown = social_card.draw_map(south, dict(EZY, track=180), "#ff0000", fetch=light, w=w, h=h)
+            self.assertEqual(shown, "normal")
+            top = next(y for y in range(4, h) if sum(img.getpixel((14, y))) < 300)     # the legend box's top edge
+            self.assertLess(top, h - 74, (w, h))
+            self.assertLess(at[0] + 22, top, "the aircraft (22 px across its centre) is above the legend, %dx%d" % (w, h))
+
     def test_no_tile_no_map_no_credit(self):
         info = social_card.render(self.LINES, trace(60), EZY, os.path.join(self.d, "p.jpg"), map_mode="normal", fetch=lambda *a: None)
         self.assertEqual(info["map"], "none")
         self.assertIsNone(info["credit"])
+        asked = []
         info = social_card.render(self.LINES, trace(60), EZY, os.path.join(self.d, "q.jpg"), map_mode="none",
-                                  fetch=lambda *a: self.fail("map none must fetch nothing"))
+                                  fetch=lambda *a: asked.append(a))
         self.assertEqual(info["map"], "none")
+        self.assertEqual(asked, [], "map none fetches nothing")       # a failure inside fetch would be swallowed
 
     def test_eox_tile_address(self):
         # as WMTSCapabilities.xml gives it: .../{layer}/default/{TileMatrixSet}/{TileMatrix}/{TileRow}/{TileCol}.jpg
@@ -1101,6 +1224,22 @@ class LogFindingsTest(unittest.TestCase):
             with self.assertRaises(Stop):
                 social.cmd_run()
         self.assertIn("running ZenithBoard %s" % social.server.VERSION, out.getvalue())
+
+    def test_the_test_says_the_map_failed_when_the_look_alternates(self):
+        # 0.23.0: `social test` asked the setting ("alternate"), not this post's look, whether a map was due, and
+        # said nothing when the tiles failed
+        import contextlib
+        import io
+        c = dict(CFG, SOCIAL_STYLE="alternate", SOCIAL_MAP="rotate")
+        for name, fake in (("_collect_once", lambda h=None: (c, {"pictures": 0}, EZY, trace(60), "all")),
+                           ("publish", lambda *a, **k: {"map": "none", "text": "t", "alt": "a", "bytes": 1, "preview": "p"}),
+                           ("local_ip", lambda: "192.0.2.1")):
+            self.addCleanup(setattr, social, name, getattr(social, name))
+            setattr(social, name, fake)
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            social.cmd_test()
+        self.assertIn("Picture: dotmap", out.getvalue())
+        self.assertIn("Map: the tiles could not be fetched", out.getvalue())
 
 
 class PublishTest(unittest.TestCase):

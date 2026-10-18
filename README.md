@@ -284,7 +284,7 @@ Not convincing? Nothing to undo: the dot matrix stays the default until you chan
 
 ## Colours
 
-The dots are **amber by default**. Pick amber, green, red, white, turquoise (`#00d6d7`) or blue (`#0404e2`). One colour at a time: the point is a lit sign, not a screenshot of a map. Blue is the deepest of the six — on a dark wall at a distance it reads as a quiet navigation light rather than as text, so try turquoise first if the board is meant to be read from the sofa.
+The dots are **amber by default**. Pick amber, green, red, white or turquoise (`#00d6d7`). One colour at a time: the point is a lit sign, not a screenshot of a map. (A dark blue was offered until 0.22.0; it read poorly, on the wall and on a phone, and was taken out. A wall still set to it shows amber until you choose: the update says so.)
 
 | Where | How |
 |---|---|
@@ -300,7 +300,7 @@ Three ways, pick the one that suits you.
 |---|---|
 | **Command line** (affects every screen) | `sudo zenithboard units imperial` · `sudo zenithboard units metric` · `sudo zenithboard radius 5` · `sudo zenithboard cycle 8` |
 | **Menu** | `sudo zenithboard menu` → *4 Settings* (network, receiver, wall, logs) |
-| **On the tablet** (that tablet only) | Tap the faint gear in the bottom-right corner: units, radius, seconds per plane, colour (amber / green / red / white / turquoise / blue). Or use a link, see [Tablet links](#tablet-links-one-address-per-look) below. |
+| **On the tablet** (that tablet only) | Tap the faint gear in the bottom-right corner: units, radius, seconds per plane, colour (amber / green / red / white / turquoise). Or use a link, see [Tablet links](#tablet-links-one-address-per-look) below. |
 
 Radius presets are **1, 2, 5, 10, 15, 30, 50** — read as kilometres in metric mode and miles in imperial mode. Changes apply immediately, no restart or reinstall.
 
@@ -518,12 +518,14 @@ Under the four numbers, two lines name **the farthest aircraft of the day and of
 
 ## Share what flies over on Bluesky (optional)
 
-Off by default. Switched on, the Pi posts the aircraft worth a post — a military tanker, a Beluga, a type it has not seen in a month, the farthest of the month — to Bluesky, as a **picture** and a short text: `Flight Etihad #ETD11K · Airbus A380-800 · Paris → Abu Dhabi · altitude 8 500 m · above Trémery`. Two looks for the picture, both drawn by the Pi itself, with no browser, on a Pi 3B included:
+Off by default. Switched on, the Pi posts the aircraft worth a post — a military tanker, a Beluga, a type it has not seen in a month, the farthest of the month — to Bluesky, as a **picture** and a short text: `Flight Etihad #ETD11K · Airbus A380-800 · Paris → Abu Dhabi · altitude 8 500 m · above Trémery`. Three looks for the picture, all drawn by the Pi itself, with no browser, on a Pi 3B included:
 
-| `dots` | `flap` |
+| `dotmap` (0.23.0) | `flap` |
 |---|---|
-| ![Dot-matrix picture](docs/images/social-dots.png) | ![Split-flap picture with a map](docs/images/social-flap.jpg) |
-| The dot-matrix wall, the aircraft's track over the last minutes drawn beside it in the same dots | The split-flap board beside a map with the track: OpenStreetMap, a darkened one, satellite, terrain, or none |
+| ![Dot-matrix picture with a map](docs/images/social-dotmap.jpg) | ![Split-flap picture with a map](docs/images/social-flap.jpg) |
+| The dot-matrix wall beside a map with the aircraft's track: OpenStreetMap, a darkened one, satellite or terrain. *Shown here without its map, as the Pi draws it when the tile service does not answer: the tiles could not be reached from where this preview was made* | The split-flap board beside the same map |
+
+The third, `dots`, is the dot-matrix wall with the track drawn in dots and no map, nothing fetched ([picture](docs/images/social-dots.png)). `alternate` takes `dotmap` and `flap` in turn, and the map and the colour can turn too.
 
 ```bash
 sudo zenithboard social setup     # the Bluesky account (an app password, never the real one), the words, the picture
@@ -531,7 +533,7 @@ sudo zenithboard social test      # draw the picture and print the text; post no
 sudo zenithboard social on        # from now on, under your rules; off at any time
 ```
 
-Or menu *4 Settings → 6 Social sharing*. The wizard tries the account before going on, then asks for the place to name in the posts (your words), the sharing radius, the minimum gap between posts, the rules, and the picture: its look, its colour (the wall's, or any of its six), its map. **Nothing that gives your position away leaves the Pi**: no distance, no bearing, no photo; the track and the map are centred on the aircraft and nothing marks the receiver. The map comes from EOX's tile service, credited and linked in every post, cached on the Pi for a month. The secret lives in a root-owned file the service alone can read, the picture is drawn in memory and deleted after each post, and `zenithboard security` checks all of it. Why Bluesky and not X, Threads or Instagram, how to get the app password step by step, what each rule and each map means: wiki **[Social sharing](https://github.com/regis57/ZenithBoard/wiki/Social-sharing)**.
+Or menu *4 Settings → 6 Social sharing*. The wizard tries the account before going on, then asks for the place to name in the posts (your words), the sharing radius, the minimum gap between posts, the rules, and the picture: its look, its colour (the wall's, or any of its five), its map. **Nothing that gives your position away leaves the Pi**: no distance, no bearing, no photo; the track and the map are centred on the aircraft and nothing marks the receiver. The map comes from EOX's tile service, credited and linked in every post, cached on the Pi for a month. The secret lives in a root-owned file the service alone can read, the picture is drawn in memory and deleted after each post, and `zenithboard security` checks all of it. Why Bluesky and not X, Threads or Instagram, how to get the app password step by step, what each rule and each map means: wiki **[Social sharing](https://github.com/regis57/ZenithBoard/wiki/Social-sharing)**.
 
 ## Reliability: when the Pi freezes or loses its network (optional)
 

@@ -7,7 +7,6 @@ body[data-theme="green"] { --dot: #39ff6a; }
 body[data-theme="red"]   { --dot: #ff3b30; }
 body[data-theme="white"] { --dot: #e8e8e8; }
 body[data-theme="turquoise"] { --dot: #00d6d7; }
-body[data-theme="blue"]  { --dot: #0404e2; }
 #wall { position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100dvh; display: block; }
 /* bottom-right corner: a real photo (with credit) or the animated sky scene; both are positioned over the dot grid by app.js */
 #scene, #photobox { position: fixed; border: 1px solid var(--dot); border-radius: 3px; overflow: hidden; background: #000; }

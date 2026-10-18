@@ -26,7 +26,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.22.0"
+VERSION = "0.23.0"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -53,12 +53,12 @@ SERVER_ID = str(int(time.time()))  # changes on restart -> browsers reload thems
 
 KM_PER_MI = 1.609344
 RADIUS_PRESETS = [1, 2, 5, 10, 15, 30, 50]
-THEMES = ("amber", "green", "red", "white", "turquoise", "blue")
+THEMES = ("amber", "green", "red", "white", "turquoise")      # 0.23.0: the dark blue (#0404e2) is gone, turquoise stays
 MAX_POSITION_AGE_S = 30  # ignore aircraft whose position is older than this
 
 DEFAULTS = {
     "UNITS": "metric",          # metric | imperial
-    "THEME": "amber",           # amber | green | red | white | turquoise | blue
+    "THEME": "amber",           # amber | green | red | white | turquoise
     "LAT": "0",
     "LON": "0",
     "DECODER": "readsb",        # readsb | dump1090-fa

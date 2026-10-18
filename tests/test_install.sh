@@ -101,8 +101,8 @@ check "the wizard runs again after a cancel"        '[ "$rc" = 0 ] && grep -q "^
 
 # ---- the menu texts the README promises
 run colours 4 wall color CANCEL back back 0
-check "wall colour offers the six colours of the wall" 'grep "^radiolist	Dot colour" "$t/colours.screens" | grep -q "\[amber green red white turquoise blue \]"'
-check "the wall menu names them"                     'grep -q "Colour: amber, green, red, white, turquoise, blue" install.sh'
+check "wall colour offers the five colours of the wall" 'grep "^radiolist	Dot colour" "$t/colours.screens" | grep -q "\[amber green red white turquoise \]"'
+check "the wall menu names them"                     'grep -q "Colour: amber, green, red, white, turquoise\" " install.sh'
 run settings 4 back 0
 check "settings: six groups, as the README says"     'grep "^menu	Settings" "$t/settings.screens" | grep -q "\[network receiver wall logs reliability social back \]" && grep -q "in six groups" README.md'
 check "settings: Wi-Fi on with no network reads \"not connected\", not \"ON, \"" 'grep "^menu	Settings" "$t/settings.screens" | grep -q "Wi-Fi ON, not connected"'

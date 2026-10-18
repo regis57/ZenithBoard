@@ -42,6 +42,22 @@ social_migrate >/dev/null 2>&1
 check "migrate: network list gone from config.env"  '! grep -q "^SOCIAL_NETWORKS=" "$ZENITHBOARD_ETC/config.env"'
 check "migrate: Mastodon token gone, Bluesky kept"  '! grep -q "MASTODON\|tok_123" "$SOCIAL_SECRETS" && [ "$(social_secret_get BLUESKY_APP_PASSWORD)" = aaaa-bbbb-cccc-dddd ] && [ "$(stat -c %a "$SOCIAL_SECRETS")" = 640 ]'
 check "migrate: twice is the same as once"          'a=$(cat "$SOCIAL_SECRETS"); social_migrate >/dev/null 2>&1; [ "$(cat "$SOCIAL_SECRETS")" = "$a" ]'
+# 0.23.0: a picture colour set to the dark blue is the owner's: kept, and the update says what to type
+cfg_set SOCIAL_THEME blue
+check "migrate: a blue picture colour is named, not changed" 'social_migrate 2>&1 | grep -q "taken out in 0.23.0.*social colour turquoise" && [ "$(cfg_get SOCIAL_THEME)" = blue ]'
+# the wall blue too: the posts come out amber, and the notice says amber, not blue
+cfg_set THEME blue
+check "migrate: the colour the posts take is the one named" 'social_migrate 2>&1 | grep -q "the wall.s colour (amber)" && [ "$(cfg_get THEME)" = blue ]'
+check "colour: the wall's colour as it shows"       '[ "$(wall_theme)" = amber ] && social_set_colour wall | grep -q "the wall.s (amber)"'
+# the picture wizard on a Pi left on blue: the wall's colour ticked and named as it shows, the closing screen too.
+# The stand-in whiptail answers Enter: the item ticked ON, or nothing when none is
+wizard=$( wt_radio() { local t=$1 on=""; shift; echo "$t: $*" >> "$t_log"; while [ $# -ge 3 ]; do [ "$3" = ON ] && on=$1; shift 3; done; [ -n "$on" ] && echo "$on"; }
+          wt_msg() { echo "MSG $1" >> "$t_log"; }; clear() { :; }; t_log="$t/wizard.log"; : > "$t_log"
+          cfg_set SOCIAL_THEME blue; cfg_set SOCIAL_STYLE dots; social_setup_picture >/dev/null 2>&1; echo "rc=$?"; cat "$t_log" )
+check "wizard: a blue picture colour shows the wall's ticked, as amber" 'echo "$wizard" | grep -q "^Colour.*wall The wall.s own colour (amber) ON"'
+check "wizard: it saves and says the colour drawn"   'echo "$wizard" | grep -q "^rc=0" && echo "$wizard" | grep -q "MSG Saved. Picture: dots, the wall.s colour (amber)" && [ -z "$(cfg_get SOCIAL_THEME "")" ] && [ "$(cfg_get THEME)" = blue ]'
+cfg_del THEME; cfg_set SOCIAL_THEME ""; cfg_del SOCIAL_STYLE
+check "migrate: no blue, no word about it"          '! social_migrate 2>&1 | grep -q "0.23.0"'
 social_secrets_write "MASTODON_URL=https://mastodon.social" "MASTODON_TOKEN=tok_123"
 cfg_set SOCIAL 1
 social_migrate >/dev/null 2>&1
@@ -54,7 +70,13 @@ check "handle: zb.bsky.social ok, no @"            'social_valid_handle zb.bsky.
 # ---- the picture: look, colour, map
 check "look: only dots or flap"                    '! social_set_look photo >/dev/null && [ -z "$(cfg_get SOCIAL_STYLE "")" ]'
 check "look: flap saved"                           'social_set_look flap >/dev/null && [ "$(cfg_get SOCIAL_STYLE)" = flap ]'
-check "colour: no argument is a usage line, not a reset" 'cfg_set SOCIAL_THEME red; ! social_set_colour "" >/dev/null && [ "$(cfg_get SOCIAL_THEME)" = red ] && ! social_set_map "night satellite" >/dev/null; cfg_set SOCIAL_THEME ""'
+check "look: dotmap, the dots beside a map (0.23.0)" 'social_set_look dotmap >/dev/null && [ "$(cfg_get SOCIAL_STYLE)" = dotmap ] && social_set_look flap >/dev/null'
+check "the shell knows the Python looks"           '[ "$(python3 -c "import sys; sys.path.insert(0, \"flightinfo\"); import social; print(\" \".join(social.STYLE_CHOICES))")" = "dots dotmap flap alternate" ] && social_set_look 2>&1 | grep -q "dotmap"'
+cfg_set SOCIAL_THEME green
+check "colour: blue is gone (0.23.0), refused"     '! social_set_colour blue >/dev/null && [ "$(cfg_get SOCIAL_THEME)" = green ]'
+cfg_set SOCIAL_THEME red
+check "colour: no argument is a usage line, not a reset" '! social_set_colour "" >/dev/null && [ "$(cfg_get SOCIAL_THEME)" = red ] && ! social_set_map "night satellite" >/dev/null'
+cfg_set SOCIAL_THEME ""
 check "colour: a wall colour, or the wall's"       'social_set_colour green >/dev/null && [ "$(cfg_get SOCIAL_THEME)" = green ] && social_set_colour wall >/dev/null && [ -z "$(cfg_get SOCIAL_THEME "")" ] && ! social_set_colour pink >/dev/null'
 check "map: the five, nothing else"                'social_set_map satellite >/dev/null && [ "$(cfg_get SOCIAL_MAP)" = satellite ] && ! social_set_map google >/dev/null && [ "$(cfg_get SOCIAL_MAP)" = satellite ]'
 check "the shell knows the Python lists"           'py=$(python3 -c "import sys; sys.path.insert(0, \"flightinfo\"); import social, server; print(\" \".join(social.MAP_CHOICES)); print(\" \".join(server.THEMES))"); [ "$(echo "$py" | head -1)" = "$SOCIAL_MAPS" ] && [ "$(echo "$py" | tail -1)" = "$SOCIAL_THEMES" ]'
