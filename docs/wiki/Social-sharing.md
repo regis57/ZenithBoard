@@ -100,13 +100,13 @@ zenithboard logs social
 
 ### Dot-matrix with a map
 
-![The dot-matrix picture with a map, drawn here without its tiles](https://github.com/regis57/ZenithBoard/raw/main/docs/images/social-dotmap.jpg)
+![The dot-matrix picture with a map, a real post](https://github.com/regis57/ZenithBoard/raw/main/docs/images/social-dotmap.jpg)
 
 The wall's rows as the tablet shows them (`FLT  EWG11S`, `REG  D-AIDO`, then airline, type, altitude, speed, route), with two differences: the time on the last row with its offset from GMT as the Pi's time zone has it that day (`11:39 GMT+2` in a French summer, `GMT+1` in winter), where the tablet shows the distance and direction; and, in the right-hand column, a map where the tablet has the silhouette and the photo. The flags are the wall's: the country of the registration beside the `REG` row (since 0.20.0; it sat beside the airline, where it read as the airline's country), and the maker's beside the model.
 
 `sudo zenithboard social look dotmap` (0.23.0, asked for by the owner; the default since 0.24.0): the map is the split-flap look's, below — the same four maps, the same credit, the same `social map` setting and its `rotate` — with the track, the aircraft, the key and north. Node draws the dots with that column left dark and says where it is; Pillow lays the map there and writes a JPEG under Bluesky's limit. The map is a strip 400 pixels wide and 800 high, so when the aircraft would land under the key, the view is chosen in the part above the key and the credit: an aircraft flying south ends above the key, not under it. With `social map none` the strip shows the track on black over a faint grid, and nothing is fetched.
 
-*The picture above was made where the tile service cannot be reached: it is what the Pi posts when the tiles do not come, the track on a dark grid, with no credit. With the tiles, the strip is the map of the split-flap picture.*
+*Above: a real post from the reference Pi, 18 October 2026, with the terrain map. The track is drawn thinner since 0.24.1. When the tiles do not come, the strip shows the track on a dark grid, with no credit.*
 
 ### Split-flap with a map
 

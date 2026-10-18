@@ -378,8 +378,10 @@ def draw_map(trace, plane, color, units="metric", mode="normal", cache_dir=None,
         x, y = world_px(p[0], p[1], z)
         pts.append(((x - ox) * S, (y - oy) * S))
     if len(pts) >= 2:
-        d.line(pts, fill=(0, 0, 0, 220), width=11 * S, joint="curve")   # a dark edge: the track reads on any map,
-        d.line(pts, fill=color + (255,), width=5 * S, joint="curve")    # roads of the same colour included
+        # a dark edge: the track reads on any map, roads of the same colour included. 0.24.1: 6 and 3 pixels, from
+        # 11 and 5, which the owner found far too thick on the real posts
+        d.line(pts, fill=(0, 0, 0, 220), width=6 * S, joint="curve")
+        d.line(pts, fill=color + (255,), width=3 * S, joint="curve")
     if pts:
         _icon(d, pts[-1][0], pts[-1][1], plane.get("track"), 22 * S, color, heli=plane.get("shape") == "heli")
     ov = ov.resize((w, h), LANCZOS)
@@ -403,7 +405,7 @@ def draw_map(trace, plane, color, units="metric", mode="normal", cache_dir=None,
     d.rounded_rectangle([lx, ly, lx + lw, ly + 74], radius=8, fill=(0, 0, 0, 185))
     tx = lx + 12 + int(max(bar, 44)) + 14
     if minutes:
-        d.line([(lx + 12, ly + 22), (lx + 12 + 44, ly + 22)], fill=color + (255,), width=5)
+        d.line([(lx + 12, ly + 22), (lx + 12 + 44, ly + 22)], fill=color + (255,), width=3)
         d.text((tx, ly + 22), "LAST %d MIN" % minutes, font=f, fill=(255, 255, 255, 255), anchor="lm")
     by = ly + 52
     d.line([(lx + 12, by), (lx + 12 + bar, by)], fill=(255, 255, 255, 255), width=3)

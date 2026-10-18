@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.24.1
+- **A thinner track on the posts' maps** (dotmap and flap): 3 pixels with a 6-pixel dark edge, from 5 and 11, which the owner found far too thick on the real posts. The aircraft keeps its size.
+- The README and the wiki show a real `dotmap` post from the reference Pi in place of the preview drawn without tiles.
+
 ## 0.24.0
 From the owner's first afternoon on 0.23.0.
 - **The posts always carry a map.** The dots-only look (the dot-matrix wall with the track drawn in dots, no map) is taken out of the choices, at the owner's word: `social look`, the picture wizard and the menu offer `dotmap`, `flap` and `alternate`. `dotmap` is the default. A Pi still set to `dots` is not changed: it posts `dotmap`, and `sudo zenithboard update` says so with the command. `social map none` with `dotmap` now draws the dot wall with the track on black, like `flap` does, instead of the dots-only picture. Pillow is installed for every look. A Pi without it (offline) still gets the dot picture rather than none.
