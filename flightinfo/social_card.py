@@ -23,6 +23,7 @@ Privacy, as for the dot-matrix picture: the map is centred on the track, not on 
 the receiver.
 """
 import concurrent.futures
+import gzip
 import io
 import math
 import os
@@ -49,6 +50,9 @@ S2_YEAR = 2025                               # the newest Sentinel-2 cloudless l
 # guideline accepts "© OpenStreetMap" with the name linked to its copyright page; EOX asks for its name and a link.
 OSM_LINK = ("OpenStreetMap", "https://www.openstreetmap.org/copyright")
 EOX_LINK = ("EOX", "https://maps.eox.at")
+GEONAMES_LINK = ("GeoNames", "https://www.geonames.org/")
+PLACES_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "places5000.tsv.gz")
+MAX_NAMES = 16                               # the towns named on a map, the largest first, none over another
 MAP_STYLES = {
     "normal": {"layers": [("osm_3857", "jpg")], "words": "an OpenStreetMap map",
                "credit": "Map \u00a9 OpenStreetMap, EOX", "links": [OSM_LINK, EOX_LINK],
@@ -56,14 +60,17 @@ MAP_STYLES = {
     "night": {"layers": [("osm_3857", "jpg")], "night": True, "words": "a darkened OpenStreetMap map",
               "credit": "Map \u00a9 OpenStreetMap, EOX", "links": [OSM_LINK, EOX_LINK],
               "credit_full": "\u00a9 OpenStreetMap contributors, rendering \u00a9 EOX (maps.eox.at)"},
-    "terrain": {"layers": [("terrain_3857", "jpg"), ("overlay_3857", "png")], "words": "a terrain map",
-                "credit": "Map \u00a9 OpenStreetMap and others, EOX", "links": [OSM_LINK, EOX_LINK],
-                "credit_full": "Terrain: data \u00a9 OpenStreetMap contributors and others, rendering \u00a9 EOX (maps.eox.at)"},
-    "satellite": {"layers": [("s2cloudless-%d_3857" % S2_YEAR, "jpg"), ("overlay_bright_3857", "png")], "words": "a satellite map",
-                  "credit": "Map: EOxCloudless by EOX, \u00a9 OpenStreetMap",
-                  "links": [("EOxCloudless", "https://cloudless.eox.at"), ("EOX", "https://eox.at"), OSM_LINK],
+    # 0.24.4: the terrain and satellite maps name the towns themselves (from GeoNames, "names"), in place of EOX's label
+    # layer, which named one village in forty kilometres on a real post over Metz
+    "terrain": {"layers": [("terrain_3857", "jpg")], "names": "dark", "words": "a terrain map",
+                "credit": "Map \u00a9 OpenStreetMap and others, EOX, GeoNames", "links": [OSM_LINK, EOX_LINK, GEONAMES_LINK],
+                "credit_full": "Terrain: data \u00a9 OpenStreetMap contributors and others, rendering \u00a9 EOX (maps.eox.at); "
+                               "place names: GeoNames (CC BY 4.0)"},
+    "satellite": {"layers": [("s2cloudless-%d_3857" % S2_YEAR, "jpg")], "names": "light", "words": "a satellite map",
+                  "credit": "Map: EOxCloudless by EOX, GeoNames",
+                  "links": [("EOxCloudless", "https://cloudless.eox.at"), ("EOX", "https://eox.at"), GEONAMES_LINK],
                   "credit_full": "EOxCloudless %d https://cloudless.eox.at by EOX IT Services GmbH (Contains modified Copernicus Sentinel data %d); "
-                                 "labels \u00a9 OpenStreetMap contributors, rendering \u00a9 EOX" % (S2_YEAR, S2_YEAR)},
+                                 "place names: GeoNames (CC BY 4.0)" % (S2_YEAR, S2_YEAR)},
     "none": {"layers": [], "words": "", "credit": None, "links": [], "credit_full": None},
 }
 MAX_ZOOM, MIN_ZOOM = 12, 4                   # 12: about 18 km across the map at 49 degrees north
@@ -309,6 +316,54 @@ def _wrap(d, text, fnt, width):
     return lines
 
 
+_places = []
+
+
+def places():
+    """[(name, lat, lon, population)]: the GeoNames places of 5 000 or more, read once (tools/make_places.py)."""
+    if not _places:
+        try:
+            with gzip.open(PLACES_FILE, "rt", encoding="utf-8") as fh:
+                for line in fh:
+                    if line.startswith("#"):
+                        continue
+                    n, la, lo, pop = line.rstrip("\n").split("\t")
+                    _places.append((n, float(la), float(lo), int(pop)))
+        except (OSError, ValueError):
+            pass                                 # no list: the map without names, as before
+    return _places
+
+
+def _draw_names(img, z, ox, oy, w, h, band, tone, plane_at=None):
+    """The towns inside the map, the largest first, each with a dot and its name on a halo; never over another name,
+    the north box or the legend and credit band."""
+    d = ImageDraw.Draw(img)
+    fnt = font(16)
+    fill, halo = ((255, 255, 255), (0, 0, 0)) if tone == "light" else ((30, 30, 30), (255, 255, 255))
+    taken = [(w - 52, 0, w, 70), (0, h - band, w, h)]
+    if plane_at:                                  # the aircraft itself stays clear
+        taken.append((plane_at[0] - 30, plane_at[1] - 30, plane_at[0] + 30, plane_at[1] + 30))
+    deg = 360.0 * w / (256.0 * 2 ** z) + 0.5      # a cheap box around the view before the projection
+    lon0 = ox * 360.0 / (256.0 * 2 ** z) - 180.0
+    shown = 0
+    for name, la, lo, pop in sorted((p for p in places() if lon0 - 0.5 <= p[2] <= lon0 + deg), key=lambda p: -p[3]):
+        x, y = world_px(la, lo, z)
+        x, y = x - ox, y - oy
+        if not (6 <= x <= w - 6 and 6 <= y <= h - 6):
+            continue
+        tw = d.textlength(name, font=fnt)
+        tx = x + 7 if x + 7 + tw <= w - 4 else x - 7 - tw
+        box = (tx - 3, y - 11, tx + tw + 3, y + 11)
+        if any(not (box[2] < t[0] or box[0] > t[2] or box[3] < t[1] or box[1] > t[3]) for t in taken):
+            continue
+        taken.append(box)
+        d.ellipse([x - 3, y - 3, x + 3, y + 3], fill=fill, outline=halo, width=1)
+        d.text((tx, y), name, font=fnt, fill=fill, anchor="lm", stroke_width=2, stroke_fill=halo)
+        shown += 1
+        if shown >= MAX_NAMES:
+            break
+
+
 def draw_map(trace, plane, color, units="metric", mode="normal", cache_dir=None, fetch=None, user_agent="ZenithBoard",
              w=MAP_W, h=MAP_H):
     """The map with the track, the aircraft, the legend, north and the credit. Returns (image, shown_mode)."""
@@ -364,6 +419,9 @@ def draw_map(trace, plane, color, units="metric", mode="normal", cache_dir=None,
     shown = mode if got_base else "none"            # any of the map shown is credited; none of it, a plain black
     if not got_base:
         img = Image.new("RGB", (w, h), (16, 16, 16))
+    elif style.get("names"):
+        at = world_px(trace[-1][0], trace[-1][1], z) if trace else None
+        _draw_names(img, z, ox, oy, w, h, band, style["names"], (at[0] - ox, at[1] - oy) if at else None)
 
     S = 3                                             # drawn three times larger, then reduced: smooth lines
     ov = Image.new("RGBA", (w * S, h * S), (0, 0, 0, 0))

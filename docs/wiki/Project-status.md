@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **18 October 2026**, version **0.24.3**.
+Last updated: **18 October 2026**, version **0.24.4**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -57,6 +57,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 18 October 2026, evening | Three more posts looked at (TRA21C terrain, NJE221Q satellite, EWG09NC normal map). The normal map names its towns; the terrain map named only Amnéville in forty kilometres, the satellite map only *Grand Est* and Épinal. 0.24.4 names the towns of 5 000 or more itself on those two. The owner asked whether the scale was right: measured on the posts, TRA21C (997 km/h, 3 min, 50 km) drew 48 km against its 10 km bar, EWG09NC (926 km/h, 6 min, 93 km) about 98 km, NJE221Q (928 km/h, 7 min, 108 km) about 102 km: right within the speed's own variation |
 | 18 October 2026, late afternoon | Three real `dotmap` posts looked at (JAF1DY night map, KLM50X satellite, RYR1CA terrain): the maps, credits, flags and legend as intended; the owner found the track line far too thick. 0.24.1 draws it at 3 pixels with a 6-pixel dark edge, from 5 and 11. The README now shows the RYR1CA post |
 | 18 October 2026, afternoon | 0.23.0 on the Pi: `social status` says *dotmap and flap in turn, the colours in turn, the maps in turn*, 140 posts in the last day, 41 MB at rest and 102 MB at most for the service (Node 100 MB). The owner confirmed the dark blue gone everywhere and asked for the dots-only look to leave the choices too (0.24.0: it is gone; a setting still on it posts `dotmap`). The statistics page named the day's farthest as *18/10 13:09 · TF-ICE · BOEING 737 MAX 8 · 11 890 m · 322 km*, with no flight and no route: at 322 km the decoder had the positions before the callsign. 0.24.0 keeps the callsigns heard in the last hour and fills it in. `/social/preview` still showed a picture from an old version: the page shows the last `social test`, and none had been run since |
 | 18 October 2026, morning | A Bluesky post: Eurowings EWG11S, D-AIDO, in the dot-matrix look. The German flag beside the registration had lost its right-hand edge under the track panel's frame (the panel started at dot 86, where the flag's outline ends). The owner asked for a real map in place of the dots-only one on the right, in the same rotation as the split-flap posts, and for the dark blue to go (turquoise stays). 0.23.0: the panel starts at 88; a third look, `dotmap`, lays the split-flap look's map beside the dot wall, and `alternate` turns between it and `flap`; the dark blue is gone, a setting still on it named by the update |
