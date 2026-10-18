@@ -52,7 +52,13 @@
   function units() { return prefs.units === "imperial" || prefs.units === "metric" ? prefs.units : server.units; }
   function radius() { var r = parseFloat(prefs.radius); return r > 0 ? r : server.radius; }
   function cycleMs() { var c = parseFloat(prefs.cycle); return Math.max(2, c > 0 ? c : server.cycle_seconds) * 1000; }
-  function theme() { return prefs.theme || server.theme || "amber"; }
+  // A colour the wall no longer has (the dark blue, gone in 0.23.0), still in a tablet's memory or in its address,
+  // falls back to the Pi's colour rather than to a page of unstyled dots with an empty choice in the gear panel
+  var THEMES = ["amber", "green", "red", "white", "turquoise"];
+  function theme() {
+    var t = [prefs.theme, server.theme].filter(function (x) { return THEMES.indexOf(x) >= 0; })[0];
+    return t || "amber";
+  }
   function mode() { return prefs.mode === "flap" || prefs.mode === "dots" ? prefs.mode : (server.display_mode === "flap" ? "flap" : "dots"); }
   function flagsOn() { return prefs.flags !== undefined ? (prefs.flags === "1" || prefs.flags === true) : server.flags !== false; }
   function cols() { return flagsOn() ? COLS_FLAGS : COLS; }

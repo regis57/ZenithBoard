@@ -54,7 +54,7 @@ A link beats the gear when you are setting up a screen you will not touch again 
 
 ## Colours
 
-Six themes: amber (the default), green, red, white, turquoise (`#00d6d7`) and blue (`#0404e2`). One dot colour at a time, because the point is a lit sign rather than a screenshot of a map. Blue is the deepest of the six: on a dark wall at a distance it reads as a quiet navigation light rather than as text, so try turquoise first if the board is meant to be read from the sofa.
+Five themes: amber (the default), green, red, white and turquoise (`#00d6d7`). One dot colour at a time, because the point is a lit sign rather than a screenshot of a map. A sixth, a dark blue (`#0404e2`), was taken out in 0.23.0: it read poorly on the wall and in the posts. A wall, a preset or a tablet still set to it shows the Pi's colour, or amber; `sudo zenithboard update` names the setting and the command, and changes nothing by itself.
 
 ## The two flags
 

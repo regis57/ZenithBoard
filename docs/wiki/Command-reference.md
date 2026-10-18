@@ -24,7 +24,7 @@ Every `zenithboard` command, grouped by what you are trying to do. `zenithboard`
 | `zenithboard units metric` · `imperial` | yes | km, km/h, m — or miles, knots, feet |
 | `zenithboard radius N` | yes | How far around the antenna aircraft are shown: 1, 2, 5, 10, 15, 30 or 50, in your unit |
 | `zenithboard location LAT LON [ALT_M]` | yes | Move the antenna. Writes the position **everywhere** it is stored (ZenithBoard, the decoder, the feeders) and tells you which websites to update by hand |
-| `zenithboard color amber` · `green` · `red` · `white` · `turquoise` · `blue` | yes | Dot colour of every wall |
+| `zenithboard color amber` · `green` · `red` · `white` · `turquoise` | yes | Dot colour of every wall (the dark blue was taken out in 0.23.0) |
 | `zenithboard mode dots` · `flap` | yes | Dot matrix, or the airport split-flap board. Without an argument: shows the current one |
 | `zenithboard cycle SECONDS` | yes | How long each aircraft stays on screen (14 by default) |
 | `zenithboard stats` | | Today, yesterday, the 30-day average and best, and messages per hour as a sparkline. See [Statistics](Statistics) |
@@ -39,8 +39,8 @@ Every `zenithboard` command, grouped by what you are trying to do. `zenithboard`
 | `zenithboard social hashtags [WORD...]` | yes to change | The hashtags ending each post: `social hashtags ADSB avgeek Moselle` (the `#` is optional — unquoted, the shell would take it for a comment), `none`, or `default`. Alone: shows them |
 | `zenithboard social gap [MINUTES]` | yes to change | The least time between two posts. `0`, the default since 0.20.0, is none: every crossing of the sharing radius is posted, once. Whole minutes up to 1440; taken by the running service at its next look. Alone: shows it |
 | `zenithboard social picture` | yes | The picture: dot-matrix or split-flap, its colour, the map (a wizard) |
-| `zenithboard social look dots` · `flap` · `alternate` | yes | The dot-matrix wall with the track, the split-flap board with a map, or the two in turn (one post each) |
-| `zenithboard social colour NAME` · `wall` · `rotate` | yes | amber, green, red, white, turquoise, blue, the wall's own colour, or the colours in turn (all but blue) |
+| `zenithboard social look dots` · `dotmap` · `flap` · `alternate` | yes | The dot-matrix wall with the track in dots (no map), the dot-matrix wall with a map, the split-flap board with a map, or `dotmap` and `flap` in turn (one post each) |
+| `zenithboard social colour NAME` · `wall` · `rotate` | yes | amber, green, red, white, turquoise, the wall's own colour, or the colours in turn |
 | `zenithboard social map NAME` · `rotate` | yes | The split-flap look's map: normal, night, satellite, terrain, none, or the four maps in turn |
 | `zenithboard social test [HEX]` | | Draw the picture and print the text for the best candidate (or that aircraft); post nothing. The picture is at `/social/preview` |
 | `zenithboard social on` · `off` · `status` | yes | Post the aircraft overhead as a picture of the wall (off by default). `off` keeps the account |

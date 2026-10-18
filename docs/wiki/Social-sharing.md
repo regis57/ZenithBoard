@@ -57,11 +57,11 @@ And then for the picture:
 
 | Question | Choices | Default |
 |---|---|---|
-| The look | `dots` or `flap` | `dots` |
-| The colour of the letters and the track | the wall's own colour, or amber, green, red, white, turquoise, blue — the wall's colours, read from its own style sheet | the wall's |
-| The map (flap only) | `normal`, `night`, `satellite`, `terrain`, `none` | `normal` |
+| The look | `dots` (the dot-matrix wall, the track in dots, no map), `dotmap` (the dot-matrix wall beside a map, 0.23.0) or `flap` (the split-flap board beside a map) | `dots` |
+| The colour of the letters and the track | the wall's own colour, or amber, green, red, white, turquoise — the wall's colours, read from its own style sheet | the wall's |
+| The map (`dotmap` and `flap`) | `normal`, `night`, `satellite`, `terrain`, `none` (for `dotmap`, `none` draws the `dots` picture) | `normal` |
 
-**To vary the posts** (optional): the look can be `alternate` — dot-matrix, then split-flap, one post each — the colour `rotate` — amber, green, red, white, turquoise in turn, one step per post — and the map `rotate` — normal, night, satellite, terrain in turn, one step per split-flap post. Five colours against two looks: over ten posts each look meets each colour. The wall's blue is left out of the turn, because dark blue on black reads poorly on a phone and a blue track nearly disappears on the satellite map; it stays available as a fixed colour. `social status` names the next picture. Posts made by hand move the turn on too.
+**To vary the posts** (optional): the look can be `alternate` — the dot-matrix wall with a map, then the split-flap board, one post each — the colour `rotate` — amber, green, red, white, turquoise in turn, one step per post — and the map `rotate` — normal, night, satellite, terrain in turn: at every post for a fixed look, after each pair of posts when alternating. Five colours against two looks: over ten posts each look meets each colour; over eight, each look meets each map. Since 0.23.0, asked for by the owner, `alternate` is the two looks with a real map: the track drawn in dots left the turn, and stays a look of its own (`social look dots`). The dark blue went the same day, from the wall and from the posts; a picture colour still set to it gives the wall's colour, and the update says so. `social status` names the next picture. Posts made by hand move the turn on too.
 
 ```bash
 sudo zenithboard social look alternate
@@ -69,7 +69,7 @@ sudo zenithboard social colour rotate
 sudo zenithboard social map rotate
 ```
 
-Each of these has its own command too, for a quick change: `social words`, `social picture` (the three picture questions), `social look dots|flap`, `social colour green|wall`, `social map satellite`.
+Each of these has its own command too, for a quick change: `social words`, `social picture` (the three picture questions), `social look dots|dotmap|flap`, `social colour green|wall`, `social map satellite`.
 
 ### 3. Try it
 
@@ -179,7 +179,7 @@ The registration is said when no airline is: an airline flight is known by its c
 
 `zenithboard-social.service` runs `flightinfo/social.py` as the `zenithboard` user inside the same sandbox as the wall (exposure at most 1.5 on systemd's scale; `tests/test_units.sh` holds the ceiling). Every five seconds it reads the decoder's `aircraft.json` and keeps the last fifteen minutes of positions per aircraft in memory. Every fifteen seconds it asks the wall itself, on the loopback, which aircraft are inside the sharing radius — with everything the wall knows about them: airline, model, route, flags. When a candidate passes the rules (and a gap, if one is set, has passed), it draws the picture and posts it, then looks again five seconds later rather than fifteen, in case another is waiting its turn. It also notes, from the decoder's positions every five seconds, which aircraft are inside the radius: that is what keeps a crossing going, even at a moment the wall does not answer.
 
-The dot-matrix picture is `tools/social-render.js`: Node reads `app.js` and lifts the wall's own text functions (the way the tests do), draws the rows, the flags from `flags.js`, the track in the right-hand column, and writes a PNG with Node's `zlib`; the colours come from the wall's `style.css`. About 60 KB. The split-flap picture asks the same script for the board's rows (`--lines`, the wall's own formatting) and paints them with Pillow in `flightinfo/social_card.py`, with the map tiles and the track; a JPEG of about 500 KB, under Bluesky's limit of 1,000,000 bytes (the quality steps down if a picture would not be).
+The dot-matrix picture is `tools/social-render.js`: Node reads `app.js` and lifts the wall's own text functions (the way the tests do), draws the rows, the flags from `flags.js`, the track in the right-hand column, and writes a PNG with Node's `zlib`; the colours come from the wall's `style.css`. About 60 KB. The right-hand column starts at dot 88, two dots clear of the flags (dots 74 to 86 with an outline): until 0.23.0 it started at 86 and its frame was drawn over a German flag's outline. For `dotmap` the same script leaves that column dark and says where it is in pixels; `social_card.py` lays the map there (`render_dotmap`) and writes a JPEG, like the split-flap picture. The split-flap picture asks the same script for the board's rows (`--lines`, the wall's own formatting) and paints them with Pillow in `flightinfo/social_card.py`, with the map tiles and the track; a JPEG of about 500 KB, under Bluesky's limit of 1,000,000 bytes (the quality steps down if a picture would not be).
 
 Bluesky is the standard library only: a sign-in (`createSession`), then for each post `uploadBlob → createRecord`, with the hashtags and the map's link as facets so they are clickable, and the alt text and the aspect ratio with the image. **The session is kept**, in memory only: Bluesky allows an account [300 sign-ins a day and 30 in five minutes](https://docs.bsky.app/docs/advanced-guides/rate-limits), and signing in for every post, as 0.19 did, would pass that on a busy day once every crossing is posted. After an hour the access token is renewed with the refresh token (`refreshSession`); a new sign-in only if Bluesky refuses it, or if the account in the file has changed. A token refused in the middle of a post means one new sign-in and one more try, never a loop. `social check` always signs in afresh: that is what it is for.
 

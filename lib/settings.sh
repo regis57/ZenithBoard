@@ -65,7 +65,7 @@ preset_valid_pair() {   # preset_valid_pair key=value -> 0 when it is one of the
     units) [ "$v" = metric ] || [ "$v" = imperial ] ;;
     radius) is_number "$v" && awk -v r="$v" 'BEGIN { exit !(r > 0 && r <= 500) }' ;;
     cycle) is_number "$v" && awk -v c="$v" 'BEGIN { exit !(c >= 2 && c <= 60) }' ;;
-    theme) [[ $v =~ ^[a-z]+$ ]] ;;
+    theme) valid_theme "$v" ;;
     mode) [ "$v" = dots ] || [ "$v" = flap ] ;;
     flags) [ "$v" = 0 ] || [ "$v" = 1 ] ;;
     *) return 1 ;;

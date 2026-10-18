@@ -42,6 +42,11 @@ social_migrate >/dev/null 2>&1
 check "migrate: network list gone from config.env"  '! grep -q "^SOCIAL_NETWORKS=" "$ZENITHBOARD_ETC/config.env"'
 check "migrate: Mastodon token gone, Bluesky kept"  '! grep -q "MASTODON\|tok_123" "$SOCIAL_SECRETS" && [ "$(social_secret_get BLUESKY_APP_PASSWORD)" = aaaa-bbbb-cccc-dddd ] && [ "$(stat -c %a "$SOCIAL_SECRETS")" = 640 ]'
 check "migrate: twice is the same as once"          'a=$(cat "$SOCIAL_SECRETS"); social_migrate >/dev/null 2>&1; [ "$(cat "$SOCIAL_SECRETS")" = "$a" ]'
+# 0.23.0: a picture colour set to the dark blue is the owner's: kept, and the update says what to type
+cfg_set SOCIAL_THEME blue
+check "migrate: a blue picture colour is named, not changed" 'social_migrate 2>&1 | grep -q "taken out in 0.23.0.*social colour turquoise" && [ "$(cfg_get SOCIAL_THEME)" = blue ]'
+cfg_set SOCIAL_THEME ""
+check "migrate: no blue, no word about it"          '! social_migrate 2>&1 | grep -q "0.23.0"'
 social_secrets_write "MASTODON_URL=https://mastodon.social" "MASTODON_TOKEN=tok_123"
 cfg_set SOCIAL 1
 social_migrate >/dev/null 2>&1
@@ -54,6 +59,9 @@ check "handle: zb.bsky.social ok, no @"            'social_valid_handle zb.bsky.
 # ---- the picture: look, colour, map
 check "look: only dots or flap"                    '! social_set_look photo >/dev/null && [ -z "$(cfg_get SOCIAL_STYLE "")" ]'
 check "look: flap saved"                           'social_set_look flap >/dev/null && [ "$(cfg_get SOCIAL_STYLE)" = flap ]'
+check "look: dotmap, the dots beside a map (0.23.0)" 'social_set_look dotmap >/dev/null && [ "$(cfg_get SOCIAL_STYLE)" = dotmap ] && social_set_look flap >/dev/null'
+check "the shell knows the Python looks"           '[ "$(python3 -c "import sys; sys.path.insert(0, \"flightinfo\"); import social; print(\" \".join(social.STYLE_CHOICES))")" = "dots dotmap flap alternate" ] && social_set_look 2>&1 | grep -q "dotmap"'
+check "colour: blue is gone (0.23.0), refused"     'cfg_set SOCIAL_THEME green; ! social_set_colour blue >/dev/null && [ "$(cfg_get SOCIAL_THEME)" = green ]; cfg_set SOCIAL_THEME ""'
 check "colour: no argument is a usage line, not a reset" 'cfg_set SOCIAL_THEME red; ! social_set_colour "" >/dev/null && [ "$(cfg_get SOCIAL_THEME)" = red ] && ! social_set_map "night satellite" >/dev/null; cfg_set SOCIAL_THEME ""'
 check "colour: a wall colour, or the wall's"       'social_set_colour green >/dev/null && [ "$(cfg_get SOCIAL_THEME)" = green ] && social_set_colour wall >/dev/null && [ -z "$(cfg_get SOCIAL_THEME "")" ] && ! social_set_colour pink >/dev/null'
 check "map: the five, nothing else"                'social_set_map satellite >/dev/null && [ "$(cfg_get SOCIAL_MAP)" = satellite ] && ! social_set_map google >/dev/null && [ "$(cfg_get SOCIAL_MAP)" = satellite ]'

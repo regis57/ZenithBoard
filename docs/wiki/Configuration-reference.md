@@ -11,7 +11,7 @@ Read the whole file with `zenithboard config`.
 | Key | Default | Set with | What it does |
 |---|---|---|---|
 | `UNITS` | `metric` | `zenithboard units metric\|imperial` | km, km/h, m — or miles, knots, feet |
-| `THEME` | `amber` | `zenithboard color amber\|green\|red\|white\|turquoise\|blue` | Dot colour of every wall. A tablet can override it with a link |
+| `THEME` | `amber` | `zenithboard color amber\|green\|red\|white\|turquoise` | Dot colour of every wall. A tablet can override it with a link. `blue` (taken out in 0.23.0) shows amber |
 | `DISPLAY_MODE` | `dots` | `zenithboard mode dots\|flap` | Dot matrix, or the airport split-flap board |
 | `RADIUS` | `10` | `zenithboard radius N` | Detection radius in your unit. Allowed: 1, 2, 5, 10, 15, 30, 50 |
 | `CYCLE_SECONDS` | `14` | `zenithboard cycle N` | How long each aircraft stays on screen. A row too long for its width scrolls once in that time |
@@ -72,9 +72,9 @@ The dynamic-DNS **token is not stored here.** It is asked for interactively and 
 | `SOCIAL_GAP_MIN` | `0` | same | At least this many minutes between two posts; `0`, the default since 0.20.0, is none: every crossing of the sharing radius is posted, once. (0.19.x defaulted to 120 and never went under 10.) A config file that still says `120` keeps it: set `0` with `social words` for every crossing |
 | `SOCIAL_RULES` | `rare,military,helicopter,heavy,farthest` | same | What is worth a post; `all` is every rule at once: everything that flies over, the special aircraft first |
 | `SOCIAL_HASHTAGS` | `#ADSB #avgeek #ZenithBoard` | `zenithboard social hashtags WORD...` or `social words` | Ending every post; `none` for none at all. Eight at most, letters, digits and `_`. `#avgeek` becomes `#helicopter` or `#military` when one of those is posted |
-| `SOCIAL_STYLE` | `dots` | `zenithboard social look dots\|flap\|alternate` | The picture: the dot-matrix wall with the track in dots, the split-flap board with a map, or the two in turn |
-| `SOCIAL_THEME` | empty | `zenithboard social colour NAME\|wall\|rotate` | The picture's colour: `amber`, `green`, `red`, `white`, `turquoise`, `blue`; empty = the wall's `THEME`; `rotate` = the colours in turn, all but blue |
-| `SOCIAL_MAP` | `normal` | `zenithboard social map NAME` | The split-flap picture's map: `normal`, `night`, `satellite`, `terrain`, `none` (no map, nothing fetched), `rotate` (the four maps in turn) |
+| `SOCIAL_STYLE` | `dots` | `zenithboard social look dots\|dotmap\|flap\|alternate` | The picture: the dot-matrix wall with the track in dots, the dot-matrix wall with a map (0.23.0), the split-flap board with a map, or `dotmap` and `flap` in turn |
+| `SOCIAL_THEME` | empty | `zenithboard social colour NAME\|wall\|rotate` | The picture's colour: `amber`, `green`, `red`, `white`, `turquoise`; empty = the wall's `THEME`; `rotate` = the colours in turn. `blue` (taken out in 0.23.0) gives the wall's colour |
+| `SOCIAL_MAP` | `normal` | `zenithboard social map NAME` | The map of the `dotmap` and `flap` pictures: `normal`, `night`, `satellite`, `terrain`, `none` (no map, nothing fetched), `rotate` (the four maps in turn) |
 | `PATCHES` | `0` | `zenithboard patches on\|off` | Debian security fixes installed daily by themselves. See [Security](Security) |
 | `PATCHES_PKG_BY_ZB` | `0` | set by `patches on` | Whether `patches on` installed unattended-upgrades itself, so that `patches off` knows to remove it again |
 | `UPDATE_VERIFY` | `1` | by hand | Check the signature on the code before `zenithboard update` installs it. Set to `0` on a fork or your own branch. See [Security](Security) |

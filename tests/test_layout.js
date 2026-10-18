@@ -41,3 +41,21 @@ const panel = css.match(/#settings \{([^}]*)\}/)[1];
 assert.ok(/bottom:\s*\d+px/.test(panel) && !/(^|[;\s])top:/.test(panel), "the settings panel must open upward from the gear");
 assert.ok(/max-height:/.test(panel) && /overflow-y:\s*auto/.test(panel), "a tall panel must scroll on a short screen");
 console.log("layout ok: gear bottom-right clear of photo and drawing on " + screens.length + " screens (smallest gap " + Math.round(worst) + " px)");
+
+// ---- the colour a tablet shows (0.23.0): the real theme() out of app.js. A colour the wall no longer has (the dark
+// blue), still in the tablet's memory, in its address or in an old preset, gives the Pi's colour, then amber
+{
+  const at = js.indexOf("function theme(");
+  let d = 0, end = -1;
+  for (let j = js.indexOf("{", at); j < js.length; j++) { if (js[j] === "{") d++; else if (js[j] === "}" && --d === 0) { end = j + 1; break; } }
+  const THEMES = JSON.parse(js.match(/var THEMES = (\[[^\]]*\]);/)[1]);
+  const pick = (prefs, server) => new Function("prefs", "server", "THEMES", js.slice(at, end) + "return theme();")(prefs, server, THEMES);
+  assert.deepStrictEqual(THEMES, ["amber", "green", "red", "white", "turquoise"]);
+  assert.strictEqual(pick({ theme: "turquoise" }, { theme: "red" }), "turquoise", "the tablet's own choice first");
+  assert.strictEqual(pick({ theme: "blue" }, { theme: "red" }), "red", "a remembered blue: the Pi's colour");
+  assert.strictEqual(pick({ theme: "blue" }, { theme: "blue" }), "amber", "and if the Pi's is gone too: amber");
+  assert.strictEqual(pick({}, {}), "amber");
+  for (const t of THEMES) if (t !== "amber") assert.ok(css.includes('body[data-theme="' + t + '"]'), t + " has its colour in style.css");
+  assert.ok(!/0404e2|data-theme="blue"/.test(css), "the dark blue is gone from style.css");
+}
+console.log("tablet colour: ok");

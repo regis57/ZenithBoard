@@ -116,12 +116,13 @@ settings_style() {
 }
 
 settings_color() {
-  # the same six as `zenithboard color` and the tablet's gear: turquoise and blue (0.13.1) were missing here until 0.21.1
-  local cur c items=() col on; cur=$(cfg_get THEME amber)
-  for col in amber green red white turquoise blue; do
+  # the same five as `zenithboard color` and the tablet's gear (turquoise was missing here until 0.21.1; the dark
+  # blue went in 0.23.0). A Pi still set to blue sees amber ticked: what the wall shows now
+  local cur c items=() col on; cur=$(cfg_get THEME amber); valid_theme "$cur" || cur=amber
+  for col in amber green red white turquoise; do
     on=OFF; [ "$col" = "$cur" ] && on=ON; items+=("$col" "${col^}" "$on")
   done
-  c=$(wt_radio "Dot colour of the wall (amber is the default).\n\nTurquoise and blue are the deepest: blue reads as a navigation light from across a room, so try turquoise first for a wall read from the sofa." "${items[@]}") || return 1
+  c=$(wt_radio "Dot colour of the wall (amber is the default)." "${items[@]}") || return 1
   cfg_set THEME "$c"
 }
 
@@ -181,7 +182,7 @@ settings_wall_menu() {
     c=$(wt_menu "ZenithBoard wall settings (defaults for every screen; a tablet can override them with its gear icon)\n\nRadius: $(cfg_get RADIUS)    Look: $(cfg_get DISPLAY_MODE dots)    Colour: $(cfg_get THEME amber)    Seconds per aircraft: $(cfg_get CYCLE_SECONDS)\nPhotos: $(cfg_get SHOW_PHOTOS)    Routes: $(cfg_get SHOW_ROUTES 1)    Monthly data refresh: $( [ "$(cfg_get AUTO_DATA_REFRESH 1)" = 1 ] && echo ON || echo OFF )" \
       radius "1  Detection radius" \
       style "2  Look: dot matrix / split-flap airport board" \
-      color "3  Colour: amber, green, red, white, turquoise, blue" \
+      color "3  Colour: amber, green, red, white, turquoise" \
       cycle "4  Seconds per aircraft" \
       photos "5  Aircraft photos on/off" \
       routes "6  Flight origin/destination on/off" \

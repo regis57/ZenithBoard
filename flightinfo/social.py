@@ -7,8 +7,9 @@ the decoder's aircraft.json and keeps, in memory, the last positions of every ai
 fifteen seconds it asks the wall itself (on the loopback) which aircraft are inside the sharing radius, with
 everything the wall knows about them: airline, model, route, flags. When one of them is worth a post under the
 rules the owner chose, and the last post is old enough, it draws the picture and posts it with a short text.
-Two looks: the dot-matrix wall with the track drawn in dots (tools/social-render.js, Node), or the split-flap
-board beside a map with the track (social_card.py, Pillow; the map from EOX's tile service). No browser, no photo.
+Three looks: the dot-matrix wall with the track drawn in dots (tools/social-render.js, Node); the same wall beside a
+map with the track (0.23.0: Node draws the dots, social_card.py, Pillow, lays the map); or the split-flap board
+beside that map (social_card.py; the map from EOX's tile service). No browser, no photo.
 The picture lives in /run while it is being sent and is deleted right after, sent or not.
 
 What never leaves the Pi: the receiver's position, the distance and the bearing to the aircraft, the Planespotters
@@ -59,20 +60,24 @@ DEFAULTS = {
     "SOCIAL_GAP_MIN": "0",           # at least this long between two posts; 0 = none: every crossing is posted (0.20.0)
     "SOCIAL_RULES": "rare,military,helicopter,heavy,farthest",
     "SOCIAL_HASHTAGS": "#ADSB #avgeek #ZenithBoard",
-    "SOCIAL_STYLE": "dots",          # the picture: dots (the dot-matrix wall + track) | flap (split-flap board + map)
-    "SOCIAL_THEME": "",              # its colour: amber | green | red | white | turquoise | blue; empty = the wall's THEME
-    "SOCIAL_MAP": "normal",          # the flap look's map: normal | night | satellite | terrain | none
+    "SOCIAL_STYLE": "dots",          # the picture: dots (wall + track in dots) | dotmap (wall + map) | flap (split-flap + map)
+    "SOCIAL_THEME": "",              # its colour: amber | green | red | white | turquoise; empty = the wall's THEME
+    "SOCIAL_MAP": "normal",          # the map of the dotmap and flap looks: normal | night | satellite | terrain | none
 }
-STYLES = ("dots", "flap")
+STYLES = ("dots", "dotmap", "flap")
+MAP_LOOKS = ("dotmap", "flap")   # the looks that carry a map
 MAPS = ("normal", "night", "satellite", "terrain", "none")
-# 0.19.5, optional: vary the posts. "alternate" takes the two looks in turn, "rotate" the wall's colours, and the
-# flap look's four maps (not "none"), one step per post. Off by default; a fixed look, colour and map stay as they are.
-# The rotation leaves out the wall's blue: dark blue on black reads poorly on a phone, and a blue track on the
-# satellite map nearly disappears (checked on the rendered pictures). Blue stays available as a fixed colour.
+# 0.19.5, optional: vary the posts. "alternate" takes the looks in turn, "rotate" the wall's colours, and the four
+# maps (not "none"), one step per post. Off by default; a fixed look, colour and map stay as they are.
+# 0.23.0: "alternate" is the two looks with a map, the dot-matrix wall and the split-flap board, asked for by the
+# owner: the dots-only track, a map drawn in dots, left the turn. It stays a look of its own, `social look dots`.
+# The wall's dark blue went the same day, from the wall and from the posts: it read poorly on a phone, and a blue
+# track on the satellite map nearly disappeared. Turquoise stays.
 STYLE_CHOICES = STYLES + ("alternate",)
+ALTERNATE = ("dotmap", "flap")
 MAP_CHOICES = MAPS + ("rotate",)
 ROTATE_MAPS = ("normal", "night", "satellite", "terrain")
-ROTATE_THEMES = tuple(t for t in server.THEMES if t != "blue")
+ROTATE_THEMES = tuple(server.THEMES)
 HEAVY = {"A388", "A124", "A225", "B748", "B744", "A337", "A3ST", "BLCF", "C5M", "C17", "A400"}   # worth a post on sight
 WARMUP_DAYS = 3                  # "rare" and "farthest" judge against history: none before this much of it
 KEEP_PER_TYPE = 4                # the latest distinct aircraft kept per type: enough to tell rare (<= 2 others) from not
@@ -129,16 +134,17 @@ def gap_words(c):
 
 def picture_for(c, n):
     """The settings with "alternate" and "rotate" turned into this post's look, colour and map. n = posts made so
-    far. Five colours against two looks: over ten posts each look meets each colour."""
+    far. Five colours against two looks: over ten posts each look meets each colour; alternating, the map moves on
+    every second post, so over eight posts each look meets each of the four maps."""
     out = dict(c)
     style = str(c.get("SOCIAL_STYLE", "dots")).strip().lower()
     alternate = style == "alternate"
     if alternate:
-        out["SOCIAL_STYLE"] = STYLES[n % 2]
+        out["SOCIAL_STYLE"] = ALTERNATE[n % len(ALTERNATE)]
     if str(c.get("SOCIAL_THEME", "")).strip().lower() == "rotate":
         out["SOCIAL_THEME"] = ROTATE_THEMES[n % len(ROTATE_THEMES)]
     if str(c.get("SOCIAL_MAP", "")).strip().lower() == "rotate":
-        k = n // 2 if alternate else n                  # alternating: the map moves on at each flap post
+        k = n // 2 if alternate else n                  # alternating: the map moves on after each pair of looks
         out["SOCIAL_MAP"] = ROTATE_MAPS[k % len(ROTATE_MAPS)]
     return out
 
@@ -711,7 +717,7 @@ def alt_text(p, c, trace, look="dots", info=None):
     s = "" if mins == 1 else "s"
     if not mins:
         tail = "."
-    elif look == "flap" and info.get("map_words"):
+    elif look in MAP_LOOKS and info.get("map_words"):
         tail = ". Beside it, %s with the aircraft's track over the last %d minute%s, north up." % (info["map_words"], mins, s)
     else:
         tail = ". Beside it, the aircraft's track over the last %d minute%s, north up." % (mins, s)
@@ -754,16 +760,30 @@ def flap_module():
 
 
 def render(p, trace, c, out_base):
-    """Draw the picture in the chosen look. out_base has no extension: .png for dots, .jpg for flap (a map in PNG
-    would pass Bluesky's 1,000,000 bytes). Returns {path, mime, width, height, bytes, and for a map: credit, links,
+    """Draw the picture in the chosen look. out_base has no extension: .png for dots, .jpg for dotmap and flap (a map
+    in PNG would pass Bluesky's 1,000,000 bytes). Returns {path, mime, width, height, bytes, and for a map: credit, links,
     credit_full, map_words}."""
     look = style_of(c)
     spec = {"plane": p, "trace": trace, "units": c.get("UNITS", "metric"), "theme": theme_of(c),
             "clock": clock_label(), "flags": server.cfg_bool(c, "FLAGS", "1"), "pitch": 10}
-    card = flap_module() if look == "flap" else None
-    if look == "flap" and card is None:          # Pillow not installed (an offline `social look flap`): the dots, and a word
-        print("social: the split-flap picture needs Pillow: drawing the dot-matrix picture instead. Run: sudo zenithboard social look flap", flush=True)
+    if look == "dotmap" and map_of(c) == "none":    # no map wanted: the dot-matrix wall with its track in dots
+        look = "dots"
+    card = flap_module() if look in MAP_LOOKS else None
+    if look in MAP_LOOKS and card is None:       # Pillow not installed (an offline `social look flap`): the dots, and a word
+        print("social: the %s picture needs Pillow: drawing the dot-matrix picture instead. Run: sudo zenithboard social look %s"
+              % ("split-flap" if look == "flap" else "map", look), flush=True)
         look = "flap-fallback"
+    if card is not None and look == "dotmap":    # 0.23.0: Node draws the dots, the right-hand column dark; Pillow lays the map
+        got = _node(dict(spec, map=True), out_base + ".png")
+        out = out_base + ".jpg"
+        info = card.render_dotmap(out_base + ".png", got["map_box"], trace, p, out, color=got.get("color", "#ffb000"),
+                                  units=spec["units"], map_mode=map_of(c), cache_dir=os.path.join(STATE_DIR, "tiles"))
+        try:
+            os.unlink(out_base + ".png")         # the dots alone: only the JPEG with its map is posted
+        except OSError:
+            pass                                 # publish() removes it anyway
+        info.update(path=out, mime="image/jpeg")         # Node's memory is counted by _node()
+        return info
     if card is not None:
         got = _node(dict(spec, flags=False, cols=card.COLS), None, "--lines")
         out = out_base + ".jpg"
@@ -1126,7 +1146,7 @@ def cmd_test(hex_code=None):
             why_not += "; 'rare' and 'farthest' wait for %d days of history (since %s)" % (WARMUP_DAYS, state.get("since", "today"))
         print("Would the service post it? No: %s. The test shows it anyway." % why_not)
     print("Picture: %s, %s (%s bytes)" % (picture_words(picture_for(c, int(state.get("pictures", 0)))), r.get("preview") or r.get("preview_error"), r.get("bytes")))
-    if style_of(c) == "flap" and map_of(c) != "none" and r.get("map") == "none":
+    if style_of(c) in MAP_LOOKS and map_of(c) != "none" and r.get("map") == "none":
         print("Map: the tiles could not be fetched (no internet, or the tile service is busy); the track is drawn on black.")
     port = int(server.cfg_float(c, "PORT", 8080))
     print("See it:  http://%s:%d/social/preview" % (local_ip(), port))
@@ -1169,10 +1189,12 @@ def picture_words(c, state=None):
     def one(r):
         if style_of(r) == "flap":
             return "flap, %s, %s" % (theme_of(r), "no map" if map_of(r) == "none" else map_of(r) + " map")
+        if style_of(r) == "dotmap" and map_of(r) != "none":
+            return "dotmap, %s, %s map" % (theme_of(r), map_of(r))
         return "dots, %s" % theme_of(r)
     if not varies(c):
         return one(c)
-    what = [x for x, on in (("dots and flap in turn", str(c.get("SOCIAL_STYLE", "")).lower() == "alternate"),
+    what = [x for x, on in (("dotmap and flap in turn", str(c.get("SOCIAL_STYLE", "")).lower() == "alternate"),
                             ("the colours in turn", str(c.get("SOCIAL_THEME", "")).lower() == "rotate"),
                             ("the maps in turn", str(c.get("SOCIAL_MAP", "")).lower() == "rotate")) if on]
     nxt = (" (next: %s)" % one(picture_for(c, int(state.get("pictures", 0))))) if state is not None else ""

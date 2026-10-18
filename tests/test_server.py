@@ -501,11 +501,22 @@ class ThemeTest(unittest.TestCase):
                 self.assertIn('body[data-theme="%s"]' % name, css, name)
             self.assertIn('<option value="%s">' % name, html, name)
             self.assertIn(name, shell.split("valid_theme()")[1].split("\n")[0], name)
+        # the tablet's own list, which a remembered or linked colour is checked against (0.23.0)
+        app = self._read("flightinfo", "static", "app.js")
+        self.assertIn("var THEMES = %s;" % json.dumps(list(server.THEMES)).replace('","', '", "'), app)
 
-    def test_the_two_new_colours_are_the_ones_asked_for(self):
+    def test_turquoise_stays_and_the_dark_blue_is_gone_everywhere(self):
+        # 0.23.0, asked for by the owner: the dark blue read poorly, on the wall and on a phone. Turquoise stays
         css = self._read("flightinfo", "static", "style.css")
         self.assertIn("--dot: #00d6d7", css)           # turquoise
-        self.assertIn("--dot: #0404e2", css)           # blue
+        self.assertNotIn("blue", server.THEMES)
+        for parts in (("flightinfo", "static", "style.css"), ("flightinfo", "static", "index.html")):
+            self.assertNotIn("0404e2", self._read(*parts), parts)
+            self.assertNotIn('"blue"', self._read(*parts), parts)
+        self.assertNotIn("blue", self._read("lib", "common.sh").split("valid_theme()")[1].split("\n")[0].split("#")[0])
+        self.assertNotIn("blue", self._read("lib", "social.sh").split("SOCIAL_THEMES=")[1].split("\n")[0].split("#")[0])
+        # a wall still set to blue is not changed by an update: it shows amber, and the update says so
+        self.assertEqual(server.public_config({"THEME": "blue"})["theme"], "amber")
 
     def test_an_unknown_colour_falls_back_on_amber(self):
         self.assertEqual(server.public_config({"THEME": "mauve"})["theme"], "amber")

@@ -5,13 +5,14 @@
 // rows come from the wall's own code (app.js is read and its functions lifted, the way the tests do), the flags
 // from flags.js, the names from format.js, and the PNG is written here with Node's zlib.
 //
-//   node tools/social-render.js IN.json OUT.png      the dot-matrix picture
+//   node tools/social-render.js IN.json OUT.png      the dot-matrix picture (with "map": true, the right-hand
+//                                                    column is left dark: social_card.py lays a map there, 0.23.0)
 //   node tools/social-render.js IN.json --lines      the split-flap board's rows and the colour, as JSON (the
 //                                                    board itself is drawn by flightinfo/social_card.py, Pillow)
 //
 // IN.json: { "plane": <one entry of /api/planes>, "trace": [[lat, lon, alt_ft, t_seconds], ...] (oldest first),
 //            "units": "metric"|"imperial", "theme": "amber", "clock": "09:50 GMT+2", "flags": true, "pitch": 10,
-//            "cols": 14 (--lines only) }
+//            "map": false, "cols": 14 (--lines only) }
 //
 // What is deliberately NOT in the picture: the distance and the direction from the receiver (the last row shows
 // the time instead), the receiver's position (the track is centred on the aircraft, north up, with no map), and
@@ -48,7 +49,13 @@ const wall = new Function("Font5x7", "GW", "GH", "ON",
   lift("put") + lift("text") + lift("textRow") + "return { put: put, text: text, textRow: textRow };")(Font5x7, GW, GH, ON);
 
 // ---- the track panel: the right-hand column, where the photo would be on the tablet
-const PANEL = { x: 86, y: 0, w: 42, h: 68 };                       // 42 x 68 dots, the photo box grown to the top
+// It starts at dot 88, two dots clear of the flags: they take dots 75 to 85, and an outlined flag (Germany, the United
+// Kingdom) dots 74 to 86. Until 0.23.0 the panel started at 86 and its frame was drawn over the outline's last
+// column, so a German flag lost its right-hand edge (seen in a post, 18 October 2026).
+const PANEL = { x: 88, y: 0, w: 40, h: 68 };                       // 40 x 68 dots, the photo box grown to the top
+// The map's place in the "dotmap" look (0.23.0): the same column, the whole height. Nothing on the left reaches it:
+// the rows stop at dot 84, the flags at 86, the clock at 66.
+const MAP_BOX = { x: 88, y: 0, w: 40, h: 80 };
 const DIM = 0x404040, FAINT = 0x2a2a2a;
 
 function haversineKm(a, b) {
@@ -82,8 +89,8 @@ function drawTrack(g, trace, track, themeHex) {
   for (let y = P.y; y < P.y + P.h; y++) { wall.put(g, P.x, y, DIM); wall.put(g, P.x + P.w - 1, y, DIM); }
   // north
   wall.text(g, "N", cx - 2, P.y + 2, 1);
-  if (!trace || trace.length < 2) {
-    wall.text(g, "NO TRACK", P.x + 3, cy - 3, 1);
+  if (!trace || trace.length < 2) {                                // two lines: "NO TRACK" is 47 dots, the panel 40
+    wall.text(g, "NO", cx - 5, cy - 8, 1); wall.text(g, "TRACK", cx - 14, cy + 1, 1);
     return;
   }
   const last = trace[trace.length - 1];
@@ -120,13 +127,14 @@ function drawTrack(g, trace, track, themeHex) {
   // what it measures ("|------| 10KM"). 0.18 wrote "10 MIN" and "10KM" one above the other, and a reader asked
   // what they meant (0.19.0).
   const minutes = Math.max(1, Math.round((last[3] - trace[0][3]) / 60));
-  const ly1 = P.y + P.h - 17, ly2 = P.y + P.h - 9, lx = P.x + 2;
+  // one dot from the frame, one between the key and its words: "100KM" (29 dots) then ends a dot before the frame
+  const ly1 = P.y + P.h - 17, ly2 = P.y + P.h - 9, lx = P.x + 1;
   for (let x = 0; x < BAR; x++) wall.put(g, lx + x, ly1 + 3, trail(x / BAR));
-  wall.text(g, minutes + "MIN", lx + BAR + 2, ly1, 1);
+  wall.text(g, minutes + "MIN", lx + BAR + 1, ly1, 1);
   for (let x = 0; x < BAR; x++) wall.put(g, lx + x, ly2 + 3, ON);
   wall.put(g, lx, ly2 + 2, ON); wall.put(g, lx + BAR - 1, ly2 + 2, ON);
   wall.put(g, lx, ly2 + 4, ON); wall.put(g, lx + BAR - 1, ly2 + 4, ON);
-  wall.text(g, scaleKm + "KM", lx + BAR + 2, ly2, 1);
+  wall.text(g, scaleKm + "KM", lx + BAR + 1, ly2, 1);
 }
 
 // ---- the two top rows, "FLT  ETD11K" and "REG  A6-APD": the wall's own (format.js), the same on the tablet since 0.19.0
@@ -169,8 +177,9 @@ const THEMES = (function () {
   while ((m = re.exec(css))) out[m[1]] = parseInt(m[2], 16);
   return out;
 })();
+function margin(pitch) { return Math.round(pitch * 1.5); }          // a margin, as the tablet has around the grid
 function render(g, pitch, themeHex) {
-  const M = Math.round(pitch * 1.5);                                // a margin, as the tablet has around the grid
+  const M = margin(pitch);
   const W = GW * pitch + 2 * M, H = GH * pitch + 2 * M, img = Buffer.alloc(W * H * 3, 0);
   const tr = (themeHex >> 16) & 255, tg = (themeHex >> 8) & 255, tb = themeHex & 255;
   const r = pitch * 0.42, halo = pitch * 0.75;
@@ -230,12 +239,15 @@ function main() {
   }
   const g = new Uint32Array(GW * GH);
   drawWall(g, spec.plane || {}, spec.units || "metric", spec.clock || "", spec.flags !== false);
-  drawTrack(g, spec.trace || [], (spec.plane || {}).track, theme);
-  const pitch = spec.pitch || 10;
+  if (!spec.map) drawTrack(g, spec.trace || [], (spec.plane || {}).track, theme);
+  const pitch = spec.pitch || 10, M = margin(pitch);
   const { W, H, img } = render(g, pitch, theme);
   fs.writeFileSync(outFile, png(W, H, img));
-  console.log(JSON.stringify({ width: W, height: H, bytes: fs.statSync(outFile).size, maxrss_kb: maxRssKb() }));
+  // with a map to come: where it goes, in pixels of this picture, and the colour to draw its track in
+  const box = spec.map ? [M + MAP_BOX.x * pitch, M + MAP_BOX.y * pitch, MAP_BOX.w * pitch, MAP_BOX.h * pitch] : null;
+  console.log(JSON.stringify({ width: W, height: H, bytes: fs.statSync(outFile).size, maxrss_kb: maxRssKb(),
+                               map_box: box, color: "#" + ("000000" + theme.toString(16)).slice(-6) }));
 }
 
 if (require.main === module) main();
-module.exports = { drawWall, drawTrack, render, png, PANEL, pickScaleKm, BAR, HALF, GW, GH, THEMES, rows, flapLines };
+module.exports = { drawWall, drawTrack, render, png, PANEL, MAP_BOX, margin, pickScaleKm, BAR, HALF, GW, GH, THEMES, rows, flapLines };
