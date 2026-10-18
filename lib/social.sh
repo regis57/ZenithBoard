@@ -223,13 +223,20 @@ social_set_colour() {
     *) echo "Picture colour: $(or_text "$c" "the wall's ($(wall_theme))")." ;;
   esac
 }
+social_set_units() {     # 0.24.3: the posts in metric or imperial, or the wall's own units (empty)
+  local u=${1:-}
+  social_valid_in "$u" metric imperial wall || { echo "Units: metric (m, km/h, km), imperial (ft, knots, mi), or wall (the wall's own, $(cfg_get UNITS metric))"; return 1; }
+  [ "$u" != wall ] || u=""
+  cfg_set SOCIAL_UNITS "$u"
+  echo "Post units: $(or_text "$u" "the wall's ($(cfg_get UNITS metric))")."
+}
 social_set_map() {
   social_valid_in "${1:-}" $SOCIAL_MAPS || { echo "Map: $SOCIAL_MAPS (rotate: the four maps in turn)"; return 1; }
   cfg_set SOCIAL_MAP "$1"
   echo "Map: $1."
 }
 social_setup_picture() {
-  local look col map cur on
+  local look col map cur on units
   cur=$(social_look)
   look=$(wt_radio "The picture each post carries. (Space = choose, Enter = go)" \
       dotmap "Dot-matrix wall, a map with the track beside it" "$( [ "$cur" = dotmap ] && echo ON || echo OFF )" \
@@ -241,6 +248,11 @@ social_setup_picture() {
   for c in $SOCIAL_THEMES; do on=OFF; [ "$cur" = "$c" ] && on=ON; items+=("$c" "${c^}" "$on"); done
   items+=(rotate "In turn, one step per post" "$( [ "$cur" = rotate ] && echo ON || echo OFF )")
   col=$(wt_radio "Colour of the letters and the track" "${items[@]}") || return 1
+  cur=$(cfg_get SOCIAL_UNITS ""); [ -n "$cur" ] || cur=wall
+  units=$(wt_radio "Units of the posts: the picture and the text" \
+      wall "The wall's own ($(cfg_get UNITS metric))" "$( [ "$cur" = wall ] && echo ON || echo OFF )" \
+      metric "Metric: m, km/h, km" "$( [ "$cur" = metric ] && echo ON || echo OFF )" \
+      imperial "Imperial: ft, knots, mi" "$( [ "$cur" = imperial ] && echo ON || echo OFF )") || return 1
   cur=$(cfg_get SOCIAL_MAP normal)
   map=$(wt_radio "The map beside the wall or the board (from EOX's map service, credited on every post)" \
       normal "OpenStreetMap" "$( [ "$cur" = normal ] && echo ON || echo OFF )" \
@@ -252,6 +264,7 @@ social_setup_picture() {
   social_set_map "$map" >/dev/null
   clear
   social_set_colour "$col" >/dev/null || return 1
+  social_set_units "$units" >/dev/null || return 1
   social_set_look "$look" >/dev/null || { read -rp "Press Enter to continue..." _; return 1; }
   wt_msg "Saved. Picture: $look, $(or_text "$(cfg_get SOCIAL_THEME "")" "the wall's colour ($(wall_theme))"), $(cfg_get SOCIAL_MAP normal) map.\n\nNext:  sudo zenithboard social test   draws the picture and shows the text, posts nothing.\nThen:  sudo zenithboard social on     starts posting." 12
 }

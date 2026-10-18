@@ -61,6 +61,7 @@ And then for the picture:
 | Question | Choices | Default |
 |---|---|---|
 | The look | `dotmap` (the dot-matrix wall beside a map), `flap` (the split-flap board beside a map) or `alternate` (the two in turn) | `dotmap` |
+| The units, picture and text (0.24.3) | the wall's own, `metric` (m, km/h, km) or `imperial` (ft, knots, mi) | the wall's |
 | The colour of the letters and the track | the wall's own colour, or amber, green, red, white, turquoise — the wall's colours, read from its own style sheet | the wall's |
 | The map | `normal`, `night`, `satellite`, `terrain`, `none` (the track on black, nothing fetched), `rotate` | `normal` |
 
@@ -72,7 +73,7 @@ sudo zenithboard social colour rotate
 sudo zenithboard social map rotate
 ```
 
-Each of these has its own command too, for a quick change: `social words`, `social picture` (the three picture questions), `social look dotmap|flap|alternate`, `social colour green|wall`, `social map satellite`.
+Each of these has its own command too, for a quick change: `social words`, `social picture` (the three picture questions), `social look dotmap|flap|alternate`, `social colour green|wall`, `social units imperial|wall`, `social map satellite`.
 
 ### 3. Try it
 

@@ -62,6 +62,7 @@ DEFAULTS = {
     "SOCIAL_HASHTAGS": "#ADSB #avgeek #ZenithBoard",
     "SOCIAL_STYLE": "dotmap",        # the picture: dotmap (dot-matrix wall + map) | flap (split-flap + map) | alternate
     "SOCIAL_THEME": "",              # its colour: amber | green | red | white | turquoise; empty = the wall's THEME
+    "SOCIAL_UNITS": "",              # metric | imperial; empty = the wall's UNITS (0.24.3)
     "SOCIAL_MAP": "normal",          # the map of the dotmap and flap looks: normal | night | satellite | terrain | none
 }
 STYLES = ("dotmap", "flap")
@@ -164,6 +165,15 @@ def style_of(c):
 def map_of(c):
     m = str(c.get("SOCIAL_MAP", "normal")).strip().lower()
     return m if m in MAPS else "normal"
+
+
+def units_of(c):
+    """The posts' units: their own setting (0.24.3), else the wall's UNITS, else metric."""
+    for k in ("SOCIAL_UNITS", "UNITS"):
+        u = str(c.get(k, "") or "").strip().lower()
+        if u in ("metric", "imperial"):
+            return u
+    return "metric"
 
 
 def theme_of(c):
@@ -644,7 +654,7 @@ def post_text(p, c, why=None, credit=None):
     """The post. English, short, nothing the wall does not know. Starts with the flight ("Flight Etihad #ETD11K"),
     ends with the place ("above Trémery"); a range record ends with where it was seen from instead, since it was
     nowhere near overhead. credit: the map's credit line, when the picture has a map."""
-    units = c.get("UNITS", "metric")
+    units = units_of(c)
     alt = metres(p.get("alt_ft"), units)
     flight = (p.get("flight") or "").strip()
     reg = p.get("registration") or ""
@@ -697,7 +707,7 @@ def post_text(p, c, why=None, credit=None):
 
 def alt_text(p, c, trace, look="dotmap", info=None):
     """For the picture: what a screen reader should say."""
-    units = c.get("UNITS", "metric")
+    units = units_of(c)
     info = info or {}
     bits = ["Split-flap flight board" if look == "flap" else "Dot-matrix flight board"]
     if p.get("flight"):
@@ -766,7 +776,7 @@ def render(p, trace, c, out_base):
     1,000,000 bytes), or .png for the dots alone when Pillow is missing. Returns {path, mime, width, height, bytes, and for a map: credit, links,
     credit_full, map_words}."""
     look = style_of(c)
-    spec = {"plane": p, "trace": trace, "units": c.get("UNITS", "metric"), "theme": theme_of(c),
+    spec = {"plane": p, "trace": trace, "units": units_of(c), "theme": theme_of(c),
             "clock": clock_label(), "flags": server.cfg_bool(c, "FLAGS", "1"), "pitch": 10}
     card = flap_module()
     if card is None:                             # Pillow not installed (an offline `social look flap`): the dots, and a word
