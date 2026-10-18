@@ -55,7 +55,9 @@ wizard=$( wt_radio() { local t=$1 on=""; shift; echo "$t: $*" >> "$t_log"; while
           wt_msg() { echo "MSG $1" >> "$t_log"; }; clear() { :; }; t_log="$t/wizard.log"; : > "$t_log"
           cfg_set SOCIAL_THEME blue; cfg_set SOCIAL_STYLE dots; social_setup_picture >/dev/null 2>&1; echo "rc=$?"; cat "$t_log" )
 check "wizard: a blue picture colour shows the wall's ticked, as amber" 'echo "$wizard" | grep -q "^Colour.*wall The wall.s own colour (amber) ON"'
-check "wizard: it saves and says the colour drawn"   'echo "$wizard" | grep -q "^rc=0" && echo "$wizard" | grep -q "MSG Saved. Picture: dots, the wall.s colour (amber)" && [ -z "$(cfg_get SOCIAL_THEME "")" ] && [ "$(cfg_get THEME)" = blue ]'
+check "wizard: it saves and says the colour drawn"   'echo "$wizard" | grep -q "^rc=0" && echo "$wizard" | grep -q "MSG Saved. Picture: dotmap, the wall.s colour (amber), normal map" && [ -z "$(cfg_get SOCIAL_THEME "")" ] && [ "$(cfg_get THEME)" = blue ]'
+# 0.24.0: the dots-only look is no longer offered; a Pi still set to it sees dotmap ticked, what its posts are
+check "wizard: three looks, all with a map, dotmap ticked for dots" 'echo "$wizard" | grep -q "^The picture.*dotmap Dot-matrix wall, a map with the track beside it ON flap .* OFF alternate .* OFF$" && ! echo "$wizard" | grep -q " dots "'
 cfg_del THEME; cfg_set SOCIAL_THEME ""; cfg_del SOCIAL_STYLE
 check "migrate: no blue, no word about it"          '! social_migrate 2>&1 | grep -q "0.23.0"'
 social_secrets_write "MASTODON_URL=https://mastodon.social" "MASTODON_TOKEN=tok_123"
@@ -68,10 +70,13 @@ social_secrets_write "BLUESKY_HANDLE=zb.bsky.social" "BLUESKY_APP_PASSWORD=aaaa-
 check "handle: zb.bsky.social ok, no @"            'social_valid_handle zb.bsky.social && ! social_valid_handle "@zb" && ! social_valid_handle "zb"'
 
 # ---- the picture: look, colour, map
-check "look: only dots or flap"                    '! social_set_look photo >/dev/null && [ -z "$(cfg_get SOCIAL_STYLE "")" ]'
+check "look: dotmap, flap or alternate, nothing else" '! social_set_look photo >/dev/null && ! social_set_look dots >/dev/null && [ -z "$(cfg_get SOCIAL_STYLE "")" ] && [ "$(social_look)" = dotmap ]'
+cfg_set SOCIAL_STYLE dots
+check "look: dots, taken out in 0.24.0, is drawn as dotmap and named by the update" '[ "$(social_look)" = dotmap ] && social_migrate 2>&1 | grep -q "taken out in 0.24.0.*social look dotmap" && [ "$(cfg_get SOCIAL_STYLE)" = dots ] && [ "$(python3 -c "import sys; sys.path.insert(0, \"flightinfo\"); import social; print(social.style_of({\"SOCIAL_STYLE\": \"dots\"}))")" = dotmap ]'
+cfg_del SOCIAL_STYLE
 check "look: flap saved"                           'social_set_look flap >/dev/null && [ "$(cfg_get SOCIAL_STYLE)" = flap ]'
 check "look: dotmap, the dots beside a map (0.23.0)" 'social_set_look dotmap >/dev/null && [ "$(cfg_get SOCIAL_STYLE)" = dotmap ] && social_set_look flap >/dev/null'
-check "the shell knows the Python looks"           '[ "$(python3 -c "import sys; sys.path.insert(0, \"flightinfo\"); import social; print(\" \".join(social.STYLE_CHOICES))")" = "dots dotmap flap alternate" ] && social_set_look 2>&1 | grep -q "dotmap"'
+check "the shell knows the Python looks"           '[ "$(python3 -c "import sys; sys.path.insert(0, \"flightinfo\"); import social; print(\" \".join(social.STYLE_CHOICES))")" = "dotmap flap alternate" ] && social_set_look 2>&1 | grep -q "dotmap"'
 cfg_set SOCIAL_THEME green
 check "colour: blue is gone (0.23.0), refused"     '! social_set_colour blue >/dev/null && [ "$(cfg_get SOCIAL_THEME)" = green ]'
 cfg_set SOCIAL_THEME red
@@ -82,7 +87,7 @@ check "map: the five, nothing else"                'social_set_map satellite >/d
 check "the shell knows the Python lists"           'py=$(python3 -c "import sys; sys.path.insert(0, \"flightinfo\"); import social, server; print(\" \".join(social.MAP_CHOICES)); print(\" \".join(server.THEMES))"); [ "$(echo "$py" | head -1)" = "$SOCIAL_MAPS" ] && [ "$(echo "$py" | tail -1)" = "$SOCIAL_THEMES" ]'
 check "variety: alternate, rotate, rotate accepted" 'social_set_look alternate >/dev/null && [ "$(cfg_get SOCIAL_STYLE)" = alternate ] && social_set_colour rotate >/dev/null && [ "$(cfg_get SOCIAL_THEME)" = rotate ] && social_set_map rotate >/dev/null && [ "$(cfg_get SOCIAL_MAP)" = rotate ]'
 social_set_colour wall >/dev/null; social_set_map normal >/dev/null
-social_set_look dots >/dev/null
+cfg_del SOCIAL_STYLE
 
 # ---- the hashtags (0.19.7): the # optional, so an unquoted shell word is not taken for a comment
 check "hashtags: words become #words"              'social_set_hashtags ADSB "#avgeek" Moselle >/dev/null && [ "$(cfg_get SOCIAL_HASHTAGS)" = "#ADSB #avgeek #Moselle" ]'
@@ -117,9 +122,9 @@ PATH="$t/bin:/usr/bin:/bin" social_need_node >/dev/null 2>&1 || true   # no node
 check "node missing: apt is asked for nodejs"      'grep -q "install -y nodejs" "$t/apt.log"'
 printf '#!/bin/bash\nexit 0\n' > "$t/bin/node"; chmod +x "$t/bin/node"
 printf '#!/bin/bash\n[ "$1" = -c ] && exit 1\nexec /usr/bin/python3 "$@"\n' > "$t/bin/python3"; chmod +x "$t/bin/python3"; hash -r
-cfg_set SOCIAL_STYLE flap; social_need_tools >/dev/null 2>&1 || true
-rm -f "$t/bin/python3"; hash -r; cfg_set SOCIAL_STYLE dots
-check "flap without Pillow: apt is asked for it"   'grep -q "install -y python3-pil fonts-dejavu-core" "$t/apt.log"'
+cfg_del SOCIAL_STYLE; social_need_tools >/dev/null 2>&1 || true     # every look has a map since 0.24.0
+rm -f "$t/bin/python3"; hash -r
+check "no Pillow: apt is asked for it, whatever the look"   'grep -q "install -y python3-pil fonts-dejavu-core" "$t/apt.log"'
 
 # ---- the security audit knows the file
 # shellcheck source=lib/security.sh

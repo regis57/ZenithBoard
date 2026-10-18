@@ -518,14 +518,14 @@ Under the four numbers, two lines name **the farthest aircraft of the day and of
 
 ## Share what flies over on Bluesky (optional)
 
-Off by default. Switched on, the Pi posts the aircraft worth a post — a military tanker, a Beluga, a type it has not seen in a month, the farthest of the month — to Bluesky, as a **picture** and a short text: `Flight Etihad #ETD11K · Airbus A380-800 · Paris → Abu Dhabi · altitude 8 500 m · above Trémery`. Three looks for the picture, all drawn by the Pi itself, with no browser, on a Pi 3B included:
+Off by default. Switched on, the Pi posts the aircraft worth a post — a military tanker, a Beluga, a type it has not seen in a month, the farthest of the month — to Bluesky, as a **picture** and a short text: `Flight Etihad #ETD11K · Airbus A380-800 · Paris → Abu Dhabi · altitude 8 500 m · above Trémery`. Two looks for the picture, each beside a map of the aircraft's track, both drawn by the Pi itself, with no browser, on a Pi 3B included:
 
-| `dotmap` (0.23.0) | `flap` |
+| `dotmap` (the default) | `flap` |
 |---|---|
 | ![Dot-matrix picture with a map](docs/images/social-dotmap.jpg) | ![Split-flap picture with a map](docs/images/social-flap.jpg) |
 | The dot-matrix wall beside a map with the aircraft's track: OpenStreetMap, a darkened one, satellite or terrain. *Shown here without its map, as the Pi draws it when the tile service does not answer: the tiles could not be reached from where this preview was made* | The split-flap board beside the same map |
 
-The third, `dots`, is the dot-matrix wall with the track drawn in dots and no map, nothing fetched ([picture](docs/images/social-dots.png)). `alternate` takes `dotmap` and `flap` in turn, and the map and the colour can turn too.
+`alternate` takes `dotmap` and `flap` in turn, and the map and the colour can turn too. The map can also be `none`: the track on black, nothing fetched.
 
 ```bash
 sudo zenithboard social setup     # the Bluesky account (an app password, never the real one), the words, the picture

@@ -26,7 +26,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.23.0"
+VERSION = "0.24.0"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -1064,6 +1064,7 @@ lookup_aircraft.pending = lambda hex_code: _aircraft.pending((hex_code or "").st
 # (lib/stats.sh), with the airline, the route and the large city nearest the aircraft, which the /stats page shows.
 FARTHEST_EVERY_S = 5                # aircraft.json is rewritten every second; a position stays in it for a minute
 FARTHEST_MAX_KM = 600               # readsb's own range limit is 300 NM (556 km): a position beyond is a decoding error
+CALLSIGN_KEEP_S = 3600              # a callsign is remembered an hour after it was last heard: one pass across the range
 CITIES_FILE = os.path.join(DATA_DIR, "cities100k.tsv")
 
 
@@ -1073,6 +1074,10 @@ class FarthestTracker(object):
     def __init__(self):
         self.lock = threading.Lock()
         self.days = {}                      # "YYYY-MM-DD" -> record
+        # hex -> (callsign, when last seen). At the edge of range the decoder often has an aircraft's positions before
+        # its callsign: the day's farthest was then written with no flight, airline or route (TF-ICE at 322 km, seen
+        # on the real Pi, 0.23.0). The callsign heard before or after fills it in.
+        self.calls = {}
 
     def observe(self, data, lat, lon, now=None):
         now = time.time() if now is None else now
@@ -1086,6 +1091,13 @@ class FarthestTracker(object):
             alt = ac.get("alt_baro", ac.get("alt_geom"))
             if not re.match(r"^[0-9a-f]{6}$", hx) or alt == "ground":      # ~ marks a made-up address: nothing to name
                 continue
+            call = str(ac.get("flight") or "").strip()
+            if call:
+                with self.lock:
+                    self.calls[hx] = (call, now)
+                    for rec in self.days.values():
+                        if rec["hex"] == hx and not rec["flight"]:
+                            rec["flight"] = call
             km = haversine_km(lat, lon, ac["lat"], ac["lon"])
             if km > FARTHEST_MAX_KM:
                 continue
@@ -1096,13 +1108,15 @@ class FarthestTracker(object):
                 if cur and cur["km"] >= round(km, 1):
                     continue
                 self.days[day] = {
-                    "day": day, "time": when.strftime("%H:%M"), "hex": hx, "flight": str(ac.get("flight") or "").strip(),
+                    "day": day, "time": when.strftime("%H:%M"), "hex": hx, "flight": call or self.calls.get(hx, ("", 0))[0],
                     "registration": ac.get("r"), "type": ac.get("t"), "category": ac.get("category"), "dbFlags": ac.get("dbFlags"),
                     "alt_ft": alt if isinstance(alt, (int, float)) else None, "km": round(km, 1),
                     "lat": ac["lat"], "lon": ac["lon"], "track": ac.get("track"), "gs": ac.get("gs")}
         with self.lock:
             for d in sorted(self.days)[:-2]:
                 del self.days[d]
+            for hx in [h for h, (_, t) in self.calls.items() if now - t > CALLSIGN_KEEP_S]:
+                del self.calls[hx]
 
     def snapshot(self):
         with self.lock:

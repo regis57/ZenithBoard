@@ -207,7 +207,7 @@ class VarietyTest(unittest.TestCase):
         c = dict(CFG, SOCIAL_STYLE="dotmap", SOCIAL_THEME="white", SOCIAL_MAP="rotate")
         self.assertEqual([social.picture_for(c, n)["SOCIAL_MAP"] for n in range(4)], list(social.ROTATE_MAPS))
         self.assertEqual(social.picture_words(dict(c, SOCIAL_MAP="terrain")), "dotmap, white, terrain map")
-        self.assertEqual(social.picture_words(dict(c, SOCIAL_MAP="none")), "dots, white")     # no map: the track in dots
+        self.assertEqual(social.picture_words(dict(c, SOCIAL_MAP="none")), "dotmap, white, no map")   # the track on black (0.24.0)
 
     def test_fixed_settings_stay_fixed(self):
         c = dict(CFG, SOCIAL_STYLE="flap", SOCIAL_THEME="green", SOCIAL_MAP="night")
@@ -414,7 +414,11 @@ class PictureTest(unittest.TestCase):
         if shutil.which(social.NODE) is None:
             self.skipTest("node not installed here")
         d = tempfile.mkdtemp(); self.addCleanup(shutil.rmtree, d, True)
-        info = social.render(EZY, trace(60), CFG, os.path.join(d, "p"))
+        # the dots alone: since 0.24.0 only what a Pi without Pillow posts rather than nothing (every look has a map)
+        self.addCleanup(setattr, social, "flap_module", social.flap_module); social.flap_module = lambda: None
+        import contextlib, io
+        with contextlib.redirect_stdout(io.StringIO()):
+            info = social.render(EZY, trace(60), CFG, os.path.join(d, "p"))
         with open(info["path"], "rb") as fh:
             head = fh.read(8)
         self.assertEqual(head, b"\x89PNG\r\n\x1a\n")
@@ -540,7 +544,9 @@ class PictureTest(unittest.TestCase):
         self.assertEqual(social.theme_of({"THEME": "red", "SOCIAL_THEME": "pink"}), "red")  # not a colour: ignored
         self.assertEqual(social.style_of({"SOCIAL_STYLE": "FLAP"}), "flap")
         self.assertEqual(social.style_of({"SOCIAL_STYLE": "dotmap"}), "dotmap")
-        self.assertEqual(social.style_of({"SOCIAL_STYLE": "photo"}), "dots")
+        self.assertEqual(social.style_of({"SOCIAL_STYLE": "photo"}), "dotmap")
+        self.assertEqual(social.style_of({"SOCIAL_STYLE": "dots"}), "dotmap")   # taken out in 0.24.0, at the owner's word
+        self.assertEqual(social.style_of({}), "dotmap")
         self.assertEqual(social.map_of({"SOCIAL_MAP": "satellite"}), "satellite")
         self.assertEqual(social.map_of({"SOCIAL_MAP": "google"}), "normal")
 
@@ -621,11 +627,11 @@ class FlapPictureTest(unittest.TestCase):
         a = social.alt_text(EZY, CFG, trace(60), "dotmap", info)
         self.assertTrue(a.startswith("Dot-matrix flight board"), a)
         self.assertIn("Beside it, a terrain map with the aircraft's track", a)
-        # no map wanted: the dot-matrix wall with its track in dots, nothing fetched
+        # no map wanted: the dot-matrix wall with its track on black, nothing fetched (0.24.0: no longer the dots look)
         asked = []
         social_card.fetch_tile = lambda *a, **k: asked.append(a)
         info = social.render(EZY, trace(60), dict(CFG, SOCIAL_STYLE="dotmap", SOCIAL_MAP="none"), os.path.join(self.d, "q"))
-        self.assertEqual(info["mime"], "image/png")
+        self.assertEqual((info["mime"], info["map"], info["credit"]), ("image/jpeg", "none", None))
         self.assertEqual(asked, [], "map none fetches nothing")
 
     def test_the_aircraft_is_never_under_the_legend(self):
@@ -1249,13 +1255,13 @@ class PublishTest(unittest.TestCase):
         if shutil.which(social.NODE) is None:
             self.skipTest("node not installed here")
         old = social.RUN_DIR; social.RUN_DIR = "/proc/no-such-place/social"; self.addCleanup(setattr, social, "RUN_DIR", old)
-        r = social.publish(EZY, trace(30), "all", CFG, {}, dry=True)
+        r = social.publish(EZY, trace(30), "all", dict(CFG, SOCIAL_MAP="none"), {}, dry=True)
         self.assertIn("text", r)
         self.assertFalse([d for d in os.listdir(tempfile.gettempdir()) if d.startswith("zenithboard-social-")], "the stand-in folder must be removed")
 
     def test_the_picture_is_deleted_after_a_post_even_when_the_network_fails(self):
-        if shutil.which(social.NODE) is None:
-            self.skipTest("node not installed here")
+        if shutil.which(social.NODE) is None or social_card is None:
+            self.skipTest("node or Pillow not installed here")
         d = tempfile.mkdtemp(); self.addCleanup(shutil.rmtree, d, True)
         old_run = social.RUN_DIR; social.RUN_DIR = d; self.addCleanup(setattr, social, "RUN_DIR", old_run)
         old = urllib.request.urlopen
@@ -1263,13 +1269,13 @@ class PublishTest(unittest.TestCase):
         self.addCleanup(setattr, urllib.request, "urlopen", old)
         keep = os.path.join(d, "keep", "preview")
         os.makedirs(os.path.dirname(keep), exist_ok=True)
-        with open(keep + ".jpg", "wb") as fh:          # a flap preview from before
-            fh.write(b"old")
-        r = social.publish(EZY, trace(30), "all", CFG, {"BLUESKY_HANDLE": "h", "BLUESKY_APP_PASSWORD": "p"}, keep=keep)
+        with open(keep + ".png", "wb") as fh:          # a dots preview from before 0.24.0 (the real Pi's
+            fh.write(b"old")                            # /social/preview still showed one from an old version)
+        r = social.publish(EZY, trace(30), "all", dict(CFG, SOCIAL_MAP="none"), {"BLUESKY_HANDLE": "h", "BLUESKY_APP_PASSWORD": "p"}, keep=keep)
         self.assertTrue(r["bluesky"].startswith("FAILED"))
         self.assertEqual([f for f in os.listdir(d) if f.startswith("post-")], [], "the picture must not stay on the Pi")
-        self.assertTrue(os.path.exists(keep + ".png"))
-        self.assertFalse(os.path.exists(keep + ".jpg"), "the preview is the last picture drawn, whatever the look")
+        self.assertTrue(os.path.exists(keep + ".jpg"))
+        self.assertFalse(os.path.exists(keep + ".png"), "the preview is the last picture drawn, whatever the look")
 
 
 if __name__ == "__main__":

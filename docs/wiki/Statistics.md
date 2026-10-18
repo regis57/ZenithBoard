@@ -31,6 +31,8 @@ The cities come from GeoNames (Creative Commons Attribution 4.0), shipped as `fl
 
 The figure in the box and the one in the line can differ by a few kilometres: the box is the decoder's own maximum over each fifteen minutes, the line the farthest position the wall saw, every five seconds. Days before 0.22.0 have a box and no line; the page says so for the thirty-day best.
 
+At the edge of range the decoder often has an aircraft's positions before its callsign. Since 0.24.0 the wall remembers the callsigns heard in the last hour and names the farthest aircraft with the one heard before or after its farthest position; until then the line had the registration and the model alone, with no flight and no route (seen on the real page: *TF-ICE · BOEING 737 MAX 8 · 322 km*).
+
 **The daily aircraft count is a floor.** A sample every fifteen minutes misses an aircraft that crossed in less than that. Both the page and the command say so. Sampling more often would catch more of them and write to the SD card more often; fifteen minutes is the same trade the gain log makes.
 
 ## The page

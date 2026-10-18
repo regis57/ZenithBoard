@@ -1,12 +1,14 @@
 # Social sharing
 
-Off by default. Switched on, the Pi posts the aircraft worth a post — a military tanker, a Beluga, a type it has not seen in a month — to **Bluesky**, as a picture with a short text. Three looks for the picture, all drawn by the Pi itself in a second or two, on a Pi 3B included, with no browser:
+Off by default. Switched on, the Pi posts the aircraft worth a post — a military tanker, a Beluga, a type it has not seen in a month — to **Bluesky**, as a picture with a short text. Two looks for the picture, each beside a map of the aircraft's track, both drawn by the Pi itself in a second or two, on a Pi 3B included, with no browser:
 
 | Look | What it shows |
 |---|---|
-| `dots` (default) | The dot-matrix wall as it is at that moment, and in the right-hand column the aircraft's track over the last minutes, drawn in the same dots. Nothing is fetched |
-| `dotmap` (0.23.0) | The same dot-matrix wall, and in the right-hand column a map with the aircraft's track: the split-flap look's map, on a narrower strip |
-| `flap` | The split-flap board, beside a map with the aircraft's track. The map can be a plain map, a dark one, satellite, terrain, or none |
+| `dotmap` (default) | The dot-matrix wall as it is at that moment, and in the right-hand column a map with the aircraft's track over the last minutes |
+| `flap` | The split-flap board, beside the same map, wider |
+| `alternate` | The two in turn, one post each |
+
+The map can be a plain map, a dark one, satellite, terrain, or none (the track on black, nothing fetched). Until 0.24.0 a third look, `dots`, drew the track in dots in place of a map; it was taken out at the owner's word. A Pi still set to it posts `dotmap`, and the update says so with the command.
 
 ```bash
 sudo zenithboard social setup      # the Bluesky account, the words, the picture   (or: menu -> 4 Settings -> 6 Social sharing)
@@ -58,11 +60,11 @@ And then for the picture:
 
 | Question | Choices | Default |
 |---|---|---|
-| The look | `dots` (the dot-matrix wall, the track in dots, no map), `dotmap` (the dot-matrix wall beside a map, 0.23.0) or `flap` (the split-flap board beside a map) | `dots` |
+| The look | `dotmap` (the dot-matrix wall beside a map), `flap` (the split-flap board beside a map) or `alternate` (the two in turn) | `dotmap` |
 | The colour of the letters and the track | the wall's own colour, or amber, green, red, white, turquoise — the wall's colours, read from its own style sheet | the wall's |
-| The map (`dotmap` and `flap`) | `normal`, `night`, `satellite`, `terrain`, `none` (for `dotmap`, `none` draws the `dots` picture) | `normal` |
+| The map | `normal`, `night`, `satellite`, `terrain`, `none` (the track on black, nothing fetched), `rotate` | `normal` |
 
-**To vary the posts** (optional): the look can be `alternate` — the dot-matrix wall with a map, then the split-flap board, one post each — the colour `rotate` — amber, green, red, white, turquoise in turn, one step per post — and the map `rotate` — normal, night, satellite, terrain in turn: at every post for a fixed look, after each pair of posts when alternating. Five colours against two looks: over ten posts each look meets each colour; over eight, each look meets each map. Since 0.23.0, asked for by the owner, `alternate` is the two looks with a real map: the track drawn in dots left the turn, and stays a look of its own (`social look dots`). The dark blue went the same day, from the wall and from the posts; a picture colour still set to it gives the wall's colour, and the update says so. `social status` names the next picture. Posts made by hand move the turn on too.
+**To vary the posts** (optional): the look can be `alternate` — the dot-matrix wall with a map, then the split-flap board, one post each — the colour `rotate` — amber, green, red, white, turquoise in turn, one step per post — and the map `rotate` — normal, night, satellite, terrain in turn: at every post for a fixed look, after each pair of posts when alternating. Five colours against two looks: over ten posts each look meets each colour; over eight, each look meets each map. Since 0.23.0, asked for by the owner, `alternate` is the two looks with a real map. The dark blue went the same day, from the wall and from the posts; a picture colour still set to it gives the wall's colour, and the update says so. `social status` names the next picture. Posts made by hand move the turn on too.
 
 ```bash
 sudo zenithboard social look alternate
@@ -70,7 +72,7 @@ sudo zenithboard social colour rotate
 sudo zenithboard social map rotate
 ```
 
-Each of these has its own command too, for a quick change: `social words`, `social picture` (the three picture questions), `social look dots|dotmap|flap`, `social colour green|wall`, `social map satellite`.
+Each of these has its own command too, for a quick change: `social words`, `social picture` (the three picture questions), `social look dotmap|flap|alternate`, `social colour green|wall`, `social map satellite`.
 
 ### 3. Try it
 
@@ -96,26 +98,13 @@ zenithboard logs social
 
 ## The picture
 
-### Dot-matrix
-
-![The dot-matrix picture](https://github.com/regis57/ZenithBoard/raw/main/docs/images/social-dots.png)
-
-The wall's rows as the tablet shows them (`FLT  ETD11K`, `REG  A6-APD`, then airline, type, altitude, speed, route), with two differences: the time on the last row with its offset from GMT as the Pi's time zone has it that day (`11:39 GMT+2` in a French summer, `GMT+1` in winter), where the tablet shows the distance and direction; and, in the right-hand column, the track where the tablet has the silhouette and the photo.
-
-**Reading the track column.** North is up. The aircraft is the arrow in the middle, pointing where it flies; the dimmer dots behind it are where it was. Under them, a legend read as a key:
-
-| Line | Means |
-|---|---|
-| a piece of the dim trail, then `10MIN` | the trail shows the last ten minutes |
-| a bar with end ticks, then `20KM` | that bar is twenty kilometres on the track's scale |
-
-The scale is chosen for each picture, from 1 to 500 km per bar, the smallest that keeps the whole track inside the frame. The flags are the wall's: the country of the registration beside the `REG` row (since 0.20.0; it sat beside the airline, where it read as the airline's country), and the maker's beside the model.
-
 ### Dot-matrix with a map
 
 ![The dot-matrix picture with a map, drawn here without its tiles](https://github.com/regis57/ZenithBoard/raw/main/docs/images/social-dotmap.jpg)
 
-`sudo zenithboard social look dotmap` (0.23.0, asked for by the owner): the dot-matrix wall as above, and in the right-hand column, instead of the track in dots, the map of the split-flap look below — the same four maps, the same credit, the same `social map` setting and its `rotate` — with the track, the aircraft, the key and north. Node draws the dots with that column left dark and says where it is; Pillow lays the map there and writes a JPEG under Bluesky's limit. The map is a strip 400 pixels wide and 800 high, so when the aircraft would land under the key, the view is chosen in the part above the key and the credit: an aircraft flying south ends above the key, not under it. With `social map none` the look draws the track in dots, as `dots` does, and fetches nothing.
+The wall's rows as the tablet shows them (`FLT  EWG11S`, `REG  D-AIDO`, then airline, type, altitude, speed, route), with two differences: the time on the last row with its offset from GMT as the Pi's time zone has it that day (`11:39 GMT+2` in a French summer, `GMT+1` in winter), where the tablet shows the distance and direction; and, in the right-hand column, a map where the tablet has the silhouette and the photo. The flags are the wall's: the country of the registration beside the `REG` row (since 0.20.0; it sat beside the airline, where it read as the airline's country), and the maker's beside the model.
+
+`sudo zenithboard social look dotmap` (0.23.0, asked for by the owner; the default since 0.24.0): the map is the split-flap look's, below — the same four maps, the same credit, the same `social map` setting and its `rotate` — with the track, the aircraft, the key and north. Node draws the dots with that column left dark and says where it is; Pillow lays the map there and writes a JPEG under Bluesky's limit. The map is a strip 400 pixels wide and 800 high, so when the aircraft would land under the key, the view is chosen in the part above the key and the credit: an aircraft flying south ends above the key, not under it. With `social map none` the strip shows the track on black over a faint grid, and nothing is fetched.
 
 *The picture above was made where the tile service cannot be reached: it is what the Pi posts when the tiles do not come, the track on a dark grid, with no credit. With the tiles, the strip is the map of the split-flap picture.*
 
@@ -188,7 +177,7 @@ The registration is said when no airline is: an airline flight is known by its c
 
 `zenithboard-social.service` runs `flightinfo/social.py` as the `zenithboard` user inside the same sandbox as the wall (exposure at most 1.5 on systemd's scale; `tests/test_units.sh` holds the ceiling). Every five seconds it reads the decoder's `aircraft.json` and keeps the last fifteen minutes of positions per aircraft in memory. Every fifteen seconds it asks the wall itself, on the loopback, which aircraft are inside the sharing radius — with everything the wall knows about them: airline, model, route, flags. When a candidate passes the rules (and a gap, if one is set, has passed), it draws the picture and posts it, then looks again five seconds later rather than fifteen, in case another is waiting its turn. It also notes, from the decoder's positions every five seconds, which aircraft are inside the radius: that is what keeps a crossing going, even at a moment the wall does not answer.
 
-The dot-matrix picture is `tools/social-render.js`: Node reads `app.js` and lifts the wall's own text functions (the way the tests do), draws the rows, the flags from `flags.js`, the track in the right-hand column, and writes a PNG with Node's `zlib`; the colours come from the wall's `style.css`. About 60 KB. The right-hand column starts at dot 88, two dots clear of the flags (dots 74 to 86 with an outline): until 0.23.0 it started at 86 and its frame was drawn over a German flag's outline. For `dotmap` the same script leaves that column dark and says where it is in pixels; `social_card.py` lays the map there (`render_dotmap`) and writes a JPEG, like the split-flap picture. The split-flap picture asks the same script for the board's rows (`--lines`, the wall's own formatting) and paints them with Pillow in `flightinfo/social_card.py`, with the map tiles and the track; a JPEG of about 500 KB, under Bluesky's limit of 1,000,000 bytes (the quality steps down if a picture would not be).
+The dot-matrix picture is `tools/social-render.js`: Node reads `app.js` and lifts the wall's own text functions (the way the tests do), draws the rows and the flags from `flags.js`, and writes a PNG with Node's `zlib`; the colours come from the wall's `style.css`. The right-hand column starts at dot 88, two dots clear of the flags (dots 74 to 86 with an outline): until 0.23.0 it started at 86 and its frame was drawn over a German flag's outline. The script leaves that column dark and says where it is in pixels; `social_card.py` lays the map there (`render_dotmap`) and writes a JPEG, like the split-flap picture. The split-flap picture asks the same script for the board's rows (`--lines`, the wall's own formatting) and paints them with Pillow in `flightinfo/social_card.py`, with the map tiles and the track; a JPEG of about 500 KB, under Bluesky's limit of 1,000,000 bytes (the quality steps down if a picture would not be). A Pi without Pillow (installed by `social on`, `social look` and `social test`, so only an offline Pi) gets the dot picture with the track drawn in dots in that column, as `dots` drew it before 0.24.0, rather than no picture; the service's journal says why.
 
 Bluesky is the standard library only: a sign-in (`createSession`), then for each post `uploadBlob → createRecord`, with the hashtags and the map's link as facets so they are clickable, and the alt text and the aspect ratio with the image. **The session is kept**, in memory only: Bluesky allows an account [300 sign-ins a day and 30 in five minutes](https://docs.bsky.app/docs/advanced-guides/rate-limits), and signing in for every post, as 0.19 did, would pass that on a busy day once every crossing is posted. After an hour the access token is renewed with the refresh token (`refreshSession`); a new sign-in only if Bluesky refuses it, or if the account in the file has changed. A token refused in the middle of a post means one new sign-in and one more try, never a loop. `social check` always signs in afresh: that is what it is for.
 
