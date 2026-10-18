@@ -297,13 +297,16 @@ zb_update_components() {
 # an update: the wall shows amber meanwhile (the server and the tablet fall back by themselves), and the update says
 # so with the command. The same for a preset that carries it.
 zb_retired_colours() {
-  local p
+  local p n v
   if [ "$(cfg_get THEME amber)" = blue ]; then
     warn "The wall's colour is set to blue, which was taken out in 0.23.0: the wall shows amber meanwhile. Choose one:  sudo zenithboard color turquoise  (or amber, green, red, white)"
   fi
-  for p in $(grep -E '^PRESET_[A-Z0-9]+=.*theme=blue' "$ZB_CONFIG" 2>/dev/null | cut -d= -f1); do
-    p=${p#PRESET_}
-    warn "The preset $(printf '%s' "$p" | tr '[:upper:]' '[:lower:]') sets theme=blue, taken out in 0.23.0: that tablet shows the wall's colour. Set it again:  sudo zenithboard preset add $(printf '%s' "$p" | tr '[:upper:]' '[:lower:]') theme=turquoise ..."
+  # the command given is the whole preset with turquoise in place of blue: "preset add" replaces a preset, so a
+  # command with theme=turquoise alone would drop its other settings
+  for p in $(grep -E '^PRESET_[A-Z0-9]+="?([^"]* )?theme=blue( |"|$)' "$ZB_CONFIG" 2>/dev/null | cut -d= -f1); do
+    n=$(printf '%s' "${p#PRESET_}" | tr '[:upper:]' '[:lower:]')
+    v=$(cfg_get "$p" "" | sed -E 's/(^| )theme=blue( |$)/\1theme=turquoise\2/')
+    warn "The preset $n sets theme=blue, taken out in 0.23.0: that tablet shows the wall's colour meanwhile. Set it again (turquoise, or another colour):  sudo zenithboard preset add $n $v"
   done
   return 0
 }

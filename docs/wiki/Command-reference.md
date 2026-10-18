@@ -41,7 +41,7 @@ Every `zenithboard` command, grouped by what you are trying to do. `zenithboard`
 | `zenithboard social picture` | yes | The picture: dot-matrix or split-flap, its colour, the map (a wizard) |
 | `zenithboard social look dots` · `dotmap` · `flap` · `alternate` | yes | The dot-matrix wall with the track in dots (no map), the dot-matrix wall with a map, the split-flap board with a map, or `dotmap` and `flap` in turn (one post each) |
 | `zenithboard social colour NAME` · `wall` · `rotate` | yes | amber, green, red, white, turquoise, the wall's own colour, or the colours in turn |
-| `zenithboard social map NAME` · `rotate` | yes | The split-flap look's map: normal, night, satellite, terrain, none, or the four maps in turn |
+| `zenithboard social map NAME` · `rotate` | yes | The map of the dotmap and flap looks: normal, night, satellite, terrain, none, or the four maps in turn |
 | `zenithboard social test [HEX]` | | Draw the picture and print the text for the best candidate (or that aircraft); post nothing. The picture is at `/social/preview` |
 | `zenithboard social on` · `off` · `status` | yes | Post the aircraft overhead as a picture of the wall (off by default). `off` keeps the account |
 | `zenithboard social post [HEX]` | | Post now, once, whatever the gap. That aircraft then counts as posted for its crossing |

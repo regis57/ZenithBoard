@@ -523,7 +523,7 @@ Off by default. Switched on, the Pi posts the aircraft worth a post — a milita
 | `dotmap` (0.23.0) | `flap` |
 |---|---|
 | ![Dot-matrix picture with a map](docs/images/social-dotmap.jpg) | ![Split-flap picture with a map](docs/images/social-flap.jpg) |
-| The dot-matrix wall beside a map with the aircraft's track: OpenStreetMap, a darkened one, satellite or terrain. *A preview: the map is cut from an earlier post* | The split-flap board beside the same map |
+| The dot-matrix wall beside a map with the aircraft's track: OpenStreetMap, a darkened one, satellite or terrain. *Shown here without its map, as the Pi draws it when the tile service does not answer: the tiles could not be reached from where this preview was made* | The split-flap board beside the same map |
 
 The third, `dots`, is the dot-matrix wall with the track drawn in dots and no map, nothing fetched ([picture](docs/images/social-dots.png)). `alternate` takes `dotmap` and `flap` in turn, and the map and the colour can turn too.
 

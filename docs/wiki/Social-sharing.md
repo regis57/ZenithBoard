@@ -1,10 +1,11 @@
 # Social sharing
 
-Off by default. Switched on, the Pi posts the aircraft worth a post — a military tanker, a Beluga, a type it has not seen in a month — to **Bluesky**, as a picture with a short text. Two looks for the picture, both drawn by the Pi itself in a second or two, on a Pi 3B included, with no browser:
+Off by default. Switched on, the Pi posts the aircraft worth a post — a military tanker, a Beluga, a type it has not seen in a month — to **Bluesky**, as a picture with a short text. Three looks for the picture, all drawn by the Pi itself in a second or two, on a Pi 3B included, with no browser:
 
 | Look | What it shows |
 |---|---|
-| `dots` (default) | The dot-matrix wall as it is at that moment, and in the right-hand column the aircraft's track over the last minutes, drawn in the same dots |
+| `dots` (default) | The dot-matrix wall as it is at that moment, and in the right-hand column the aircraft's track over the last minutes, drawn in the same dots. Nothing is fetched |
+| `dotmap` (0.23.0) | The same dot-matrix wall, and in the right-hand column a map with the aircraft's track: the split-flap look's map, on a narrower strip |
 | `flap` | The split-flap board, beside a map with the aircraft's track. The map can be a plain map, a dark one, satellite, terrain, or none |
 
 ```bash
@@ -109,6 +110,14 @@ The wall's rows as the tablet shows them (`FLT  ETD11K`, `REG  A6-APD`, then air
 | a bar with end ticks, then `20KM` | that bar is twenty kilometres on the track's scale |
 
 The scale is chosen for each picture, from 1 to 500 km per bar, the smallest that keeps the whole track inside the frame. The flags are the wall's: the country of the registration beside the `REG` row (since 0.20.0; it sat beside the airline, where it read as the airline's country), and the maker's beside the model.
+
+### Dot-matrix with a map
+
+![The dot-matrix picture with a map, drawn here without its tiles](https://github.com/regis57/ZenithBoard/raw/main/docs/images/social-dotmap.jpg)
+
+`sudo zenithboard social look dotmap` (0.23.0, asked for by the owner): the dot-matrix wall as above, and in the right-hand column, instead of the track in dots, the map of the split-flap look below — the same four maps, the same credit, the same `social map` setting and its `rotate` — with the track, the aircraft, the key and north. Node draws the dots with that column left dark and says where it is; Pillow lays the map there and writes a JPEG under Bluesky's limit. The map is a strip 400 pixels wide and 800 high, so the view is chosen in the part above the key and the credit: an aircraft flying south ends above the key, not under it. With `social map none` the look draws the track in dots, as `dots` does, and fetches nothing.
+
+*The picture above was made where the tile service cannot be reached: it is what the Pi posts when the tiles do not come, the track on a dark grid, with no credit. With the tiles, the strip is the map of the split-flap picture.*
 
 ### Split-flap with a map
 

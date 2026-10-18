@@ -67,7 +67,7 @@ function haversineKm(a, b) {
 
 // A scale that keeps the whole track inside the panel: 1 to 500 km per bar, the smallest that fits.
 // The scale bar is BAR dots long and stands for one round distance; the track must fit HALF dots either side of the
-// aircraft (the panel is 42 dots wide). 0.18.2 used a 14-dot bar and let the track run twice past the edge, and a
+// aircraft (the panel is 40 dots wide). 0.18.2 used a 14-dot bar and let the track run twice past the edge, and a
 // "10KM" label pushed the bar out of the frame; an A380 covers 165 km in ten minutes, so "100KM" has to fit too.
 const BAR = 8, HALF = 18;
 function pickScaleKm(extentKm) {

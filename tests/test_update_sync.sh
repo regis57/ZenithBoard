@@ -71,6 +71,11 @@ out=$(zb_retired_colours 2>&1)
 check "retired blue: the wall's colour named, with the command" "$(printf '%s' "$out" | grep -c 'taken out in 0.23.0.*zenithboard color turquoise')" "1"
 check "retired blue: the preset named"            "$(printf '%s' "$out" | grep -c 'preset tv sets theme=blue')" "1"
 check "retired blue: the settings themselves kept" "$(cfg_get THEME):$(cfg_get PRESET_TV)" "blue:theme=blue mode=flap"
+# the command printed for the preset is run as given: it is accepted and keeps the preset's other settings
+cmd=$(printf '%s\n' "$out" | sed -n -E 's/.*sudo zenithboard preset add (.*)$/\1/p')
+# shellcheck disable=SC2086  # the words of the printed command, as a shell would split them
+( . "$HERE/lib/settings.sh"; preset_add $cmd ) >/dev/null 2>&1
+check "retired blue: the preset command works as printed" "$?:$(cfg_get PRESET_TV)" "0:theme=turquoise mode=flap"
 cfg_set THEME green; cfg_del PRESET_TV
 check "retired blue: silent otherwise"            "$(zb_retired_colours 2>&1)" ""
 # ---- the wall is asked what it is actually running, and restarted when it is not the installed version.

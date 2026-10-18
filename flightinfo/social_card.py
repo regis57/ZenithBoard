@@ -313,7 +313,14 @@ def draw_map(trace, plane, color, units="metric", mode="normal", cache_dir=None,
     """The map with the track, the aircraft, the legend, north and the credit. Returns (image, shown_mode)."""
     style = MAP_STYLES.get(mode) or MAP_STYLES["normal"]
     color = rgb(color)
-    z, ox, oy = choose_view(trace, w, h)
+    f = font(20)
+    fs = font(15, bold=False)
+    # The legend and the credit take a band at the foot of the map; the track is centred in the area above it, so
+    # the aircraft is never under the legend. A north-south track on the narrow dotmap map put it there (0.23.0).
+    planned = _wrap(ImageDraw.Draw(Image.new("RGB", (1, 1))), style["credit_full"], fs, w - 24) \
+        if style["credit_full"] else []
+    band = 19 * len(planned) + (10 if planned else 0) + 12 + 74 + 12
+    z, ox, oy = choose_view(trace, w, h - band)
     img = Image.new("RGB", (w, h), (16, 16, 16))
     n = 2 ** z
     tiles = [(tx, ty) for ty in range(oy // 256, (oy + h - 1) // 256 + 1) for tx in range(ox // 256, (ox + w - 1) // 256 + 1)
@@ -374,8 +381,6 @@ def draw_map(trace, plane, color, units="metric", mode="normal", cache_dir=None,
 
     # legend, north, credit: drawn at their size, on see-through dark boxes so they read on any map
     d = ImageDraw.Draw(img, "RGBA")
-    f = font(20)
-    fs = font(15, bold=False)
     credit = style["credit_full"] if shown != "none" else None
     clines = _wrap(d, credit, fs, w - 24) if credit else []
     ch = 19 * len(clines) + (10 if clines else 0)

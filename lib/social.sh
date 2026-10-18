@@ -49,10 +49,10 @@ social_need_node() {
   log "Installing Node (draws the picture; about 30 MB)"
   apt_install nodejs >/dev/null || { err "Node could not be installed: the picture cannot be drawn without it."; return 1; }
 }
-social_need_pil() {      # the split-flap look: Pillow paints the board and the map, in the DejaVu font
+social_need_pil() {      # the map looks (dotmap, flap): Pillow paints the map and the board, in the DejaVu font
   python3 -c 'import PIL' >/dev/null 2>&1 && [ -f /usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf ] && return 0
-  log "Installing Pillow and the DejaVu fonts (draw the split-flap picture; a few MB)"
-  apt_install python3-pil fonts-dejavu-core >/dev/null || { err "Pillow could not be installed: the split-flap picture cannot be drawn without it."; return 1; }
+  log "Installing Pillow and the DejaVu fonts (draw the map pictures, dotmap and flap; a few MB)"
+  apt_install python3-pil fonts-dejavu-core >/dev/null || { err "Pillow could not be installed: the map pictures (dotmap, flap) cannot be drawn without it."; return 1; }
 }
 social_need_tools() {    # what the chosen look needs: Node always (the dots, and the flap board's rows), Pillow for a map
   social_need_node || return 1
@@ -73,7 +73,7 @@ social_migrate() {
   # 0.23.0: the dark blue is gone. A picture colour set to it is the owner's and is not changed: the posts take the
   # wall's colour meanwhile, and the update says so with the command
   if [ "$(cfg_get SOCIAL_THEME "")" = blue ]; then
-    log "Social sharing: the dark blue was taken out in 0.23.0. Your picture colour is still set to it, so the posts take the wall's colour ($(cfg_get THEME amber)). Choose one:  sudo zenithboard social colour turquoise  (or wall, rotate)"
+    log "Social sharing: the dark blue was taken out in 0.23.0. Your picture colour is still set to it, so the posts take the wall's colour ($(wall_theme)). Choose one:  sudo zenithboard social colour turquoise  (or wall, rotate)"
   fi
   # 0.20.0: no gap by default, every crossing posted once. A gap set before is the owner's and is kept; say it.
   if [ "$(cfg_get SOCIAL 0)" = 1 ] && [ "$(social_gap_words)" != "none, every crossing" ]; then
@@ -209,13 +209,13 @@ social_set_look() {
 }
 social_set_colour() {
   local c=${1:-}
-  [ -n "$c" ] || { echo "Colour: $SOCIAL_THEMES, rotate (in turn), or wall (the wall's own, $(cfg_get THEME amber))"; return 1; }
+  [ -n "$c" ] || { echo "Colour: $SOCIAL_THEMES, rotate (in turn), or wall (the wall's own, $(wall_theme))"; return 1; }
   [ "$c" != wall ] || c=""
-  [ -z "$c" ] || social_valid_in "$c" $SOCIAL_THEMES rotate || { echo "Colour: $SOCIAL_THEMES, rotate (in turn), or wall (the wall's own, $(cfg_get THEME amber))"; return 1; }
+  [ -z "$c" ] || social_valid_in "$c" $SOCIAL_THEMES rotate || { echo "Colour: $SOCIAL_THEMES, rotate (in turn), or wall (the wall's own, $(wall_theme))"; return 1; }
   cfg_set SOCIAL_THEME "$c"
   case "$c" in
     rotate) echo "Picture colour: the colours in turn, one step per post." ;;
-    *) echo "Picture colour: $(or_text "$c" "the wall's ($(cfg_get THEME amber))")." ;;
+    *) echo "Picture colour: $(or_text "$c" "the wall's ($(wall_theme))")." ;;
   esac
 }
 social_set_map() {
@@ -231,8 +231,9 @@ social_setup_picture() {
       dotmap "Dot-matrix wall, a map with the track beside it" "$( [ "$cur" = dotmap ] && echo ON || echo OFF )" \
       flap "Split-flap board, a map with the track beside it" "$( [ "$cur" = flap ] && echo ON || echo OFF )" \
       alternate "Dot-matrix and split-flap with a map, in turn" "$( [ "$cur" = alternate ] && echo ON || echo OFF )") || return 1
-  cur=$(cfg_get SOCIAL_THEME ""); [ -n "$cur" ] || cur=wall
-  local items=(wall "The wall's own colour ($(cfg_get THEME amber))" "$( [ "$cur" = wall ] && echo ON || echo OFF )")
+  cur=$(cfg_get SOCIAL_THEME "")
+  social_valid_in "$cur" $SOCIAL_THEMES rotate || cur=wall    # empty, or the blue taken out in 0.23.0: the wall's
+  local items=(wall "The wall's own colour ($(wall_theme))" "$( [ "$cur" = wall ] && echo ON || echo OFF )")
   for c in $SOCIAL_THEMES; do on=OFF; [ "$cur" = "$c" ] && on=ON; items+=("$c" "${c^}" "$on"); done
   items+=(rotate "In turn, one step per post" "$( [ "$cur" = rotate ] && echo ON || echo OFF )")
   col=$(wt_radio "Colour of the letters and the track" "${items[@]}") || return 1
@@ -248,9 +249,9 @@ social_setup_picture() {
     social_set_map "$map" >/dev/null
   fi
   clear
-  social_set_colour "$col" >/dev/null
+  social_set_colour "$col" >/dev/null || return 1
   social_set_look "$look" >/dev/null || { read -rp "Press Enter to continue..." _; return 1; }
-  wt_msg "Saved. Picture: $look, $(or_text "$(cfg_get SOCIAL_THEME "")" "the wall's colour")$( [ "$look" != dots ] && echo ", $(cfg_get SOCIAL_MAP normal) map").\n\nNext:  sudo zenithboard social test   draws the picture and shows the text, posts nothing.\nThen:  sudo zenithboard social on     starts posting." 12
+  wt_msg "Saved. Picture: $look, $(or_text "$(cfg_get SOCIAL_THEME "")" "the wall's colour ($(wall_theme))")$( [ "$look" != dots ] && echo ", $(cfg_get SOCIAL_MAP normal) map").\n\nNext:  sudo zenithboard social test   draws the picture and shows the text, posts nothing.\nThen:  sudo zenithboard social on     starts posting." 12
 }
 social_rule_on() { [ "$1" = all ] && case ",$(cfg_get SOCIAL_RULES "")," in *",all,"*|*",any,"*) echo ON; return ;; esac; case ",$(cfg_get SOCIAL_RULES "$(python3 -c 'import sys; sys.path.insert(0, sys.argv[1]); import social; print(social.DEFAULTS["SOCIAL_RULES"])' "$ZB_HOME/flightinfo")")," in *",$1,"*) echo ON ;; *) echo OFF ;; esac; }
 

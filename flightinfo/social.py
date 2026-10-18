@@ -770,8 +770,10 @@ def render(p, trace, c, out_base):
         look = "dots"
     card = flap_module() if look in MAP_LOOKS else None
     if look in MAP_LOOKS and card is None:       # Pillow not installed (an offline `social look flap`): the dots, and a word
-        print("social: the %s picture needs Pillow: drawing the dot-matrix picture instead. Run: sudo zenithboard social look %s"
-              % ("split-flap" if look == "flap" else "map", look), flush=True)
+        # `social test` installs what the chosen look needs and keeps the setting; `social look` would replace an
+        # `alternate` with the one look named here
+        print("social: the %s picture needs Pillow: drawing the dot-matrix picture instead. Install it with:  sudo zenithboard social test"
+              % ("split-flap" if look == "flap" else "dotmap"), flush=True)
         look = "flap-fallback"
     if card is not None and look == "dotmap":    # 0.23.0: Node draws the dots, the right-hand column dark; Pillow lays the map
         got = _node(dict(spec, map=True), out_base + ".png")
@@ -1134,7 +1136,8 @@ def cmd_test(hex_code=None):
     if not p:
         print("Nothing to show: no aircraft with a track inside %s km right now (or the wall did not answer)." % c.get("SOCIAL_RADIUS_KM"))
         return 1
-    r = publish(p, trace, why, picture_for(c, int(state.get("pictures", 0))), {}, dry=True, keep=os.path.join(STATE_DIR, "preview"))
+    pc = picture_for(c, int(state.get("pictures", 0)))     # this post's look and map, "alternate" and "rotate" resolved
+    r = publish(p, trace, why, pc, {}, dry=True, keep=os.path.join(STATE_DIR, "preview"))
     print("Aircraft: %s %s (%s)" % (p.get("flight") or "", p.get("hex"), p.get("type") or "?"))
     # The test always finds something to show (it adds "all"); say plainly whether the service would post it.
     score, real = interest(p, rules_of(c), state, time.time())
@@ -1145,8 +1148,8 @@ def cmd_test(hex_code=None):
         if not warmed(state, time.time()) and rules_of(c) & {"rare", "farthest"}:
             why_not += "; 'rare' and 'farthest' wait for %d days of history (since %s)" % (WARMUP_DAYS, state.get("since", "today"))
         print("Would the service post it? No: %s. The test shows it anyway." % why_not)
-    print("Picture: %s, %s (%s bytes)" % (picture_words(picture_for(c, int(state.get("pictures", 0)))), r.get("preview") or r.get("preview_error"), r.get("bytes")))
-    if style_of(c) in MAP_LOOKS and map_of(c) != "none" and r.get("map") == "none":
+    print("Picture: %s, %s (%s bytes)" % (picture_words(pc), r.get("preview") or r.get("preview_error"), r.get("bytes")))
+    if style_of(pc) in MAP_LOOKS and map_of(pc) != "none" and r.get("map") == "none":
         print("Map: the tiles could not be fetched (no internet, or the tile service is busy); the track is drawn on black.")
     port = int(server.cfg_float(c, "PORT", 8080))
     print("See it:  http://%s:%d/social/preview" % (local_ip(), port))
