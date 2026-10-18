@@ -38,7 +38,8 @@ ZenithBoard runs as root on a machine in your home, listens on your network, and
 | Grafana, port 3000 | Same | Only with ACARS. Login `admin` with the password ZenithBoard set: `sudo zenithboard acars password` |
 | Plane Finder, port 30053 | Same | Its own setup page |
 | SkyAware, port 8504 (or 8978) | Same | Served by FlightAware's lighttpd, not by ZenithBoard. `zenithboard security` names it |
-| `/stats`, `/api/stats` | Same as the wall | Only when `STATS=1`. Counts and ranges per hour and per day; the antenna's position is not part of it |
+| `/stats`, `/api/stats` | Same as the wall | Only when `STATS=1`. Counts and ranges per hour and per day; the antenna's position is not part of it. Since 0.22.0 also the farthest aircraft of the day and of the month, each with the large city nearest it and its distance from the antenna: two such lines narrow down where the antenna is, one more reason this page answers the home network only |
+| `/api/farthest` | Same as the wall | Only when `STATS=1`. What the statistics sample asks on the loopback: the farthest aircraft of today and yesterday, named, never with a position |
 | `/social/preview` | Same as the wall | The picture `zenithboard social test` drew, if any |
 
 **Do not forward any of these from the internet.** Nothing here expects a hostile visitor: there is no login on the wall, no rate limit, and no audit trail. To see your wall from outside, use a VPN into your home network. The dynamic-DNS feature exists so *you* can find your Pi, not so the world can.

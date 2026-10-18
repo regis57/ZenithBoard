@@ -48,3 +48,43 @@ console.log("stats axis: ok");
   make(RELEASES, () => null)("0.17.2");          // no such element: must not throw
 }
 console.log("stats version line: ok");
+
+// ---- the farthest aircraft in words (0.22.0): the real fmt(), shortDay(), altText(), place() and farthestLine()
+// taken out of stats.js. What is not known is left out, never guessed, and nothing in the line says where the
+// aircraft was in coordinates.
+{
+  const grab = (name) => {
+    const a = src.indexOf("function " + name + "(");
+    assert.ok(a > 0, name + "() not found in stats.js");
+    let d = 0;
+    for (let j = src.indexOf("{", a); j < src.length; j++) {
+      if (src[j] === "{") d++;
+      else if (src[j] === "}" && --d === 0) return src.slice(a, j + 1);
+    }
+  };
+  const line = new Function(["fmt", "shortDay", "altText", "place", "farthestLine"].map(grab).join("\n") + "return farthestLine;")();
+  const full = {day: "2026-10-18", time: "14:32", hex: "406a1b", flight: "EZY1234", flight_iata: "U21234", airline: "easyJet",
+    registration: "G-EZAB", type: "A319", type_name: "Airbus A319", alt_ft: 37000, km: 318.4,
+    route: {from: {city: "Edinburgh", iata: "EDI", name: "Edinburgh Airport"}, to: {city: "Saint-Louis", iata: "BSL"}},
+    near: {name: "Charleroi", country: "BE", km: 35}};
+  assert.strictEqual(line(full, "metric"),
+    "18/10 14:32 \u00b7 easyJet U21234 (EZY1234) \u00b7 Edinburgh (EDI) \u2192 Saint-Louis (BSL) \u00b7 Airbus A319 G-EZAB \u00b7 11\u202f280 m \u00b7 318 km, near Charleroi, BE (35 km)");
+  assert.ok(/ 37\u202f000 ft /.test(line(full, "imperial")), "imperial: the altitude in feet");
+  // a light aircraft: no callsign, no airline, no route, no city found
+  assert.strictEqual(line({day: "2026-10-18", time: "09:05", hex: "3c0001", registration: "D-EABC", type: "C172", alt_ft: 4500, km: 205.2}, "metric"),
+    "18/10 09:05 \u00b7 D-EABC \u00b7 C172 \u00b7 1\u202f370 m \u00b7 205 km");
+  // nothing but the address: the hex, in capitals as trackers show it
+  assert.strictEqual(line({day: "2026-10-18", hex: "3c0001", km: 99}, "metric"), "18/10 \u00b7 3C0001 \u00b7 99 km");
+  // a callsign the built-in list and adsbdb do not name: the callsign alone, no "undefined" anywhere
+  const bare = line({day: "2026-10-18", time: "10:00", hex: "abcdef", flight: "BGA113J", airline: null, km: 300}, "metric");
+  assert.strictEqual(bare, "18/10 10:00 \u00b7 BGA113J \u00b7 300 km");
+  assert.ok(!/undefined|null|NaN/.test(line(full, "metric") + bare), "no undefined, null or NaN in a line");
+  // a military aircraft is said so; half a route keeps its known end
+  assert.ok(/RCH123 \(military\)/.test(line({day: "2026-10-18", flight: "RCH123", airline: "MILITARY", hex: "ae0001", km: 250}, "metric")));
+  assert.ok(/\? \u2192 Basel \(BSL\)/.test(line(Object.assign({}, full, {route: {from: null, to: {city: "Basel", iata: "BSL"}}}), "metric")));
+  // far from any large city (over the sea, say): the distance to it, not "near"
+  assert.ok(/\u00b7 318 km, 85 km from Brugge, BE$/.test(line(Object.assign({}, full, {near: {name: "Brugge", country: "BE", km: 85}}), "metric")));
+  assert.strictEqual(line(null, "metric"), null);
+}
+console.log("stats farthest line: ok");
+

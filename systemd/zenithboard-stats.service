@@ -4,14 +4,15 @@ Description=ZenithBoard statistics (one sample every 15 minutes: messages, farth
 [Service]
 Type=oneshot
 ExecStart=/opt/zenithboard/bin/zenithboard stats run
-TimeoutStartSec=60
+# 120 s since 0.22.0: the sample may wait a few seconds for the farthest aircraft's route (lib/stats.sh)
+TimeoutStartSec=120
 # Runs as the wall's own user: it reads the decoder's stats.json and aircraft.json under /run and writes under
 # /var/lib/zenithboard/stats, which that user owns. Nothing here needs root, so root is not used.
 User=zenithboard
 Group=zenithboard
 ReadWritePaths=/var/lib/zenithboard
-# AF_INET since 0.21.0: it asks the wall, on the loopback, which aircraft it could not name or draw. Nothing
-# beyond this Pi: IPAddressAllow keeps it to the loopback.
+# AF_INET since 0.21.0: it asks the wall, on the loopback, which aircraft it could not name or draw, and since
+# 0.22.0 which aircraft was the farthest. Nothing beyond this Pi: IPAddressAllow keeps it to the loopback.
 RestrictAddressFamilies=AF_UNIX AF_INET
 IPAddressDeny=any
 IPAddressAllow=localhost

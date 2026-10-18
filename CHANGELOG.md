@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.22.0
+- **The statistics page names the farthest aircraft.** Under the four numbers, two lines: the farthest aircraft of the day and of the thirty days, with the date and time, the airline and flight number, where it flew from and to, the model and registration, the altitude, the distance, and the city of 100 000 inhabitants or more nearest to it: `14/10 21:07 · easyJet U21234 (EZY1234) · Edinburgh (EDI) → Saint-Louis (BSL) · AIRBUS A-319 G-EZAB · 10 970 m · 329 km, 55 km from Lille, FR`. Asked for from the real page, where *355 km* stood alone.
+- The decoder only says how far, never which aircraft. With statistics on, the wall server now looks at `aircraft.json` every five seconds (about a millisecond each time on a laptop, a few on a Pi) and keeps the farthest aircraft of today and yesterday in memory; the 15-minute sample asks for it on the loopback and writes it to `farthest-DAY`, kept thirty days. The route is the wall's own lookup with the wall's own check, so with routes off nothing more leaves the Pi; with routes on, the day's farthest callsign is looked up too (the README's privacy line says so).
+- The cities come from a list shipped with ZenithBoard: GeoNames, Creative Commons Attribution 4.0, credited on the page, 4 578 cities, made by `tools/make_cities.py`. City districts are left out, and two British entries that carry a district's population (St Peter's in Kent, Mendip), found when the preview named a point over the Channel *near Saint Peters*. Nothing is asked of the internet for a city. Neither the aircraft's position nor the antenna's is written or shown.
+- Days from before this version have their number in the box and no line; the page says so for the thirty-day best.
+- The statistics unit may run 120 s instead of 60: the sample can wait a few seconds for a route on its way.
+
 ## 0.21.1
 The fresh-install check from the roadmap, done as far as it can be without a Pi: `install.sh` walked end to end from the README, in a container, against a scripted whiptail and stand-ins for the system (every flag, the first-run wizard, every menu, the deployed wall answering on its port, the uninstall). What it found, fixed, and now held by `tests/test_install.sh`:
 - **A missing whiptail no longer ends in silence.** When `apt` could not install whiptail and curl (no internet, say), every screen failed and the installer quietly exited with nothing said. It now stops with the command to run by hand.

@@ -689,6 +689,137 @@ class StatsTest(unittest.TestCase):
             server._cfg_cache.update(mtime=None); os.unlink(cfgpath)
 
 
+class FarthestTest(unittest.TestCase):
+    """0.22.0: which aircraft was the farthest of the day, with its airline, route and the large city nearest it.
+    The decoder says only how far; the wall watches aircraft.json and the statistics timer writes the record down."""
+
+    def _dir(self):
+        import tempfile
+        d = tempfile.mkdtemp()
+        self.addCleanup(lambda: __import__("shutil").rmtree(d, ignore_errors=True))
+        return d
+
+    def test_the_tracker_keeps_the_farthest_position_of_each_day(self):
+        import datetime
+        tr = server.FarthestTracker()
+        noon = time.mktime(datetime.datetime(2026, 10, 18, 12, 0, 30).timetuple())
+        tr.observe({"aircraft": [
+            {"hex": "4ca123", "flight": "RYR8526 ", "r": "EI-DCL", "t": "B738", "lat": 49.9, "lon": 4.5, "alt_baro": 37000, "seen_pos": 0.5},
+            {"hex": "3c6444", "flight": "DLH4YK", "lat": 51.5, "lon": 3.0, "alt_baro": 38000, "seen_pos": 0.4},   # farther still
+            {"hex": "3c0001", "lat": 52.5, "lon": 2.0, "alt_baro": "ground", "seen_pos": 1},     # on the ground: not a range record
+            {"hex": "3c0002", "lat": 53.0, "lon": 1.0, "alt_baro": 30000, "seen_pos": 45},       # position too old
+            {"hex": "~2a0001", "lat": 53.0, "lon": 1.0, "alt_baro": 30000, "seen_pos": 1},       # a made-up address
+            {"hex": "3c0003", "lat": 40.0, "lon": -9.0, "alt_baro": 30000, "seen_pos": 1},       # beyond what a receiver hears
+            {"hex": "3c0004", "alt_baro": 30000},                                                # no position
+        ]}, LAT, LON, now=noon)
+        recs = tr.snapshot()
+        self.assertEqual(len(recs), 1)
+        r = recs[0]
+        self.assertEqual((r["day"], r["time"], r["hex"], r["flight"], r["alt_ft"]), ("2026-10-18", "12:00", "3c6444", "DLH4YK", 38000))
+        self.assertAlmostEqual(r["km"], server.haversine_km(LAT, LON, 51.5, 3.0), delta=0.1)
+        # a nearer aircraft later the same day changes nothing; a farther one replaces the record
+        tr.observe({"aircraft": [{"hex": "4ca123", "lat": 49.9, "lon": 4.5, "alt_baro": 37000}]}, LAT, LON, now=noon + 60)
+        self.assertEqual(tr.snapshot()[0]["hex"], "3c6444")
+        tr.observe({"aircraft": [{"hex": "4ca124", "lat": 52.2, "lon": 2.5, "alt_baro": 39000}]}, LAT, LON, now=noon + 120)
+        self.assertEqual(tr.snapshot()[0]["hex"], "4ca124")
+        # a new day starts its own record; two days are kept, not more
+        for days in (1, 2, 3):
+            tr.observe({"aircraft": [{"hex": "4ca125", "lat": 50.0, "lon": 6.0, "alt_baro": 9000}]}, LAT, LON, now=noon + days * 86400)
+        self.assertEqual([x["day"] for x in tr.snapshot()], ["2026-10-20", "2026-10-21"])
+
+    def test_the_nearest_city_of_100000_or_more(self):
+        # checked against GeoNames' own positions: Luxembourg-City is under 100 000 there, so its nearest is Trier
+        self.assertEqual(server.nearest_city(49.6116, 6.1319), {"name": "Trier", "country": "DE", "km": 40})
+        self.assertEqual(server.nearest_city(49.25, 6.23)["name"], "Metz")
+        self.assertEqual(server.nearest_city(45.76, 4.84)["name"], "Lyon")
+        self.assertIsNone(server.nearest_city(0, 0, cities=[]))
+
+    def test_the_city_list_names_cities_not_their_districts(self):
+        names = {c[0] for c in server.load_cities()}
+        # set differences, so a failure names the cities concerned (CodeQL: an assertTrue(a <= b) says nothing)
+        self.assertEqual(set(), {"Paris", "Berlin", "Lyon", "Metz", "Trier", "Saarbrücken"} - names)
+        self.assertEqual(set(), {"Paris 15 Vaugirard", "Neukölln", "Lyon 03", "Kreuzberg"} & names)
+        # GeoNames gives these two an administrative area's population (checked, see tools/make_cities.py): the
+        # preview named a point over the Channel "near Saint Peters", a part of Broadstairs of 7 000 people
+        self.assertEqual(set(), {"Saint Peters", "Mendip"} & names)
+        self.assertEqual(server.nearest_city(51.25, 2.0), {"name": "Brugge", "country": "BE", "km": 85})
+        self.assertGreater(len(names), 4000)
+        with open(server.CITIES_FILE, encoding="utf-8") as fh:
+            head = fh.read(400)
+        self.assertIn("GeoNames", head); self.assertIn("Creative Commons Attribution 4.0", head)     # the licence travels with it
+
+    def test_the_route_answer_carries_the_flight_number(self):
+        self.assertEqual(server.parse_route(ADSBDB_EASYJET)["flight_iata"], "U21234")      # the real answer of 15 October
+        self.assertNotIn("flight_iata", server.parse_route(ADSBDB_SAMPLE))                 # an answer without one
+        bad = json.loads(json.dumps(ADSBDB_EASYJET)); bad["response"]["flightroute"]["callsign_iata"] = "<script>"
+        self.assertNotIn("flight_iata", server.parse_route(bad))
+
+    REC = {"day": "2026-10-18", "time": "14:32", "hex": "406a1b", "flight": "EZY1234", "registration": "G-EZAB", "type": "A319",
+           "category": "A3", "dbFlags": None, "alt_ft": 37000, "km": 151.2, "lat": 49.95, "lon": 4.4, "track": 135, "gs": 450}
+
+    def test_a_record_described_with_its_airline_route_and_city(self):
+        route = lambda cs: server.parse_route(ADSBDB_EASYJET) if cs == "EZY1234" else None
+        d = server.describe_farthest(dict(self.REC), {}, route_lookup=route, airlines={"EZY": {"name": "easyJet"}}, types={})
+        self.assertEqual((d["airline"], d["flight"], d["flight_iata"]), ("easyJet", "EZY1234", "U21234"))
+        self.assertEqual(d["route"]["from"]["city"], "Edinburgh"); self.assertEqual(d["route"]["from"]["iata"], "EDI")
+        self.assertEqual(d["route"]["to"]["iata"], "BSL")
+        self.assertEqual((d["alt_ft"], d["km"], d["time"], d["registration"]), (37000, 151.2, "14:32", "G-EZAB"))
+        self.assertEqual(d["near"], {"name": "Charleroi", "country": "BE", "km": 51})   # Charleville-Mézières, nearer, has 46 000
+        self.assertEqual(d["pending"], [])
+        # neither the aircraft's position nor the airports' leaves: the page names places, it does not plot them
+        self.assertNotIn('"lat"', json.dumps(d)); self.assertNotIn('"lon"', json.dumps(d))
+
+    def test_a_route_that_cannot_be_this_flight_is_dropped(self):
+        route = lambda cs: server.parse_route(ADSBDB_EASYJET)
+        far_off = dict(self.REC, lat=60.5, lon=20.0, track=0)          # over the Baltic, nowhere near Edinburgh-Basel
+        self.assertIsNone(server.describe_farthest(far_off, {}, route_lookup=route, airlines={}, types={})["route"])
+
+    def test_a_route_on_its_way_is_said_pending_and_none_asked_with_routes_off(self):
+        asked = []
+        def route(cs):
+            asked.append(cs); return None
+        route.pending = lambda cs: True
+        d = server.describe_farthest(dict(self.REC), {}, route_lookup=route, airlines={}, types={})
+        self.assertEqual(d["pending"], ["route"]); self.assertEqual(asked, ["EZY1234"])
+        d = server.describe_farthest(dict(self.REC), {}, airlines={}, types={})       # SHOW_ROUTES=0: no lookup at all
+        self.assertIsNone(d["route"]); self.assertEqual(d["pending"], [])
+        self.assertIsNotNone(d["near"])                                                # the city needs no internet
+
+    def test_the_page_reads_what_the_timer_wrote(self):
+        import datetime
+        d = self._dir()
+        now = datetime.datetime(2026, 10, 18, 15, 0)
+        with open(os.path.join(d, "stats.csv"), "w") as fh:
+            fh.write("when,messages,farthest_km,aircraft_pos,aircraft_seen\n2026-10-16 21:00,9,355,1,1\n2026-10-18 14:45,9,322,1,1\n")
+        def put(day, **kw):
+            with open(os.path.join(d, "farthest-" + day), "w") as fh:
+                json.dump(dict({"day": day, "time": "10:00", "hex": "abc123", "km": 300.0, "lat": 1.0, "secret": "x"}, **kw), fh)
+        put("2026-10-18", km=318.4, flight="EZY1234")
+        put("2026-10-17", km=340.0)
+        put("2026-09-01", km=400.0)                                    # older than thirty days: not the month's best
+        with open(os.path.join(d, "farthest-2026-10-15"), "w") as fh:
+            fh.write("not json")
+        r = server.read_stats(d, now)["farthest"]
+        self.assertEqual(r["today"]["km"], 318.4); self.assertEqual(r["today"]["flight"], "EZY1234")
+        self.assertEqual(r["best"]["day"], "2026-10-17")
+        self.assertNotIn("lat", r["today"]); self.assertNotIn("secret", r["today"])   # only what the page shows
+        self.assertFalse(r["best_box_detailed"])          # the box's 355 km of 16/10 came before the details were kept
+        put("2026-10-16", km=352.0)
+        self.assertTrue(server.read_stats(d, now)["farthest"]["best_box_detailed"])
+
+    def test_the_api_answers_only_with_statistics_on(self):
+        self.assertEqual(server.farthest_answer({"STATS": "0"}), {"enabled": False})
+        old = server._farthest
+        server._farthest = server.FarthestTracker()
+        try:
+            server._farthest.observe({"aircraft": [{"hex": "406a1b", "flight": "EZY1234", "lat": 49.95, "lon": 4.4, "alt_baro": 37000}]}, LAT, LON)
+            got = server.farthest_answer({"STATS": "1", "SHOW_ROUTES": "0"})         # routes off: nothing asked of adsbdb
+            self.assertTrue(got["enabled"]); self.assertEqual(len(got["days"]), 1)
+            self.assertEqual(got["days"][0]["flight"], "EZY1234"); self.assertIsNone(got["days"][0]["route"])
+        finally:
+            server._farthest = old
+
+
 class PhotoUrlTest(unittest.TestCase):
     """The photo address is somebody else's answer, and the Pi fetches it itself: it has to be checked first."""
 

@@ -36,7 +36,7 @@ docs/wiki/              the source of this wiki
 | `reliability.sh` | Both watchdogs, persistent logs, the health screen |
 | `patches.sh` | Debian security fixes by themselves: the one apt rule it writes, and taking it back |
 | `security.sh` | `zenithboard security`: reads the running Pi, one line per fact, each WARN with its fix |
-| `stats.sh` | The 15-minute statistics sample, the day files of aircraft seen, pruning, and the terminal view with its sparkline |
+| `stats.sh` | The 15-minute statistics sample, the day files of aircraft seen, the farthest aircraft asked of the wall (`stats_farthest_sample`), pruning, and the terminal view with its sparkline |
 | `network.sh` | Fixed address, DHCP, `net status` |
 | `wifi.sh` | Radio, country, scan, connect, forget, the boot-time re-apply |
 | `ddns.sh` | DuckDNS, No-IP, FreeDNS |
@@ -49,12 +49,13 @@ Two conventions throughout: a menu's back entry is always the single word `back`
 
 ## `flightinfo/server.py`
 
-One file, read top to bottom in four parts:
+One file, read top to bottom in five parts:
 
 1. **Config and geometry** — `load_config`, `radius_to_km`, `haversine_km`, `bearing_deg`.
 2. **Building the picture** — `merge_aircraft` joins 1090 MHz and UAT, `build_planes` turns raw aircraft into what the wall shows: distance, airline from the callsign, type name, route, photo.
 3. **The lookups** — `ThrottledLookup` and the route, photo and aircraft functions. See [Routes, photos and data](Routes-photos-and-data).
-4. **The server** — `Handler` serves `/`, the static files, `/api/planes` and `/api/config`. `public_config` decides what the browser is allowed to know, which is where the antenna's exact position is held back.
+4. **The farthest aircraft** (0.22.0) — `FarthestTracker` keeps the day's farthest position, `farthest_watch` feeds it every five seconds while statistics are on, `nearest_city` reads `data/cities100k.tsv`, `describe_farthest` names the record with the same route check as the wall (`checked_route`), and `read_farthest` reads back what the statistics timer wrote.
+5. **The server** — `Handler` serves `/`, the static files, `/api/planes` and `/api/config`. `public_config` decides what the browser is allowed to know, which is where the antenna's exact position is held back.
 
 `VERSION` near the top must match `ZB_VERSION` in `lib/versions.sh`; a test enforces it.
 
@@ -67,7 +68,7 @@ One file, read top to bottom in four parts:
 | `scene.js` | The animated sky scene and the side views, used when there is no photo |
 | `shapes.js` | Aircraft seen from above, drawn as dots |
 | `flags.js` | Registration prefix to country, maker to country, and the flags themselves at 11 x 7 dots. No manufacturer mark is ever drawn |
-| `stats.html`, `stats.css`, `stats.js` | The `/stats` page: four headline numbers and three charts from `/api/stats`, one series each, following the device's light or dark setting |
+| `stats.html`, `stats.css`, `stats.js` | The `/stats` page: four headline numbers, the two farthest aircraft in words (`farthestLine`), and three charts from `/api/stats`, one series each, following the device's light or dark setting |
 | `font5x7.js`, `format.js` | The dot font, and formatting numbers in metric or imperial units |
 
 The constants at the top of `app.js` — `GW`, `GH`, `SIL_BOX`, `PHOTO_BOX` — are the layout. Change one and `tests/test_layout.js` will tell you whether the settings gear still fits. See [The wall](The-wall).
