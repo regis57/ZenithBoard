@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.24.2
+- Code scanning (CodeQL) findings put right: `social status | head` no longer leaves a file handle open when the reader leaves; an unused distance function went from the dot renderer; an empty `except` says why; a test imported the map module twice.
+
 ## 0.24.1
 - **A thinner track on the posts' maps** (dotmap and flap): 3 pixels with a 6-pixel dark edge, from 5 and 11, which the owner found far too thick on the real posts. The aircraft keeps its size.
 - The README and the wiki show a real `dotmap` post from the reference Pi in place of the preview drawn without tiles.

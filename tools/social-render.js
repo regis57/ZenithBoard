@@ -58,13 +58,6 @@ const PANEL = { x: 88, y: 0, w: 40, h: 68 };                       // 40 x 68 do
 const MAP_BOX = { x: 88, y: 0, w: 40, h: 80 };
 const DIM = 0x404040, FAINT = 0x2a2a2a;
 
-function haversineKm(a, b) {
-  const R = 6371.0088, toR = Math.PI / 180;
-  const dLat = (b[0] - a[0]) * toR, dLon = (b[1] - a[1]) * toR;
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a[0] * toR) * Math.cos(b[0] * toR) * Math.sin(dLon / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(h));
-}
-
 // A scale that keeps the whole track inside the panel: 1 to 500 km per bar, the smallest that fits.
 // The scale bar is BAR dots long and stands for one round distance; the track must fit HALF dots either side of the
 // aircraft (the panel is 40 dots wide). 0.18.2 used a 14-dot bar and let the track run twice past the edge, and a

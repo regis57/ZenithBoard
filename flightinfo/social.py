@@ -937,7 +937,7 @@ def work_dir():
         if os.access(RUN_DIR, os.W_OK):
             return RUN_DIR
     except OSError:
-        pass
+        pass                                     # not ours to make: the private temporary folder below
     d = tempfile.mkdtemp(prefix="zenithboard-social-")
     return d
 
@@ -1279,5 +1279,6 @@ if __name__ == "__main__":
     try:
         sys.exit(main(sys.argv))
     except BrokenPipeError:                      # `social status | head`: the reader left, nothing went wrong
-        os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())
+        with open(os.devnull, "w") as null:      # Python's own flush at exit then writes nowhere, without a second error
+            os.dup2(null.fileno(), sys.stdout.fileno())
         sys.exit(0)

@@ -148,7 +148,8 @@ class WordsTest(unittest.TestCase):
     def test_the_map_credit_is_one_short_line_at_the_end(self):
         # 0.19.6, from the owner after the first satellite post: the three lines of small print spoiled the post.
         # The whole text stays on the picture and in the alt text; the post has the names, as links
-        import social_card
+        if social_card is None:
+            self.skipTest("Pillow not installed here")
         for mode, st in social_card.MAP_STYLES.items():
             if st["credit"]:
                 self.assertLessEqual(len(st["credit"]), 45, mode)
