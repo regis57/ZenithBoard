@@ -7,9 +7,9 @@ the decoder's aircraft.json and keeps, in memory, the last positions of every ai
 fifteen seconds it asks the wall itself (on the loopback) which aircraft are inside the sharing radius, with
 everything the wall knows about them: airline, model, route, flags. When one of them is worth a post under the
 rules the owner chose, and the last post is old enough, it draws the picture and posts it with a short text.
-Three looks: the dot-matrix wall with the track drawn in dots (tools/social-render.js, Node); the same wall beside a
-map with the track (0.23.0: Node draws the dots, social_card.py, Pillow, lays the map); or the split-flap board
-beside that map (social_card.py; the map from EOX's tile service). No browser, no photo.
+Two looks, each with a map of the track: the dot-matrix wall (tools/social-render.js, Node, draws the dots;
+social_card.py, Pillow, lays the map beside them) or the split-flap board (social_card.py), the map from EOX's tile
+service; or the two in turn. No browser, no photo.
 The picture lives in /run while it is being sent and is deleted right after, sent or not.
 
 What never leaves the Pi: the receiver's position, the distance and the bearing to the aircraft, the Planespotters
@@ -60,17 +60,19 @@ DEFAULTS = {
     "SOCIAL_GAP_MIN": "0",           # at least this long between two posts; 0 = none: every crossing is posted (0.20.0)
     "SOCIAL_RULES": "rare,military,helicopter,heavy,farthest",
     "SOCIAL_HASHTAGS": "#ADSB #avgeek #ZenithBoard",
-    "SOCIAL_STYLE": "dots",          # the picture: dots (wall + track in dots) | dotmap (wall + map) | flap (split-flap + map)
+    "SOCIAL_STYLE": "dotmap",        # the picture: dotmap (dot-matrix wall + map) | flap (split-flap + map) | alternate
     "SOCIAL_THEME": "",              # its colour: amber | green | red | white | turquoise; empty = the wall's THEME
     "SOCIAL_MAP": "normal",          # the map of the dotmap and flap looks: normal | night | satellite | terrain | none
 }
-STYLES = ("dots", "dotmap", "flap")
-MAP_LOOKS = ("dotmap", "flap")   # the looks that carry a map
+STYLES = ("dotmap", "flap")
+MAP_LOOKS = STYLES               # every look carries a map (0.24.0)
 MAPS = ("normal", "night", "satellite", "terrain", "none")
 # 0.19.5, optional: vary the posts. "alternate" takes the looks in turn, "rotate" the wall's colours, and the four
 # maps (not "none"), one step per post. Off by default; a fixed look, colour and map stay as they are.
 # 0.23.0: "alternate" is the two looks with a map, the dot-matrix wall and the split-flap board, asked for by the
-# owner: the dots-only track, a map drawn in dots, left the turn. It stays a look of its own, `social look dots`.
+# owner: the dots-only track, a map drawn in dots, left the turn. 0.24.0: it left the choices too, at the owner's
+# word; a setting still on "dots" is read as dotmap, and the update says so. Node still draws it when Pillow is
+# missing, rather than no picture.
 # The wall's dark blue went the same day, from the wall and from the posts: it read poorly on a phone, and a blue
 # track on the satellite map nearly disappeared. Turquoise stays.
 STYLE_CHOICES = STYLES + ("alternate",)
@@ -137,7 +139,7 @@ def picture_for(c, n):
     far. Five colours against two looks: over ten posts each look meets each colour; alternating, the map moves on
     every second post, so over eight posts each look meets each of the four maps."""
     out = dict(c)
-    style = str(c.get("SOCIAL_STYLE", "dots")).strip().lower()
+    style = str(c.get("SOCIAL_STYLE", "dotmap")).strip().lower()
     alternate = style == "alternate"
     if alternate:
         out["SOCIAL_STYLE"] = ALTERNATE[n % len(ALTERNATE)]
@@ -155,8 +157,8 @@ def varies(c):
 
 
 def style_of(c):
-    s = str(c.get("SOCIAL_STYLE", "dots")).strip().lower()
-    return s if s in STYLES else "dots"
+    s = str(c.get("SOCIAL_STYLE", "dotmap")).strip().lower()
+    return s if s in STYLES else "dotmap"          # "dots", taken out in 0.24.0, included
 
 
 def map_of(c):
@@ -693,7 +695,7 @@ def post_text(p, c, why=None, credit=None):
     return fit_post(text, credit, tags.strip())
 
 
-def alt_text(p, c, trace, look="dots", info=None):
+def alt_text(p, c, trace, look="dotmap", info=None):
     """For the picture: what a screen reader should say."""
     units = c.get("UNITS", "metric")
     info = info or {}
@@ -760,16 +762,14 @@ def flap_module():
 
 
 def render(p, trace, c, out_base):
-    """Draw the picture in the chosen look. out_base has no extension: .png for dots, .jpg for dotmap and flap (a map
-    in PNG would pass Bluesky's 1,000,000 bytes). Returns {path, mime, width, height, bytes, and for a map: credit, links,
+    """Draw the picture in the chosen look. out_base has no extension: .jpg (a map in PNG would pass Bluesky's
+    1,000,000 bytes), or .png for the dots alone when Pillow is missing. Returns {path, mime, width, height, bytes, and for a map: credit, links,
     credit_full, map_words}."""
     look = style_of(c)
     spec = {"plane": p, "trace": trace, "units": c.get("UNITS", "metric"), "theme": theme_of(c),
             "clock": clock_label(), "flags": server.cfg_bool(c, "FLAGS", "1"), "pitch": 10}
-    if look == "dotmap" and map_of(c) == "none":    # no map wanted: the dot-matrix wall with its track in dots
-        look = "dots"
-    card = flap_module() if look in MAP_LOOKS else None
-    if look in MAP_LOOKS and card is None:       # Pillow not installed (an offline `social look flap`): the dots, and a word
+    card = flap_module()
+    if card is None:                             # Pillow not installed (an offline `social look flap`): the dots, and a word
         # `social test` installs what the chosen look needs and keeps the setting; `social look` would replace an
         # `alternate` with the one look named here
         print("social: the %s picture needs Pillow: drawing the dot-matrix picture instead. Install it with:  sudo zenithboard social test"
@@ -965,7 +965,7 @@ def publish(p, trace, why, c, sec, dry=False, keep=None):
     try:
         info = render(p, trace, c, base)
         text = post_text(p, c, why, info.get("credit"))
-        alt = alt_text(p, c, trace, style_of(c), info)
+        alt = alt_text(p, c, trace, "dotmap" if info.get("fallback") else style_of(c), info)   # no Pillow: the dots
         if keep:
             try:
                 results["preview"] = keep_copy(info["path"], keep)
@@ -1187,14 +1187,10 @@ def cmd_check():
 
 
 def picture_words(c, state=None):
-    """"dots, amber" or "flap, green, satellite map": what the picture will look like. With the varying settings,
+    """"dotmap, amber, normal map" or "flap, green, satellite map": what the picture will look like. With the varying settings,
     what varies, and the next post's picture when the count of posts is known."""
     def one(r):
-        if style_of(r) == "flap":
-            return "flap, %s, %s" % (theme_of(r), "no map" if map_of(r) == "none" else map_of(r) + " map")
-        if style_of(r) == "dotmap" and map_of(r) != "none":
-            return "dotmap, %s, %s map" % (theme_of(r), map_of(r))
-        return "dots, %s" % theme_of(r)
+        return "%s, %s, %s" % (style_of(r), theme_of(r), "no map" if map_of(r) == "none" else map_of(r) + " map")
     if not varies(c):
         return one(c)
     what = [x for x, on in (("dotmap and flap in turn", str(c.get("SOCIAL_STYLE", "")).lower() == "alternate"),

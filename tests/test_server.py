@@ -738,6 +738,25 @@ class FarthestTest(unittest.TestCase):
             tr.observe({"aircraft": [{"hex": "4ca125", "lat": 50.0, "lon": 6.0, "alt_baro": 9000}]}, LAT, LON, now=noon + days * 86400)
         self.assertEqual([x["day"] for x in tr.snapshot()], ["2026-10-20", "2026-10-21"])
 
+    def test_a_callsign_heard_before_or_after_the_farthest_position_names_it(self):
+        # 0.24.0, from the real page: "18/10 13:09 · TF-ICE · BOEING 737 MAX 8 · 11 890 m · 322 km", no flight and no
+        # route. At the edge of range the decoder had the positions before the callsign; it came a few seconds later
+        import datetime
+        noon = time.mktime(datetime.datetime(2026, 10, 18, 13, 9, 0).timetuple())
+        tr = server.FarthestTracker()
+        tr.observe({"aircraft": [{"hex": "4cc2b1", "r": "TF-ICE", "t": "B38M", "lat": 51.6, "lon": 3.0, "alt_baro": 39000}]}, LAT, LON, now=noon)
+        self.assertEqual(tr.snapshot()[0]["flight"], "")
+        tr.observe({"aircraft": [{"hex": "4cc2b1", "flight": "ICE528  ", "lat": 51.4, "lon": 3.2, "alt_baro": 39000}]}, LAT, LON, now=noon + 20)
+        r = tr.snapshot()[0]
+        self.assertEqual((r["flight"], r["time"]), ("ICE528", "13:09"), "the record stays the farthest position, now named")
+        # heard first, nearer, then the farthest position without it: named too
+        tr.observe({"aircraft": [{"hex": "4cc2b2", "flight": "ICE529", "lat": 50.0, "lon": 6.0, "alt_baro": 30000}]}, LAT, LON, now=noon + 60)
+        tr.observe({"aircraft": [{"hex": "4cc2b2", "lat": 52.0, "lon": 2.6, "alt_baro": 30000}]}, LAT, LON, now=noon + 120)
+        self.assertEqual(tr.snapshot()[0]["flight"], "ICE529")
+        # forgotten an hour after it was last heard
+        tr.observe({"aircraft": []}, LAT, LON, now=noon + 60 + server.CALLSIGN_KEEP_S + 1)
+        self.assertEqual(tr.calls, {})
+
     def test_the_nearest_city_of_100000_or_more(self):
         # checked against GeoNames' own positions: Luxembourg-City is under 100 000 there, so its nearest is Trier
         self.assertEqual(server.nearest_city(49.6116, 6.1319), {"name": "Trier", "country": "DE", "km": 40})

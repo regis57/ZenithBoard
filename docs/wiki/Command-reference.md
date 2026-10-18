@@ -39,7 +39,7 @@ Every `zenithboard` command, grouped by what you are trying to do. `zenithboard`
 | `zenithboard social hashtags [WORD...]` | yes to change | The hashtags ending each post: `social hashtags ADSB avgeek Moselle` (the `#` is optional — unquoted, the shell would take it for a comment), `none`, or `default`. Alone: shows them |
 | `zenithboard social gap [MINUTES]` | yes to change | The least time between two posts. `0`, the default since 0.20.0, is none: every crossing of the sharing radius is posted, once. Whole minutes up to 1440; taken by the running service at its next look. Alone: shows it |
 | `zenithboard social picture` | yes | The picture: dot-matrix or split-flap, its colour, the map (a wizard) |
-| `zenithboard social look dots` · `dotmap` · `flap` · `alternate` | yes | The dot-matrix wall with the track in dots (no map), the dot-matrix wall with a map, the split-flap board with a map, or `dotmap` and `flap` in turn (one post each) |
+| `zenithboard social look dotmap` · `flap` · `alternate` | yes | The dot-matrix wall with a map, the split-flap board with a map, or the two in turn (one post each). `dots` was taken out in 0.24.0 |
 | `zenithboard social colour NAME` · `wall` · `rotate` | yes | amber, green, red, white, turquoise, the wall's own colour, or the colours in turn |
 | `zenithboard social map NAME` · `rotate` | yes | The map of the dotmap and flap looks: normal, night, satellite, terrain, none, or the four maps in turn |
 | `zenithboard social test [HEX]` | | Draw the picture and print the text for the best candidate (or that aircraft); post nothing. The picture is at `/social/preview` |

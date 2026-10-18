@@ -1,7 +1,12 @@
 # Changelog
 
+## 0.24.0
+From the owner's first afternoon on 0.23.0.
+- **The posts always carry a map.** The dots-only look (the dot-matrix wall with the track drawn in dots, no map) is taken out of the choices, at the owner's word: `social look`, the picture wizard and the menu offer `dotmap`, `flap` and `alternate`. `dotmap` is the default. A Pi still set to `dots` is not changed: it posts `dotmap`, and `sudo zenithboard update` says so with the command. `social map none` with `dotmap` now draws the dot wall with the track on black, like `flap` does, instead of the dots-only picture. Pillow is installed for every look. A Pi without it (offline) still gets the dot picture rather than none.
+- **The farthest aircraft of the day is named even when its callsign came late.** At the edge of range the decoder often has an aircraft's positions before its callsign, so the record was kept with no flight, airline or route (*18/10 13:09 · TF-ICE · BOEING 737 MAX 8 · 322 km*, on the real page). The wall now remembers the callsigns heard in the last hour and fills it in, before or after the farthest position; the route is then looked up at the next sample. The record already written for 18 October stays as it is: the aircraft is long gone.
+
 ## 0.23.0
-From a Bluesky post read on a phone (Eurowings EWG11S, D-AIDO).
+From a Bluesky post (Eurowings EWG11S, D-AIDO).
 - **A new look for the posts: the dot-matrix wall beside a real map.** `sudo zenithboard social look dotmap`: the wall's dots on the left, and in the right-hand column, instead of the track drawn in dots, the map the split-flap picture already carries (OpenStreetMap, darkened, satellite or terrain, from EOX, credited in the post and on the picture) with the track and the aircraft. The map turns like the split-flap one (`social map rotate`), and the colours too. Node draws the dots with that column left dark and says where it is; Pillow lays the map there and writes a JPEG under Bluesky's limit.
 - **`alternate` is now the two looks with a map**, `dotmap` then `flap`, as asked; the track drawn in dots left the turn. It stays a look of its own, `social look dots`, which fetches no map. Alternating with the maps turning, each look meets each of the four maps over eight posts and each colour over ten.
 - **The flags show whole in the dot-matrix picture.** Its right-hand panel started at dot 86, and its frame was drawn over the last column of an outlined flag (the German flag beside D-AIDO lost its right edge). It starts at 88 now, two dots clear: a dark column, then the panel. Its legend (`100KM`) and its "no track" words fit inside the narrower frame. The wall itself was never affected: its right-hand column starts at 90.

@@ -4,10 +4,10 @@
 #
 # Posts the aircraft overhead to Bluesky as a picture of the wall, with a short text. Off by default. The work is
 # done by flightinfo/social.py, running as a service under the wall's user; this file is the setup wizard, the
-# switch, and the commands. Three looks for the picture: the dot-matrix wall with the track in dots (drawn by
-# tools/social-render.js, which needs Node, about 30 MB), the same wall beside a map (0.23.0), or the split-flap
-# board beside a map (both maps laid by flightinfo/social_card.py, which needs Pillow and the DejaVu fonts, a few
-# MB). Each is installed from Debian when it is first needed. Bluesky only since 0.19.0: Mastodon was taken out.
+# switch, and the commands. Two looks for the picture, each beside a map of the track: the dot-matrix wall (drawn by
+# tools/social-render.js, which needs Node, about 30 MB) or the split-flap board; the maps are laid by
+# flightinfo/social_card.py, which needs Pillow and the DejaVu fonts, a few MB. Both are installed from Debian when
+# they are first needed. The dots-only look (the track drawn in dots, no map) was taken out in 0.24.0. Bluesky only since 0.19.0: Mastodon was taken out.
 #
 # The secret (a Bluesky app password, never the real one) lives in $ZB_ETC/social.env, owned by root, readable by
 # the zenithboard group (the service runs as that user), mode 0640. Never in config.env, never in a log, never
@@ -54,10 +54,11 @@ social_need_pil() {      # the map looks (dotmap, flap): Pillow paints the map a
   log "Installing Pillow and the DejaVu fonts (draw the map pictures, dotmap and flap; a few MB)"
   apt_install python3-pil fonts-dejavu-core >/dev/null || { err "Pillow could not be installed: the map pictures (dotmap, flap) cannot be drawn without it."; return 1; }
 }
-social_need_tools() {    # what the chosen look needs: Node always (the dots, and the flap board's rows), Pillow for a map
-  social_need_node || return 1
-  [ "$(cfg_get SOCIAL_STYLE dots)" = dots ] || social_need_pil       # dotmap, flap, or alternate
+social_need_tools() {    # what every look needs since 0.24.0: Node (the dots, the flap board's rows), Pillow (the map)
+  social_need_node && social_need_pil
 }
+# The look as it is drawn: "dots" was taken out in 0.24.0 and is read as dotmap, like anything unknown
+social_look() { local l; l=$(cfg_get SOCIAL_STYLE dotmap); social_valid_in "$l" dotmap flap alternate && printf '%s' "$l" || printf dotmap; }
 
 # 0.19.0 took Mastodon out. A Pi set up before that keeps its Bluesky account; the Mastodon token and the list of
 # networks are dropped, so no secret stays behind for a feature that is gone. Run by every update; does nothing twice.
@@ -74,6 +75,10 @@ social_migrate() {
   # wall's colour meanwhile, and the update says so with the command
   if [ "$(cfg_get SOCIAL_THEME "")" = blue ]; then
     log "Social sharing: the dark blue was taken out in 0.23.0. Your picture colour is still set to it, so the posts take the wall's colour ($(wall_theme)). Choose one:  sudo zenithboard social colour turquoise  (or wall, rotate)"
+  fi
+  # 0.24.0: the dots-only look is gone, at the owner's word. A setting still on it is kept; the posts are dotmap
+  if [ "$(cfg_get SOCIAL_STYLE "")" = dots ]; then
+    log "Social sharing: the dots-only picture was taken out in 0.24.0. Your look is still set to it, so the posts are drawn as dotmap (the dot-matrix wall beside a map). Choose one:  sudo zenithboard social look dotmap  (or flap, alternate)"
   fi
   # 0.20.0: no gap by default, every crossing posted once. A gap set before is the owner's and is kept; say it.
   if [ "$(cfg_get SOCIAL 0)" = 1 ] && [ "$(social_gap_words)" != "none, every crossing" ]; then
@@ -202,8 +207,8 @@ social_set_gap() {
 # ---- the picture: the look, its colour, the map (the looks with a map: dotmap and flap)
 social_valid_in() { local v=$1; shift; [[ $v =~ ^[a-z]+$ ]] && [[ " $* " == *" $v "* ]]; }   # exactly one of the words
 social_set_look() {
-  social_valid_in "${1:-}" dots dotmap flap alternate || { echo "Look: dots (the track in dots), dotmap (dots and a map), flap (split-flap and a map), or alternate (dotmap and flap in turn)"; return 1; }
-  [ "$1" = dots ] || social_need_pil || return 1        # install first: a look that cannot be drawn is not saved
+  social_valid_in "${1:-}" dotmap flap alternate || { echo "Look: dotmap (the dot-matrix wall and a map), flap (the split-flap board and a map), or alternate (the two in turn)"; return 1; }
+  social_need_pil || return 1                           # install first: a look that cannot be drawn is not saved
   cfg_set SOCIAL_STYLE "$1"
   echo "Picture: $1. Try it:  sudo zenithboard social test"
 }
@@ -221,13 +226,12 @@ social_set_colour() {
 social_set_map() {
   social_valid_in "${1:-}" $SOCIAL_MAPS || { echo "Map: $SOCIAL_MAPS (rotate: the four maps in turn)"; return 1; }
   cfg_set SOCIAL_MAP "$1"
-  echo "Map: $1 (the dotmap and flap looks). $( [ "$(cfg_get SOCIAL_STYLE dots)" != dots ] || echo 'The picture is the dots-only look now; switch with  sudo zenithboard social look dotmap  (or flap, or alternate)')"
+  echo "Map: $1."
 }
 social_setup_picture() {
   local look col map cur on
-  cur=$(cfg_get SOCIAL_STYLE dots)
+  cur=$(social_look)
   look=$(wt_radio "The picture each post carries. (Space = choose, Enter = go)" \
-      dots "Dot-matrix wall, the track drawn in dots beside it (no map fetched)" "$( [ "$cur" = dots ] && echo ON || echo OFF )" \
       dotmap "Dot-matrix wall, a map with the track beside it" "$( [ "$cur" = dotmap ] && echo ON || echo OFF )" \
       flap "Split-flap board, a map with the track beside it" "$( [ "$cur" = flap ] && echo ON || echo OFF )" \
       alternate "Dot-matrix and split-flap with a map, in turn" "$( [ "$cur" = alternate ] && echo ON || echo OFF )") || return 1
@@ -237,21 +241,19 @@ social_setup_picture() {
   for c in $SOCIAL_THEMES; do on=OFF; [ "$cur" = "$c" ] && on=ON; items+=("$c" "${c^}" "$on"); done
   items+=(rotate "In turn, one step per post" "$( [ "$cur" = rotate ] && echo ON || echo OFF )")
   col=$(wt_radio "Colour of the letters and the track" "${items[@]}") || return 1
-  if [ "$look" != dots ]; then
-    cur=$(cfg_get SOCIAL_MAP normal)
-    map=$(wt_radio "The map beside the wall or the board (from EOX's map service, credited on every post)" \
-        normal "OpenStreetMap" "$( [ "$cur" = normal ] && echo ON || echo OFF )" \
-        night "OpenStreetMap, darkened" "$( [ "$cur" = night ] && echo ON || echo OFF )" \
-        satellite "Satellite (Sentinel-2 cloudless, non-commercial use)" "$( [ "$cur" = satellite ] && echo ON || echo OFF )" \
-        terrain "Terrain: relief, forests, rivers" "$( [ "$cur" = terrain ] && echo ON || echo OFF )" \
-        none "No map: the track on black, nothing fetched" "$( [ "$cur" = none ] && echo ON || echo OFF )" \
-        rotate "The four maps in turn (not none)" "$( [ "$cur" = rotate ] && echo ON || echo OFF )") || return 1
-    social_set_map "$map" >/dev/null
-  fi
+  cur=$(cfg_get SOCIAL_MAP normal)
+  map=$(wt_radio "The map beside the wall or the board (from EOX's map service, credited on every post)" \
+      normal "OpenStreetMap" "$( [ "$cur" = normal ] && echo ON || echo OFF )" \
+      night "OpenStreetMap, darkened" "$( [ "$cur" = night ] && echo ON || echo OFF )" \
+      satellite "Satellite (Sentinel-2 cloudless, non-commercial use)" "$( [ "$cur" = satellite ] && echo ON || echo OFF )" \
+      terrain "Terrain: relief, forests, rivers" "$( [ "$cur" = terrain ] && echo ON || echo OFF )" \
+      none "No map: the track on black, nothing fetched" "$( [ "$cur" = none ] && echo ON || echo OFF )" \
+      rotate "The four maps in turn (not none)" "$( [ "$cur" = rotate ] && echo ON || echo OFF )") || return 1
+  social_set_map "$map" >/dev/null
   clear
   social_set_colour "$col" >/dev/null || return 1
   social_set_look "$look" >/dev/null || { read -rp "Press Enter to continue..." _; return 1; }
-  wt_msg "Saved. Picture: $look, $(or_text "$(cfg_get SOCIAL_THEME "")" "the wall's colour ($(wall_theme))")$( [ "$look" != dots ] && echo ", $(cfg_get SOCIAL_MAP normal) map").\n\nNext:  sudo zenithboard social test   draws the picture and shows the text, posts nothing.\nThen:  sudo zenithboard social on     starts posting." 12
+  wt_msg "Saved. Picture: $look, $(or_text "$(cfg_get SOCIAL_THEME "")" "the wall's colour ($(wall_theme))"), $(cfg_get SOCIAL_MAP normal) map.\n\nNext:  sudo zenithboard social test   draws the picture and shows the text, posts nothing.\nThen:  sudo zenithboard social on     starts posting." 12
 }
 social_rule_on() { [ "$1" = all ] && case ",$(cfg_get SOCIAL_RULES "")," in *",all,"*|*",any,"*) echo ON; return ;; esac; case ",$(cfg_get SOCIAL_RULES "$(python3 -c 'import sys; sys.path.insert(0, sys.argv[1]); import social; print(social.DEFAULTS["SOCIAL_RULES"])' "$ZB_HOME/flightinfo")")," in *",$1,"*) echo ON ;; *) echo OFF ;; esac; }
 
@@ -297,7 +299,7 @@ social_status() {
 social_menu() {
   local c
   while true; do
-    c=$(wt_menu "Social sharing: $(social_state)    Bluesky: $(or_text "$(social_account)" "no account")    Picture: $(cfg_get SOCIAL_STYLE dots)\nRadius: $(cfg_get SOCIAL_RADIUS_KM 15) km    Gap: $(social_gap_words)    Area: $(or_text "$(cfg_get SOCIAL_AREA "")" "(none)")\nRules: $(cfg_get SOCIAL_RULES rare,military,helicopter,heavy,farthest)\n\nPosts a picture of the wall and a short text when something worth it flies over. Nothing leaves the Pi until you switch it on." \
+    c=$(wt_menu "Social sharing: $(social_state)    Bluesky: $(or_text "$(social_account)" "no account")    Picture: $(social_look)\nRadius: $(cfg_get SOCIAL_RADIUS_KM 15) km    Gap: $(social_gap_words)    Area: $(or_text "$(cfg_get SOCIAL_AREA "")" "(none)")\nRules: $(cfg_get SOCIAL_RULES rare,military,helicopter,heavy,farthest)\n\nPosts a picture of the wall and a short text when something worth it flies over. Nothing leaves the Pi until you switch it on." \
       setup "1  Set up or change the Bluesky account" \
       words "2  Words and rules: place name, radius, gap, what is worth a post" \
       picture "3  The picture: dot-matrix or split-flap, colour, map" \
