@@ -44,7 +44,7 @@ stats_on()  { stats_prepare_dir || { echo "Could not make $STATS_DIR"; return 1;
               echo "Statistics are ON: one line every 15 minutes in $STATS_FILE, $STATS_DAYS days kept."
               echo "Read them with 'zenithboard stats' or at http://$(local_ip):$(cfg_get PORT 8080)/stats"; }
 stats_off() { cfg_set STATS 0; stats_remove_units; echo "Statistics are OFF. The files are kept in $STATS_DIR (empty them: zenithboard stats clear)."; }
-stats_clear() { rm -f "$STATS_DIR"/seen-* "$STATS_DIR"/gaps-* 2>/dev/null; [ -d "$STATS_DIR" ] && echo "$STATS_HEADER" > "$STATS_FILE"; echo "Statistics emptied ($STATS_DIR)."; }
+stats_clear() { rm -f "$STATS_DIR"/seen-* "$STATS_DIR"/gaps-* "$STATS_DIR"/farthest-* 2>/dev/null; [ -d "$STATS_DIR" ] && echo "$STATS_HEADER" > "$STATS_FILE"; echo "Statistics emptied ($STATS_DIR)."; }
 
 # One sample. Reads the decoder's two files; writes one CSV line and today's aircraft. Silent when there is
 # nothing to read: a decoder that is not running is not an error worth a journal line every quarter hour.
@@ -94,6 +94,7 @@ PY
   read -r msgs far pos seen <<<"$n"
   printf '%s,%s,%s,%s,%s\n' "$now" "$msgs" "$far" "$pos" "$seen" >> "$STATS_FILE"
   stats_gaps_sample "$day"
+  stats_farthest_sample
   stats_prune
 }
 
@@ -132,6 +133,49 @@ os.replace(tmp, out)
 PY
 }
 
+# ---- which aircraft was the farthest (0.22.0). The decoder only says how far; the wall watches aircraft.json every
+# few seconds and keeps, for today and yesterday, the farthest aircraft with its airline, route and the large city
+# nearest it. It keeps that in memory, so it is asked here and written down: farthest-YYYY-MM-DD, one JSON object,
+# thirty days like the rest. A farther record already written (before the wall restarted, say) is never replaced;
+# the same record asked again fills in what the lookups found since.
+STATS_FARTHEST_TRIES=4          # a route still being looked up: ask again, 3 s apart (adsbdb is asked 1.5 s apart)
+stats_farthest_sample() {
+  python3 - "$(cfg_get PORT 8080)" "$STATS_DIR" "$STATS_FARTHEST_TRIES" "${ZB_FARTHEST_WAIT:-3}" <<'PY' 2>/dev/null || true
+import json, os, re, sys, time, urllib.request
+port, out, tries, wait = sys.argv[1], sys.argv[2], int(sys.argv[3]), float(sys.argv[4])
+def ask():
+    with urllib.request.urlopen("http://127.0.0.1:%s/api/farthest" % port, timeout=5) as r:
+        return json.load(r)
+try:
+    got = ask()
+    while tries > 0 and any(d.get("pending") for d in got.get("days") or []):
+        time.sleep(wait); tries -= 1; got = ask()
+except Exception:
+    sys.exit(0)
+for rec in got.get("days") or []:
+    day = str(rec.get("day") or "")
+    if not re.match(r"^\d{4}-\d{2}-\d{2}$", day) or not isinstance(rec.get("km"), (int, float)):
+        continue
+    f = os.path.join(out, "farthest-" + day)
+    try:
+        with open(f) as fh:
+            old = json.load(fh)
+    except (OSError, ValueError):
+        old = None
+    if isinstance(old, dict):
+        if float(old.get("km") or 0) > rec["km"]:
+            continue
+        if old.get("hex") == rec.get("hex") and old.get("time") == rec.get("time"):
+            for k, v in old.items():             # the same record: keep what an earlier answer knew and this one does not
+                if rec.get(k) in (None, "", [], {}):
+                    rec[k] = v
+    rec.pop("pending", None)
+    with open(f + ".tmp", "w") as fh:
+        json.dump(rec, fh, ensure_ascii=False, sort_keys=True)
+    os.replace(f + ".tmp", f)
+PY
+}
+
 # The counters over the thirty days, most frequent first: "zenithboard stats gaps" is what to paste in an issue
 stats_gaps() {
   local days
@@ -153,9 +197,9 @@ stats_prune() {
   cut=$(date -d "$STATS_DAYS days ago" '+%Y-%m-%d %H:%M' 2>/dev/null) || return 0
   tmp="$STATS_FILE.tmp"
   { echo "$STATS_HEADER"; awk -F, -v c="$cut" 'NR>1 && $1 >= c' "$STATS_FILE"; } > "$tmp" && mv "$tmp" "$STATS_FILE"
-  for f in "$STATS_DIR"/seen-* "$STATS_DIR"/gaps-*; do
+  for f in "$STATS_DIR"/seen-* "$STATS_DIR"/gaps-* "$STATS_DIR"/farthest-*; do
     [ -f "$f" ] || continue
-    d=${f##*/}; d=${d#seen-}; d=${d#gaps-}            # the YYYY-MM-DD after the prefix
+    d=${f##*/}; d=${d#seen-}; d=${d#gaps-}; d=${d#farthest-}     # the YYYY-MM-DD after the prefix
     [ "$d" \< "${cut%% *}" ] && rm -f "$f"
   done
   return 0

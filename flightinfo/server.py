@@ -26,7 +26,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.21.1"
+VERSION = "0.22.0"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -206,6 +206,9 @@ def read_stats(stats_dir=None, now=None):
     t = days.get(today) or {"day": today, "messages": 0, "farthest_km": 0, "aircraft": 0, "samples": 0}
     busiest = max(hours, key=lambda h: h["messages"]) if rows else None
     best = max(day_list, key=lambda d: d["farthest_km"]) if day_list else None
+    far = read_farthest(stats_dir, now)
+    if best:                              # the box's best day: were its details written down? (not before 0.22.0)
+        far["best_box_detailed"] = os.path.exists(os.path.join(stats_dir, "farthest-" + best["day"]))
     return {
         "enabled": True,
         "samples": len(rows),
@@ -216,7 +219,37 @@ def read_stats(stats_dir=None, now=None):
         "best": {"day": best["day"], "farthest_km": best["farthest_km"]} if best else None,
         "hours": hours,
         "days": day_list,
+        "farthest": far,
     }
+
+
+FARTHEST_SHOWN = ("day", "time", "hex", "flight", "flight_iata", "airline", "registration", "type", "type_name",
+                  "alt_ft", "km", "route", "near")
+
+
+def read_farthest(stats_dir, now):
+    """{"today": record or None, "best": the farthest record of the thirty days or None}, from the farthest-DAY files
+    the timer writes (0.22.0). Only the fields the page shows are passed on, whatever else a file holds."""
+    cut = (now - datetime.timedelta(days=30)).strftime("%Y-%m-%d")
+    recs = []
+    try:
+        names = os.listdir(stats_dir)
+    except OSError:
+        names = []
+    for name in names:
+        day = name[len("farthest-"):]
+        if not name.startswith("farthest-") or not re.match(r"^\d{4}-\d{2}-\d{2}$", day) or day < cut:
+            continue
+        rec = _read_json(os.path.join(stats_dir, name))
+        try:
+            rec["km"] = float(rec.get("km"))
+        except (TypeError, ValueError):
+            continue
+        rec["day"] = day
+        recs.append({k: rec.get(k) for k in FARTHEST_SHOWN})
+    today = now.strftime("%Y-%m-%d")
+    return {"today": next((r for r in recs if r["day"] == today), None),
+            "best": max(recs, key=lambda r: (r["km"], r["day"])) if recs else None}
 
 
 # --------------------------------------------------------------------------- who may read the wall
@@ -321,6 +354,18 @@ def read_json(path):
             return json.load(fh)
     except (OSError, ValueError):
         return None
+
+
+def read_aircraft(cfg):
+    """-> (the decoder's aircraft.json with the 978 MHz UAT aircraft merged in, or None; the path read)."""
+    path = aircraft_json_path(cfg)
+    data = read_json(path)
+    upath = uat_json_path(cfg)
+    if upath:                                   # 978 MHz UAT: optional, never a reason to show an error
+        udata = read_json(upath)
+        if udata is not None:
+            data = merge_aircraft(data or {}, udata)
+    return data, path
 
 
 # --------------------------------------------------------------------------- geometry
@@ -470,6 +515,22 @@ def describe_type(ac, types=None):
 
 
 # --------------------------------------------------------------------------- planes
+def checked_route(flight, lat, lon, track, gs, route_lookup, route_fallback):
+    """-> (route the aircraft can really be on, or None; True while an answer is still on its way).
+    adsbdb first; hexdb's second opinion only when adsbdb's answer cannot be this flight."""
+    route = route_lookup(flight) if route_lookup is not None else None
+    waiting = bool(route is None and route_lookup is not None and getattr(route_lookup, "pending", None) and route_lookup.pending(flight))
+    checked = route_plausible(route, lat, lon, track, gs)
+    if route and not checked and route_fallback is not None:      # a second opinion, only when the first answer is wrong
+        for leg in route_fallback(flight) or ():
+            checked = route_plausible(leg, lat, lon, track, gs, strict=True)
+            if checked:
+                break
+        if not checked and getattr(route_fallback, "pending", None) and route_fallback.pending(flight):
+            waiting = True
+    return checked, waiting
+
+
 def build_planes(data, lat, lon, radius_km, airlines=None, photo_lookup=None, demo=False, types=None, route_lookup=None,
                  aircraft_lookup=None, route_fallback=None, only_hex=None):
     """Return (planes_in_radius_sorted_by_distance, total_with_position). only_hex: that aircraft alone, so asking
@@ -508,18 +569,9 @@ def build_planes(data, lat, lon, radius_km, airlines=None, photo_lookup=None, de
         if demo and ac.get("demo_route"):
             route = ac["demo_route"]
         else:
-            route = route_lookup(flight) if route_lookup is not None else None
-            if route is None and route_lookup is not None and getattr(route_lookup, "pending", None) and route_lookup.pending(flight):
+            route, waiting = checked_route(flight, ac["lat"], ac["lon"], ac.get("track"), ac.get("gs"), route_lookup, route_fallback)
+            if waiting:
                 pending.append("route")
-            checked = route_plausible(route, ac["lat"], ac["lon"], ac.get("track"), ac.get("gs"))
-            if route and not checked and route_fallback is not None:      # a second opinion, only when the first answer is wrong
-                for leg in route_fallback(flight) or ():
-                    checked = route_plausible(leg, ac["lat"], ac["lon"], ac.get("track"), ac.get("gs"), strict=True)
-                    if checked:
-                        break
-                if not checked and getattr(route_fallback, "pending", None) and route_fallback.pending(flight):
-                    pending.append("route")
-            route = checked
         # The decoder only knows the type and the registration when its aircraft database has the airframe. When it
         # does not, ask adsbdb.com (by the aircraft's hex code) so the model is still shown and the silhouette fits.
         reg, code, found = ac.get("r"), ac.get("t"), None
@@ -788,7 +840,13 @@ def parse_route(data):
     if not isinstance(fr, dict):
         return None
     origin, dest = _airport(fr.get("origin")), _airport(fr.get("destination"))
-    return {"from": origin, "to": dest} if (origin or dest) else None
+    if not (origin or dest):
+        return None
+    out = {"from": origin, "to": dest}
+    iata = str(fr.get("callsign_iata") or "").strip().upper()     # FR8526 for RYR8526: the number on the ticket (0.22.0)
+    if re.match(r"^[A-Z0-9]{2}[0-9]{1,4}[A-Z]?$", iata):
+        out["flight_iata"] = iata
+    return out
 
 
 def _same_airport(a, b):
@@ -998,6 +1056,164 @@ def lookup_aircraft(hex_code):
 lookup_aircraft.pending = lambda hex_code: _aircraft.pending((hex_code or "").strip().upper())
 
 
+# --------------------------------------------------------------------------- the farthest aircraft of the day (0.22.0)
+# The decoder's stats.json says how far the farthest aircraft was, never which one. So, with statistics on, the server
+# looks at aircraft.json every few seconds and keeps, for today and yesterday, the aircraft whose position was the
+# farthest from the antenna: its callsign, registration, type, altitude, and when. It keeps them in memory only (the
+# server writes nowhere); the statistics timer asks for them on the loopback every quarter hour and writes them down
+# (lib/stats.sh), with the airline, the route and the large city nearest the aircraft, which the /stats page shows.
+FARTHEST_EVERY_S = 5                # aircraft.json is rewritten every second; a position stays in it for a minute
+FARTHEST_MAX_KM = 600               # readsb's own range limit is 300 NM (556 km): a position beyond is a decoding error
+CITIES_FILE = os.path.join(DATA_DIR, "cities100k.tsv")
+
+
+class FarthestTracker(object):
+    """The farthest aircraft position seen, per day (local time), for the last two days."""
+
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.days = {}                      # "YYYY-MM-DD" -> record
+
+    def observe(self, data, lat, lon, now=None):
+        now = time.time() if now is None else now
+        for ac in (data or {}).get("aircraft") or []:
+            if not isinstance(ac, dict) or not isinstance(ac.get("lat"), (int, float)) or not isinstance(ac.get("lon"), (int, float)):
+                continue
+            age = ac.get("seen_pos", 0)
+            if not isinstance(age, (int, float)) or age > MAX_POSITION_AGE_S:
+                continue
+            hx = str(ac.get("hex") or "").lower()
+            alt = ac.get("alt_baro", ac.get("alt_geom"))
+            if not re.match(r"^[0-9a-f]{6}$", hx) or alt == "ground":      # ~ marks a made-up address: nothing to name
+                continue
+            km = haversine_km(lat, lon, ac["lat"], ac["lon"])
+            if km > FARTHEST_MAX_KM:
+                continue
+            when = datetime.datetime.fromtimestamp(now - age)
+            day = when.strftime("%Y-%m-%d")
+            with self.lock:
+                cur = self.days.get(day)
+                if cur and cur["km"] >= round(km, 1):
+                    continue
+                self.days[day] = {
+                    "day": day, "time": when.strftime("%H:%M"), "hex": hx, "flight": str(ac.get("flight") or "").strip(),
+                    "registration": ac.get("r"), "type": ac.get("t"), "category": ac.get("category"), "dbFlags": ac.get("dbFlags"),
+                    "alt_ft": alt if isinstance(alt, (int, float)) else None, "km": round(km, 1),
+                    "lat": ac["lat"], "lon": ac["lon"], "track": ac.get("track"), "gs": ac.get("gs")}
+        with self.lock:
+            for d in sorted(self.days)[:-2]:
+                del self.days[d]
+
+    def snapshot(self):
+        with self.lock:
+            return [dict(self.days[d]) for d in sorted(self.days)]
+
+
+_farthest = FarthestTracker()
+
+
+def farthest_watch():
+    """The tracker's loop, a thread of its own. Does nothing while statistics are off or the position is not set."""
+    while True:
+        try:
+            cfg = load_config()
+            lat, lon = cfg_float(cfg, "LAT", 0), cfg_float(cfg, "LON", 0)
+            if cfg_bool(cfg, "STATS") and (lat or lon):
+                data, _ = read_aircraft(cfg)
+                if data is not None:
+                    _farthest.observe(data, lat, lon)
+        except Exception as exc:            # a bad file now and then must not end the watch for good
+            print("farthest aircraft: %s" % exc, file=sys.stderr, flush=True)
+        time.sleep(FARTHEST_EVERY_S)
+
+
+_cities = {"rows": None, "lock": threading.Lock()}
+
+
+def load_cities(path=None):
+    """[(name, country, lat, lon, population)] from the GeoNames list shipped in data/ (read once)."""
+    with _cities["lock"]:
+        if _cities["rows"] is None or path:
+            rows = []
+            try:
+                with open(path or CITIES_FILE, encoding="utf-8") as fh:
+                    for line in fh:
+                        if line.startswith("#"):
+                            continue
+                        f = line.rstrip("\n").split("\t")
+                        try:
+                            rows.append((f[0], f[1], float(f[2]), float(f[3]), int(f[4])))
+                        except (IndexError, ValueError):
+                            continue
+            except OSError:
+                rows = []
+            if path:
+                return rows
+            _cities["rows"] = rows
+        return _cities["rows"]
+
+
+def nearest_city(lat, lon, cities=None):
+    """{"name", "country", "km"} of the city of 100 000 inhabitants or more nearest the point, or None."""
+    best, best_km = None, None
+    cos = max(0.1, math.cos(math.radians(lat)))
+    for c in (cities if cities is not None else load_cities()):
+        if best_km is not None and (abs(c[2] - lat) * 111.2 > best_km or abs(c[3] - lon) * 111.2 * cos > best_km):
+            continue                        # cheaper than the great circle, and enough to rule a city out
+        km = haversine_km(lat, lon, c[2], c[3])
+        if best_km is None or km < best_km:
+            best, best_km = c, km
+    return {"name": best[0], "country": best[1], "km": round(best_km)} if best else None
+
+
+def _shown_airport(a):
+    """An airport as the page shows it: what it is called, without the position that served only to check the route."""
+    return {k: a.get(k) for k in ("city", "name", "iata", "icao", "country")} if isinstance(a, dict) else None
+
+
+def describe_farthest(rec, cfg, route_lookup=None, route_fallback=None, aircraft_lookup=None, airlines=None, types=None):
+    """One of the tracker's records, as the statistics timer writes it down: the airline, the route and the model when
+    they are known, the nearest large city; neither the aircraft's position nor the antenna's. "pending" lists what is
+    still being looked up, so the timer can wait a few seconds for it."""
+    flight, pending = rec.get("flight") or "", []
+    route, waiting = checked_route(flight, rec["lat"], rec["lon"], rec.get("track"), rec.get("gs"), route_lookup, route_fallback)
+    if waiting:
+        pending.append("route")
+    reg, code, found = rec.get("registration"), rec.get("type"), None
+    if aircraft_lookup is not None and not (reg and code):
+        found = aircraft_lookup(rec.get("hex"))
+        if found:
+            reg, code = reg or found.get("registration"), code or found.get("icao_type")
+        elif getattr(aircraft_lookup, "pending", None) and aircraft_lookup.pending(rec.get("hex")):
+            pending.append("model")
+    icao, info = airline_for(flight, airlines if airlines is not None else load_airlines(cfg))   # after the route: it teaches airline names
+    kind = describe_type({"t": code, "category": rec.get("category"), "dbFlags": rec.get("dbFlags")},
+                         types if types is not None else load_types(cfg))
+    if not kind["type_name"] and found and found.get("type"):
+        kind["type_name"] = " ".join(x for x in (found.get("manufacturer"), found.get("type")) if x)
+    return {
+        "day": rec["day"], "time": rec["time"], "hex": rec["hex"], "flight": flight,
+        "flight_iata": (route or {}).get("flight_iata"),
+        "airline": info.get("name") if info else ("MILITARY" if kind["military"] else None),
+        "registration": reg or None, "type": code or None, "type_name": kind["type_name"] or None,
+        "alt_ft": rec.get("alt_ft"), "km": rec["km"],
+        "route": {"from": _shown_airport(route.get("from")), "to": _shown_airport(route.get("to"))} if route else None,
+        "near": nearest_city(rec["lat"], rec["lon"]),
+        "pending": pending,
+    }
+
+
+def farthest_answer(cfg):
+    """What /api/farthest says: the records of today and yesterday, described. Lookups only with routes on."""
+    if not cfg_bool(cfg, "STATS"):
+        return {"enabled": False}
+    real = not cfg_bool(cfg, "DEMO")
+    routes = cfg_bool(cfg, "SHOW_ROUTES") and real
+    rl = lookup_route if routes else None
+    return {"enabled": True, "days": [describe_farthest(r, cfg, rl, lookup_route_fallback if rl else None,
+                                                        lookup_aircraft if routes else None) for r in _farthest.snapshot()]}
+
+
 # --------------------------------------------------------------------------- HTTP
 def public_config(cfg):
     units = cfg.get("UNITS", "metric")
@@ -1059,7 +1275,9 @@ class Handler(BaseHTTPRequestHandler):
             if not cfg_bool(cfg, "STATS"):
                 return self._send(200, {"enabled": False, "version": VERSION})
             got = read_stats() or {"enabled": True, "samples": 0, "hours": [], "days": [], "today": None, "best": None}
-            return self._send(200, dict(got, version=VERSION))
+            return self._send(200, dict(got, version=VERSION, units=public_config(cfg)["units"]))
+        if path == "/api/farthest":                    # asked by the statistics timer every quarter hour (lib/stats.sh)
+            return self._send(200, farthest_answer(cfg))
         if path == "/stats":
             return self._file(STATIC_DIR, "stats.html")
         if path == "/social/preview":                 # the picture `zenithboard social test` drew, to look at before posting anything
@@ -1078,13 +1296,7 @@ class Handler(BaseHTTPRequestHandler):
         except (KeyError, ValueError, IndexError):
             radius_km = radius_to_km(cfg_float(cfg, "RADIUS", 10), units)
         radius_km = min(max(radius_km, 0.1), 500.0)
-        path = aircraft_json_path(cfg)
-        data = read_json(path)
-        upath = uat_json_path(cfg)
-        if upath:                                   # 978 MHz UAT: optional, never a reason to show an error
-            udata = read_json(upath)
-            if udata is not None:
-                data = merge_aircraft(data or {}, udata)
+        data, path = read_aircraft(cfg)
         if data is None:
             return self._send(200, {"error": "no_data", "path": path, "server_id": SERVER_ID,
                                     "planes": [], "total": 0})
@@ -1133,6 +1345,7 @@ def main():
     port = int(os.environ.get("PORT") or cfg.get("PORT") or 8080)
     bind = str(cfg.get("BIND_ADDRESS") or "0.0.0.0").strip() or "0.0.0.0"
     httpd = WallServer((bind, port), Handler)
+    threading.Thread(target=farthest_watch, daemon=True).start()
     print("ZenithBoard FlightInfo %s listening on %s:%d, answering %s (config: %s)"
           % (VERSION, bind, port, cfg.get("ALLOW_FROM", "private"), CONFIG_FILE), flush=True)
     try:

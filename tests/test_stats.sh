@@ -86,11 +86,55 @@ check "show: says the count is a floor"               'printf "%s" "$out" | grep
 check "spark: heights follow the values"              '[ "$(stats_spark 0 4 8)" = "▁▅█" ]'
 check "spark: all zero is all low"                    '[ "$(stats_spark 0 0 0)" = "▁▁▁" ]'
 
+# ---- which aircraft was the farthest (0.22.0): asked of the wall on the loopback, written to farthest-DAY.
+#      A stub wall answers: first with the route still on its way, then with it; the timer waits for it.
+port=$((20000 + RANDOM % 20000)); cfg_set PORT "$port"
+cat > "$t/wall.py" <<'PY'
+import http.server, json, sys
+port, script = int(sys.argv[1]), sys.argv[2]
+answers = json.load(open(script)); n = {"i": 0}
+class H(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        a = answers[min(n["i"], len(answers) - 1)]; n["i"] += 1
+        open(script + ".asked", "a").write(self.path + "\n")
+        b = json.dumps(a).encode(); self.send_response(200); self.send_header("Content-Length", str(len(b))); self.end_headers(); self.wfile.write(b)
+    def log_message(self, *a): pass
+http.server.HTTPServer(("127.0.0.1", port), H).serve_forever()
+PY
+rec() { printf '{"day":"%s","time":"14:32","hex":"406a1b","flight":"EZY1234","km":%s,"near":{"name":"Charleroi","country":"BE","km":51},"route":%s,"pending":%s}' "$1" "$2" "$3" "$4"; }
+route='{"from":{"city":"Edinburgh","iata":"EDI"},"to":{"city":"Saint-Louis","iata":"BSL"}}'
+wall() { printf '[%s]' "$1" > "$t/answers.json"; rm -f "$t/answers.json.asked"; python3 "$t/wall.py" "$port" "$t/answers.json" & srv=$!; sleep 0.7; }
+export ZB_FARTHEST_WAIT=0.2
+wall "{\"enabled\":true,\"days\":[$(rec "$today" 318.4 null '["route"]')]},{\"enabled\":true,\"days\":[$(rec "$today" 318.4 "$route" '[]')]}"
+stats_farthest_sample; kill $srv 2>/dev/null; wait $srv 2>/dev/null
+ff="$STATS_DIR/farthest-$today"
+check "farthest: written for the day"                    '[ -f "$ff" ] && python3 -c "import json,sys; d=json.load(open(sys.argv[1])); assert d[\"km\"]==318.4 and d[\"flight\"]==\"EZY1234\"" "$ff"'
+check "farthest: it waited for the route on its way"     '[ "$(grep -c farthest "$t/answers.json.asked")" = 2 ] && grep -q "Saint-Louis" "$ff" && ! grep -q pending "$ff"'
+# the same record again, but the route lookup failed this time: what was known is kept
+wall "{\"enabled\":true,\"days\":[$(rec "$today" 318.4 null '[]')]}"
+stats_farthest_sample; kill $srv 2>/dev/null; wait $srv 2>/dev/null
+check "farthest: the same record keeps the route it had"  'grep -q "Saint-Louis" "$ff"'
+# the wall restarted and only knows a nearer one: the farther record stays
+wall "{\"enabled\":true,\"days\":[$(rec "$today" 120.0 null '[]')]}"
+stats_farthest_sample; kill $srv 2>/dev/null; wait $srv 2>/dev/null
+check "farthest: a nearer one never replaces it"         'grep -q "318.4" "$ff"'
+# a farther one does, and yesterday's record is written to its own file
+yd=$(date -d yesterday '+%Y-%m-%d')
+wall "{\"enabled\":true,\"days\":[$(rec "$yd" 250.0 null '[]'),$(rec "$today" 331.0 null '[]')]}"
+stats_farthest_sample; kill $srv 2>/dev/null; wait $srv 2>/dev/null
+check "farthest: a farther one replaces it, each day in its file" 'grep -q "331.0" "$ff" && grep -q "250.0" "$STATS_DIR/farthest-$yd"'
+# nothing answers: nothing written, no error
+rm -f "$STATS_DIR/farthest-$yd"; stats_farthest_sample; r=$?
+check "farthest: wall down, silent, nothing written"     '[ $r -eq 0 ] && [ ! -e "$STATS_DIR/farthest-$yd" ]'
+touch "$STATS_DIR/farthest-$old"; stats_prune
+check "farthest: pruned after thirty days like the rest" '[ ! -e "$STATS_DIR/farthest-$old" ] && [ -f "$ff" ]'
+check "farthest: the unit gives the sample time to wait" 'grep -q "^TimeoutStartSec=120$" systemd/zenithboard-stats.service'
+
 # ---- off keeps the files, clear empties them
 out=$(stats_off)
 check "off: setting, timer disabled, files kept"  '[ "$(cfg_get STATS)" = 0 ] && grep -q "disable --now zenithboard-stats.timer" "$t/systemctl.log" && [ -f "$STATS_FILE" ] && [ ! -e "$t/sysd/zenithboard-stats.timer" ]'
 stats_clear >/dev/null
-check "clear: header only, no day files"          '[ "$(cat "$STATS_FILE")" = "$STATS_HEADER" ] && [ -z "$(ls "$STATS_DIR"/seen-* 2>/dev/null)" ]'
+check "clear: header only, no day files"          '[ "$(cat "$STATS_FILE")" = "$STATS_HEADER" ] && [ -z "$(ls "$STATS_DIR"/seen-* "$STATS_DIR"/farthest-* 2>/dev/null)" ]'
 rm -f "$STATS_FILE"
 out=$(stats_show); r=$?
 check "show without any file: says how to turn it on" '[ $r -ne 0 ] && printf "%s" "$out" | grep -q "stats on"'

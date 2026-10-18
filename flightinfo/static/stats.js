@@ -78,6 +78,37 @@
     mount.innerHTML = ""; mount.appendChild(s);
   }
 
+  // The farthest aircraft, in words (0.22.0): "18/10 14:32 · Ryanair FR8526 (RYR8526) · Charleroi (CRL) → Reggio
+  // Calabria (REG) · Boeing 737-800 EI-DCL · 11 280 m · 322 km, near Lyon, FR (12 km)". Whatever is not known is left
+  // out rather than guessed: no airline, no route, no city each simply drop their part.
+  function altText(ft, units) {
+    if (typeof ft !== "number") return null;
+    return units === "imperial" ? fmt(Math.round(ft / 100) * 100) + " ft" : fmt(Math.round(ft * 0.3048 / 10) * 10) + " m";
+  }
+  function place(a) {
+    if (!a) return null;
+    var where = a.city || a.name, code = a.iata || a.icao;
+    return where ? where + (code ? " (" + code + ")" : "") : code || null;
+  }
+  function farthestLine(r, units) {
+    if (!r) return null;
+    var parts = [shortDay(r.day) + (r.time ? " " + r.time : "")];
+    var num = r.flight_iata || r.flight, who = r.airline && r.airline !== "MILITARY" ? r.airline + (num ? " " + num : "") : num || "";
+    if (r.flight_iata && r.flight && r.flight_iata !== r.flight) who += " (" + r.flight + ")";
+    if (r.airline === "MILITARY") who = (who ? who + " " : "") + "(military)";
+    parts.push(who || r.registration || String(r.hex || "").toUpperCase());
+    if (r.route && (r.route.from || r.route.to)) parts.push((place(r.route.from) || "?") + " \u2192 " + (place(r.route.to) || "?"));
+    var model = [r.type_name || r.type, who ? r.registration : null].filter(Boolean).join(" ");
+    if (model) parts.push(model);
+    var alt = altText(r.alt_ft, units);
+    if (alt) parts.push(alt);
+    // "near" up to 50 km; beyond, over the sea or open country, the distance says how near it really was
+    var city = r.near && r.near.name ? r.near.name + (r.near.country ? ", " + r.near.country : "") : "";
+    var near = !city ? "" : r.near.km <= 50 ? ", near " + city + " (" + fmt(r.near.km) + " km)" : ", " + fmt(r.near.km) + " km from " + city;
+    parts.push(fmt(r.km) + " km" + near);
+    return parts.join(" \u00b7 ");
+  }
+
   // The version, and behind it what changed in it. Nothing is asked of GitHub: it is a link, followed only if
   // somebody clicks it, so the page still names its version with no way out to the internet.
   var RELEASES = "https://github.com/regis57/ZenithBoard/releases";
@@ -97,6 +128,13 @@
     $("t-far").textContent = (t.farthest_km || 0) + " km";
     $("t-best").textContent = d.best ? d.best.farthest_km + " km" : "–";
     $("t-bestday").textContent = d.best ? "on " + shortDay(d.best.day) : "";
+    var f = d.farthest || {};
+    $("r-today").textContent = farthestLine(f.today, d.units) || "Nothing written down yet today: the next sample, on the quarter hour, does it.";
+    $("r-best").textContent = farthestLine(f.best, d.units) || "Nothing written down yet.";
+    if (d.best && f.best_box_detailed === false) {
+      $("r-note").textContent = "The " + d.best.farthest_km + " km of " + shortDay(d.best.day) + " in the box above has no details: they are written down since ZenithBoard 0.22.0.";
+      $("r-note").hidden = false;
+    }
     var hl = d.hours.map(function (h) { return (h.hour < 10 ? "0" : "") + h.hour + "h"; }), hv = d.hours.map(function (h) { return h.messages; });
     var hot = hv.indexOf(Math.max.apply(null, hv));
     bars($("c-msgs"), hl, hv, "", 3, hot);

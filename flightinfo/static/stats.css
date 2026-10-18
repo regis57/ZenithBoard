@@ -18,6 +18,14 @@ code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .92em; 
 .tile .k { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
 .tile .v { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.15; margin-top: 2px; }
 .tile .d { font-size: 12px; color: var(--muted); }
+/* the two farthest aircraft, named (0.22.0): a label column, then one line of words that may wrap */
+.records { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 16px; display: grid; gap: 6px; margin: 12px 0; }
+.rec { display: grid; grid-template-columns: 1fr; gap: 0; }
+@media (min-width: 620px) { .rec { grid-template-columns: 170px 1fr; gap: 12px; align-items: baseline; } }
+.rec .k { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.rec p { margin: 0; font-size: 14px; }
+.rnote { margin: 2px 0 0; font-size: 12px; color: var(--muted); }
+.rnote[hidden] { display: none; }
 .charts { display: grid; grid-template-columns: 1fr; gap: 18px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px; }
 @media (min-width: 760px) { .charts { grid-template-columns: 1fr 1fr; } .charts .wide { grid-column: 1 / -1; } }
 figure { margin: 0; min-width: 0; }

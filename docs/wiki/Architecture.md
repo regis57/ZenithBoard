@@ -23,7 +23,7 @@ Two independent chains. The ADS-B chain is the project; the ACARS chain is optio
 | Process | What it is | Started by |
 |---|---|---|
 | `readsb` or `dump1090-fa` | Decodes 1090 MHz into `aircraft.json` and a Beast stream | Its own package |
-| **FlightInfo server** | `flightinfo/server.py`. Reads `aircraft.json`, works out what is in range, looks up names, routes and photos, serves the wall | `zenithboard-flightinfo.service` |
+| **FlightInfo server** | `flightinfo/server.py`. Reads `aircraft.json`, works out what is in range, looks up names, routes and photos, serves the wall. With statistics on, a thread of it also looks at `aircraft.json` every five seconds for the day's farthest aircraft (0.22.0), kept in memory | `zenithboard-flightinfo.service` |
 | Feeder clients | One process per sharing service, each reading the Beast stream | Their own packages |
 | `acarsdec` | Decodes ACARS on a second dongle, sends JSON over UDP | `zenithboard-acarsdec.service` |
 | ACARS ingester | `acars/acars_ingest.py`. Filters, writes to SQLite, deletes old rows hourly | `zenithboard-acars-ingest.service` |
@@ -37,7 +37,8 @@ Everything ZenithBoard installs lives in `/opt/zenithboard`. Nothing else is tou
 |---|---|---|
 | `/etc/zenithboard/config.env` | The menus and the `zenithboard` command | The server, every `lib/*.sh` module |
 | `/run/readsb/aircraft.json` (or `/run/dump1090-fa/`) | The decoder, about once a second | The server, every refresh |
-| `/run/readsb/stats.json` | The decoder | `zenithboard gain check` |
+| `/run/readsb/stats.json` | The decoder | `zenithboard gain check`, the statistics sample |
+| `/var/lib/zenithboard/stats/` | The statistics timer, every 15 min: `stats.csv`, `seen-DAY`, `gaps-DAY`, `farthest-DAY` | The server, for `/stats` |
 | `/var/lib/zenithboard/data/types.json` | The monthly refresh timer | The server, for silhouette names |
 | `/var/lib/zenithboard/gain-log.csv` | The gain log timer, every 15 min | You, in a spreadsheet. Holds 24 h, rolling |
 | `/var/lib/zenithboard/netwatch-reboot` | The network watchdog | Itself, to honour the three-hour gap |
