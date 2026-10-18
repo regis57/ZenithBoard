@@ -535,7 +535,7 @@ Off by default. Switched on, the Pi posts the aircraft worth a post — a milita
 | ![Dot-matrix picture with a map](docs/images/social-dotmap.jpg) | ![Split-flap picture with a map](docs/images/social-flap.jpg) |
 | The dot-matrix wall beside a map with the aircraft's track: OpenStreetMap, a darkened one, satellite or terrain. *A real post from the reference Pi (terrain map), 18 October 2026; the track is drawn thinner since 0.24.1* | The split-flap board beside the same map |
 
-`alternate` takes `dotmap` and `flap` in turn, and the map and the colour can turn too. The map can also be `none`: the track on black, nothing fetched.
+`alternate` takes `dotmap` and `flap` in turn, and the map and the colour can turn too. The map can also be `none`: the track on black, nothing fetched. The posts follow the wall's units, or their own: `sudo zenithboard social units imperial` (ft, knots, mi) or `metric`, also in the picture wizard (0.24.3).
 
 ```bash
 sudo zenithboard social setup     # the Bluesky account (an app password, never the real one), the words, the picture
