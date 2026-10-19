@@ -48,7 +48,7 @@ The airport positions used for these checks are never displayed. They exist only
 
 ## Photos
 
-Looked up by the aircraft's ICAO hex, which is a far better key than a callsign: it identifies the airframe. Photos are cached, credited to the photographer on screen, and optional — `zenithboard photos off`.
+Looked up by the aircraft's ICAO hex, which is a far better key than a callsign: it identifies the airframe. Credited to the photographer on screen, with the photo itself a link to its page on Planespotters, and optional — `zenithboard photos off`. Since 0.24.5, as [Planespotters' photo API terms](https://www.planespotters.net/photo/api) require (read 19 October 2026), the tablet loads each picture straight from the address the API gives, unchanged; the Pi keeps no picture and remembers the API's answer 24 hours at most. Until 0.24.4 the Pi fetched the pictures and served them to the tablet from a memory cache, which those terms rule out. The tablet therefore needs internet to show photos. The terms also rule out posting a photo elsewhere: social sharing never does.
 
 With no photo available, the corner shows an animated sky scene with a side view of the matching model, rather than an empty box. Most aircraft have no photo on a quiet night, so this is the normal case rather than the fallback.
 

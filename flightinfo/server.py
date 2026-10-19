@@ -26,7 +26,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.24.4"
+VERSION = "0.24.5"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -558,7 +558,8 @@ def build_planes(data, lat, lon, radius_km, airlines=None, photo_lookup=None, de
         elif photo_lookup is not None:
             found = photo_lookup(ac.get("hex"))
             if found:
-                photo, credit, link = "/api/photo/%s" % ac.get("hex"), found.get("photographer"), found.get("link")
+                # the address Planespotters gave, unchanged: the tablet fetches the picture itself (0.24.5)
+                photo, credit, link = found.get("url"), found.get("photographer"), found.get("link")
         # What is still on its way for this aircraft: the wall ignores it (it shows the rows when they come); social
         # sharing waits for it rather than post a board with empty rows. 0.19.5: adsbdb's first answer, after KLM24V
         # went out with no registration, model or route. 0.19.9: hexdb's second opinion too, after RYR8526 and EWG6ZP
@@ -692,37 +693,28 @@ class ThrottledLookup(object):
                 self.cache[key] = {"value": value, "retry_at": retry_at, "queued": False}
 
 
-# --------------------------------------------------------------------------- photos (Planespotters, optional, proxied so the tablet needs no internet)
-_photo_bytes = {}     # hex -> (content_type, bytes)
-_photo_lock = threading.Lock()
+# --------------------------------------------------------------------------- photos (Planespotters, optional)
+# 0.24.5, from Planespotters' photo API terms (read 19 October 2026): the picture must be fetched straight from the
+# address the API gives, by the screen that shows it, and never stored, proxied or passed on; the API's answer may
+# be kept 24 hours at most. Until then the Pi fetched each picture and served it to the tablet from a cache of 200.
+# Now the wall hands the tablet Planespotters' own address, with the credit and the link back the terms ask for.
 # Every request this server makes to somebody else carries this. Planespotters refuses a plain library or
 # product name and asks for one that names the application and a contact address, so all five requests send the
 # same descriptive line rather than each inventing its own.
 USER_AGENT = "ZenithBoard/%s (+https://github.com/regis57/ZenithBoard)" % VERSION
 
-MAX_PHOTO_CACHE = 200
+PHOTO_TTL_S = 24 * 3600             # an answer is asked again after a day, as the terms require
 PHOTO_GAP_S = 2.0                   # Planespotters answers 403 to bursts: at most one request every 2 s
 PHOTO_RETRY_S = 600                 # refused / failed: try again after 10 min
 PHOTO_NOPHOTO_RETRY_S = 86400       # no photo published today: look again tomorrow
 
 
-# The photo address comes from somebody else's answer, and the Pi then fetches it itself. So it is checked before
-# it is used: https only, and a host inside one of the domains below. Without this, an answer that was tampered
-# with (a compromise at the other end, a spoofed name on the way) could make the Pi fetch any address, your own
-# router included, and hand what came back to the tablet. Nothing else in the project follows an address it was
-# given. Planespotters serves its pictures from plnspttrs.net, a different domain from the one its API answers
-# on: leaving it out silently refused every photo, which is what 0.12.4 fixes.
+# The photo address comes from somebody else's answer, and the tablet then fetches it. So it is checked before it
+# is passed on: https only, and a host inside one of the domains below. Without this, an answer that was tampered
+# with could send the tablet to any address, your own router included. Planespotters serves its pictures from
+# plnspttrs.net, a different domain from the one its API answers on: leaving it out silently refused every photo,
+# which is what 0.12.4 fixes.
 PHOTO_HOSTS = ("planespotters.net", "plnspttrs.net")
-# The image type is also somebody else's answer, and it ends up in one of our response headers. Only these are
-# passed on; anything else (including a value carrying a line break, which would let a header be injected into
-# our answer) becomes image/jpeg.
-PHOTO_TYPES = ("image/jpeg", "image/png", "image/webp", "image/gif")
-
-def photo_type_allowed(ctype):
-    base = (ctype or "").split(";")[0].strip().lower()
-    return HEADER_TYPES.get(base, "image/jpeg") if base in PHOTO_TYPES else "image/jpeg"
-
-
 # Every header value the wall sends comes out of these tables, never from a request or from somebody else's
 # answer: the lookup returns OUR string, so whatever arrives cannot end up in a header (no line break, no
 # second header smuggled in). Files are typed by their extension here too, rather than by the system's MIME list.
@@ -740,7 +732,7 @@ FILE_TYPES = {
     ".ico": "image/x-icon",
     ".txt": "text/plain; charset=utf-8",
 }
-HEADER_TYPES = {t: t for t in set(FILE_TYPES.values()) | set(PHOTO_TYPES) | {"text/plain", "application/octet-stream"}}
+HEADER_TYPES = {t: t for t in set(FILE_TYPES.values()) | {"text/plain", "application/octet-stream"}}
 CACHE_RULES = {"no-store": "no-store", "max-age=3600": "max-age=3600"}
 
 def photo_url_allowed(url):
@@ -778,35 +770,12 @@ def _photo_api(hex_code):
     return parse_photo_answer(data)
 
 
-_photos = ThrottledLookup(_photo_api, PHOTO_GAP_S, PHOTO_RETRY_S, PHOTO_NOPHOTO_RETRY_S)
+_photos = ThrottledLookup(_photo_api, PHOTO_GAP_S, PHOTO_RETRY_S, PHOTO_NOPHOTO_RETRY_S, found_ttl=PHOTO_TTL_S)
 
 
 def lookup_photo(hex_code):
     """Non-blocking: the photo metadata we already have; a request is queued when it is missing."""
     return _photos.get(hex_code)
-
-
-def fetch_photo_bytes(hex_code):
-    with _photo_lock:
-        if hex_code in _photo_bytes:
-            return _photo_bytes[hex_code]
-    meta = _photos.peek(hex_code)
-    if not meta:
-        return None
-    if not photo_url_allowed(meta.get("url")):      # also checked here: the cache may predate the check above
-        return None
-    try:
-        req = urllib.request.Request(meta["url"], headers={"User-Agent": USER_AGENT})
-        with urllib.request.urlopen(req, timeout=6) as resp:
-            body = resp.read(2_000_000)
-            ctype = photo_type_allowed(resp.headers.get("Content-Type"))
-    except Exception:
-        return None
-    with _photo_lock:
-        if len(_photo_bytes) >= MAX_PHOTO_CACHE:
-            _photo_bytes.clear()
-        _photo_bytes[hex_code] = (ctype, body)
-    return ctype, body
 
 
 # --------------------------------------------------------------------------- routes (adsbdb.com, optional)
@@ -1296,9 +1265,6 @@ class Handler(BaseHTTPRequestHandler):
             return self._file(STATIC_DIR, "stats.html")
         if path == "/social/preview":                 # the picture `zenithboard social test` drew, to look at before posting anything
             return self._file(SOCIAL_DIR, social_preview_name())
-        if path.startswith("/api/photo/"):
-            got = fetch_photo_bytes(path[len("/api/photo/"):].lower()) if cfg_bool(cfg, "SHOW_PHOTOS") else None
-            return self._send(200, got[1], got[0], cache="max-age=3600") if got else self._send(404, b"", "text/plain")
         if path.startswith("/demo/") and cfg_bool(cfg, "DEMO"):
             return self._file(DEMO_DIR, path[len("/demo/"):])
         return self._static(path)

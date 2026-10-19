@@ -388,7 +388,7 @@ ADS-B only carries the aircraft's identity, position, altitude and speed: **it n
 
 ## Photos
 
-Photos come from the [Planespotters.net photo API](https://www.planespotters.net/photo/api), looked up by the aircraft's hex address. They belong to their photographers: the wall shows each photo unmodified, with the photographer's name and a link to the page on Planespotters, and keeps nothing on disk (a small memory cache only). The Pi fetches the photos, so **the tablet does not need internet**. Please read Planespotters' API terms for your own use.
+Photos come from the [Planespotters.net photo API](https://www.planespotters.net/photo/api), looked up by the aircraft's hex address. They belong to their photographers: the wall shows each photo unmodified, with the photographer's name and a link to the page on Planespotters. As Planespotters' [photo API terms](https://www.planespotters.net/photo/api) require, **the tablet loads each picture straight from Planespotters** (so it needs internet for photos; without it, the animated sky is shown), and the Pi keeps no picture: it only asks the API which photo there is, and remembers the answer a day at most (0.24.5; until then the Pi fetched the pictures for the tablet). The photos are never posted to Bluesky.
 
 * Turn photos off or on: `sudo zenithboard photos off` / `on` (or menu *4 Settings → 3 Wall → Photos*). With photos off, the animated sky scene is shown for every aircraft.
 * Not every aircraft has a photo; those show the animated scene.

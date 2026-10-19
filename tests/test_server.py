@@ -85,10 +85,13 @@ class ServerTests(unittest.TestCase):
                 self.assertTrue(os.path.isfile(os.path.join(HERE, "..", "flightinfo", p["photo"].replace("/demo/", "demo/"))), p["photo"])
 
     def test_photo_credit_and_link(self):
-        lookup = lambda h: {"url": "u", "photographer": "Jane Doe", "link": "https://www.planespotters.net/photo/1"} if h == "dd0001" else None  # noqa: E731
+        # 0.24.5, Planespotters' photo API terms: the tablet fetches the picture from the address the API gave,
+        # unchanged; the Pi neither fetches, keeps nor passes it on
+        src = "https://t.plnspttrs.net/12345/1234567_abcdef_280.jpg"
+        lookup = lambda h: {"url": src, "photographer": "Jane Doe", "link": "https://www.planespotters.net/photo/1"} if h == "dd0001" else None  # noqa: E731
         planes, _ = server.build_planes(self._demo(), LAT, LON, 10, {}, lookup, demo=False)
         by = {p["hex"]: p for p in planes}
-        self.assertEqual(by["dd0001"]["photo"], "/api/photo/dd0001")
+        self.assertEqual(by["dd0001"]["photo"], src)
         self.assertEqual(by["dd0001"]["photo_credit"], "Jane Doe")
         self.assertEqual(by["dd0001"]["photo_link"], "https://www.planespotters.net/photo/1")
         self.assertIsNone(by["dd0002"]["photo"])
@@ -923,18 +926,15 @@ class UserAgentTest(unittest.TestCase):
 
 
 class ResponseHeaderTest(unittest.TestCase):
-    """A photo's type is somebody else's answer and ends up in one of our headers."""
+    """Only our own strings end up in a header."""
 
-    def test_only_known_image_types_are_passed_on(self):
-        self.assertEqual(server.photo_type_allowed("image/png"), "image/png")
-        self.assertEqual(server.photo_type_allowed("image/jpeg; charset=binary"), "image/jpeg")
-        self.assertEqual(server.photo_type_allowed("IMAGE/WEBP"), "image/webp")
-
-    def test_anything_else_becomes_jpeg(self):
-        for ctype in ("text/html", "application/javascript", "", None,
-                      "image/jpeg\r\nSet-Cookie: a=b",          # a reply split in two
-                      "image/jpeg\nLocation: https://evil.example"):
-            self.assertEqual(server.photo_type_allowed(ctype), "image/jpeg")
+    def test_the_pi_keeps_no_photo_and_the_answer_a_day_at_most(self):
+        # 0.24.5: the proxy and its cache of pictures are gone (Planespotters' terms); the API's answer, 24 h at most
+        self.assertFalse(hasattr(server, "fetch_photo_bytes"))
+        self.assertFalse(hasattr(server, "_photo_bytes"))
+        self.assertEqual(server._photos.found_ttl, 24 * 3600)
+        with open(server.__file__) as fh:
+            self.assertNotIn('"/api/photo/"', fh.read())
 
     def test_header_values_only_ever_come_from_our_tables(self):
         hv = server.Handler._header_values
