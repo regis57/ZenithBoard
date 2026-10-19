@@ -41,6 +41,7 @@ Every `zenithboard` command, grouped by what you are trying to do. `zenithboard`
 | `zenithboard social picture` | yes | The picture: dot-matrix or split-flap, its colour, the map (a wizard) |
 | `zenithboard social look dotmap` · `flap` · `alternate` | yes | The dot-matrix wall with a map, the split-flap board with a map, or the two in turn (one post each). `dots` was taken out in 0.24.0 |
 | `zenithboard social colour NAME` · `wall` · `rotate` | yes | amber, green, red, white, turquoise, the wall's own colour, or the colours in turn |
+| `zenithboard social photolink on` · `off` | yes (to change) | End each post with *Photo: NAME / Planespotters*, a link to the aircraft's photo page, when the wall has one. The link only, never the picture. Off by default. 0.25.0 |
 | `zenithboard social units metric` · `imperial` · `wall` | yes | The posts' units, picture and text (m, km/h, km or ft, knots, mi), or the wall's own `UNITS` (the default). 0.24.3 |
 | `zenithboard social map NAME` · `rotate` | yes | The map of the dotmap and flap looks: normal, night, satellite, terrain, none, or the four maps in turn |
 | `zenithboard social test [HEX]` | | Draw the picture and print the text for the best candidate (or that aircraft); post nothing. The picture is at `/social/preview` |

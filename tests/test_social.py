@@ -542,6 +542,27 @@ class PictureTest(unittest.TestCase):
                                         "EDINBURGH", "\u2192SAINT-LOUIS", "11:39 GMT+2"])
         self.assertEqual(got["color"], "#39ff6a")
 
+    def test_the_photo_link_is_a_link_only_and_off_by_default(self):
+        # 0.25.0, asked for by the owner: the aircraft's Planespotters photo page as the last line, with the
+        # photographer's name, clickable; never the picture (their API terms), and nothing when there is no photo
+        p = dict(EZY, photo_credit="Jane  Doe", photo_link="https://www.planespotters.net/photo/1234567/g-uzha-easyjet")
+        self.assertEqual(social.photo_line(p, CFG), (None, []))
+        on = dict(CFG, SOCIAL_PHOTOLINK="1")
+        line, links = social.photo_line(p, on)
+        self.assertEqual(line, "Photo: Jane Doe / Planespotters")
+        self.assertEqual(links, [(line, p["photo_link"])])
+        t = social.post_text(p, on, None, "Map \u00a9 OpenStreetMap, EOX", line)
+        self.assertTrue(t.endswith("\nMap \u00a9 OpenStreetMap, EOX\nPhoto: Jane Doe / Planespotters"), t)
+        f = [x for x in social.bluesky_facets(t, links) if x["features"][0].get("uri") == p["photo_link"]]
+        self.assertEqual(len(f), 1)
+        for bad in ("https://evil.example/photo/1", "http://www.planespotters.net/photo/1", ""):
+            self.assertEqual(social.photo_line(dict(p, photo_link=bad), on), (None, []), bad)
+        self.assertEqual(social.photo_line(dict(p, photo_credit=""), on), (None, []))
+        # a text too long for both: the photo line goes, the text stays whole
+        long = dict(p, route={"from": {"city": "X" * 120}, "to": {"city": "Y" * 120}})
+        t = social.post_text(long, on, None, None, line)
+        self.assertNotIn("Planespotters", t)
+
     def test_the_posts_have_their_own_units(self):
         # 0.24.3, asked for by the owner: imperial posts whatever the wall shows, or the wall's own units by default
         self.assertEqual(social.units_of({"UNITS": "metric"}), "metric")
