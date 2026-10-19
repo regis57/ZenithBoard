@@ -12,7 +12,7 @@ ZenithBoard runs as root on a machine in your home, listens on your network, and
 | The wall server | Runs as a `nologin` system user inside a full systemd sandbox; can write nowhere | 0.12.0 |
 | The ACARS ingester | Same sandbox; listens on `127.0.0.1` only; parameterised SQL | 0.12.0 |
 | Its HTTP answers | Every header value comes from a fixed table inside the program | 0.12.2 |
-| Photos | The address must be `https` inside `planespotters.net` or `plnspttrs.net`; the type must be a known image type | 0.11.1, 0.12.4 |
+| Photos | The address must be `https` inside `planespotters.net` or `plnspttrs.net` before it is handed to the tablet | 0.11.1, 0.12.4, 0.24.5 |
 | Files it serves | Real-path check: nothing outside its own folders, symlinks included | always |
 | Updates of ZenithBoard | The commit is signature-checked before `install.sh` runs as root. One GitHub release per version, pointing at that signed commit | 0.12.0, fixed in 0.12.3; releases 0.15.0 |
 | Downloads run as root | Private `mktemp` folder (mode 700), https only, no downgrade on redirect | 0.12.0, fixed in 0.12.1 |
@@ -109,7 +109,7 @@ Housekeeping:
 ## What is checked in the code
 
 * **Files served by the wall.** Both file handlers resolve the real path and refuse anything outside their folder, so `../../etc/shadow` and its symlink cousins get a 404.
-* **The photo address.** Photos are found at Planespotters and then fetched *by the Pi itself*. The address must be `https` and inside `planespotters.net` or `plnspttrs.net`, checked when the answer arrives and again just before the fetch. Without it, a tampered answer could have pointed the Pi at your router's admin page and handed the result to the tablet.
+* **The photo address.** Photos are found at Planespotters and, since 0.24.5, loaded *by the tablet* from the address the API gives (their terms forbid a proxy). The address must be `https` and inside `planespotters.net` or `plnspttrs.net`, checked when the answer arrives. Without it, a tampered answer could send the tablet to any address. The Pi no longer fetches any picture, so it no longer serves one either.
 * **Every response header.** The content type is chosen by file extension from a short list written in the program, the cache rule from two allowed values, and anything else gets a safe default. Nothing that arrives with a request or with somebody else's answer can reach a header — which closes header injection (a line break that splits one reply into two) for good.
 * **Downloads that are about to be run as root** land in a private folder made for the run (`mktemp -d`, mode 700), never on a fixed name in `/tmp` that somebody else could have created first.
 * **Every download is https**, TLS 1.2 or later, and a redirection cannot drop it to plain http on the way.

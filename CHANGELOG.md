@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.24.5
+From Planespotters' photo API terms, read on 19 October 2026 at the owner's request.
+- **The tablet loads the photos straight from Planespotters.** The terms ask that a picture be fetched from the address the API gives, by the screen that shows it, and never stored, proxied or passed on. Until now the Pi fetched each picture and served it to the tablet from a memory cache of 200 (`/api/photo/…`): that route and the cache are gone. The tablet needs internet to show photos; without it, the animated sky is shown as before.
+- The API's answer is remembered 24 hours at most, as the terms allow; it was kept until the wall restarted.
+- `zenithboard photos test` checks the API only and no longer downloads a picture to the Pi.
+- The credit next to the photo and the photo as a link to its page were already as the terms ask. The photos are still never posted to Bluesky. JetPhotos is not used: it has no public photo API, and its terms grant personal, non-commercial use of the site only.
+
 ## 0.24.4
 - **The towns are named on every map.** The satellite and terrain maps relied on EOX's label layer, which named one village in forty kilometres on a real post over Metz. They now carry the names ZenithBoard draws itself: the places of 5 000 inhabitants or more (GeoNames, CC BY 4.0, shipped with ZenithBoard, nothing looked up), the largest first, never over another name, the aircraft, north or the key. The credit names GeoNames; the satellite map's credit no longer names OpenStreetMap, whose labels it no longer carries. The OpenStreetMap maps already name their towns.
 - Checked at the owner's question: the scale bar and the track agree with the real distances and speeds. A Transavia at 997 km/h over three minutes flies 50 km; its track measured 48 km against the 10 km bar on the post; Metz to Thionville (28 km) measures 27 km on a preview.

@@ -5,8 +5,9 @@
     zenithboard photos test            # try a few well-photographed airliners
     zenithboard photos test 3c6444     # try one aircraft by its ICAO hex
 
-Useful before the antenna is connected: it tells you whether the network, the API and the image download work,
-without waiting for an aircraft to fly over. Nothing is stored; the wall fetches photos the same way.
+Useful before the antenna is connected: it tells you whether the Pi reaches the API, without waiting for an aircraft
+to fly over. The picture itself is not downloaded: since 0.24.5 the tablet fetches it straight from Planespotters,
+as their photo API terms require (the image fetched only by the screen that shows it), so the tablet needs internet.
 """
 import json
 import sys
@@ -21,7 +22,7 @@ GAP_S = 2.5          # Planespotters refuses (403) requests that come too fast -
 
 def get(url, limit):
     req = urllib.request.Request(url, headers={"User-Agent": "ZenithBoard-photo-check (+https://github.com/regis57/ZenithBoard)"})
-    with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:   # nosec - fixed https API and the image it points to
+    with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:   # nosec - the fixed https API
         return resp.headers.get("Content-Type", ""), resp.read(limit)
 
 
@@ -44,12 +45,8 @@ def check(hex_code):
     if not url:
         print("  %s: the entry has no usable image" % hex_code)
         return False
-    try:
-        ctype, data = get(url, 3_000_000)
-    except Exception as exc:
-        print("  %s: found a photo but could not download it (%s)" % (hex_code, exc))
-        return False
-    print("  %s: OK - %s, %d kB, by %s" % (hex_code, ctype or "image", len(data) // 1024, p.get("photographer") or "unknown"))
+    print("  %s: OK - a photo by %s (the tablet loads it from %s)" % (hex_code, p.get("photographer") or "unknown",
+                                                                  url.split("/")[2] if "//" in url else url))
     return True
 
 
@@ -62,7 +59,8 @@ def main(argv):
             time.sleep(GAP_S)
         results.append(check(code))
     if any(r is True for r in results):
-        print("Photos work on this Pi. Aircraft without a published photo still show the animated sky scene.")
+        print("Photos work on this Pi. The tablet loads each picture from Planespotters itself, so it needs internet;"
+              " aircraft without a published photo still show the animated sky scene.")
         return 0
     if all(r is None for r in results):
         print("Reached Planespotters, but none of these aircraft has a photo. Try another hex.")
