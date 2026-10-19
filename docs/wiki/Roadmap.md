@@ -11,6 +11,7 @@ The code is complete enough. What it lacks is proof.
 | Try Plane Finder | The fourth feeder is installed by the menu and has never been fed. It is also the only feeder whose version is pinned ([Providers](Providers)) | It feeds, or the menu entry gets a caveat |
 | Watch the Debian patches | Switched on 18 October 2026 from the menu | A few weeks without a feeder disturbed |
 | **Count what the wall cannot name or draw** | Two *Later* items — airline names for bare callsigns, more silhouettes — wait on real figures, not guesses. Since 0.21.0 the statistics sampler notes, every quarter hour, each aircraft shown with a callsign but no airline (by its three-letter prefix) and each one drawn with the generic silhouette (by type code). `zenithboard stats on` must be on | After two weeks, `zenithboard stats gaps` pasted into an issue decides which prefixes get a lookup and which shapes get drawn |
+| Watch the first weeks of the posts | Since 0.23.0 the Bluesky posts carry a real map with the track (`dotmap` and `flap`, alternating), town names on the satellite and terrain maps (0.24.4), the photographer's name as a link to the aircraft's Planespotters page if `social photolink on` (0.25.0), and units of their own (0.24.3). Looked at so far on the real Pi: the normal and terrain maps, the satellite map once | A few posts on each map (normal, night, satellite, terrain) read on a phone: legible names, credits in place, nothing hidden by the legend. Anything else is a field-log row and a fix |
 | Leave the gain alone | Settled at 48.0 dB, 4–5 % strong messages at rush hour | Nothing to do. Recorded so it is not re-opened |
 
 ## Deciding the airline lookup and the new silhouettes on figures
@@ -52,6 +53,7 @@ And three proofs of stability that no caveat names yet:
 
 ## Next — once the above is proven
 
+* **Posts, small things that may come:** the town names are drawn from a list of places of 5 000 inhabitants or more; a sparse region may want a lower threshold (`flightinfo/data/places5000.tsv.gz`, `tools/make_places.py`). The farthest aircraft of the month is named only from 0.22.0 on; earlier days have a figure and no line.
 * **Enrich the statistics page**, later, once there are some weeks of real data to look at: coverage by direction (which side of the sky the antenna hears best) and the airlines seen most often. The page today shows messages per hour, the farthest aircraft and aircraft per day ([Statistics](Statistics)); nothing is added before the real figures show what is worth drawing.
 * **A decision on AirNav RadarBox.** A fifth feeder is only worth it if its MLAT does not fight the single-MLAT rule. Waiting on a few nights of data first.
 * ~~Wi-Fi hardening~~ — done in 0.21.0: `zenithboard wifi harden on`, off by default, reversible.
@@ -62,6 +64,8 @@ And three proofs of stability that no caveat names yet:
 * Airline names for callsigns that have no route in adsbdb: a dedicated airline lookup, one request per prefix, off by default. Since 0.17.0 every airline with a known route is already named from the route answer, so this is worth doing only if bare callsigns are still common on a real wall — which is what `zenithboard stats gaps` (0.21.0) now measures; see *Now*.
 * Wider silhouette coverage, so fewer aircraft fall back to the generic shape: the same counter says which type codes do, and the five to ten most frequent get a shape each, previewed before it ships.
 * The 978 MHz UAT path validated by someone in the United States. It is written and tested, and nobody has run it for real.
+* ~~Posts with a real map, flags whole, no dark blue~~ — done in 0.23.0 (`social look dotmap|flap|alternate`); the dots-only look left in 0.24.0.
+* ~~Photos as Planespotters' terms ask~~ — done in 0.24.5: the tablet loads each picture itself, the Pi keeps none. JetPhotos is not used (no API; personal use only).
 * ~~Per-tablet presets~~ — done in 0.21.0: `zenithboard preset add kitchen theme=green mode=flap`, then `?p=kitchen` on that tablet.
 
 ## Not planned, and why
@@ -76,6 +80,7 @@ Saying no here saves answering the same question twice.
 | **Turning off package signature checking** | It has been the quick fix for two different installer problems. It stays off the table: a signature that is not checked is not a signature. |
 | **Supporting hardware other than a Raspberry Pi** | It probably works on other Debian machines; it will not be tested there, so it will not be claimed. |
 | **A route source that does not need the internet** | There is no free, complete and current database of routes by callsign: the public ones are partial, stale, or under licences a GPL project cannot carry, and a stale route shown with confidence is worse than none. Callsign lookups stay online (adsbdb, hexdb as a second opinion), cached, and off when the Pi is |
+| **A photo in the Bluesky posts** | Planespotters' photo API terms forbid storing, re-hosting or passing on a picture, and a link card would upload its thumbnail. A link to the photo page with the photographer named is what is allowed (`social photolink on`, 0.25.0). JetPhotos has no API and grants personal, non-commercial use of the site only |
 | **A paid tier** | It is GPL and it stays free. There is a beer link in the README and that is the whole business model. |
 
 ## Suggesting something
