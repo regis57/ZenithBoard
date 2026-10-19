@@ -26,7 +26,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.25.0"
+VERSION = "0.25.1"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -997,17 +997,39 @@ def parse_aircraft(data):
     return out if (out["icao_type"] or out["type"] or out["registration"]) else None
 
 
+def parse_hexdb_aircraft(data):
+    """hexdb /aircraft answer -> the same dict as parse_aircraft, or None. Its keys: Registration, ICAOTypeCode,
+    Manufacturer, Type (and owner and flag fields, not used)."""
+    if not isinstance(data, dict):
+        return None
+    out = {"icao_type": str(data.get("ICAOTypeCode") or "").upper(), "type": str(data.get("Type") or ""),
+           "manufacturer": str(data.get("Manufacturer") or ""), "registration": str(data.get("Registration") or "")}
+    return out if (out["icao_type"] or out["type"] or out["registration"]) else None
+
+
+def _hexdb_aircraft(hex_code):
+    """hexdb's second opinion on an airframe adsbdb does not know. 0.25.1: TF-AKE, an Air Atlanta cargo 747, went out
+    with blank registration and model rows; adsbdb answered "unknown aircraft", hexdb knew it."""
+    try:
+        return parse_hexdb_aircraft(_hexdb_json("/aircraft/%s" % hex_code))
+    except Exception:
+        return None                              # not known there either, or unreachable: the rows stay as they were
+
+
 def _aircraft_api(hex_code):
-    """-> (info|None, ok). ok is False when we could not get an answer."""
+    """-> (info|None, ok). ok is False when we could not get an answer. adsbdb first; hexdb only when adsbdb does
+    not know the airframe."""
     url = "https://api.adsbdb.com/v0/aircraft/%s" % hex_code
     try:
         req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
         with urllib.request.urlopen(req, timeout=10) as resp:
-            return parse_aircraft(json.load(resp)), True
+            found = parse_aircraft(json.load(resp))
+        return (found or _hexdb_aircraft(hex_code)), True
     except urllib.error.HTTPError as exc:
         if exc.code != 404:
             print("aircraft lookup %s: HTTP %s, retrying in %d s" % (hex_code, exc.code, AIRCRAFT_RETRY_S), file=sys.stderr, flush=True)
-        return None, exc.code == 404
+            return None, False
+        return _hexdb_aircraft(hex_code), True
     except Exception as exc:
         print("aircraft lookup %s failed (%s), retrying in %d s" % (hex_code, exc, AIRCRAFT_RETRY_S), file=sys.stderr, flush=True)
         return None, False

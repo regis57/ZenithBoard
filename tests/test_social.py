@@ -493,6 +493,22 @@ class PictureTest(unittest.TestCase):
         self.assertTrue(out["frame"])
         self.assertEqual(out["panel"]["x"], 88)
 
+    def test_an_empty_row_leaves_no_gap(self):
+        # 0.25.1, from a post (TF-AKE): no registration and no model known, two blank rows on the picture. The rows
+        # below move up; the flap board's too, the time staying last
+        bare = {"hex": "4cc54b", "flight": "ABD2614", "airline": "Air Atlanta", "alt_ft": 30650, "gs_kt": 478,
+                "route": {"from": {"city": "Liege"}, "to": {"city": "Port Harcourt"}}}
+        out = self.node("const g = new Uint32Array(R.GW * R.GH); R.drawWall(g, %s, 'metric', '18:42 GMT+2', true);"
+                        " const lit = (y) => { let n = 0; for (let x = 0; x < 72; x++) n += g[y * R.GW + x] ? 1 : 0; return n; };"
+                        " console.log(JSON.stringify({rows: [...Array(70).keys()].map(lit)}));" % json.dumps(bare))
+        rows = out["rows"]
+        self.assertTrue(all(rows[y] for y in range(8, 15)), "the airline on the second row, not a blank REG row")
+        self.assertEqual(sum(rows[61:70]), 0, "nothing left for the last rows: they were moved up")
+        got = social._node({"plane": bare, "units": "metric", "clock": "18:42 GMT+2", "theme": "green", "cols": 14}, None, "--lines")
+        self.assertEqual(got["lines"][:5], ["FLT  ABD2614", "AIR ATLANTA", "ALT  9340 M", "SPD  885 KMH", "LIEGE"])
+        self.assertEqual(got["lines"][-1], "18:42 GMT+2")
+        self.assertEqual(len(got["lines"]), 9)
+
     def test_the_legend_and_no_track_stay_inside_the_frame(self):
         # "100KM" is 29 dots: with the panel at 88 it must still end before the frame (dot 127); "NO TRACK" is 47 dots,
         # the panel 40, so it is two lines
