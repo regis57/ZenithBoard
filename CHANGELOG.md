@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.25.0
+- **A link to the aircraft's photo in the posts, optional.** `sudo zenithboard social photolink on` (and menu *Social sharing → 4*): when the wall has a Planespotters photo of the aircraft, the post ends with *Photo: NAME / Planespotters*, a link to the photo's page with the photographer named. The link only: the picture is never posted and no link card is made, as Planespotters' photo API terms require. No line without a photo; left out rather than cutting the text when the post is full. JetPhotos is not used (no API; querying its site is not granted). Off by default. Asked for by the owner.
+
 ## 0.24.5
 From Planespotters' photo API terms, read on 19 October 2026 at the owner's request.
 - **The tablet loads the photos straight from Planespotters.** The terms ask that a picture be fetched from the address the API gives, by the screen that shows it, and never stored, proxied or passed on. Until now the Pi fetched each picture and served it to the tablet from a memory cache of 200 (`/api/photo/…`): that route and the cache are gone. The tablet needs internet to show photos; without it, the animated sky is shown as before.

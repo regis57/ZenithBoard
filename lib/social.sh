@@ -230,6 +230,21 @@ social_set_units() {     # 0.24.3: the posts in metric or imperial, or the wall'
   cfg_set SOCIAL_UNITS "$u"
   echo "Post units: $(or_text "$u" "the wall's ($(cfg_get UNITS metric))")."
 }
+# 0.25.0: a last line in each post, "Photo: NAME / Planespotters", linking to the aircraft's photo page. The link only:
+# Planespotters' photo API terms forbid posting or storing the picture. Off by default.
+social_set_photolink() {
+  case "${1:-}" in
+    on)  cfg_set SOCIAL_PHOTOLINK 1 ;;
+    off) cfg_set SOCIAL_PHOTOLINK 0 ;;
+    "")  ;;
+    *)   echo "Photo link: on or off"; return 1 ;;
+  esac
+  if [ "$(cfg_get SOCIAL_PHOTOLINK 0)" = 1 ]; then
+    echo "Photo link: ON. A post ends with \"Photo: NAME / Planespotters\", a link to the photo page, when the wall has a photo of that aircraft (photos on). The picture itself is never posted."
+  else
+    echo "Photo link: OFF. Posts carry no link to a photo."
+  fi
+}
 social_set_map() {
   social_valid_in "${1:-}" $SOCIAL_MAPS || { echo "Map: $SOCIAL_MAPS (rotate: the four maps in turn)"; return 1; }
   cfg_set SOCIAL_MAP "$1"
@@ -316,16 +331,18 @@ social_menu() {
       setup "1  Set up or change the Bluesky account" \
       words "2  Words and rules: place name, radius, gap, what is worth a post" \
       picture "3  The picture: dot-matrix or split-flap, colour, map" \
-      test "4  Try it: draw the picture and show the text, post nothing" \
-      toggle "5  Switch sharing $( [ "$(social_state)" = on ] && echo OFF || echo ON )" \
-      post "6  Post now, once" \
-      status "7  Status" \
-      remove "8  Remove: account, state and service" \
+      photolink "4  Link to the Planespotters photo page: $( [ "$(cfg_get SOCIAL_PHOTOLINK 0)" = 1 ] && echo ON || echo OFF )" \
+      test "5  Try it: draw the picture and show the text, post nothing" \
+      toggle "6  Switch sharing $( [ "$(social_state)" = on ] && echo OFF || echo ON )" \
+      post "7  Post now, once" \
+      status "8  Status" \
+      remove "9  Remove: account, state and service" \
       back "Return to the previous menu") || return 0
     case "$c" in
       setup) social_setup || true ;;
       words) social_setup_words && wt_msg "Saved." 7 || true ;;
       picture) social_setup_picture || true ;;
+      photolink) social_set_photolink "$( [ "$(cfg_get SOCIAL_PHOTOLINK 0)" = 1 ] && echo off || echo on )" >/dev/null; wt_msg "$(social_set_photolink)" 10 ;;
       test) clear; social_need_tools && social_prepare_dir && sudo -u "$ZB_USER" python3 "$SOCIAL_PY" test; read -rp "Press Enter to continue..." _ ;;
       toggle) clear; if [ "$(social_state)" = on ]; then social_off; else social_on; fi; read -rp "Press Enter to continue..." _ ;;
       post) clear; social_need_tools && social_prepare_dir && sudo -u "$ZB_USER" python3 "$SOCIAL_PY" post; read -rp "Press Enter to continue..." _ ;;

@@ -73,7 +73,7 @@ sudo zenithboard social colour rotate
 sudo zenithboard social map rotate
 ```
 
-Each of these has its own command too, for a quick change: `social words`, `social picture` (the three picture questions), `social look dotmap|flap|alternate`, `social colour green|wall`, `social units imperial|wall`, `social map satellite`.
+Each of these has its own command too, for a quick change: `social words`, `social picture` (the three picture questions), `social look dotmap|flap|alternate`, `social colour green|wall`, `social units imperial|wall`, `social photolink on|off`, `social map satellite`.
 
 ### 3. Try it
 
@@ -128,6 +128,10 @@ The board as the wall's split-flap look draws it — the same nine rows, without
 **Where the map comes from, and why there.** The tiles come from [EOX::Maps](https://maps.eox.at), whose layers are free to use with attribution and a link back. The whole required text is drawn on the picture and read in its alt text; the post ends with one short line whose names are links — *Map © OpenStreetMap, EOX* — which is what OpenStreetMap's [attribution guideline](https://osmfoundation.org/wiki/Attribution) accepts (the name, linked to its copyright page) and what EOX asks of an online publication (the name and the link). Until 0.19.6 the post repeated the whole text, three lines of small print under every aircraft. OpenStreetMap's own tile servers are not used: their [usage policy](https://operations.osmfoundation.org/policies/tiles/) rules out automated fetching that nobody is looking at, which is what a service posting by itself does. The satellite layer is licensed CC BY-NC-SA 4.0: free for a hobby account like this one, **not for commercial use**, and a picture made with it is shared under the same licence. The Pi asks only for the few tiles under the picture, names itself in every request, and keeps them for a month under its state folder, so the tiles over your area are fetched once, not at every post. If the tile service does not answer, the picture is drawn with no map and no credit, and `social test` says so.
 
 ---
+
+### A link to the aircraft's photo (0.25.0, optional)
+
+`sudo zenithboard social photolink on` (or menu *Social sharing → 4*): when the wall has a Planespotters photo of the aircraft, the post ends with a line *Photo: Jane Doe / Planespotters*, the whole line a link to the photo's page. The photographer is named and the picture opens at Planespotters, full size. **Only the link**: Planespotters' [photo API terms](https://www.planespotters.net/photo/api) forbid storing, re-hosting or passing on the picture, so it is never posted, and the post carries no link card (Bluesky's card would mean uploading the thumbnail). With photos off on the wall, or no photo for that aircraft, there is no line. When the text would not fit beside it, the line is left out rather than the text cut. JetPhotos is not used: it has no photo API, and finding out whether it has a photo would mean querying the site, which its terms do not grant. Off by default.
 
 ## What gets posted, and what never does
 

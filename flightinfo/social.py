@@ -63,7 +63,8 @@ DEFAULTS = {
     "SOCIAL_STYLE": "dotmap",        # the picture: dotmap (dot-matrix wall + map) | flap (split-flap + map) | alternate
     "SOCIAL_THEME": "",              # its colour: amber | green | red | white | turquoise; empty = the wall's THEME
     "SOCIAL_UNITS": "",              # metric | imperial; empty = the wall's UNITS (0.24.3)
-    "SOCIAL_MAP": "normal",          # the map of the dotmap and flap looks: normal | night | satellite | terrain | none
+    "SOCIAL_MAP": "normal",
+    "SOCIAL_PHOTOLINK": "0",         # 1: a last line linking to the aircraft's Planespotters photo page (0.25.0)          # the map of the dotmap and flap looks: normal | night | satellite | terrain | none
 }
 STYLES = ("dotmap", "flap")
 MAP_LOOKS = STYLES               # every look carries a map (0.24.0)
@@ -650,7 +651,21 @@ def fit_post(body, credit, tags):
     return join(body, credit, tags)[:POST_MAX]
 
 
-def post_text(p, c, why=None, credit=None):
+PHOTO_PAGE = re.compile(r"^https://(www\.)?planespotters\.net/photo/[0-9]+")
+
+
+def photo_line(p, c):
+    """(line, [(label, uri)]) or (None, []). 0.25.0, asked for by the owner: a link to the aircraft's photo page on
+    Planespotters, with the photographer's name, as the post's last line. Only the link: the picture is never posted
+    (their photo API terms forbid storing or passing it on), and no card is made, which would upload the thumbnail."""
+    link, who = str(p.get("photo_link") or ""), " ".join(str(p.get("photo_credit") or "").split())[:40]
+    if not server.cfg_bool(c, "SOCIAL_PHOTOLINK", "0") or not PHOTO_PAGE.match(link) or not who:
+        return None, []
+    line = "Photo: %s / Planespotters" % who
+    return line, [(line, link)]
+
+
+def post_text(p, c, why=None, credit=None, photo=None):
     """The post. English, short, nothing the wall does not know. Starts with the flight ("Flight Etihad #ETD11K"),
     ends with the place ("above Trémery"); a range record ends with where it was seen from instead, since it was
     nowhere near overhead. credit: the map's credit line, when the picture has a map."""
@@ -702,6 +717,10 @@ def post_text(p, c, why=None, credit=None):
         tags = tags.replace("#avgeek", "#helicopter") if "#avgeek" in tags else tags + " #helicopter"
     if p.get("military") and tags:
         tags = tags.replace("#avgeek", "#military") if "#avgeek" in tags else tags + " #military"
+    if photo:                                    # the photo line only when the text fits whole beside it
+        with_photo = fit_post(text, "\n".join(x for x in (credit, photo) if x), tags.strip())
+        if with_photo.startswith(text + "\n") or with_photo == text:
+            return with_photo
     return fit_post(text, credit, tags.strip())
 
 
@@ -974,7 +993,9 @@ def publish(p, trace, why, c, sec, dry=False, keep=None):
     results = {}
     try:
         info = render(p, trace, c, base)
-        text = post_text(p, c, why, info.get("credit"))
+        pline, plinks = photo_line(p, c)
+        text = post_text(p, c, why, info.get("credit"), pline)
+        links = list(info.get("links") or []) + (plinks if pline and pline in text else [])
         alt = alt_text(p, c, trace, "dotmap" if info.get("fallback") else style_of(c), info)   # no Pillow: the dots
         if keep:
             try:
@@ -986,7 +1007,7 @@ def publish(p, trace, why, c, sec, dry=False, keep=None):
             return results
         try:
             results["bluesky"] = post_bluesky(sec, text, info["path"], alt, info.get("width", 0), info.get("height", 0),
-                                              info.get("mime", "image/png"), info.get("links"))
+                                              info.get("mime", "image/png"), links)
         except urllib.error.HTTPError as exc:
             results["bluesky"] = "FAILED: " + _http_error_text(exc)
         except Exception as exc:
