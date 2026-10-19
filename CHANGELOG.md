@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.25.2
+- The town names on the posts' satellite and terrain maps are smaller (13 points, from 16) and more of them are shown (up to 26, from 16), still the largest first and never one over another. Asked for by the owner after the first post with them.
+
 ## 0.25.1
 From a real post: TF-AKE, an Air Atlanta Icelandic cargo 747 (4CC54B), went out with blank registration and model rows.
 - **hexdb.io's second opinion on the aircraft.** When adsbdb answers *unknown aircraft*, the wall asks hexdb, as it already does for a route adsbdb gets wrong: the registration and the model, once per airframe, remembered like adsbdb's answers. adsbdb answered *unknown aircraft* for TF-AKE; hexdb knew it.

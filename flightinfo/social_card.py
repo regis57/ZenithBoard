@@ -52,7 +52,7 @@ OSM_LINK = ("OpenStreetMap", "https://www.openstreetmap.org/copyright")
 EOX_LINK = ("EOX", "https://maps.eox.at")
 GEONAMES_LINK = ("GeoNames", "https://www.geonames.org/")
 PLACES_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "places5000.tsv.gz")
-MAX_NAMES = 16                               # the towns named on a map, the largest first, none over another
+MAX_NAMES = 26                               # the towns named on a map, the largest first, none over another (0.25.2: 16 before)
 MAP_STYLES = {
     "normal": {"layers": [("osm_3857", "jpg")], "words": "an OpenStreetMap map",
                "credit": "Map \u00a9 OpenStreetMap, EOX", "links": [OSM_LINK, EOX_LINK],
@@ -338,7 +338,7 @@ def _draw_names(img, z, ox, oy, w, h, band, tone, plane_at=None):
     """The towns inside the map, the largest first, each with a dot and its name on a halo; never over another name,
     the north box or the legend and credit band."""
     d = ImageDraw.Draw(img)
-    fnt = font(16)
+    fnt = font(13)                                # 0.25.2, from the owner: smaller names, more of them (16 before)
     fill, halo = ((255, 255, 255), (0, 0, 0)) if tone == "light" else ((30, 30, 30), (255, 255, 255))
     taken = [(w - 52, 0, w, 70), (0, h - band, w, h)]
     if plane_at:                                  # the aircraft itself stays clear
@@ -353,7 +353,7 @@ def _draw_names(img, z, ox, oy, w, h, band, tone, plane_at=None):
             continue
         tw = d.textlength(name, font=fnt)
         tx = x + 7 if x + 7 + tw <= w - 4 else x - 7 - tw
-        box = (tx - 3, y - 11, tx + tw + 3, y + 11)
+        box = (tx - 3, y - 9, tx + tw + 3, y + 9)
         if any(not (box[2] < t[0] or box[0] > t[2] or box[3] < t[1] or box[1] > t[3]) for t in taken):
             continue
         taken.append(box)
