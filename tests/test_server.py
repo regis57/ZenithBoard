@@ -446,11 +446,11 @@ class AircraftLookupTests(unittest.TestCase):
 
     def test_hexdb_is_asked_when_adsbdb_does_not_know_the_airframe(self):
         # 0.25.1, from a real post: TF-AKE (4CC54B), an Air Atlanta cargo 747, had blank REG and model rows; adsbdb
-        # answered "unknown aircraft". hexdb gives Registration, ICAOTypeCode, Manufacturer, Type
+        # answered "unknown aircraft". hexdb's real answer for it, from the Pi:
         hexdb = {"ModeS": "4CC54B", "Registration": "TF-AKE", "Manufacturer": "Boeing", "ICAOTypeCode": "B744",
-                 "Type": "747-4H6F", "RegisteredOwners": "Air Atlanta Icelandic", "OperatorFlagCode": "ABD"}
+                 "Type": "747 409F", "RegisteredOwners": "Air Atlanta Icelandic", "OperatorFlagCode": "ABD"}
         self.assertEqual(server.parse_hexdb_aircraft(hexdb),
-                         {"icao_type": "B744", "type": "747-4H6F", "manufacturer": "Boeing", "registration": "TF-AKE"})
+                         {"icao_type": "B744", "type": "747 409F", "manufacturer": "Boeing", "registration": "TF-AKE"})
         for bad in ({"status": "404", "error": "Aircraft not found."}, {}, "x", None):
             self.assertIsNone(server.parse_hexdb_aircraft(bad))
         import io
