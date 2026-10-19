@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.25.1
+From a real post: TF-AKE, an Air Atlanta Icelandic cargo 747 (4CC54B), went out with blank registration and model rows.
+- **hexdb.io's second opinion on the aircraft.** When adsbdb answers *unknown aircraft*, the wall asks hexdb, as it already does for a route adsbdb gets wrong: the registration and the model, once per airframe, remembered like adsbdb's answers. adsbdb answered *unknown aircraft* for TF-AKE; hexdb knew it.
+- **No blank rows on the posts' pictures.** A row nobody could fill leaves no gap: the rows below move up, the flags with their row, the time stays at the foot (dot-matrix and split-flap). The wall itself is unchanged.
+
 ## 0.25.0
 - **A link to the aircraft's photo in the posts, optional.** `sudo zenithboard social photolink on` (and menu *Social sharing → 4*): when the wall has a Planespotters photo of the aircraft, the post ends with *Photo: NAME / Planespotters*, a link to the photo's page with the photographer named. The link only: the picture is never posted and no link card is made, as Planespotters' photo API terms require. No line without a photo; left out rather than cutting the text when the post is full. JetPhotos is not used (no API; querying its site is not granted). Off by default. Asked for by the owner.
 

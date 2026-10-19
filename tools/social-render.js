@@ -43,7 +43,7 @@ function lift(name) {
 function constant(re) { const m = app.match(re); if (!m) throw new Error("constant missing: " + re); return Number(m[1]); }
 const GW = constant(/var GW = (\d+)/), GH = constant(/GW = \d+, GH = (\d+)/), ON = constant(/var ON = (\d+)/);
 const COLS = constant(/var COLS = (\d+)/), COLS_FLAGS = constant(/var COLS_FLAGS = (\d+)/);
-const FLAG_X = constant(/var FLAG_X = (\d+)/), FLAG_Y1 = constant(/FLAG_Y1 = (\d+)/), FLAG_Y2 = constant(/FLAG_Y2 = (\d+)/);
+const FLAG_X = constant(/var FLAG_X = (\d+)/);
 const TEXT_MAX_X = constant(/TEXT_MAX_X = (\d+)/), ROW_MAX_X = constant(/ROW_MAX_X = (\d+)/);
 const wall = new Function("Font5x7", "GW", "GH", "ON",
   lift("put") + lift("text") + lift("textRow") + "return { put: put, text: text, textRow: textRow };")(Font5x7, GW, GH, ON);
@@ -136,7 +136,11 @@ function rows(p, L, cols) { void L; return Fmt.topRows(p, cols || 14); }
 // ---- the split-flap board's rows (social_card.py draws them): the dot-matrix rows, no flags, the time last
 function flapLines(p, units, clock, cols) {
   const L = Fmt.planeLines(p, units, 0, 1, cols), R = rows(p, L);
-  return [R.flight, R.reg, L.airline, L.type, L.alt, L.spd, L.from, L.to, clock].map(s => String(s || "").slice(0, cols));
+  // 0.25.1: a row nobody could fill (TF-AKE, a cargo 747 neither the decoder nor adsbdb knew) leaves no gap: the
+  // rows below move up, the time stays on the last row
+  const filled = [R.flight, R.reg, L.airline, L.type, L.alt, L.spd, L.from, L.to].map(s => String(s || "").slice(0, cols)).filter(s => s.trim());
+  while (filled.length < 8) filled.push("");
+  return filled.concat([String(clock || "").slice(0, cols)]);
 }
 
 // ---- the wall rows, as buildScreen lays them out, without silhouette, photo, or distance
@@ -146,16 +150,23 @@ function drawWall(g, p, units, clock, flags) {
   // The tablet's big callsign takes two rows; the picture has the flight and the registration on one row each, at
   // the size of the others and labelled like ALT and SPD under them (0.19.0, from the owner's mock-up)
   const R = rows(p, L, cols);                    // twelve letters with the flags: the REG row has its flag beside it
-  wall.text(g, R.flight, 0, 0, 1);
-  wall.text(g, R.reg, 0, 8, 1);
-  wall.textRow(g, L.airline, 16, 0, maxX);
-  wall.textRow(g, L.type, 25, 0, maxX);
-  wall.text(g, L.alt, 0, 34, 1); wall.text(g, L.spd, 0, 43, 1); wall.text(g, L.from, 0, 52, 1); wall.text(g, L.to, 0, 61, 1);
+  // Each row in the wall's own place, except that a row with nothing to say leaves no gap: the rows below move up
+  // (0.25.1, from a post with blank REG and model rows). The flags follow their row; the clock stays at the foot.
+  const slots = [[R.flight, 8, "text"], [R.reg, 8, "text", "reg"], [L.airline, 9, "row"], [L.type, 9, "row", "made"],
+                 [L.alt, 9, "text"], [L.spd, 9, "text"], [L.from, 9, "text"], [L.to, 9, "text"]];
+  const at = {};
+  let y = 0;
+  for (const [txt, h, how, flag] of slots) {
+    if (!String(txt || "").trim()) continue;
+    if (how === "row") wall.textRow(g, txt, y, 0, maxX); else wall.text(g, txt, 0, y, 1);
+    if (flag) at[flag] = y;
+    y += h;
+  }
   wall.text(g, clock, 0, 72, 1);
   if (flags) {
     const reg = Flags.country(p.registration), made = Flags.origin(p.type_name);
-    const at = (code, y) => { if (code) Flags.draw(code, FLAG_X, y, (x, yy, v) => wall.put(g, x, yy, v)); };
-    at(reg, FLAG_Y1); at(made, FLAG_Y2);
+    const put = (code, yy) => { if (code && yy != null) Flags.draw(code, FLAG_X, yy, (x, y2, v) => wall.put(g, x, y2, v)); };
+    put(reg, at.reg); put(made, at.made);
   }
 }
 

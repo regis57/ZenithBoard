@@ -46,6 +46,10 @@ When adsbdb's answer is dropped, **hexdb.io is asked once** as a second opinion,
 
 The airport positions used for these checks are never displayed. They exist only to judge plausibility, and are fetched once per airport and kept until the next restart.
 
+### Registration and model: a second opinion (0.25.1)
+
+When the decoder does not know an airframe, the wall asks adsbdb for its registration and model; when adsbdb answers *unknown aircraft*, it asks [hexdb.io](https://hexdb.io/) once, the same service that gives the second opinion on routes. Found on a real post: TF-AKE (4CC54B), an Air Atlanta Icelandic cargo 747, unknown to adsbdb, known to hexdb. When neither knows it, the posts' pictures leave no blank row: the rows below move up.
+
 ## Photos
 
 Looked up by the aircraft's ICAO hex, which is a far better key than a callsign: it identifies the airframe. Credited to the photographer on screen, with the photo itself a link to its page on Planespotters, and optional — `zenithboard photos off`. Since 0.24.5, as [Planespotters' photo API terms](https://www.planespotters.net/photo/api) require (read 19 October 2026), the tablet loads each picture straight from the address the API gives, unchanged; the Pi keeps no picture and remembers the API's answer 24 hours at most. Until 0.24.4 the Pi fetched the pictures and served them to the tablet from a memory cache, which those terms rule out. The tablet therefore needs internet to show photos. The terms also rule out posting a photo elsewhere: social sharing never does.

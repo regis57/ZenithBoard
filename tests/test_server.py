@@ -444,6 +444,38 @@ class AircraftLookupTests(unittest.TestCase):
         for bad in ({"response": "unknown aircraft"}, {"response": {"aircraft": {}}}, "x", None):
             self.assertIsNone(server.parse_aircraft(bad))
 
+    def test_hexdb_is_asked_when_adsbdb_does_not_know_the_airframe(self):
+        # 0.25.1, from a real post: TF-AKE (4CC54B), an Air Atlanta cargo 747, had blank REG and model rows; adsbdb
+        # answered "unknown aircraft". hexdb's real answer for it, from the Pi:
+        hexdb = {"ModeS": "4CC54B", "Registration": "TF-AKE", "Manufacturer": "Boeing", "ICAOTypeCode": "B744",
+                 "Type": "747 409F", "RegisteredOwners": "Air Atlanta Icelandic", "OperatorFlagCode": "ABD"}
+        self.assertEqual(server.parse_hexdb_aircraft(hexdb),
+                         {"icao_type": "B744", "type": "747 409F", "manufacturer": "Boeing", "registration": "TF-AKE"})
+        for bad in ({"status": "404", "error": "Aircraft not found."}, {}, "x", None):
+            self.assertIsNone(server.parse_hexdb_aircraft(bad))
+        import io
+        asked = []
+
+        class Resp(io.BytesIO):
+            def __enter__(self): return self
+            def __exit__(self, *a): return False
+
+        def opener(req, timeout=None):
+            asked.append(req.full_url)
+            body = {"response": "unknown aircraft"} if "adsbdb" in req.full_url else hexdb
+            return Resp(json.dumps(body).encode())
+        self.addCleanup(setattr, server.urllib.request, "urlopen", server.urllib.request.urlopen)
+        server.urllib.request.urlopen = opener
+        info, ok = server._aircraft_api("4CC54B")
+        self.assertTrue(ok)
+        self.assertEqual((info["registration"], info["icao_type"]), ("TF-AKE", "B744"))
+        self.assertEqual([u.split("/")[2] for u in asked], ["api.adsbdb.com", "hexdb.io"])
+        # adsbdb knows it: hexdb is not asked
+        del asked[:]
+        server.urllib.request.urlopen = lambda req, timeout=None: asked.append(req.full_url) or Resp(json.dumps(self.SAMPLE).encode())
+        info, ok = server._aircraft_api("4B1805")
+        self.assertEqual((info["registration"], len(asked)), ("HB-JCN", 1))
+
     def test_only_hex_codes_are_looked_up(self):
         asked = []
         real = server._aircraft
