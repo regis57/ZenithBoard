@@ -78,7 +78,10 @@ The dynamic-DNS **token is not stored here.** It is asked for interactively and 
 | `SOCIAL_STYLE` | `dotmap` | `zenithboard social look dotmap\|flap\|alternate` | The picture: the dot-matrix wall with a map, the split-flap board with a map, or the two in turn. `dots` (the track in dots, no map) was taken out in 0.24.0 and is read as `dotmap` |
 | `SOCIAL_PLACES` | `0` | `zenithboard social places on\|off` | `1`: the town names of the maps from the region's own list, `/var/lib/zenithboard/social/places-local.tsv.gz` (0.27.0) |
 | `SOCIAL_PLACES_KM` | `400` | `zenithboard config-set SOCIAL_PLACES_KM 300`, then `social places on` | How far around the receiver that list reaches (50 to 1 000 km) |
-| `SOCIAL_WEEKLY` | `0` | `zenithboard social weekly on\|off` | `1`: a summary of the week on Sundays from 19:00, from the statistics (0.33.0) |
+| `SOCIAL_WEEKLY` | `0` | `zenithboard social summary weekly on\|off` | `1`: a summary of the week, from the statistics (0.33.0) |
+| `SOCIAL_WEEKLY_AT` · `SOCIAL_WEEKLY_PARTS` | `sun 19:00` · `1,2,3,4` | `zenithboard social summary weekly at …` · `parts …` | Its day and time on the Pi's clock, and its posts (0.38.0) |
+| `SOCIAL_DAILY` · `SOCIAL_DAILY_AT` · `SOCIAL_DAILY_PARTS` | `0` · `21:00` · `1` | `zenithboard social summary daily …` | The summary of the last 24 hours (0.38.0) |
+| `SOCIAL_MONTHLY` · `SOCIAL_MONTHLY_AT` · `SOCIAL_MONTHLY_PARTS` | `0` · `1 09:00` · `1,2,3,4` | `zenithboard social summary monthly …` | The summary of the last 30 days, on a day of the month 1 to 28 (0.38.0) |
 | `SOCIAL_SENTENCE` | `factual` | `zenithboard social sentence LIST` | The words of a post: `factual`, `story`, `board`, `spotter`, `lookup`, several (`story,lookup`) or `random` (0.29.0) |
 | `SOCIAL_PHOTOLINK` | `0` | `zenithboard social photolink on\|off` | `1`: a last line linking to the aircraft's Planespotters photo page, with the photographer's name (0.25.0) |
 | `SOCIAL_UNITS` | empty | `zenithboard social units metric\|imperial\|wall` | The posts' units, picture and text; empty = the wall's `UNITS` (0.24.3) |

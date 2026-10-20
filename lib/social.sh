@@ -247,21 +247,103 @@ social_set_photolink() {
 }
 # 0.33.0: a summary of the week, posted by the service on Sundays from 19:00: aircraft, messages, the busiest day and
 # hour, the airlines and type most seen, the posts made. From the statistics' files: never a distance or a direction.
-social_set_weekly() {
-  case "${1:-}" in
-    on)  cfg_set SOCIAL_WEEKLY 1 ;;
-    off) cfg_set SOCIAL_WEEKLY 0 ;;
-    "")  ;;
-    *)   echo "Weekly summary: on, off, test or post"; return 1 ;;
+social_set_weekly() { social_summary weekly "${1:-}"; }   # 0.33.0's command, kept
+
+# 0.38.0: three summaries, each on or off, at its own day and time on the Pi's clock, with the posts picked for it:
+#   1 the period (aircraft, messages, busiest times, airlines and models), 2 cargo airlines and business jets,
+#   3 military aircraft by country, 4 general aviation. The service puts them in one queue, two minutes apart.
+SUMMARY_PERIODS="daily weekly monthly"
+summary_key() { case "$1" in daily) echo SOCIAL_DAILY ;; weekly) echo SOCIAL_WEEKLY ;; monthly) echo SOCIAL_MONTHLY ;; esac; }
+summary_default_at() { case "$1" in daily) echo "21:00" ;; weekly) echo "sun 19:00" ;; monthly) echo "1 09:00" ;; esac; }
+summary_default_parts() { case "$1" in daily) echo "1" ;; *) echo "1,2,3,4" ;; esac; }
+summary_word() { case "$1" in daily) echo "the last 24 hours" ;; weekly) echo "the week" ;; monthly) echo "the last 30 days" ;; esac; }
+# the time a summary is set for, checked: daily HH:MM, weekly DAY HH:MM (mon..sun), monthly D HH:MM (1-28)
+summary_valid_at() {   # summary_valid_at PERIOD VALUE -> the value tidied, or non-zero
+  local p=$1 v hhmm='([01]?[0-9]|2[0-3]):[0-5][0-9]'
+  v=$(printf '%s' "$2" | tr 'A-Z' 'a-z' | tr -s ' ' | sed 's/^ //; s/ $//')
+  case "$p" in
+    daily)   [[ "$v" =~ ^$hhmm$ ]] || return 1 ;;
+    weekly)  [[ "$v" =~ ^(mon|tue|wed|thu|fri|sat|sun)[a-z]*\ $hhmm$ ]] || return 1; v="${v:0:3} ${v##* }" ;;
+    monthly) [[ "$v" =~ ^([1-9]|1[0-9]|2[0-8])\ $hhmm$ ]] || return 1 ;;
+    *) return 1 ;;
   esac
-  if [ "$(cfg_get SOCIAL_WEEKLY 0)" = 1 ]; then
-    echo "Weekly summary: ON. On Sundays from 19:00 the service posts the week: aircraft heard, messages, the busiest day and hour, the airlines and the models most seen, with a picture of the week by hour; then, two minutes apart, the cargo airlines and the business jets, the military aircraft by country, and general aviation (helicopters, light aircraft, gliders, drones). No distance, no direction, no registration."
+  printf '%s' "$v"
+}
+summary_valid_parts() {   # "all", or 1 to 4 comma-separated -> "1,3"; non-zero otherwise
+  local v; v=$(printf '%s' "$1" | tr -d ' ' | tr 'A-Z' 'a-z')
+  [ "$v" = all ] && { echo "1,2,3,4"; return 0; }
+  [[ "$v" =~ ^[1-4](,[1-4])*$ ]] || return 1
+  printf '%s' "$v" | tr ',' '\n' | sort -u | paste -sd, -
+}
+summary_line() {   # one line: the summary, on or off, when and which posts
+  local p=$1 k; k=$(summary_key "$p")
+  if [ "$(cfg_get "$k" 0)" = 1 ]; then
+    printf '%-8s ON   %-10s posts %s\n' "$p" "$(cfg_get "${k}_AT" "$(summary_default_at "$p")")" "$(cfg_get "${k}_PARTS" "$(summary_default_parts "$p")")"
+  else
+    printf '%-8s off  (%s, posts %s when on)\n' "$p" "$(cfg_get "${k}_AT" "$(summary_default_at "$p")")" "$(cfg_get "${k}_PARTS" "$(summary_default_parts "$p")")"
+  fi
+}
+social_summary() {   # social_summary [PERIOD [on|off|at VALUE|parts LIST]]
+  local p=${1:-} what=${2:-} k v
+  if [ -z "$p" ]; then
+    echo "Summaries (times on this Pi's clock; posts: 1 the period, 2 cargo and business jets, 3 military, 4 general aviation):"
+    for p in $SUMMARY_PERIODS; do echo "  $(summary_line "$p")"; done
+    echo "Change:  sudo zenithboard social summary daily|weekly|monthly on|off|at TIME|parts LIST|test|post"
+    return 0
+  fi
+  k=$(summary_key "$p"); [ -n "$k" ] || { echo "A summary is daily, weekly or monthly."; return 1; }
+  case "$what" in
+    on)  cfg_set "$k" 1 ;;
+    off) cfg_set "$k" 0 ;;
+    at)
+      v=$(summary_valid_at "$p" "${*:3}") || {
+        case "$p" in daily) echo "The time: HH:MM, e.g. 21:00" ;; weekly) echo "The day and time: mon..sun HH:MM, e.g. sun 19:00" ;;
+          monthly) echo "The day of the month and time: 1 to 28 and HH:MM, e.g. 1 09:00 (29 to 31 are not in every month)" ;; esac
+        return 1; }
+      cfg_set "${k}_AT" "$v" ;;
+    parts)
+      v=$(summary_valid_parts "${3:-}") || { echo "The posts: all, or some of 1 2 3 4 comma-separated, e.g. 1,3"; return 1; }
+      case ",$v," in *,1,*) ;; *) v="1,$v" ;; esac          # the others follow the first: it is always among them
+      cfg_set "${k}_PARTS" "$v" ;;
+    "") ;;
+    *) echo "Usage: zenithboard social summary $p on|off|at TIME|parts LIST|test|post[2-4]"; return 1 ;;
+  esac
+  echo "Summary of $(summary_word "$p"): $(summary_line "$p")"
+  if [ "$(cfg_get "$k" 0)" = 1 ]; then
     [ "$(cfg_get STATS 0)" = 1 ] || echo "It is made from the statistics, which are OFF: nothing will be posted until  sudo zenithboard stats on"
     [ "$(social_state)" = on ] || echo "Social sharing itself is OFF: the service that posts it starts with  sudo zenithboard social on"
-    echo "See it first, nothing posted:  sudo zenithboard social weekly test"
-  else
-    echo "Weekly summary: OFF."
+    echo "See it first, nothing posted:  sudo zenithboard social summary $p test"
   fi
+}
+summary_menu() {
+  local c p a v picks
+  while true; do
+    c=$(wt_menu "Summaries, from the statistics, at their time on this Pi's clock. Posts: 1 the period, 2 cargo and business jets, 3 military, 4 general aviation; two minutes apart. Never a distance or a direction." \
+      daily "24 hours: $(summary_line daily | cut -c10-)" weekly "The week: $(summary_line weekly | cut -c10-)" monthly "30 days:  $(summary_line monthly | cut -c10-)" \
+      back "Return to the previous menu") || return 0
+    case "$c" in daily|weekly|monthly) p=$c ;; *) return 0 ;; esac
+    a=$(wt_menu "Summary of $(summary_word "$p").\n\n$(summary_line "$p")" \
+      toggle "Switch it $( [ "$(cfg_get "$(summary_key "$p")" 0)" = 1 ] && echo OFF || echo ON )" \
+      at "When: $(cfg_get "$(summary_key "$p")_AT" "$(summary_default_at "$p")")" \
+      parts "Which posts: $(cfg_get "$(summary_key "$p")_PARTS" "$(summary_default_parts "$p")")" \
+      test "See its posts now: draw them and show the texts, post nothing" \
+      back "Return to the previous menu") || continue
+    case "$a" in
+      toggle) if [ "$(cfg_get "$(summary_key "$p")" 0)" = 1 ]; then social_summary "$p" off >/dev/null; else wt_msg "$(social_summary "$p" on)" 14; fi ;;
+      at)
+        v=$(wt_input "When, on this Pi's clock. $(case "$p" in daily) echo "HH:MM, e.g. 21:00" ;; weekly) echo "A day and a time, e.g. sun 19:00" ;; monthly) echo "A day of the month, 1 to 28, and a time, e.g. 1 09:00" ;; esac)" "$(cfg_get "$(summary_key "$p")_AT" "$(summary_default_at "$p")")") || continue
+        wt_msg "$(social_summary "$p" at "$v")" 9 ;;
+      parts)
+        picks=$(wt_check "Which posts for the summary of $(summary_word "$p") (Space = tick). The first always goes; the others follow it, two minutes apart." \
+          1 "The period: aircraft, messages, busiest times, airlines and models" ON \
+          2 "Cargo airlines and business jets, with their countries" "$(case ",$(cfg_get "$(summary_key "$p")_PARTS" "$(summary_default_parts "$p")")," in *,2,*) echo ON ;; *) echo OFF ;; esac)" \
+          3 "Military aircraft by country" "$(case ",$(cfg_get "$(summary_key "$p")_PARTS" "$(summary_default_parts "$p")")," in *,3,*) echo ON ;; *) echo OFF ;; esac)" \
+          4 "General aviation: helicopters, light aircraft, gliders, drones" "$(case ",$(cfg_get "$(summary_key "$p")_PARTS" "$(summary_default_parts "$p")")," in *,4,*) echo ON ;; *) echo OFF ;; esac)") || continue
+        picks=$(printf '%s' "$picks" | tr -d '"' | tr ' ' ',')
+        wt_msg "$(social_summary "$p" parts "${picks:-1}")" 9 ;;
+      test) clear; social_need_tools && social_prepare_dir && sudo -u "$ZB_USER" python3 "$SOCIAL_PY" summary-test "$p"; read -rp "Press Enter to continue..." _ ;;
+    esac
+  done
 }
 # 0.29.0: the shape of the post's words: factual (as before), story, board, spotter, lookup; several, comma-separated,
 # or random: one is drawn at each post. Templates filled from the flight's data; never the distance or direction.
@@ -398,7 +480,7 @@ social_menu() {
       photolink "4  Link to the Planespotters photo page: $( [ "$(cfg_get SOCIAL_PHOTOLINK 0)" = 1 ] && echo ON || echo OFF )" \
       places "5  Town names from the region's own list (GeoNames, downloaded once): $( [ "$(cfg_get SOCIAL_PLACES 0)" = 1 ] && echo ON || echo OFF )" \
       sentence "6  The words of a post: $(cfg_get SOCIAL_SENTENCE factual)" \
-      weekly "7  A summary of the week, Sundays at 19:00: $( [ "$(cfg_get SOCIAL_WEEKLY 0)" = 1 ] && echo ON || echo OFF )" \
+      weekly "7  Summaries: the day, the week, the last 30 days ($(for p in $SUMMARY_PERIODS; do [ "$(cfg_get "$(summary_key "$p")" 0)" = 1 ] && printf '%s ' "$p"; done | sed 's/ $//; s/^$/all off/'))" \
       test "8  Try it: draw the picture and show the text, post nothing" \
       toggle "9  Switch sharing $( [ "$(social_state)" = on ] && echo OFF || echo ON )" \
       post "10 Post now, once" \
@@ -421,20 +503,7 @@ social_menu() {
         picks=$(printf '%s' "$picks" | tr -d '"' | tr ' ' ',')
         [ -n "$picks" ] || picks=factual
         wt_msg "$(social_set_sentence "$picks")" 8 ;;
-      weekly)
-        if [ "$(cfg_get SOCIAL_WEEKLY 0)" = 1 ]; then
-          wt_yesno "The summary of the week is ON (Sundays from 19:00).\n\nTurn it OFF?" 9 && social_set_weekly off >/dev/null
-        else
-          local wc
-          wc=$(wt_menu "A summary of the week, posted on Sundays from 19:00: aircraft heard, messages, the busiest day and hour, the airlines and the models most seen, and a picture of the week by hour. Then three more, two minutes apart: the cargo airlines and the business jets; the military aircraft by country; helicopters, light aircraft, gliders and drones. Made from the statistics (menu Receiver -> Statistics). Never a distance or a direction." \
-            test "See this week's four posts now: draw them and show the texts, post nothing" \
-            on "Turn it on" \
-            back "Return to the previous menu") || continue
-          case "$wc" in
-            test) clear; social_need_tools && social_prepare_dir && sudo -u "$ZB_USER" python3 "$SOCIAL_PY" week-test; read -rp "Press Enter to continue..." _ ;;
-            on) wt_msg "$(social_set_weekly on)" 14 ;;
-          esac
-        fi ;;
+      weekly) summary_menu ;;
       places)
         if [ "$(cfg_get SOCIAL_PLACES 0)" = 1 ]; then
           wt_yesno "Town names come from the region's own list.\n\nGo back to the lists shipped with ZenithBoard (and delete the region's list)?" 10 && social_set_places off >/dev/null

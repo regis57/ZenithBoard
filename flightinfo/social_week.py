@@ -30,19 +30,113 @@ THEME_HEX = {"amber": "#ffb000", "green": "#39ff6a", "red": "#ff3b30", "white": 
 
 
 # --------------------------------------------------------------------------- when
+# 0.38.0: three summaries, each on or off, at its own time on the Pi's clock, with the posts the owner picks.
+#   daily    every day at HH:MM, the last 24 hours
+#   weekly   one weekday at HH:MM, the seven days ending that day (Sunday 19:00 since 0.33.0)
+#   monthly  one day of the month (1 to 28, so that every month has it) at HH:MM, the thirty days ending that day
+PERIODS = {
+    "daily": {"days": 1, "key": "SOCIAL_DAILY", "at": "21:00", "parts": "1", "word": "The last 24 hours"},
+    "weekly": {"days": 7, "key": "SOCIAL_WEEKLY", "at": "sun 19:00", "parts": "1,2,3,4", "word": "The week"},
+    "monthly": {"days": 30, "key": "SOCIAL_MONTHLY", "at": "1 09:00", "parts": "1,2,3,4", "word": "The last 30 days"},
+}
+ORDER = ("monthly", "weekly", "daily")      # when two fall at the same time, the longer goes first
+WEEKDAYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
+
+
+def parse_at(period, value):
+    """(day, hour, minute) from the setting: day is None (daily), 0-6 (weekly, Monday 0) or 1-28 (monthly).
+    Raises ValueError on anything else."""
+    value = " ".join(str(value or "").strip().lower().split())
+    parts = value.split(" ")
+    clock = parts[-1]
+    if not clock or ":" not in clock:
+        raise ValueError("a time, HH:MM")
+    hh, mm = clock.split(":", 1)
+    hour, minute = int(hh), int(mm)
+    if not (0 <= hour <= 23 and 0 <= minute <= 59):
+        raise ValueError("a time, HH:MM")
+    if period == "daily":
+        if len(parts) != 1:
+            raise ValueError("a time only, HH:MM")
+        return None, hour, minute
+    if len(parts) != 2:
+        raise ValueError("a day and a time")
+    if period == "weekly":
+        day = parts[0][:3]
+        if day not in WEEKDAYS:
+            raise ValueError("a weekday: mon tue wed thu fri sat sun")
+        return WEEKDAYS.index(day), hour, minute
+    day = int(parts[0])
+    if not 1 <= day <= 28:
+        raise ValueError("a day of the month, 1 to 28")
+    return day, hour, minute
+
+
+def at_of(c, period):
+    """The period's time as set, or its default when the setting is missing or wrong (the setter refuses a wrong one;
+    a hand-edited config.env falls back rather than stops the service)."""
+    try:
+        return parse_at(period, c.get(PERIODS[period]["key"] + "_AT") or PERIODS[period]["at"])
+    except (ValueError, KeyError):
+        return parse_at(period, PERIODS[period]["at"])
+
+
+def at_words(c, period):
+    day, hour, minute = at_of(c, period)
+    clock = "%02d:%02d" % (hour, minute)
+    if period == "daily":
+        return "every day at " + clock
+    if period == "weekly":
+        return "every %s at %s" % (DAYS[day], clock)
+    return "on the %d%s of each month at %s" % (day, {1: "st", 2: "nd", 3: "rd", 21: "st", 22: "nd", 23: "rd"}.get(day, "th"), clock)
+
+
+def parts_of(c, period):
+    """The posts picked for that summary, 1 to 4 in order; the first is always among them (the others follow it)."""
+    raw = str(c.get(PERIODS[period]["key"] + "_PARTS") or PERIODS[period]["parts"]).replace(" ", "")
+    if raw.lower() == "all":
+        return [1, 2, 3, 4]
+    got = sorted({int(x) for x in raw.split(",") if x.isdigit() and 1 <= int(x) <= 4})
+    return got or [1]
+
+
+def is_on(c, period):
+    return server.cfg_bool(c, PERIODS[period]["key"], "0")
+
+
+def cycle_key(period, now):
+    """One summary per key: the day, the ISO week or the month of a time."""
+    d = datetime.date.fromtimestamp(now)
+    if period == "daily":
+        return d.isoformat()
+    if period == "weekly":
+        y, w, _ = d.isocalendar()
+        return "%d-W%02d" % (y, w)
+    return d.strftime("%Y-%m")
+
+
 def week_key(now):
-    """The ISO week of a time: one weekly post per key."""
-    y, w, _ = datetime.date.fromtimestamp(now).isocalendar()
-    return "%d-W%02d" % (y, w)
+    """The ISO week of a time (0.33.0)."""
+    return cycle_key("weekly", now)
 
 
-def due(c, state, now):
-    """On, Sunday from 19:00, and not yet done this week. A Pi switched off on Sunday evening posts nothing on
-    Monday: a summary of last week a day late is not what the account promises."""
-    if not server.cfg_bool(c, "SOCIAL_WEEKLY", "0"):
+def due(c, state, now, period="weekly"):
+    """On, on its day, from its time to the end of that day, and not yet done this cycle. A Pi switched off at that
+    time posts nothing the next day: a summary a day late is not what the account promises."""
+    if not is_on(c, period):
         return False
+    day, hour, minute = at_of(c, period)
     lt = datetime.datetime.fromtimestamp(now)
-    return lt.weekday() == WEEK_DAY and lt.hour >= WEEK_HOUR and state.get("weekly") != week_key(now)
+    if period == "weekly" and lt.weekday() != day:
+        return False
+    if period == "monthly" and lt.day != day:
+        return False
+    if (lt.hour, lt.minute) < (hour, minute):
+        return False
+    done = (state.get("summaries") or {}).get(period)
+    if period == "weekly" and not done:
+        done = state.get("weekly")               # 0.33.0 to 0.37.0 kept the weekly key here
+    return done != cycle_key(period, now)
 
 
 # --------------------------------------------------------------------------- what
@@ -54,48 +148,73 @@ def _lines(path):
         return set()
 
 
-def week_data(c, stats_dir=None, now=None, posts=None):
-    """The seven days ending on now's day, from the statistics files; None when there are none.
-    posts: {YYYY-MM-DD: number of posts} from the service's state."""
+def week_data(c, stats_dir=None, now=None, posts=None, period="weekly"):
+    """The period ending now, from the statistics files; None when there are none. weekly and monthly: the 7 or 30
+    days ending on now's day; daily (0.38.0): the last 24 hours, to the quarter hour. posts: {YYYY-MM-DD: number of
+    posts} from the service's state."""
     stats_dir = stats_dir or server.STATS_DIR
     now_dt = datetime.datetime.fromtimestamp(now) if isinstance(now, (int, float)) else (now or datetime.datetime.now())
-    st = server.read_stats(stats_dir, now_dt)
+    n = PERIODS[period]["days"]
+    st = server.read_stats(stats_dir, now_dt, "24h" if n == 1 else ("7d" if n == 7 else "30d"))
     if not st:
         return None
-    dates = [(now_dt.date() - datetime.timedelta(days=i)).isoformat() for i in range(6, -1, -1)]
-    by_day = {d["day"]: d for d in st.get("days") or []}
-    heat = {r["day"]: r["hours"] for r in st.get("heat") or []}
-    seen, per_day = set(), []
-    for d in dates:
-        s = _lines(os.path.join(stats_dir, "seen-" + d))
-        seen |= s
-        per_day.append((d, len(s) or (by_day.get(d) or {}).get("aircraft", 0)))
-    messages = sum((by_day.get(d) or {}).get("messages", 0) for d in dates)
-    if not seen and not messages:
-        return None
-    best_day = max(per_day, key=lambda x: (x[1], x[0]))
-    rows = [heat.get(d) or [None] * 24 for d in dates]
-    hours = []
-    for h in range(24):
-        v = [r[h] for r in rows if r[h] is not None]
-        hours.append(sum(v) / len(v) if v else None)
-    known = [(v, h) for h, v in enumerate(hours) if v is not None]
-    busiest_hour = max(known)[1] if known else None
-    # 0.34.1: the airlines and types only when their lists cover the whole week. On the reference Pi the first test,
-    # the evening the lists began (0.31.0), said "6 435 aircraft heard" and "Ryanair (14)": a week against two hours
+    dates = [(now_dt.date() - datetime.timedelta(days=i)).isoformat() for i in range(max(n, 2) - 1, -1, -1)]
     fleet_from = fleet_start(stats_dir)
+    # 0.34.1: the airlines and types only when their lists cover the whole period. On the reference Pi the first
+    # test, the evening the lists began (0.31.0), said "6 435 aircraft heard" and "Ryanair (14)": a week against two
+    # hours. The last 24 hours start yesterday: the lists must have begun before it
     covered = bool(fleet_from and fleet_from < dates[0])
-    fleet = server.read_fleet(c, stats_dir, now_dt, since=dates[0]) if covered else {}
-    posted = sum(int((posts or {}).get(d, 0)) for d in dates)
-    return {"dates": dates, "aircraft": len(seen) or max(n for _, n in per_day), "messages": messages,
-            "per_day": per_day, "best_day": best_day if best_day[1] else None, "busiest_hour": busiest_hour,
-            "heat": rows, "airlines": (fleet.get("airlines") or [])[:TOP], "models": (fleet.get("types") or [])[:TOP],
-            "cargo": (fleet.get("cargo") or [])[:TOP], "cargo_total": fleet.get("cargo_total", 0),
-            "bizjets": (fleet.get("bizjets") or [])[:TOP], "bizjet_total": fleet.get("bizjet_total", 0),
-            "cargo_models": fleet.get("cargo_models") or {}, "bizjet_countries": [(cc, k) for cc, k in fleet.get("bizjet_countries") or [] if cc][:TOP],
-            "military": fleet.get("military") or [], "military_total": fleet.get("military_total", 0),
-            "misc": fleet.get("misc") or {},
-            "covered": covered, "posted": posted, "fleet_from": fleet_from, "fleet_week": first_full_week(fleet_from)}
+    posted = sum(int((posts or {}).get(d, 0)) for d in dates[-n:] if n > 1) if n > 1 else \
+        int((posts or {}).get(dates[-1], 0))
+    w = st["window"]
+    if n == 1:
+        if not w["totals"]["messages"] and not w["totals"]["aircraft"]:
+            return None
+        fleet = server.read_fleet(c, stats_dir, now_dt, rng="24h") if covered else {}
+        row = [v if c_ else None for v, c_ in zip(w["aircraft"], w["messages"])]
+        known = [(v, i) for i, v in enumerate(row) if v is not None]
+        # the busiest hour as the weekly one counts it: the most aircraft with a position, not the most messages
+        busiest = int(w["labels"][max(known)[1]][:2]) if known else None
+        out = {"dates": dates, "aircraft": w["totals"]["aircraft"], "messages": w["totals"]["messages"], "per_day": [],
+               "best_day": None, "busiest_hour": busiest, "heat": [row], "heat_labels": w["labels"]}
+    else:
+        by_day = {d["day"]: d for d in st.get("days") or []}
+        heat = {r["day"]: r["hours"] for r in st.get("heat") or []}
+        seen, per_day = set(), []
+        for d in dates:
+            s_ = _lines(os.path.join(stats_dir, "seen-" + d))
+            seen |= s_
+            per_day.append((d, len(s_) or (by_day.get(d) or {}).get("aircraft", 0)))
+        messages = sum((by_day.get(d) or {}).get("messages", 0) for d in dates)
+        if not seen and not messages:
+            return None
+        best_day = max(per_day, key=lambda x: (x[1], x[0]))
+        rows = [heat.get(d) or [None] * 24 for d in dates]
+        hours = []
+        for h in range(24):
+            v = [r[h] for r in rows if r[h] is not None]
+            hours.append(sum(v) / len(v) if v else None)
+        known = [(v, h) for h, v in enumerate(hours) if v is not None]
+        fleet = server.read_fleet(c, stats_dir, now_dt, since=dates[0]) if covered else {}
+        out = {"dates": dates, "aircraft": len(seen) or max(k for _, k in per_day), "messages": messages,
+               "per_day": per_day, "best_day": best_day if best_day[1] else None,
+               "busiest_hour": max(known)[1] if known else None, "heat": rows}
+    out.update({"period": period, "airlines": (fleet.get("airlines") or [])[:TOP], "models": (fleet.get("types") or [])[:TOP],
+                "cargo": (fleet.get("cargo") or [])[:TOP], "cargo_total": fleet.get("cargo_total", 0),
+                "bizjets": (fleet.get("bizjets") or [])[:TOP], "bizjet_total": fleet.get("bizjet_total", 0),
+                "cargo_models": fleet.get("cargo_models") or {},
+                "bizjet_countries": [(cc, k) for cc, k in fleet.get("bizjet_countries") or [] if cc][:TOP],
+                "military": fleet.get("military") or [], "military_total": fleet.get("military_total", 0),
+                "misc": fleet.get("misc") or {}, "covered": covered, "posted": posted, "fleet_from": fleet_from,
+                "fleet_week": first_full_week(fleet_from) if period == "weekly" else first_full(fleet_from, n)})
+    return out
+
+
+def first_full(fleet_from, days):
+    """The first day a summary of `days` days ending that day is covered whole by the lists (0.38.0)."""
+    if not fleet_from:
+        return None
+    return (datetime.date.fromisoformat(fleet_from) + datetime.timedelta(days=max(days, 2))).isoformat()
 
 
 def fleet_start(stats_dir):
@@ -136,6 +255,11 @@ def span_words(dates):
     return "%d %s – %d %s" % (a.day, MONTHS[a.month - 1], b.day, MONTHS[b.month - 1])
 
 
+def period_words(w):
+    """"14–20 October", or for the daily summary "the last 24 hours" (0.38.0)."""
+    return "the last 24 hours" if w.get("period") == "daily" else span_words(w["dates"])
+
+
 def short_date(d):
     d = datetime.date.fromisoformat(d)
     return "%d %s" % (d.day, MONTHS[d.month - 1])
@@ -169,14 +293,21 @@ def _fit_lines(head, parts, tags, fit):
 def text(w, c, area, tags, fit):
     """The post: the head always; the busiest times, the airlines, the models and the posts while they fit beside the
     hashtags. No distance, ever."""
-    head = "The week%s, %s: %s aircraft, %s messages." % (
-        (" " + area) if area else "", span_words(w["dates"]), number(w["aircraft"]), messages_words(w["messages"]))
+    word = PERIODS[w.get("period") or "weekly"]["word"]
+    if w.get("period") == "daily":
+        head = "%s%s: %s aircraft, %s messages." % (word, (" " + area) if area else "", number(w["aircraft"]),
+                                                    messages_words(w["messages"]))
+    else:
+        head = "%s%s, %s: %s aircraft, %s messages." % (word, (" " + area) if area else "", span_words(w["dates"]),
+                                                       number(w["aircraft"]), messages_words(w["messages"]))
     parts = []
     bd, bh = w.get("best_day"), w.get("busiest_hour")
     if bd and bh is not None:
         parts.append("Busiest: %s (%s aircraft) and %02d:00." % (day_name(bd[0]), number(bd[1]), bh))
     elif bd:
         parts.append("Busiest: %s (%s aircraft)." % (day_name(bd[0]), number(bd[1])))
+    elif bh is not None:
+        parts.append("Busiest hour: %02d:00." % bh)
     parts.append(("Airlines", w.get("airlines") or []))
     parts.append(("Models", w.get("models") or []))          # 0.35.0
     if w.get("posted"):
@@ -185,13 +316,17 @@ def text(w, c, area, tags, fit):
 
 
 def alt(w, area):
-    bits = ["Weekly summary card for %s%s" % (span_words(w["dates"]), (" " + area) if area else ""),
+    kind = {"daily": "Daily", "weekly": "Weekly", "monthly": "Thirty-day"}[w.get("period") or "weekly"]
+    bits = ["%s summary card for %s%s" % (kind, period_words(w), (" " + area) if area else ""),
             "%s aircraft heard and %s messages decoded" % (number(w["aircraft"]), messages_words(w["messages"]))]
     if w.get("best_day"):
         bits.append("busiest day %s with %s aircraft" % (day_name(w["best_day"][0]), number(w["best_day"][1])))
     if w.get("busiest_hour") is not None:
         bits.append("busiest hour %02d:00" % w["busiest_hour"])
-    s = ", ".join(bits) + ". A grid of the seven days by hour, brighter where more aircraft were overhead."
+    s = ", ".join(bits) + "." + {"daily": " A row of the 24 hours, brighter where more aircraft were overhead.",
+                                 "weekly": " A grid of the seven days by hour, brighter where more aircraft were overhead.",
+                                 "monthly": " A column of dots for each of the thirty days, taller where more aircraft were heard."
+                                 }[w.get("period") or "weekly"]
     if w.get("airlines"):
         s += " The airlines most seen, as bars: " + ", ".join("%s %d" % (n, k) for n, k in w["airlines"]) + "."
     if w.get("models"):
@@ -239,7 +374,7 @@ def _plural(n, one, many=None):
 def text_second(w, area, tags, fit):
     """Cargo airlines and business jets: the head always, the lists while they fit."""
     head = "Cargo and business jets%s, %s: %s cargo aircraft, %s." % (
-        (" " + area) if area else "", span_words(w["dates"]), number(w.get("cargo_total", 0)),
+        (" " + area) if area else "", period_words(w), number(w.get("cargo_total", 0)),
         _plural(w.get("bizjet_total", 0), "business jet"))
     return _fit_lines(head, [("Cargo", w.get("cargo") or []), ("Business jets", w.get("bizjets") or [])], tags, fit)
 
@@ -247,7 +382,7 @@ def text_second(w, area, tags, fit):
 def text_military(w, area, tags, fit):
     """Military aircraft: by country, the most represented first, each with its models."""
     mil = w.get("military") or []
-    head = "Military aircraft%s, %s: %s from %s." % ((" " + area) if area else "", span_words(w["dates"]),
+    head = "Military aircraft%s, %s: %s from %s." % ((" " + area) if area else "", period_words(w),
                                                     _plural(w.get("military_total", 0), "aircraft", "aircraft"),
                                                     _plural(len(mil), "country", "countries"))
     return _fit_lines(head, [(e["country"], e["models"]) for e in mil], tags, fit)
@@ -258,14 +393,14 @@ def text_misc(w, area, tags, fit):
     counts = [_plural(m[g]["total"], one.lower().rstrip("s") if g != "other" else "drone or balloon",
                       one.lower() if g != "other" else "drones and balloons")
               for g, one, _ in MISC_SHOWN if (m.get(g) or {}).get("total")]
-    head = "General aviation%s, %s: %s." % ((" " + area) if area else "", span_words(w["dates"]),
+    head = "General aviation%s, %s: %s." % ((" " + area) if area else "", period_words(w),
                                                                   ", ".join(counts))
     return _fit_lines(head, [(one, m[g]["models"]) for g, one, _ in MISC_SHOWN if (m.get(g) or {}).get("total")], tags, fit)
 
 
 def alt_second(w, area):
     s = "Weekly card of the cargo airlines and business jets, %s%s: %s cargo aircraft and %s business jets." % (
-        span_words(w["dates"]), (" " + area) if area else "", number(w.get("cargo_total", 0)), number(w.get("bizjet_total", 0)))
+        period_words(w), (" " + area) if area else "", number(w.get("cargo_total", 0)), number(w.get("bizjet_total", 0)))
     if w.get("cargo"):
         cm = w.get("cargo_models") or {}
         s += " Cargo airlines, as bars, each with the model it flew most: " + ", ".join(
@@ -280,7 +415,7 @@ def alt_second(w, area):
 
 def alt_military(w, area):
     return "Weekly card of the military aircraft, %s%s: %s. By country, with its flag, the most represented first: %s." % (
-        span_words(w["dates"]), (" " + area) if area else "", _plural(w.get("military_total", 0), "aircraft", "aircraft"),
+        period_words(w), (" " + area) if area else "", _plural(w.get("military_total", 0), "aircraft", "aircraft"),
         "; ".join("%s %d (%s)" % (e["country"], e["total"], ", ".join("%s %d" % (n, k) for n, k in e["models"][:3]))
                   for e in w.get("military") or []))
 
@@ -290,7 +425,7 @@ def alt_misc(w, area):
     groups = ["%s: %d (%s)." % (one, m[g]["total"], ", ".join("%s %d" % (n, k) for n, k in m[g]["models"]))
               for g, one, _ in MISC_SHOWN if (m.get(g) or {}).get("total")]
     return "Weekly card of the helicopters, light aircraft, gliders, drones and balloons, %s%s. %s" % (
-        span_words(w["dates"]), (" " + area) if area else "", " ".join(groups))
+        period_words(w), (" " + area) if area else "", " ".join(groups))
 
 
 FLAG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "flags")
@@ -327,8 +462,13 @@ GREY, FAINT, OFF, INK = (150, 150, 150), (90, 90, 90), (28, 28, 28), (225, 225, 
 M = 48
 
 
-def _header(d, f, col, dim, title, dates):
-    span = span_words(dates).upper()
+def _header(d, f, col, dim, title, w):
+    if w.get("period") == "daily":
+        span = short_date(w["dates"][-1]).upper()
+    else:
+        span = span_words(w["dates"]).upper()
+        if " – " in span:                        # across two months: "22 SEP – 21 OCT", so the title keeps its place
+            span = " – ".join(" ".join((x.split(" ")[0], x.split(" ")[1][:3])) for x in span.split(" – "))
     room = W - 2 * M - d.textlength(span, font=f["head"]) - 30       # a long place name never runs into the dates
     d.text((M, 34), _fit(d, title.upper(), f["head"], room), font=f["head"], fill=col)
     d.text((W - M, 34), span, font=f["head"], fill=dim, anchor="ra")
@@ -362,9 +502,63 @@ def _ranks(d, f, col, x, y, width, title, pairs, rows=TOP, step=44, fnt="name"):
 
 
 def _not_yet(d, f, x, y, w):
-    why = ("Counted since %s: shown from the week ending %s." % (short_date(w["fleet_from"]), short_date(w["fleet_week"]))
-           if w.get("fleet_from") else "Not counted yet: statistics from ZenithBoard 0.31.0 on.")
+    if w.get("covered"):
+        why = "Nothing in the lists for this period."
+    elif w.get("fleet_from"):
+        why = "Counted since %s: shown from the summary of %s." % (short_date(w["fleet_from"]), short_date(w["fleet_week"]))
+    else:
+        why = "Not counted yet: statistics from ZenithBoard 0.31.0 on."
     d.text((x, y), why, font=f["name"], fill=FAINT)
+
+
+def _dot_fill(col, v, top):
+    k = None if v is None or not top else 0.12 + 0.88 * (v / top)
+    return OFF if k is None else tuple(int(OFF[j] + (col[j] - OFF[j]) * k) for j in range(3))
+
+
+def _period_graph(d, f, col, w):
+    """The card's graph, in dots: the week by hour (7 rows of 24); the last 24 hours (one row, larger dots, 0.38.0);
+    the thirty days (a column of dots a day, as tall as that day had aircraft, 0.38.0)."""
+    period = w.get("period") or "weekly"
+    gx, gy = 520, 108
+    if period == "monthly":
+        per = w.get("per_day") or []
+        top = max([k for _, k in per] or [0])
+        cw, levels, step = (W - M - gx) / max(1, len(per)), 8, 20
+        for i, (day, k) in enumerate(per):
+            lit = round(levels * k / top) if top else 0
+            cx = gx + i * cw + cw / 2
+            for lv in range(levels):
+                cy = gy + (levels - 1 - lv) * step + 10
+                d.ellipse([cx - 7, cy - 7, cx + 7, cy + 7], fill=col if lv < lit else OFF)
+            if i % 7 == 0 and len(per) - i > 3:  # one date a week, none crowding the last
+                dd = datetime.date.fromisoformat(day)
+                d.text((cx, gy + levels * step + 6), "%02d/%02d" % (dd.day, dd.month), font=f["small"], fill=FAINT, anchor="ma")
+            if i == len(per) - 1:
+                dd = datetime.date.fromisoformat(day)
+                d.text((cx, gy + levels * step + 6), "%02d/%02d" % (dd.day, dd.month), font=f["small"], fill=GREY, anchor="ma")
+        return
+    if period == "daily":
+        row, labels = (w.get("heat") or [[None] * 24])[0], w.get("heat_labels") or ["%02dh" % h for h in range(24)]
+        vals = [v for v in row if v is not None]
+        top, cw = max(vals) if vals else 0, (W - M - gx) / 24
+        for h, v in enumerate(row):
+            cx, cy = gx + h * cw + cw / 2, gy + 50
+            d.ellipse([cx - 10, cy - 10, cx + 10, cy + 10], fill=_dot_fill(col, v, top))
+            if h % 3 == 0:
+                d.text((cx, cy + 22), labels[h], font=f["small"], fill=FAINT, anchor="ma")
+        d.text((gx, gy), "AIRCRAFT WITH A POSITION, HOUR BY HOUR", font=f["small"], fill=GREY)
+        return
+    cw, ch = 26, 22
+    vals = [v for r in w["heat"] for v in r if v is not None]
+    top = max(vals) if vals else 0
+    for i, r in enumerate(w["heat"]):
+        d.text((gx - 14, gy + i * ch + ch / 2), day_name(w["dates"][i])[:3].upper(), font=f["small"], fill=GREY, anchor="rm")
+        for h, v in enumerate(r):
+            cx, cy = gx + h * cw + cw / 2, gy + i * ch + ch / 2
+            d.ellipse([cx - 8, cy - 8, cx + 8, cy + 8], fill=_dot_fill(col, v, top))
+    for h in (0, 6, 12, 18):
+        d.text((gx + h * cw + cw / 2, gy + 7 * ch + 6), "%02dh" % h, font=f["small"], fill=FAINT, anchor="ma")
 
 
 def draw(w, theme, area, out):
@@ -372,7 +566,8 @@ def draw(w, theme, area, out):
     models most seen side by side, on the right (0.35.0: the grid smaller to make room for the models).
     Needs Pillow (social_card). Returns {path, width, height, bytes, mime}."""
     img, d, col, dim, f = _canvas(theme)
-    _header(d, f, col, dim, ("THE WEEK " + area) if area else "THE WEEK", w["dates"])
+    word = PERIODS[w.get("period") or "weekly"]["word"].upper()
+    _header(d, f, col, dim, (word + " " + area) if area else word, w)
     rows = [(number(w["aircraft"]), "AIRCRAFT HEARD"),
             ((messages_words(w["messages"]).replace(" million", " M")), "MESSAGES DECODED")]
     if w.get("best_day"):
@@ -384,19 +579,7 @@ def draw(w, theme, area, out):
         d.text((M, y), big, font=f["big"], fill=col)
         d.text((M + 2, y + 68), lbl, font=f["lbl"], fill=GREY)
         y += 128
-    # the week by hour: a dot per hour, brighter where more aircraft had a position
-    gx, gy, cw, ch = 520, 108, 26, 22
-    vals = [v for r in w["heat"] for v in r if v is not None]
-    top = max(vals) if vals else 0
-    for i, r in enumerate(w["heat"]):
-        d.text((gx - 14, gy + i * ch + ch / 2), day_name(w["dates"][i])[:3].upper(), font=f["small"], fill=GREY, anchor="rm")
-        for h, v in enumerate(r):
-            cx, cy = gx + h * cw + cw / 2, gy + i * ch + ch / 2
-            k = None if v is None or not top else 0.12 + 0.88 * (v / top)
-            fill = OFF if k is None else tuple(int(OFF[j] + (col[j] - OFF[j]) * k) for j in range(3))
-            d.ellipse([cx - 8, cy - 8, cx + 8, cy + 8], fill=fill)
-    for h in (0, 6, 12, 18):
-        d.text((gx + h * cw + cw / 2, gy + 7 * ch + 6), "%02dh" % h, font=f["small"], fill=FAINT, anchor="ma")
+    _period_graph(d, f, col, w)
     # the airlines and the models, side by side
     x0, x1, colw, ly = 466, 820, 332, 300
     if w.get("airlines") or w.get("models"):
@@ -430,7 +613,7 @@ def draw_second(w, theme, area, out, flags=None):
     business jets by make and model; and the countries the business jets are registered in, with their flags."""
     img, d, col, dim, f = _canvas(theme)
     flags = flags or {}
-    _header(d, f, col, dim, ("CARGO AND BUSINESS JETS " + area) if area else "CARGO AND BUSINESS JETS", w["dates"])
+    _header(d, f, col, dim, ("CARGO AND BUSINESS JETS " + area) if area else "CARGO AND BUSINESS JETS", w)
     # cargo: the airline, then in grey the model it flew most and how many of them, the airline's count on the right
     x, width = M, 420
     _total(d, f, col, x, 108, w.get("cargo_total", 0), "CARGO AIRCRAFT")
@@ -461,7 +644,7 @@ def draw_second(w, theme, area, out, flags=None):
         d.text((x, 268), "None heard this week.", font=f["name"], fill=FAINT)
     # where they are registered: the flag, the country, a bar and the count
     x, width = 840, W - M - 840
-    d.text((x, 236), "REGISTERED IN", font=f["lbl"], fill=GREY)
+    d.text((x, 236), "MOST REGISTERED IN", font=f["lbl"], fill=GREY)
     y, ctry = 268, w.get("bizjet_countries") or []
     best = ctry[0][1] if ctry else 0
     for cc, k in ctry[:TOP]:
@@ -481,7 +664,7 @@ def draw_military(w, theme, area, out, flags=None):
     first, each row with the country's flag, a bar and the count."""
     img, d, col, dim, f = _canvas(theme)
     flags = flags or {}
-    _header(d, f, col, dim, ("MILITARY AIRCRAFT " + area) if area else "MILITARY AIRCRAFT", w["dates"])
+    _header(d, f, col, dim, ("MILITARY AIRCRAFT " + area) if area else "MILITARY AIRCRAFT", w)
     mil = w.get("military") or []
     _total(d, f, col, M, 108, w.get("military_total", 0), "MILITARY AIRCRAFT")
     _total(d, f, col, 420, 108, len(mil), "COUNTRIES" if len(mil) != 1 else "COUNTRY")
@@ -509,7 +692,7 @@ def draw_misc(w, theme, area, out):
     """The fourth card (0.36.0): helicopters, light aircraft, gliders, drones and balloons, a column each with its
     total and its makes and models."""
     img, d, col, dim, f = _canvas(theme)
-    _header(d, f, col, dim, ("GENERAL AVIATION " + area) if area else "GENERAL AVIATION", w["dates"])
+    _header(d, f, col, dim, ("GENERAL AVIATION " + area) if area else "GENERAL AVIATION", w)
     m = misc_lists(w)
     shown = [(g, big) for g, _, big in MISC_SHOWN if (m.get(g) or {}).get("total")] or [(g, big) for g, _, big in MISC_SHOWN[:3]]
     gap = 24

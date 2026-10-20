@@ -25,6 +25,8 @@ photo, and the account secret (a Bluesky app password), which lives in /etc/zeni
     social.py week-post2     post the week's second post now: cargo airlines and business jets (0.35.0)
     social.py week-post3     the third: military aircraft (0.36.0)
     social.py week-post4     the fourth: helicopters, light aircraft, gliders, drones and balloons (0.36.0)
+    social.py summary-test PERIOD          the four posts of the daily, weekly or monthly summary; posts nothing (0.38.0)
+    social.py summary-post PERIOD [N]      post N (1 to 4) of that summary now
     social.py status         what it would do right now
 
 Standard library only for the service and the network, like the rest of the wall; Pillow only for the looks with a
@@ -74,6 +76,10 @@ DEFAULTS = {
     "SOCIAL_MAP": "normal",
     "SOCIAL_PLACES": "0",            # 1: the town names from the region's own list (0.27.0, social places on)
     "SOCIAL_WEEKLY": "0",            # 1: a summary of the week on Sundays from 19:00 (0.33.0, social weekly on)
+    "SOCIAL_WEEKLY_AT": "sun 19:00",  # 0.38.0: its day and time, and the posts it makes (1 the week, 2 cargo and
+    "SOCIAL_WEEKLY_PARTS": "1,2,3,4",  # business jets, 3 military, 4 general aviation)
+    "SOCIAL_DAILY": "0", "SOCIAL_DAILY_AT": "21:00", "SOCIAL_DAILY_PARTS": "1",               # the last 24 hours
+    "SOCIAL_MONTHLY": "0", "SOCIAL_MONTHLY_AT": "1 09:00", "SOCIAL_MONTHLY_PARTS": "1,2,3,4",  # the last 30 days
     "SOCIAL_PHOTOLINK": "0",         # 1: a last line linking to the aircraft's Planespotters photo page (0.25.0)          # the map of the dotmap and flap looks: normal | night | satellite | terrain | none
 }
 STYLES = ("dotmap", "flap")
@@ -292,9 +298,10 @@ def prune_state(s, now):
                crossing (0.20.0): kept while the aircraft is inside, and an hour after it last was; the same airframe
                back later (the return flight, the next day) is a new crossing, and so is a new callsign
       posts    the times of the posts of the last day, for `social status`
-      post_days  day -> number of posts, eight days, for the weekly summary (0.33.0)
+      post_days  day -> number of posts, thirty-one days, for the summaries (0.33.0; eight days before 0.38.0)
       weekly   the ISO week of the last weekly summary, posted or skipped (0.33.0)
-      weekly2  {week, at}: the second weekly post, due at that time (0.35.0)
+      summaries  period -> the cycle (day, ISO week, month) last scheduled (0.38.0)
+      summary_queue  the summary posts still to make: [{period, part, key, at}], two minutes apart (0.38.0)
       since    the first day the service watched the sky (no history, no "rare", no "farthest")
     0.18.0 counted a type once per poll instead of once per aircraft; that history is dropped, not converted."""
     cut = day_of(now - 30 * 86400)
@@ -320,7 +327,7 @@ def prune_state(s, now):
         else:
             posted[h] = e
     s["posts"] = [t for t in s.get("posts", []) if isinstance(t, (int, float)) and now - t <= 86400]
-    week_cut = day_of(now - 8 * 86400)
+    week_cut = day_of(now - 31 * 86400)             # 0.38.0: thirty days, for the monthly summary (eight before)
     s["post_days"] = {d: n for d, n in (s.get("post_days") or {}).items() if isinstance(d, str) and d >= week_cut}
     s.pop("farthest_day", None); s.pop("farthest_km", None)
     return s
@@ -1159,26 +1166,28 @@ def publish(p, trace, why, c, sec, dry=False, keep=None):
                 pass
 
 
-def publish_week(c, sec, now, state=None, dry=False, keep=None, second=False, part=None):
+def publish_week(c, sec, now, state=None, dry=False, keep=None, second=False, part=None, period="weekly"):
     """The week's posts (social_week.py): draw, post, delete the picture. part 1 the week (0.33.0), 2 the cargo
     airlines and business jets (0.35.0; second=True says the same), 3 the military aircraft, 4 the helicopters, light
     aircraft and gliders (0.36.0). Returns {"bluesky": uri or 'FAILED ...'}, or {"skipped": why} when there is
     nothing to say (dry: the text instead)."""
     part = part or (2 if second else 1)
     import social_week as week
-    w = week.week_data(c, now=now, posts=(state or {}).get("post_days"))
+    w = week.week_data(c, now=now, posts=(state or {}).get("post_days"), period=period)
+    span = {"daily": "the last 24 hours", "weekly": "these seven days", "monthly": "these thirty days"}[period]
     if not w:
-        return {"skipped": "no statistics for these seven days (turn them on: sudo zenithboard stats on)"}
+        return {"skipped": "no statistics for %s (turn them on: sudo zenithboard stats on)" % span}
     for k in ("models", "bizjets"):              # "BOEING 737-800" as the posts write it: "Boeing 737-800" (0.34.1)
         w[k] = [(nice_type({"type_name": n}), v) for n, v in w.get(k) or []]
     w["cargo_models"] = {a: (nice_type({"type_name": m}), v) for a, (m, v) in (w.get("cargo_models") or {}).items()}
     for e in w.get("military") or []:
         e["models"] = [(nice_type({"type_name": n}), v) for n, v in e["models"]]
     if part > 1 and not week.has_part(w, part):
-        return {"skipped": ({2: "no cargo airline nor business jet in the lists this week", 3: "no military aircraft in the lists this week",
-                             4: "no helicopter, light aircraft, glider, drone or balloon in the lists this week"}[part] if w.get("covered") else
-                            "the airline and type lists do not cover the week yet (counted since %s, shown from the week ending %s)"
-                            % (w.get("fleet_from") or "-", w.get("fleet_week") or "-"))}
+        return {"skipped": ({2: "no cargo airline nor business jet in the lists", 3: "no military aircraft in the lists",
+                             4: "no helicopter, light aircraft, glider, drone or balloon in the lists"}[part] + " for " + span
+                            if w.get("covered") else
+                            "the airline and type lists do not cover %s yet (counted since %s, shown from the summary of %s)"
+                            % (span, w.get("fleet_from") or "-", w.get("fleet_week") or "-"))}
     if flap_module() is None:
         return {"skipped": "the weekly picture needs Pillow (install it: sudo zenithboard social test)"}
     tags = str(c.get("SOCIAL_HASHTAGS", "")).strip()
@@ -1226,6 +1235,57 @@ def publish_week(c, sec, now, state=None, dry=False, keep=None, second=False, pa
             os.unlink(out)
         except OSError:
             pass                                 # never drawn
+
+
+def schedule_summaries(c, state, now):
+    """Put the posts of every summary that is due into the queue, the longer period first, each SECOND_AFTER_S after
+    the last one already there. Marked as scheduled at once: a restart does not post it twice."""
+    import social_week
+    queue = state.setdefault("summary_queue", [])
+    done = state.setdefault("summaries", {})
+    for period in social_week.ORDER:
+        if not social_week.due(c, state, now, period):
+            continue
+        key = social_week.cycle_key(period, now)
+        at = max([now] + [q["at"] + SECOND_AFTER_S for q in queue])
+        for i, part in enumerate(social_week.parts_of(c, period)):
+            queue.append({"period": period, "part": part, "key": key, "at": at + i * SECOND_AFTER_S})
+        done[period] = key
+    state.pop("weekly2", None)                     # the chain of 0.35.0 to 0.37.0, replaced by the queue
+    return queue
+
+
+def run_summaries(c, sec, state, now, last_fail):
+    """One step of the queue: the first post whose time has come. Returns the time of the last failure."""
+    queue = schedule_summaries(c, state, now)
+    if not queue or now < queue[0]["at"] or not bluesky_ready(sec) or now - last_fail < RETRY_AFTER_FAIL_S:
+        return last_fail
+    q = queue[0]
+    if now - q["at"] > SECOND_LATE_S:              # failing for hours: that summary is dropped, not posted late
+        print("social: %s summary dropped: could not be posted for %d hours" % (q["period"], SECOND_LATE_S // 3600), flush=True)
+        state["summary_queue"] = [x for x in queue if not (x["period"] == q["period"] and x["key"] == q["key"])]
+        return last_fail
+    try:
+        results = publish_week(c, sec, now, state, part=q["part"], period=q["period"])
+    except Exception as exc:                       # a summary that cannot be made must not stop the service
+        results = {"bluesky": "FAILED: %s" % exc}
+    name = "%s summary, post %d" % (q["period"], q["part"])
+    if "skipped" in results:
+        print("social: no %s: %s" % (name, results["skipped"]), flush=True)
+        queue.pop(0)
+        if q["part"] == 1:                         # nothing to sum up: none of that summary's other posts either
+            state["summary_queue"] = [x for x in queue if not (x["period"] == q["period"] and x["key"] == q["key"])]
+        elif queue:
+            queue[0]["at"] = min(queue[0]["at"], now)  # nothing to say: the next one keeps its turn
+        return last_fail
+    if str(results.get("bluesky", "FAILED")).startswith("FAILED"):
+        print("social: could not post the %s: %s" % (name, json.dumps(results)), flush=True)
+        return now
+    print("social: posted the %s: %s" % (name, json.dumps(results)), flush=True)
+    queue.pop(0)
+    if queue:
+        queue[0]["at"] = max(queue[0]["at"], now + SECOND_AFTER_S)
+    return last_fail
 
 
 # --------------------------------------------------------------------------- commands
@@ -1318,47 +1378,9 @@ def cmd_run():
                     last_ask = 0                         # another one may be waiting its turn: look again at the next read
                 else:
                     last_fail = now
-            # 0.33.0: the week's summary, Sunday from 19:00, once a week; a failure waits like a post's does
-            import social_week
-            if social_week.due(c, state, now) and bluesky_ready(sec) and now - last_fail >= RETRY_AFTER_FAIL_S:
-                try:
-                    results = publish_week(c, sec, now, state)
-                except Exception as exc:                 # a summary that cannot be made must not stop the service
-                    results = {"bluesky": "FAILED: %s" % exc}
-                if "skipped" in results:
-                    print("social: no weekly summary this week: %s" % results["skipped"], flush=True)
-                    state["weekly"] = social_week.week_key(now)
-                elif str(results.get("bluesky", "FAILED")).startswith("FAILED"):
-                    print("social: could not post the weekly summary: %s" % json.dumps(results), flush=True)
-                    last_fail = now
-                else:
-                    print("social: posted the weekly summary: %s" % json.dumps(results), flush=True)
-                    state["weekly"] = social_week.week_key(now)
-                    # the cargo airlines and business jets (0.35.0), then the military aircraft, then the helicopters,
-                    # light aircraft and gliders (0.36.0), each SECOND_AFTER_S after the one before, in posts of their own
-                    state["weekly2"] = {"week": social_week.week_key(now), "at": now + SECOND_AFTER_S, "part": 2}
-            w2 = state.get("weekly2")
-            if isinstance(w2, dict) and now >= w2.get("at", 0) and bluesky_ready(sec) and now - last_fail >= RETRY_AFTER_FAIL_S:
-                part = int(w2.get("part", 2))
-                if w2.get("week") != social_week.week_key(now) or now - w2.get("at", 0) > SECOND_LATE_S or part > 4:
-                    state.pop("weekly2", None)           # its week is over, or it failed for hours: not posted late
-                else:
-                    try:
-                        results = publish_week(c, sec, now, state, part=part)
-                    except Exception as exc:
-                        results = {"bluesky": "FAILED: %s" % exc}
-                    nxt = {"week": w2.get("week"), "part": part + 1}
-                    if "skipped" in results:
-                        print("social: no weekly post %d: %s" % (part, results["skipped"]), flush=True)
-                        state["weekly2"] = dict(nxt, at=now)        # nothing to say: the next one keeps its turn
-                    elif str(results.get("bluesky", "FAILED")).startswith("FAILED"):
-                        print("social: could not post weekly post %d: %s" % (part, json.dumps(results)), flush=True)
-                        last_fail = now
-                    else:
-                        print("social: posted weekly post %d: %s" % (part, json.dumps(results)), flush=True)
-                        state["weekly2"] = dict(nxt, at=now + SECOND_AFTER_S)
-                    if state.get("weekly2", {}).get("part", 0) > 4:
-                        state.pop("weekly2", None)
+            # the summaries (0.33.0 the week; 0.38.0 the day and thirty days too), each at its own time, with the posts
+            # picked for it, two minutes apart in one queue. A failure waits like a post's does
+            last_fail = run_summaries(c, sec, state, now, last_fail)
             state["memory"] = dict(memory_mb(), since=started)  # for `social status`: since this start
             save_state(state)
         if now - last_summary >= 3600:
@@ -1449,13 +1471,14 @@ def cmd_post(hex_code=None):
     return 0 if ok else 1
 
 
-WEEK_TITLES = {1: "the week", 2: "cargo airlines and business jets", 3: "military aircraft",
+WEEK_TITLES = {1: "the period: aircraft, messages, busiest times, airlines and models", 2: "cargo airlines and business jets", 3: "military aircraft",
                4: "general aviation: helicopters, light aircraft, gliders, drones and balloons"}
 
 
-def cmd_week(post=False, second=False, part=None):
-    """`social weekly test`: the four weekly posts of the seven days ending today, drawn and shown, nothing posted;
-    `social weekly post` (post2, post3, post4): that one posted now. Sunday's still go out."""
+def cmd_week(post=False, second=False, part=None, period="weekly"):
+    """`social summary weekly test` (`social weekly test`): the four posts of that summary, drawn and shown, nothing
+    posted; `... post` (post2, post3, post4): that one posted now. The scheduled ones still go out."""
+    import social_week
     part = part or (2 if second else 1)
     c = cfg()
     state = prune_state(load_state(), time.time())
@@ -1464,7 +1487,7 @@ def cmd_week(post=False, second=False, part=None):
         print("No Bluesky account is set up: run  sudo zenithboard social setup")
         return 1
     if post:
-        r = publish_week(c, sec, time.time(), state, part=part)
+        r = publish_week(c, sec, time.time(), state, part=part, period=period)
         if "skipped" in r:
             print("Nothing to post: %s." % r["skipped"])
             return 1
@@ -1472,15 +1495,17 @@ def cmd_week(post=False, second=False, part=None):
         return 0 if not str(r.get("bluesky", "FAILED")).startswith("FAILED") else 1
     port = int(server.cfg_float(c, "PORT", 8080))
     for n in (1, 2, 3, 4):
-        r = publish_week(c, sec, time.time(), state, dry=True, part=n,
+        r = publish_week(c, sec, time.time(), state, dry=True, part=n, period=period,
                          keep=os.path.join(STATE_DIR, "preview" if n == 1 else "preview%d" % n))
         if n == 1 and "skipped" in r:
             print("Nothing to sum up: %s." % r["skipped"])
             return 1
-        print("Post %d%s: %s" % (n, ", Sunday from 19:00" if n == 1 else ", %d minutes after the one before" % (SECOND_AFTER_S // 60),
-                                 WEEK_TITLES[n]))
+        picked = n in social_week.parts_of(c, period)
+        print("Post %d%s: %s%s" % (n, (", " + social_week.at_words(c, period)) if n == 1 else
+                                   ", %d minutes after the one before" % (SECOND_AFTER_S // 60), WEEK_TITLES[n],
+                                   "" if picked else "   (not picked: sudo zenithboard social summary %s parts ...)" % period))
         if "skipped" in r:
-            print("  Not posted this week: %s." % r["skipped"])
+            print("  Not posted this time: %s." % r["skipped"])
             try:                                 # no picture of an older test shown for a post that has none (0.36.1)
                 os.unlink(os.path.join(STATE_DIR, "preview%d.png" % n))
             except OSError:
@@ -1491,13 +1516,14 @@ def cmd_week(post=False, second=False, part=None):
             print("  " + r["text"].replace("\n", "\n  "))
             print("  Alt text: " + r["alt"])
         if n == 1 and not r.get("fleet_shown"):
-            print("  Airlines and models: %s" % (("counted since %s, they join the summary from the week ending %s, the first "
-                                                   "one they cover whole." % (r["fleet_from"], r["fleet_week"])) if r.get("fleet_from")
+            print("  Airlines and models: %s" % (("counted since %s, they join the summary from the one of %s, the first "
+                                                   "they cover whole." % (r["fleet_from"], r["fleet_week"])) if r.get("fleet_from")
                                                   else "not counted yet (the statistics' lists, ZenithBoard 0.31.0 on)."))
         print()
-    print("Nothing was posted: this was the test. To post one now:  sudo zenithboard social weekly post  (post2, post3, post4)")
-    print("The service posts them %s." % ("on Sundays from 19:00" if server.cfg_bool(c, "SOCIAL_WEEKLY", "0")
-                                          else "only once it is on: sudo zenithboard social weekly on"))
+    print("Nothing was posted: this was the test. To post one now:  sudo zenithboard social summary %s post  (post2, post3, post4)" % period)
+    print("The service posts posts %s %s." % (",".join(str(x) for x in social_week.parts_of(c, period)),
+                                              social_week.at_words(c, period) if social_week.is_on(c, period)
+                                              else "only once it is on: sudo zenithboard social summary %s on" % period))
     return 0
 
 
@@ -1550,8 +1576,11 @@ def cmd_status():
     print("Town names on the maps: %s" % places_words(c))
     print("Post sentence: %s%s   (change: sudo zenithboard social sentence ...)" % (",".join(sentences_of(c)),
           "  (one drawn at each post)" if len(sentences_of(c)) > 1 else ""))
-    print("Weekly summary: %s" % ("on, Sundays from 19:00 (the week; cargo and business jets; military; helicopters, light aircraft and gliders)" if server.cfg_bool(c, "SOCIAL_WEEKLY", "0")
-                                  else "off   (sudo zenithboard social weekly on)"))
+    import social_week
+    for period in ("daily", "weekly", "monthly"):          # 0.38.0
+        print("Summary, %s: %s" % (period, ("on, %s, posts %s" % (social_week.at_words(c, period),
+                                                                  ",".join(str(x) for x in social_week.parts_of(c, period))))
+                                   if social_week.is_on(c, period) else "off   (sudo zenithboard social summary %s on)" % period))
     if unreadable(STATE_DIR) or unreadable(os.path.join(STATE_DIR, "state.json")):
         blind.append(STATE_DIR)
         print("History: %s cannot read the service's state folder" % who)
@@ -1603,6 +1632,11 @@ def main(argv):
         return cmd_week()
     if cmd in ("week-post", "week-post2", "week-post3", "week-post4"):
         return cmd_week(post=True, part=int(cmd[9:] or 1))
+    if cmd in ("summary-test", "summary-post") and arg in ("daily", "weekly", "monthly"):     # 0.38.0
+        n = argv[3] if len(argv) > 3 else "1"
+        if cmd == "summary-test":
+            return cmd_week(period=arg)
+        return cmd_week(post=True, part=int(n) if n in ("1", "2", "3", "4") else 1, period=arg)
     if cmd == "status":
         return cmd_status()
     print(__doc__)

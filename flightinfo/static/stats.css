@@ -75,8 +75,6 @@ svg { width: 100%; height: auto; display: block; }
 .big { display: flex; flex-direction: column; margin-bottom: 14px; }
 .big b { font: 700 40px ui-monospace, Menlo, Consolas, monospace; color: var(--on); line-height: 1.1; }
 .big span { font: 600 11px ui-monospace, Menlo, Consolas, monospace; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
-.big.spacer { visibility: hidden; }
-@media (max-width: 759px) { .big.spacer { display: none; } }
 .big-row { display: flex; gap: 48px; flex-wrap: wrap; }
 
 .ranks ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 9px; }

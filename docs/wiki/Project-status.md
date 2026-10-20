@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **20 October 2026**, version **0.37.0**.
+Last updated: **20 October 2026**, version **0.38.0**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -55,6 +55,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 21 October 2026, 00:25 | The owner liked the page ("so zenithboard") and asked for the countries column aligned with the other two and named *most registered in*; and for summaries every 24 hours, 7 days and 30 days, each at a chosen day and time, with the posts picked, and what two at the same time would do. 0.38.0; previewed on made-up statistics |
 | 20 October 2026, 23:58 | `sudo zenithboard memory` again: 155 MB for all the services after the evening's restarts (social 22 MB, Plane Finder 19, the wall 19), 653 MB available; `/social/preview2`–`4` now say why they have no picture. The owner shared ZenithBoard's banners (the name in amber dots, the split-flap *OVERHEAD NOW*) and asked for the statistics page in that look, with a 24 h / 7 days / 30 days toggle that every chart follows except the sky by hour, and the weekly posts' lists on it, provided it does not overload the Pi: 0.37.0. Previewed at desk and phone width on made-up statistics |
 | 20 October 2026, 23:43 | From the owner's pastes. **0.34.0's new screens on the Pi**: `health` says *Card: 6% full: 3.5 GB used of 61.0 GB, 54.9 GB free (the card: 62.5 GB)*; `memory` gives 212 MB for all the services, Plane Finder 27 MB (in Hardware). **0.35.0's weekly test**: the first post without airlines and models (lists not covering the week), the second skipped, so `/social/preview2` answered a bare *not found*: 0.36.1 says why. The `/stats` lists were small (*Ryanair 27*): one day of lists, as the page says; TAY was shown bare, now *ASL Airlines Belgium* from the cargo list. The owner found the dot flags of 0.36.0's cards crude: real flags at scale in 0.36.1. Redrawing them showed that 0.36.0's search over the country table gave the United Kingdom's military block (43C000) to no country, the table's blocks being nested: fixed and checked against 200 000 addresses |
 | 20 October 2026, 23:26 | The owner sketched the second weekly card: each cargo airline with its most seen model, and the business jets' countries of registration with flags; and asked for two more weekly posts, military aircraft by country and general aviation. 0.36.0. The countries come from the ICAO address blocks (Annex 10, as tabulated by tar1090), the military mark from tar1090's database (the first flag of an entry: `10` military, as tar1090 reads it) and tar1090-db's military address ranges; checked on the real database (23 065 entries marked `10`). Previewed on made-up statistics; not yet on the Pi |

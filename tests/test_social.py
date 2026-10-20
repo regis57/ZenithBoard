@@ -1649,6 +1649,82 @@ class WeeklyTest(unittest.TestCase):
         self.assertTrue(social.publish_week(self.c, {}, now, {}, dry=True, part=3)["text"].startswith("Military aircraft above Trémery"))
         self.assertTrue(social.publish_week(self.c, {}, now, {}, dry=True, part=4)["text"].startswith("General aviation above Trémery"))
 
+    def test_summary_settings(self):
+        # 0.38.0: three summaries, each at its own time, with the posts picked
+        import social_week as sw
+        self.assertEqual(sw.parse_at("weekly", "Sat 08:05"), (5, 8, 5))
+        self.assertEqual(sw.parse_at("monthly", "28 23:59"), (28, 23, 59))
+        self.assertEqual(sw.parse_at("daily", "7:30"), (None, 7, 30))
+        for period, bad in (("daily", "25:00"), ("daily", "mon 21:00"), ("weekly", "21:00"), ("weekly", "xyz 10:00"),
+                            ("monthly", "31 09:00"), ("monthly", "0 09:00"), ("monthly", "1 9h")):
+            with self.assertRaises(ValueError, msg="%s %s" % (period, bad)):
+                sw.parse_at(period, bad)
+        c = dict(CFG, SOCIAL_MONTHLY_AT="31 09:00")
+        self.assertEqual(sw.at_of(c, "monthly"), (1, 9, 0), "a hand-edited wrong value: the default, not a stop")
+        self.assertEqual(sw.at_words(CFG, "weekly"), "every Sunday at 19:00")
+        self.assertEqual(sw.at_words(dict(CFG, SOCIAL_MONTHLY_AT="2 07:00"), "monthly"), "on the 2nd of each month at 07:00")
+        self.assertEqual(sw.parts_of(CFG, "daily"), [1])
+        self.assertEqual(sw.parts_of(dict(CFG, SOCIAL_WEEKLY_PARTS="3,1"), "weekly"), [1, 3])
+        self.assertEqual(sw.parts_of(dict(CFG, SOCIAL_WEEKLY_PARTS="all"), "weekly"), [1, 2, 3, 4])
+        self.assertEqual(sw.parts_of(dict(CFG, SOCIAL_WEEKLY_PARTS="x,9"), "weekly"), [1])
+
+    def test_when_each_summary_is_due(self):
+        import datetime
+        import social_week as sw
+        at = lambda *a: time.mktime(datetime.datetime(*a).timetuple())
+        c = dict(CFG, SOCIAL_DAILY="1", SOCIAL_DAILY_AT="07:30", SOCIAL_WEEKLY="1", SOCIAL_WEEKLY_AT="wed 12:00",
+                 SOCIAL_MONTHLY="1", SOCIAL_MONTHLY_AT="21 06:00")
+        wed = at(2026, 10, 21, 12, 0)                                     # Wednesday the 21st
+        self.assertTrue(all(sw.due(c, {}, wed, p) for p in ("daily", "weekly", "monthly")))
+        self.assertFalse(sw.due(c, {}, at(2026, 10, 21, 7, 29), "daily"))
+        self.assertFalse(sw.due(c, {}, at(2026, 10, 22, 12, 0), "weekly"), "Thursday")
+        self.assertFalse(sw.due(c, {}, at(2026, 11, 20, 12, 0), "monthly"), "the 20th")
+        self.assertFalse(sw.due(c, {"summaries": {"daily": "2026-10-21"}}, wed, "daily"), "done today")
+        self.assertTrue(sw.due(c, {"summaries": {"daily": "2026-10-20"}}, wed, "daily"))
+        self.assertFalse(sw.due(c, {"weekly": "2026-W43"}, wed, "weekly"), "the key 0.33.0 kept still counts")
+        self.assertFalse(sw.due(CFG, {}, wed, "monthly"), "off by default")
+        self.assertEqual((sw.cycle_key("daily", wed), sw.cycle_key("weekly", wed), sw.cycle_key("monthly", wed)),
+                         ("2026-10-21", "2026-W43", "2026-10"))
+
+    def test_the_day_and_the_thirty_days(self):
+        import datetime
+        import social_week as sw
+        with open(os.path.join(self.d, "fleet-2026-10-18"), "w") as fh:
+            fh.write("4ca009\tRYR77\t35000\tB738\t\t\t1800\n")
+        day = sw.week_data(self.c, self.d, self.now, period="daily")
+        self.assertEqual(day["period"], "daily")
+        self.assertEqual(day["busiest_hour"], 15)
+        self.assertEqual(len(day["heat"][0]), 24)
+        t = sw.text(day, self.c, "above Trémery", "#ADSB", social.fit_post)
+        self.assertTrue(t.startswith("The last 24 hours above Trémery: "), t)
+        self.assertIn("Busiest hour: 15:00.", t)
+        self.assertEqual([n for n, _ in day["airlines"]], ["Ryanair"], "the lists of the last 24 hours")
+        month = sw.week_data(self.c, self.d, self.now, period="monthly")
+        self.assertEqual(len(month["dates"]), 30)
+        self.assertEqual(month["best_day"], ("2026-10-16", 120))
+        t = sw.text(month, self.c, "above Trémery", "#ADSB", social.fit_post)
+        self.assertTrue(t.startswith("The last 30 days above Trémery, 19 September – 18 October: "), t)
+        self.assertFalse(month["covered"], "the lists began on the 10th: they do not cover thirty days")
+        for w, name in ((day, "d.png"), (month, "m.png")):
+            info = sw.draw(w, "green", "above Trémery", os.path.join(self.d, name))
+            self.assertEqual((info["width"], info["height"]), (1200, 675))
+        self.assertIn("the last 24 hours", sw.text_military(dict(day, military=[], military_total=0), "above Trémery", "", social.fit_post))
+
+    def test_summaries_share_one_queue(self):
+        # 0.38.0: the week and the day both due on Sunday at 19:00: the longer first, every post two minutes after the
+        # one before, only the posts picked; a restart does not post anything twice
+        import datetime
+        self.c.update(SOCIAL_DAILY="1", SOCIAL_DAILY_AT="19:00", SOCIAL_DAILY_PARTS="1,3", SOCIAL_WEEKLY_PARTS="1,2")
+        ok = {"bluesky": "at://did/post/1"}
+        sent, state = self.run_loop(self.sunday(), 2, {1: [ok], 2: [ok], 3: [ok]})
+        self.assertEqual([p for _, p in sent], [1, 2, 1, 3], "the week's 1 and 2, then the day's 1 and 3")
+        times = [t for t, _ in sent]
+        self.assertTrue(all(social.SECOND_AFTER_S <= b - a < social.SECOND_AFTER_S + 30 for a, b in zip(times, times[1:])))
+        self.assertEqual(state["summaries"], {"weekly": "2026-W42", "daily": "2026-10-18"})
+        self.assertEqual(state["summary_queue"], [])
+        q = social.schedule_summaries(self.c, state, self.sunday() + 3 * 3600)
+        self.assertEqual(q, [], "already done this cycle: nothing again")
+
     def test_the_lists_shrink_before_a_line_goes(self):
         import social_week
         w = self.week()
@@ -1669,7 +1745,7 @@ class WeeklyTest(unittest.TestCase):
         r = social.publish_week(self.c, {}, now, {}, dry=True, second=True)
         self.assertTrue(r["text"].startswith("Cargo and business jets above Trémery"))
         os.unlink(os.path.join(self.d, "fleet-2026-10-10"))
-        self.assertIn("do not cover the week", social.publish_week(self.c, {}, now, {}, dry=True, second=True)["skipped"])
+        self.assertIn("do not cover these seven days", social.publish_week(self.c, {}, now, {}, dry=True, second=True)["skipped"])
 
     def test_the_words_never_give_a_distance(self):
         import social_week
@@ -1712,10 +1788,11 @@ class WeeklyTest(unittest.TestCase):
         social.server.STATS_DIR = self.d + "/none"
         self.assertIn("skipped", social.publish_week(self.c, {}, now, {}, dry=True))
 
-    def test_posts_counted_by_day_for_eight_days(self):
+    def test_posts_counted_by_day_for_thirty_one_days(self):
+        # 0.38.0: thirty-one days for the monthly summary (eight before)
         s = warm()
         now = time.time()
-        social.remember(s, EZY, now - 9 * 86400)
+        social.remember(s, EZY, now - 32 * 86400)
         social.remember(s, EZY, now)
         social.remember(s, BELUGA, now)
         social.prune_state(s, now)
@@ -1739,7 +1816,7 @@ class WeeklyTest(unittest.TestCase):
         for name, fake in (("read_aircraft", lambda c: []), ("account", lambda: {"BLUESKY_HANDLE": "h", "BLUESKY_APP_PASSWORD": "p"}),
                            ("one_poll", lambda c, st, tr, ac, now: ([], None)), ("load_state", lambda: state),
                            ("save_state", lambda st: None), ("cfg", lambda: dict(self.c)), ("merge_disk", lambda st: st),
-                           ("publish_week", lambda c, sec, now, st, second=False: (sent.append(now) or results[min(len(sent), 2) - 1]) if not second else {"skipped": "-"})):
+                           ("publish_week", lambda c, sec, now, st, second=False, part=1, period="weekly": (sent.append(now) or results[min(len(sent), 2) - 1]) if part == 1 else {"skipped": "-"})):
             self.addCleanup(setattr, social, name, getattr(social, name))
             setattr(social, name, fake)
         self.addCleanup(setattr, time, "time", time.time); time.time = lambda: clock[0]
@@ -1750,10 +1827,11 @@ class WeeklyTest(unittest.TestCase):
         self.assertEqual(len(sent), 2, "a failure, then one post ten minutes later, then nothing more that week")
         self.assertGreaterEqual(sent[0], start + 5 * 60, "not before 19:00")
         self.assertGreaterEqual(sent[1] - sent[0], social.RETRY_AFTER_FAIL_S)
-        self.assertEqual(state.get("weekly"), "2026-W42")
+        self.assertEqual(state["summaries"]["weekly"], "2026-W42")
 
     def run_loop(self, start, hours, results):
         """The service loop on a Sunday evening. results: {part: [answers in turn]} (the last one repeats)."""
+        self.periods = []
         import contextlib
         clock = [start]
         sent, state = [], warm()
@@ -1766,9 +1844,10 @@ class WeeklyTest(unittest.TestCase):
             if clock[0] > start + hours * 3600:
                 raise Stop()
 
-        def fake_publish(c, sec, now, st, second=False, part=None):
+        def fake_publish(c, sec, now, st, second=False, part=None, period="weekly"):
             part = part or (2 if second else 1)
             sent.append((now, part))
+            self.periods.append(period)
             seq = results.get(part) or [{"skipped": "-"}]
             return seq[min(len([x for x in sent if x[1] == part]), len(seq)) - 1]
         for name, fake in (("read_aircraft", lambda c: []), ("account", lambda: {"BLUESKY_HANDLE": "h", "BLUESKY_APP_PASSWORD": "p"}),
