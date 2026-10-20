@@ -663,6 +663,20 @@ class FlapPictureTest(unittest.TestCase):
         social_card.draw_map(metz, EZY, "#ff0000", mode="none", fetch=lambda *a: None)
         self.assertNotIn("Metz", names, "no map, no names")
 
+    def test_no_town_is_named_twice(self):
+        # 0.26.1, from the real posts (EWG8QR over Nancy): the names ZenithBoard draws went over EOX's OpenStreetMap
+        # layer, which writes its own: every town twice, a few pixels apart. A map that names its towns draws on
+        # layers that carry no name.
+        unnamed = {"terrain-light_3857", "streets_3857", "terrain_3857", "s2cloudless-%d_3857" % social_card.S2_YEAR}
+        for mode, st in social_card.MAP_STYLES.items():
+            if st.get("names"):
+                self.assertTrue({l for l, _ in st["layers"]} <= unnamed, mode)
+                self.assertIn("GeoNames", st["credit_full"], mode)
+        road = Image.new("RGBA", (4, 1), (255, 255, 255, 255)); road.putpixel((0, 0), (120, 120, 120, 255))
+        t = social_card.tint(road, (214, 140, 60))
+        self.assertEqual(t.getpixel((1, 0)), (214, 140, 60, 255), "a white road takes the colour")
+        self.assertLess(t.getpixel((0, 0))[0], 214, "its grey edge stays darker")
+
     def test_the_names_are_drawn_over_the_track(self):
         # 0.25.3, from the real posts: the track cut letters out of the towns it crossed ("N ncy"). The names now come
         # after the track; each town's dot stays where the town is.
@@ -700,7 +714,7 @@ class FlapPictureTest(unittest.TestCase):
         self.assertEqual((info["width"], info["height"]), (1310, 830))
         self.assertLess(info["bytes"], 1000000)
         self.assertEqual(info["map"], "night"); self.assertEqual(info["credit"], "Map \u00a9 OpenStreetMap, EOX, GeoNames")
-        self.assertEqual({a[0] for a in asked}, {"osm_3857"})
+        self.assertEqual({a[0] for a in asked}, {"terrain-light_3857", "streets_3857"})   # 0.26.1: no layer with names of its own
         im = Image.open(out).convert("RGB")
         x, y, w, h = got["map_box"]
         self.assertGreater(sum(im.getpixel((x + w // 2, y + 40))), 60, "the map is there, not the dark column")

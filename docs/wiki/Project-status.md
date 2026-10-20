@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **20 October 2026**, version **0.26.0**.
+Last updated: **20 October 2026**, version **0.26.1**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -57,6 +57,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 20 October 2026, afternoon | The owner saw the town names twice, a few pixels apart, on the light map (EWG8QR over Nancy): 0.25.3 drew ZenithBoard's names over EOX's OpenStreetMap layer, which writes its own. EOX's layer list (WMTSCapabilities) has no OpenStreetMap layer without labels; `terrain-light` and `streets` have none. 0.26.1 builds the light and dark maps from those two; previewed with the real code and tiles on EWG8QR's track, approved by the owner |
 | 20 October 2026, noon | EWG8QR (4D2087) went out with no registration, though Planespotters had a photo of 9H-EWG. Checked: adsbdb *unknown aircraft*, hexdb *n/a*; tar1090's database knows it. On the Pi: tar1090's database at `/usr/local/share/tar1090/git-db/db`, version 3.14.1721; readsb does not load it (no `--db-file`). 0.26.0 reads it, off by default: `sudo zenithboard data localdb on` |
 | 20 October 2026, late morning | Eight posts made with 0.25.3 (10:42 to 11:14): the names read on the two OpenStreetMap maps, none is cut by a track any more, *Frankfurt-Hahn → Palma de Mallorca* names towns. One left: KLM105 read *Amsterdam Schiphol → Cape Town* in the text. 0.25.4 keeps the town alone when the name opens on the town by the airport |
 | 20 October 2026 | A recording of fifteen posts made since 0.25.2 (00:35 to 07:51), on every map: the smaller, more numerous names read well on the terrain and satellite maps. Three things to put right, in 0.25.3. The track cut letters out of the towns it crossed (*N ncy*, *Lu embourg*, *Pon -à-Mousson*): the names are now drawn over it. The OpenStreetMap maps' own labels were an unreadable grey at the post's size, the dark one especially: those two maps get the same names. RYR7CW read *Brussels South Charleroi Airport → Turin Airport (Caselle Airport)*: hexdb's second-opinion route gives airports without a town (checked on its real answers for EBCI and LIMF), so the town is now taken from the name: *Charleroi → Turin*. Previewed with the real code and EOX's real tiles before merging. *Brussels Air* stays cut: the boards are fourteen letters wide |
