@@ -42,7 +42,7 @@ So the answer is checked against the aircraft in front of you before it is shown
 
 A blank route row is better than a wrong one.
 
-When adsbdb's answer is dropped, **hexdb.io is asked once** as a second opinion, and the wall takes the first leg of that route the aircraft can actually be on. If hexdb is unreachable, nothing is shown and nothing wrong is remembered.
+When adsbdb's answer is dropped, **hexdb.io is asked once** as a second opinion, and the wall takes the first leg of that route the aircraft can actually be on. If hexdb is unreachable, nothing is shown and nothing wrong is remembered. hexdb gives each airport a name and no town, so the town is taken from the name (0.25.3): what is in brackets and the words *Airport*, *International* and the like go (*Turin Airport (Caselle Airport)* → *Turin*), and a name that opens on a city far from the airport gives way to the town by it, within 30 km, from the GeoNames list shipped with ZenithBoard (*Brussels South Charleroi Airport* → *Charleroi*; Brussels is 45 km away). The small words of a town's name are written as the town writes them (*Palma de Mallorca*, not adsbdb's *Palma De Mallorca*).
 
 The airport positions used for these checks are never displayed. They exist only to judge plausibility, and are fetched once per airport and kept until the next restart.
 

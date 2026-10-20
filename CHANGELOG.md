@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.25.3
+From a recording of the posts made since 0.25.2.
+- **The town names are drawn over the track**, not under it: the track cut letters out of the towns it crossed (*N ncy*). Each town's dot stays where the town is; nothing moves.
+- **The OpenStreetMap maps (`normal`, `night`) name the towns too**, as the terrain and satellite maps do since 0.24.4: OSM's own labels, drawn for a screen, were an unreadable grey once the map was reduced to the post's size. The credit names GeoNames on those two maps as well. OSM's own labels stay under ours (EOX has no OpenStreetMap layer without them).
+- **A town, not an airport's name, when the route comes from hexdb.** hexdb's second opinion gives each airport a name and no town, so a post read *Brussels South Charleroi Airport → Turin Airport (Caselle Airport)*. The town is now taken from the name: what is in brackets and the words *Airport*, *International* and the like go, and a name that opens on a city far from the airport (*Brussels*, 45 km) gives way to the town by it (*Charleroi*): *Charleroi → Turin*.
+- The small words in a town's name are written as the town writes them: *Palma de Mallorca*, *Frankfurt am Main* (adsbdb wrote *Palma De Mallorca*).
+
 ## 0.25.2
 - The town names on the posts' satellite and terrain maps are smaller (13 points, from 16) and more of them are shown (up to 26, from 16), still the largest first and never one over another. Asked for by the owner after the first post with them.
 
