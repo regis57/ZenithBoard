@@ -1571,6 +1571,24 @@ class WeeklyTest(unittest.TestCase):
         info = social_week.draw(w, "white", "above a very long place name that would never fit beside the dates", os.path.join(self.d, "w1.png"))
         self.assertLess(info["bytes"], 1000000)
 
+    def test_the_cargo_list(self):
+        # 0.35.0: each entry an ICAO designator with its source; no passenger prefix (a callsign cannot tell its
+        # cargo flights apart); DHL's airlines counted as one
+        import json as _json
+        import server
+        with open(os.path.join(HERE, "..", "flightinfo", "data", "cargo_airlines.json"), encoding="utf-8") as fh:
+            raw = _json.load(fh)
+        codes = {k: v for k, v in raw.items() if not k.startswith("_")}
+        self.assertGreaterEqual(len(codes), 30)
+        for k, v in codes.items():
+            self.assertRegex(k, r"^[A-Z]{3}$")
+            self.assertTrue(v["name"] and v["source"].startswith("https://"), k)
+        for passenger in ("THY", "QTR", "UAE", "AFR", "DLH", "KLM", "BAW", "RYR", "CPA", "ETH"):
+            self.assertNotIn(passenger, codes)
+        cargo = server.load_cargo()
+        self.assertEqual({cargo[c] for c in ("BCS", "DHK", "DHX", "DAE", "DHA")}, {"DHL"})
+        self.assertEqual((cargo["FDX"], cargo["CLX"], cargo["TAY"]), ("FedEx", "Cargolux", "ASL Airlines Belgium"))
+
     def test_the_lists_shrink_before_a_line_goes(self):
         import social_week
         w = self.week()
