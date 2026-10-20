@@ -30,6 +30,8 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$ROOT/lib/ddns.sh"
 # shellcheck source=lib/settings.sh
 . "$ROOT/lib/settings.sh"
+# shellcheck source=lib/console.sh
+. "$ROOT/lib/console.sh"
 . "$ROOT/lib/update.sh"
 
 zb_tmp_init   # the private folder for downloads, made here in the main shell (see zb_tmp in lib/common.sh)
@@ -248,10 +250,12 @@ settings_menu() {
       logs "4  Logs: size limit, review, automatic cleaning" \
       reliability "5  Reliability: watchdogs, saved logs, health check" \
       social "6  Social sharing: post the aircraft overhead to Bluesky ($(social_state))" \
+      console "7  Web console: these settings from a browser or a phone ($(console_state))" \
       back "Return to the previous menu") || return 0
     case "$c" in
       network) network_menu ;;
       social) social_menu ;;
+      console) console_menu ;;
       receiver) settings_receiver_menu ;;
       wall) settings_wall_menu ;;
       logs) logs_menu ;;
@@ -275,6 +279,7 @@ uninstall_all() {
   netwatch_remove_units
   gain_log_remove_units
   stats_remove_units
+  console_remove_units
   [ -z "$(acars_leftovers)" ] || acars_remove --yes
   if is_graphs || [ -f "$GRAPHS_STATE" ]; then graphs_off; fi
   is_flightinfo && remove_flightinfo

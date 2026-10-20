@@ -39,6 +39,8 @@ HERE="$(dirname "$(readlink -f "$0")")"
 . "$HERE/../lib/update.sh"
 # shellcheck source=lib/settings.sh
 . "$HERE/../lib/settings.sh"
+# shellcheck source=lib/console.sh
+. "$HERE/../lib/console.sh"
 
 zb_tmp_init   # the private folder for downloads, made here in the main shell (see zb_tmp in lib/common.sh)
 
@@ -121,6 +123,10 @@ ZenithBoard $ZB_VERSION - ADSB Flight Info
   zenithboard logs limit MB|default     cap the size of the system logs (10-2000 MB)
   zenithboard logs clean                delete ALL logs now
   zenithboard logs auto on|off|status   automatic daily clean-up that keeps the last 7 days (off by default)
+  zenithboard console on|off|status     the web console: settings from a browser on your network, /console (off by default)
+  zenithboard console password          set its password (asked, never on the command line; signs everyone out)
+  zenithboard console pair              a QR code that signs a phone in, once, within 5 minutes
+  zenithboard console signout|forget    sign every browser out / turn it off and delete its password and records
   zenithboard menu                      open the installer menu (add / remove components)
 USAGE
 }
@@ -476,6 +482,18 @@ case "${1:-}" in
       social) journalctl -u zenithboard-social -n 100 --no-pager ;;
       decoder) journalctl -u "$(cfg_get DECODER readsb)" -n 100 --no-pager ;;
       *) die "Usage: zenithboard logs [flightinfo|decoder|uat|social]" ;;
+    esac ;;
+  console)
+    case "${2:-status}" in
+      on)       root_or_die; console_on ;;
+      off)      root_or_die; console_off ;;
+      status)   console_status ;;
+      password) root_or_die; console_password ;;
+      pair)     root_or_die; console_pair ;;
+      signout)  root_or_die; console_signout ;;
+      forget)   root_or_die; console_forget ;;
+      state)    root_or_die; console_state_lines ;;
+      *) die "Usage: zenithboard console on|off|status|password|pair|signout|forget" ;;
     esac ;;
   menu) root_or_die; exec "$HERE/../install.sh" ;;
   version|--version) echo "ZenithBoard $ZB_VERSION" ;;

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#030303">
+  <meta name="apple-mobile-web-app-title" content="ZenithBoard">
+  <meta name="referrer" content="no-referrer">
+  <title>ZenithBoard console</title>
+  <link rel="stylesheet" href="/static/console.css">
+</head>
+<body>
+  <!-- before signing in: the console off, no password yet, the password, a phone being paired -->
+  <main id="gate" class="gate" hidden>
+    <div class="gate-card">
+      <div id="gate-logo" class="logo" role="img" aria-label="ZenithBoard"></div>
+      <div id="gate-sub" class="logo-sub" role="img" aria-label="Console"></div>
+      <div id="gate-off" hidden>
+        <p>The web console is off. To turn it on, over SSH on the Pi:</p>
+        <pre>sudo zenithboard console on</pre>
+        <p class="muted">Or in the menu: Settings &rarr; 7 Web console. <a href="/">The wall</a>.</p>
+      </div>
+      <form id="login" autocomplete="on" hidden>
+        <input type="text" name="username" autocomplete="username" value="zenithboard" class="sr" tabindex="-1" aria-hidden="true">
+        <label for="pw">Console password</label>
+        <div class="pwrow">
+          <input id="pw" name="password" type="password" autocomplete="current-password" required minlength="1" autofocus>
+          <button type="button" class="ghost eye" id="pw-eye" aria-label="Show the password"></button>
+        </div>
+        <button type="submit" class="primary wide" id="login-go">Sign in</button>
+        <p class="err" id="login-err" role="alert" hidden></p>
+      </form>
+      <div id="gate-nopw" class="muted" hidden>
+        <p>No console password yet. Choose one over SSH on the Pi:</p>
+        <pre>sudo zenithboard console password</pre>
+      </div>
+      <div id="gate-pairing" hidden><p class="busy">Pairing this device&hellip;</p></div>
+      <details class="gate-help" id="gate-help" hidden>
+        <summary>Sign in a phone without typing</summary>
+        <p>On a computer already signed in: <b>System &rarr; Signed in &rarr; Pair a phone</b>, or over SSH:</p>
+        <pre>sudo zenithboard console pair</pre>
+        <p>Then scan the QR code with the phone's camera. It works once, within five minutes, and keeps the phone signed in for 30 days.</p>
+      </details>
+      <p class="fine">Your home network only. <a href="/">Wall</a> &middot; <a href="/stats">Statistics</a></p>
+    </div>
+  </main>
+
+  <!-- signed in -->
+  <div id="app" class="app" hidden>
+    <aside class="side" aria-label="Sections">
+      <a class="side-brand" href="#overview" id="side-logo" aria-label="ZenithBoard console"></a>
+      <nav id="nav" class="nav"></nav>
+      <div class="side-foot">
+        <a href="/" target="_blank" rel="noopener">Wall &#8599;</a>
+        <a href="/stats" target="_blank" rel="noopener">Statistics &#8599;</a>
+        <span id="side-version" class="muted"></span>
+      </div>
+    </aside>
+    <div class="main">
+      <header class="bar">
+        <div class="bar-brand" id="bar-logo" aria-hidden="true"></div>
+        <h1 id="title">Overview</h1>
+        <div class="bar-tools">
+          <button type="button" class="ghost tool" id="open-activity" aria-label="Activity"><span class="ico" data-ico="activity"></span><span class="tool-txt">Activity</span><span class="badge" id="busy-badge" hidden></span></button>
+          <button type="button" class="ghost tool" id="sign-out" aria-label="Sign out"><span class="ico" data-ico="out"></span><span class="tool-txt">Sign out</span></button>
+        </div>
+      </header>
+      <main id="view" class="view" tabindex="-1"></main>
+    </div>
+    <nav id="tabs" class="tabs" aria-label="Sections"></nav>
+  </div>
+
+  <!-- the activity drawer: the job running, the last ones, what changed and who signed in -->
+  <div id="drawer" class="drawer" hidden>
+    <div class="drawer-back" data-close="drawer"></div>
+    <section class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
+      <header><h2 id="drawer-title">Activity</h2><button type="button" class="ghost" data-close="drawer" aria-label="Close">&times;</button></header>
+      <div id="drawer-body" class="drawer-body"></div>
+    </section>
+  </div>
+
+  <!-- a question, a QR code, the wizard -->
+  <div id="modal" class="modal" hidden>
+    <div class="modal-back"></div>
+    <section class="modal-panel" role="dialog" aria-modal="true" id="modal-panel"></section>
+  </div>
+
+  <div id="toast" class="toast" role="status" hidden></div>
+  <script src="/static/font5x7.js"></script>
+  <script src="/static/vendor/qrcode.js"></script>
+  <script src="/static/console.js"></script>
+</body>
+</html>

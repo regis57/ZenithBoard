@@ -11,6 +11,7 @@
 * [The wall](The-wall)
 * [Statistics](Statistics)
 * [Social sharing](Social-sharing)
+* [Web console](Web-console)
 
 *Running it*
 * [When a provider changes](Providers)

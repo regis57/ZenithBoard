@@ -26,7 +26,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.38.0"
+VERSION = "0.39.0"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -48,6 +48,7 @@ DATA_DIR = os.path.join(BASE_DIR, "data")
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 import aircraft  # noqa: E402  (silhouette class per aircraft type)
+import console  # noqa: E402  (the web console, 0.39.0: off unless CONSOLE=1)
 
 SERVER_ID = str(int(time.time()))  # changes on restart -> browsers reload themselves
 
@@ -1799,7 +1800,7 @@ class Handler(BaseHTTPRequestHandler):
         """-> (content type, cache rule), both taken from our own tables; anything unknown gets the safe default."""
         return HEADER_TYPES.get(ctype, "application/octet-stream"), CACHE_RULES.get(cache, "no-store")
 
-    def _send(self, code, body, ctype="application/json", cache="no-store"):
+    def _send(self, code, body, ctype="application/json", cache="no-store", headers=None):
         if isinstance(body, (dict, list)):
             body = json.dumps(body).encode("utf-8")
         ctype, cache = self._header_values(ctype, cache)
@@ -1807,8 +1808,45 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", cache)
+        for k, v in (headers or {}).items():          # the console's security headers and its cookie (0.39.0)
+            if k in console.SECURITY_HEADERS or k == "Set-Cookie":
+                self.send_header(k, v)
         self.end_headers()
         self.wfile.write(body)
+
+    def _console(self, cfg, url):
+        """The web console (0.39.0): its own checks, then its reply. None when the path is not the console's."""
+        body = b""
+        if self.command == "POST":
+            try:
+                n = int(self.headers.get("Content-Length") or 0)
+            except ValueError:
+                n = -1
+            if not 0 <= n <= console.MAX_BODY:
+                self._send(413, b"too large", "text/plain")
+                return True
+            body = self.rfile.read(n) if n else b""
+        req = console.Request(self.command, url.path, parse_qs(url.query), dict(self.headers.items()),
+                              self.client_address[0], body, dict(cfg, _VERSION=VERSION))
+        reply = _CONSOLE.handle(req)
+        if reply is None:
+            return None
+        if reply.file:
+            self._file(STATIC_DIR, reply.file, reply.headers)
+            return True
+        out = reply.body if reply.body is not None else b""
+        if isinstance(out, str):
+            out = out.encode("utf-8")
+        self._send(reply.code, out, reply.ctype, headers=reply.headers)
+        return True
+
+    def do_POST(self):
+        url = urlparse(self.path)
+        cfg = load_config()
+        if not client_allowed(self.client_address[0], cfg.get("ALLOW_FROM", "private")):
+            self._send(403, b"This wall answers its own network only (ALLOW_FROM).", "text/plain")
+        elif self._console(cfg, url) is None:
+            self._send(405, b"method not allowed", "text/plain")
 
     def do_GET(self):
         url = urlparse(self.path)
@@ -1816,6 +1854,11 @@ class Handler(BaseHTTPRequestHandler):
         cfg = load_config()
         if not client_allowed(self.client_address[0], cfg.get("ALLOW_FROM", "private")):
             return self._send(403, b"This wall answers its own network only (ALLOW_FROM).", "text/plain")
+        if path == "/console" or path.startswith("/console/"):
+            self._console(cfg, url)
+            return
+        if path.startswith("/static/console") or path.startswith("/static/vendor/"):
+            return self._static(path, console.SECURITY_HEADERS)
         if path == "/api/config":
             return self._send(200, public_config(cfg))
         if path == "/api/health":
@@ -1877,20 +1920,23 @@ class Handler(BaseHTTPRequestHandler):
         return self._send(200, {"planes": planes, "total": total, "radius_km": radius_km,
                                 "server_id": SERVER_ID, "updated": time.time()})
 
-    def _static(self, path):
+    def _static(self, path, headers=None):
         rel = "index.html" if path in ("/", "") else path.lstrip("/")
         if rel.startswith("static/"):
             rel = rel[len("static/"):]
-        return self._file(STATIC_DIR, rel)
+        return self._file(STATIC_DIR, rel, headers)
 
-    def _file(self, root, rel):
+    def _file(self, root, rel, headers=None):
         full = os.path.realpath(os.path.join(root, rel))
         if not full.startswith(os.path.realpath(root) + os.sep) or not os.path.isfile(full):
             return self._send(404, b"not found", "text/plain")
         ctype = FILE_TYPES.get(os.path.splitext(full)[1].lower(), "application/octet-stream")
         with open(full, "rb") as fh:
             body = fh.read()
-        return self._send(200, body, ctype)
+        return self._send(200, body, ctype, headers=headers)
+
+
+_CONSOLE = console.Console()
 
 
 class WallServer(ThreadingHTTPServer):

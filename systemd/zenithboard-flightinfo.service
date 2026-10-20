@@ -36,6 +36,9 @@ SystemCallFilter=~@privileged @resources
 CapabilityBoundingSet=
 AmbientCapabilities=
 UMask=0027
+# 0.39.0: the one folder it may write, the web console's (its sessions and the jobs it hands to the root helper).
+# The "-" leaves the wall starting on a Pi where the console was never turned on.
+ReadWritePaths=-/var/lib/zenithboard/console/state
 
 [Install]
 WantedBy=multi-user.target
