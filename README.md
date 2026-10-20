@@ -24,9 +24,10 @@ Inspired by [jprochazka/adsb-receiver](https://github.com/jprochazka/adsb-receiv
 
 **Watch:** [what's new in ZenithBoard (flags, scrolling names, colours)](https://youtu.be/XHzTL2T3D2A) · [the new promotional Short](https://youtube.com/shorts/irg4B0wQOBI) · [the split-flap Short](https://youtube.com/shorts/RpelTSHk6jo) · [the short how-to (no installation details)](https://youtu.be/vuBje80VaZA) · [the whole playlist](https://www.youtube.com/channel/UCBlFORfQZ6XtUnpuG5fBd9Q/playlists)
 
-<p align="center"><img src="docs/images/wall/zb-wall-green.gif" alt="The ZenithBoard wall cycling through aircraft in green" width="460">&nbsp;<img src="docs/images/wall/zb-flap-roll.gif" alt="The split-flap look, letters rolling to the next aircraft" width="460"></p>
+<p align="center"><img src="docs/images/wall/zb-wall.gif" alt="The dot-matrix wall in turquoise: BAW357, a British Airways A320neo, its airline name scrolling beside the registration flag, then the next aircraft, D-IDBA, a Raytheon 390" width="460">&nbsp;<img src="docs/images/wall/zb-flap-roll.gif" alt="The split-flap look in green, letters rolling from RYR6QU, Bergamo to Luxembourg, to the next aircraft" width="460"></p>
 
-<p align="center"><img src="docs/images/wall/zb-three-colours.jpg" alt="The same flight in red, white and green" width="640"></p>
+<p align="center"><img src="docs/images/wall/zb-three-colours.jpg" alt="The wall in amber and turquoise dot matrix, and in green split-flap" width="640"></p>
+<p align="center"><em>Recorded on the reference Pi, 20 October 2026 (0.26.1). The tablet also shows the aircraft's photo from Planespotters; it is left out of these captures, as Planespotters' terms ask that its photos be shown only by the screen that fetches them, never copied.</em></p>
 
 The story behind the project: [ZenithBoard on regis-hennequin.info](https://regis-hennequin.info/beyond-the-desk/adsb/zenithboard/).
 
@@ -126,7 +127,10 @@ After the questions, the installer shows its main menu. *4 Settings* is organise
 
 Everything in the menus also exists as a command, which is quicker once you know what you want: `zenithboard status`, `sudo zenithboard update`, `zenithboard gain check`… The full list, grouped by subject with what each command is for, is the **[Command reference](https://github.com/regis57/ZenithBoard/wiki/Command-reference)** in the wiki.
 
-<p align="center"><img src="docs/images/install-3-menu.png" alt="The ZenithBoard main menu: ADSB, FlightInfo, ACARS, Settings, Status, Update, Maintenance" width="520"></p>
+<p align="center"><img src="docs/images/install-3-menu.png" alt="The ZenithBoard 0.26.1 main menu: ADSB, FlightInfo, ACARS, Settings, Status, Update, Maintenance, Exit" width="520"></p>
+
+<p align="center"><img src="docs/images/install-4-settings.png" alt="4 Settings: Network, Receiver, ZenithBoard wall, Logs, Reliability, Social sharing" width="400">&nbsp;<img src="docs/images/install-5-maintenance.png" alt="7 Maintenance: save my settings to a file, restore settings from a file, uninstall everything (asks you to type the word)" width="400">&nbsp;<img src="docs/images/install-6-update.png" alt="6 Update: quick (ZenithBoard and the wall only), all, pick, list" width="400"></p>
+<p align="center"><em>Settings, Maintenance and Update in 0.26.1. The Wi-Fi name on the Settings screen is replaced by MyHomeWiFi.</em></p>
 
 **1 · ADSB** — pick the decoder (**readsb** is recommended; **dump1090-fa** is supported as an alternative; both feed the same local port so every feeder works with either). Then tick where to share. *ADSB Exchange is always on.* The ADSB Exchange script will ask for a station name and your position, and prints a link to see your feed. FlightAware prints a claim link; **Flightradar24** runs FR24's own sign-up after printing what to answer (paste your *sharing key* — flightradar24.com → account → *My data sharing* — if you already feed FR24; otherwise Enter); Beast, `127.0.0.1`, port `30005` and MLAT no are enforced afterwards; Plane Finder finishes setup on a small web page. Unticking an installed feeder removes it after a confirmation.
 
@@ -266,11 +270,11 @@ In the menu, **Help me choose** explains these three, **Set up** asks for the na
 
 ## Look: dot matrix or airport split-flap board
 
-Two looks, same data. **Dot matrix** (default) is the amber dot display above. **Split-flap** imitates an old airport departure board (Frankfurt style): every row is made of small flaps, and when the wall moves to another aircraft the letters **roll one by one, row after row**, through the alphabet until they land on the new text. The photo and the silhouette stay as they are.
+Two looks, same data. **Dot matrix** (default) is the dot display above. **Split-flap** imitates an old airport departure board (Frankfurt style): every row is made of small flaps, and when the wall moves to another aircraft the letters **roll one by one, row after row**, through the alphabet until they land on the new text. The photo and the silhouette stay as they are.
 
-<p align="center"><img src="docs/images/wall/zb-flap-roll.gif" alt="The split-flap look: the letters roll one by one when the wall moves to the next aircraft" width="560"></p>
+<p align="center"><img src="docs/images/wall/zb-flap-roll.gif" alt="The split-flap look in green: the letters roll one by one from RYR6QU to D-IDBA when the wall moves to the next aircraft" width="560"></p>
 
-<p align="center"><img src="docs/images/wall/zb-beluga-flap.jpg" alt="The split-flap board showing an Airbus Beluga XL overhead: callsign BGA113J, A-330-700, 9750 m, 687 km/h, 32 km NNW" width="760"></p>
+<p align="center"><img src="docs/images/wall/zb-beluga-flap.jpg" alt="The split-flap board showing an Airbus Beluga XL overhead: callsign BGA113J, A-330-700, 9750 m, 687 km/h, 32 km NNW (an older version of the board, the photo left out)" width="760"></p>
 <p align="center"><em>A Beluga XL passing 32 km north-north-west, carrying wings to an assembly line. Its callsign has no airline name behind it, so that row stays blank — the board shows what it knows and nothing else.</em></p>
 
 | Where | How |
@@ -534,7 +538,7 @@ Off by default. Switched on, the Pi posts the aircraft worth a post — a milita
 | `dotmap` (the default) | `flap` |
 |---|---|
 | ![Dot-matrix picture with a map](docs/images/social-dotmap.jpg) | ![Split-flap picture with a map](docs/images/social-flap.jpg) |
-| The dot-matrix wall beside a map with the aircraft's track: a light or dark relief map with the main roads, satellite or terrain, every town named once. *A real post from the reference Pi (terrain map), 18 October 2026; the track is drawn thinner since 0.24.1* | The split-flap board beside the same map |
+| The dot-matrix wall beside a map with the aircraft's track: a light or dark relief map with the main roads, satellite or terrain, every town named once. *A real post from the reference Pi, 20 October 2026 (0.26.1): TAR954, Tunis to Brussels, satellite map* | The split-flap board beside the same map. *EWG86P, Palma to Cologne, on the light map (0.26.1)* |
 
 `alternate` takes `dotmap` and `flap` in turn, and the map and the colour can turn too. The map can also be `none`: the track on black, nothing fetched. The posts follow the wall's units, or their own: `sudo zenithboard social units imperial` (ft, knots, mi) or `metric`, also in the picture wizard (0.24.3). Each post can end with a link to the aircraft's Planespotters photo page, the photographer named: `sudo zenithboard social photolink on` (0.25.0; the link only, never the picture).
 
