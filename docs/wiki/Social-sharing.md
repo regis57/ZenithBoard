@@ -99,13 +99,13 @@ zenithboard logs social
 
 ### Dot-matrix with a map
 
-![The dot-matrix picture with a map, a real post](https://github.com/regis57/ZenithBoard/raw/main/docs/images/social-dotmap.jpg)
+![The dot-matrix picture with a map: RYR5236, Pisa to Brussels, over Metz, a real post of 20 October 2026](https://github.com/regis57/ZenithBoard/raw/main/docs/images/social-dotmap.jpg)
 
 The wall's rows as the tablet shows them (`FLT  EWG11S`, `REG  D-AIDO`, then airline, type, altitude, speed, route), with two differences: the time on the last row with its offset from GMT as the Pi's time zone has it that day (`11:39 GMT+2` in a French summer, `GMT+1` in winter), where the tablet shows the distance and direction; and, in the right-hand column, a map where the tablet has the silhouette and the photo. The flags are the wall's: the country of the registration beside the `REG` row (since 0.20.0; it sat beside the airline, where it read as the airline's country), and the maker's beside the model.
 
 `sudo zenithboard social look dotmap` (0.23.0, asked for by the owner; the default since 0.24.0): the map is the split-flap look's, below — the same four maps, the same credit, the same `social map` setting and its `rotate` — with the track, the aircraft, the key and north. Node draws the dots with that column left dark and says where it is; Pillow lays the map there and writes a JPEG under Bluesky's limit. The map is a strip 400 pixels wide and 800 high, so when the aircraft would land under the key, the view is chosen in the part above the key and the credit: an aircraft flying south ends above the key, not under it. With `social map none` the strip shows the track on black over a faint grid, and nothing is fetched.
 
-*Above: a real post from the reference Pi, 20 October 2026 (0.26.1), with the satellite map: TAR954, Tunis to Brussels. When the tiles do not come, the strip shows the track on a dark grid, with no credit.*
+*Above: a real post from the reference Pi, 20 October 2026 (0.27.3), with the light map: RYR5236, Pisa to Brussels, over Metz. Twenty-six names from the region's own list (`social places on`), Pont-à-Mousson, Nomeny and Rémilly filling the south of the map. When the tiles do not come, the strip shows the track on a dark grid, with no credit.*
 
 ### Split-flap with a map
 
