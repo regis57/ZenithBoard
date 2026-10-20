@@ -45,7 +45,7 @@ echo ingest > "$ZB_HOME/acars/acars_ingest.py"; echo run > "$ZB_HOME/bin/run-aca
 # shellcheck source=lib/flightinfo.sh
 . lib/flightinfo.sh
 ZB_BIN_DIR="$t/usrbin"; mkdir -p "$ZB_BIN_DIR"
-deploy_on() { ( BASH_SOURCE_DIR="$src"; cd "$src" && deploy_files ) >/dev/null 2>&1; }
+deploy_on() { ( cd "$src" && deploy_files ) >/dev/null 2>&1; }
 units_dir_has() { [ -f /etc/systemd/system/zenithboard-acars-ingest.service ]; }
 if units_dir_has; then echo "skip keep-files: this machine has an ACARS unit"; else
   deploy_on
