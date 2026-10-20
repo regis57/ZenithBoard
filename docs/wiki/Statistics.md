@@ -37,6 +37,24 @@ At the edge of range the decoder often has an aircraft's positions before its ca
 
 **The daily aircraft count is a floor.** A sample every fifteen minutes misses an aircraft that crossed in less than that. Both the page and the command say so. Sampling more often would catch more of them and write to the SD card more often; fifteen minutes is the same trade the gain log makes.
 
+## graphs1090: years of the decoder's graphs (optional)
+
+The `/stats` page keeps thirty days of what ZenithBoard measures. For the long view of the decoder itself — messages, range, signal and noise, aircraft, CPU, temperature, over days, months and years — there is [graphs1090](https://github.com/wiedehopf/graphs1090), by the author of readsb and tar1090. Off by default (0.32.0):
+
+```
+sudo zenithboard graphs on        # menu 3 Settings -> 2 Receiver -> 6
+zenithboard graphs status
+sudo zenithboard graphs off
+```
+
+**What `on` does.** It checks that a decoder is installed, that lighttpd is there (it comes with the receiver map: tar1090, or FlightAware's SkyAware) and that 64 MB are free in `/run`, then runs graphs1090's own installer, the way readsb is installed. Read in full on 20 October 2026, that installer: installs `collectd-core`, `rrdtool`, `git`, `wget`, `unzip` and `bash-builtins` from apt (signed); copies itself to `/usr/share/graphs1090`; replaces `/etc/collectd/collectd.conf` (keeping the old one as `collectd.conf.graphs1090`); adds two lighttpd files, `/graphs1090` on port 80 and its own port **8542**; and keeps the graphs' data in memory, in `/run/collectd`, writing it to the card **once a day at 23:42** and at shutdown — so unplugging the Pi without `sudo shutdown now` loses up to a day of graphs. It also changes one line of Flightradar24's updater script when that is installed (a fix its author ships for a read-only remount). ZenithBoard notes which packages were not there before, in `/etc/zenithboard/graphs1090.state`.
+
+**What `off` does.** It runs graphs1090's uninstaller, which stops collectd (writing the graphs to the card) and puts the old collectd settings back; then removes what that uninstaller leaves behind (the two lighttpd files, its unit, `/etc/default/graphs1090`, its cron line) and restarts lighttpd; then removes the packages `on` added, and only those. apt is asked first: if something installed since needs one of them, they all stay and `off` says so. They are removed, never purged — Debian's purge of `collectd-core` deletes `/var/lib/collectd`, the history — so the history stays on the card for a later `on`, and `off` gives the command to delete it.
+
+`sudo zenithboard update` runs graphs1090's installer again while it is on (it stops at once when nothing changed), and *Uninstall everything* turns it off. `zenithboard security` names port 8542; like the receiver map, lighttpd answers anyone who reaches it.
+
+**Not yet run on the reference Pi.** The installer was read, not run, in the session that wrote this: what it costs on a Pi 3B (memory for collectd, the size in `/run`) is for `zenithboard graphs status` to say, and the field log to keep.
+
 ## The page
 
 Four numbers for today — aircraft, messages with the busiest hour, the farthest aircraft, the best distance of the thirty days — then two lines naming the farthest aircraft of today and of the thirty days, then the charts: messages per hour over the last twenty-four hours, the farthest aircraft per day, aircraft per day, and four more since 0.31.0:

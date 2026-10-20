@@ -21,6 +21,8 @@ HERE="$(dirname "$(readlink -f "$0")")"
 . "$HERE/../lib/security.sh"
 # shellcheck source=lib/stats.sh
 . "$HERE/../lib/stats.sh"
+# shellcheck source=lib/graphs.sh
+. "$HERE/../lib/graphs.sh"
 # shellcheck source=lib/social.sh
 . "$HERE/../lib/social.sh"
 # shellcheck source=lib/gain.sh
@@ -77,6 +79,7 @@ ZenithBoard $ZB_VERSION - ADSB Flight Info
   zenithboard stats on|off|status       collect a sample every 15 minutes (off by default; the page is /stats)
   zenithboard stats csv|clear           the raw samples / empty them
   zenithboard stats gaps                callsigns shown without an airline, types drawn with the generic silhouette (30 days)
+  zenithboard graphs on|off|status      graphs1090: years of the decoder's graphs on port 8542 (off by default)
   zenithboard settings export [FILE]    your settings as one file (no secrets), to keep or to move to another Pi
   zenithboard settings import FILE      put them on this Pi (the ones from before are kept in a .bak file)
   zenithboard preset list|add|del       a name for a tablet's own choices: ?p=NAME in its address (add NAME theme=green mode=flap ...)
@@ -143,6 +146,7 @@ cmd_status() {
   if is_region_us || is_uat978; then show_state "978 MHz UAT (dump978-fa)" is_uat978 dump978-fa; fi
   echo "Displays:"
   show_state "FlightInfo wall" is_flightinfo zenithboard-flightinfo
+  if is_graphs; then show_state "graphs1090 (port $GRAPHS_PORT)" true graphs1090; fi
   local n; n=$(mlat_count)
   if [ "${n:-0}" -le 1 ]; then echo "MLAT clients running: ${n:-0}  ${C_G}(OK: max 1)${C_0}"; else echo "MLAT clients running: $n  ${C_R}(too many! run: sudo zenithboard mlat-guard)${C_0}"; fi
   local j; j=$(decoder_json)
@@ -280,6 +284,13 @@ case "${1:-}" in
       gaps)   stats_gaps ;;
       clear)  root_or_die; stats_clear ;;
       *) die "Usage: zenithboard stats [on|off|status|csv|gaps|clear]" ;;
+    esac ;;
+  graphs|graphs1090)
+    case "${2:-status}" in
+      on)     root_or_die; graphs_on ;;
+      off)    root_or_die; graphs_off ;;
+      status) graphs_status ;;
+      *) die "Usage: zenithboard graphs on|off|status" ;;
     esac ;;
   social)
     case "${2:-status}" in

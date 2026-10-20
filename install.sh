@@ -20,6 +20,8 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$ROOT/lib/security.sh"
 # shellcheck source=lib/stats.sh
 . "$ROOT/lib/stats.sh"
+# shellcheck source=lib/graphs.sh
+. "$ROOT/lib/graphs.sh"
 # shellcheck source=lib/social.sh
 . "$ROOT/lib/social.sh"
 . "$ROOT/lib/uat.sh"
@@ -153,6 +155,7 @@ settings_receiver_menu() {
       location "3  Antenna position (updates it everywhere)" \
       gain "4  Gain: check it and tune the dongle's sensitivity" \
       stats "5  Statistics: messages per hour, farthest aircraft, aircraft per day ($(stats_state))" \
+      graphs "6  graphs1090: years of the decoder's graphs, on port 8542 ($(graphs_state))" \
       back "Return to the previous menu") || return 0
     case "$c" in
       region) settings_region && wt_msg "Region saved: $(cfg_get REGION world).\n\nIn menu 1 ADSB the 978 MHz UAT option appears for the United States." 10 ;;
@@ -162,7 +165,13 @@ settings_receiver_menu() {
         if [ "$(stats_state)" = on ]; then
           if wt_yesno "Statistics are ON: a sample every 15 minutes, 30 days kept, readable at http://$(local_ip):$(cfg_get PORT 8080)/stats and with 'zenithboard stats'.\n\nTurn them OFF? (the files are kept)" 12; then clear; stats_off; read -rp "Press Enter to continue..." _; fi
         else
-          if wt_yesno "Collect statistics?\n\nEvery 15 minutes: messages, the farthest aircraft, how many aircraft had a position, and which aircraft were seen. About 6 KB a day on the card, 30 days kept. Read them at http://$(local_ip):$(cfg_get PORT 8080)/stats or with 'zenithboard stats'. Off again at any time." 14; then clear; stats_on; read -rp "Press Enter to continue..." _; fi
+          if wt_yesno "Collect statistics?\n\nEvery 15 minutes: messages, the farthest aircraft, how many aircraft had a position, and which aircraft were seen. Since 0.31.0 also the airlines, types and altitudes seen. About 30 KB a day on the card, 30 days kept. Read them at http://$(local_ip):$(cfg_get PORT 8080)/stats or with 'zenithboard stats'. Off again at any time." 14; then clear; stats_on; read -rp "Press Enter to continue..." _; fi
+        fi ;;
+      graphs)
+        if is_graphs; then
+          if wt_yesno "graphs1090 is ON: http://$(local_ip):$GRAPHS_PORT/\n\nTurn it OFF? Its packages that were not there before go; its history stays on the card for a later 'on'." 12; then clear; graphs_off; read -rp "Press Enter to continue..." _; fi
+        else
+          if wt_yesno "Install graphs1090?\n\nwiedehopf's graphs of the receiver: messages, range, signal, aircraft, CPU and temperature, kept for years, on port $GRAPHS_PORT (and /graphs1090 on the map's port 80). Installed by its author's script: collectd and rrdtool from apt, its files from GitHub. Needs the receiver map's lighttpd.\n\nIts graphs live in memory and go to the card once a day and at shutdown. Off again at any time." 17; then clear; graphs_on; read -rp "Press Enter to continue..." _; fi
         fi ;;
       location)
         if settings_location; then
@@ -256,7 +265,7 @@ settings_menu() {
 # the menu review of 0.21.0) must not take a working receiver down. Your settings are offered as a file first.
 uninstall_all() {
   local word
-  wt_yesno "UNINSTALL EVERYTHING?\n\nThis removes FlightInfo, all feeders and the decoder installed through this menu (and ACARS / Grafana if an older ZenithBoard installed them).\n\nFirst, keep your settings as a file? (Maintenance -> Save settings, or: zenithboard settings export)" 14 || return 0
+  wt_yesno "UNINSTALL EVERYTHING?\n\nThis removes FlightInfo, all feeders, graphs1090 and the decoder installed through this menu (and ACARS / Grafana if an older ZenithBoard installed them).\n\nFirst, keep your settings as a file? (Maintenance -> Save settings, or: zenithboard settings export)" 14 || return 0
   word=$(wt_input "To go on, type the word  uninstall  (anything else cancels)." "") || return 0
   [ "$word" = uninstall ] || { wt_msg "Not uninstalled: nothing was changed." 7; return 0; }
   clear
@@ -267,6 +276,7 @@ uninstall_all() {
   gain_log_remove_units
   stats_remove_units
   [ -z "$(acars_leftovers)" ] || acars_remove --yes
+  if is_graphs || [ -f "$GRAPHS_STATE" ]; then graphs_off; fi
   is_flightinfo && remove_flightinfo
   is_planefinder && remove_planefinder
   is_fr24 && remove_fr24

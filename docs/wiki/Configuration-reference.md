@@ -68,6 +68,7 @@ The dynamic-DNS **token is not stored here.** It is asked for interactively and 
 | `WIFI_HARDEN` | `0` | `zenithboard wifi harden on\|off` | The two Wi-Fi profile settings above are applied. `WIFI_HARDEN_PREV` keeps what they were, for `off` |
 | `PRESET_NAME` | — | `zenithboard preset add\|del` | A tablet preset, e.g. `PRESET_KITCHEN="theme=green mode=flap"`; `?p=kitchen` applies it. Comes along in `settings export` |
 | `STATS` | `0` | `zenithboard stats on\|off` | A sample every 15 minutes for the `/stats` page and `zenithboard stats`. See [Statistics](Statistics) |
+| `GRAPHS1090` | `0` | `zenithboard graphs on\|off` | Whether graphs1090 was turned on (0.32.0). What `on` found, to put it back, is in `/etc/zenithboard/graphs1090.state`. See [Statistics](Statistics#graphs1090-years-of-the-decoders-graphs-optional) |
 | `SOCIAL` | `0` | `zenithboard social on\|off` | Post the aircraft overhead to Bluesky. See [Social sharing](Social-sharing). The account's secret is in `social.env`, not here |
 | `SOCIAL_RADIUS_KM` | `15` | `zenithboard social words` | An aircraft is a candidate while inside it. Separate from `RADIUS` |
 | `SOCIAL_AREA` | empty | same | The place named in the posts, in your words: a town name (`Trémery`) reads *above Trémery*, a phrase (`near Metz`) is kept. Never derived from the position |

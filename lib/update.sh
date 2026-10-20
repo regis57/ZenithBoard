@@ -168,7 +168,7 @@ _zb_sync_source() {
 }
 
 # Components that can be updated one by one (the name is what `zenithboard update only NAME...` and the menu use).
-ZB_COMPONENTS="zenithboard readsb dump1090 adsbx piaware fr24 planefinder flightinfo"
+ZB_COMPONENTS="zenithboard readsb dump1090 adsbx piaware fr24 planefinder flightinfo graphs1090"
 zb_component_label() {
   case "$1" in
     zenithboard) echo "ZenithBoard itself (installer, menu, wall code)" ;;
@@ -179,13 +179,14 @@ zb_component_label() {
     fr24) echo "Flightradar24 (fr24feed)" ;;
     planefinder) echo "Plane Finder" ;;
     flightinfo) echo "FlightInfo wall + aircraft data" ;;
+    graphs1090) echo "graphs1090 (the decoder's graphs)" ;;
   esac
 }
 zb_component_installed() {
   case "$1" in
     zenithboard) return 0 ;;
     readsb) is_readsb ;; dump1090) is_dump1090 ;; adsbx) is_adsbx ;; piaware) is_piaware ;;
-    fr24) is_fr24 ;; planefinder) is_planefinder ;; flightinfo) is_flightinfo ;;
+    fr24) is_fr24 ;; planefinder) is_planefinder ;; flightinfo) is_flightinfo ;; graphs1090) is_graphs ;;
     *) return 1 ;;
   esac
 }
@@ -197,6 +198,7 @@ zb_component_version() {   # a short version when it is cheap to know, else noth
     dump1090) v=$(dpkg-query -W -f='${Version}' dump1090-fa 2>/dev/null) ;;
     piaware) v=$(dpkg-query -W -f='${Version}' piaware 2>/dev/null) ;;
     fr24) v=$(dpkg-query -W -f='${Version}' fr24feed 2>/dev/null) ;;
+    graphs1090) v=$(graphs_version) ;;
   esac
   printf '%s' "$v"
 }
@@ -270,6 +272,7 @@ zb_update_components() {
     data_refresh_apply
     [ "$(cfg_get AUTO_DATA_REFRESH 1)" != 1 ] || data_refresh_now || warn "aircraft data refresh failed (kept the previous data)"
   fi
+  if want_c graphs1090 && is_graphs; then log "graphs1090"; graphs_update; fi
   acars_notice      # 0.30.0: ACARS and Grafana left by an older version are said, never removed by an update
 
   zb_refresh_units
