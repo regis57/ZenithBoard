@@ -9,12 +9,13 @@ The board's rows come from the wall's own formatting (tools/social-render.js --l
 the tablet; this file only paints them. The map comes from EOX's tile service (maps.eox.at), whose layers are
 "free to use" with a link back and the attribution, both of which every picture and every post carry:
 
-    normal     OpenStreetMap, rendered by EOX
-    night      the same, darkened here (inverted, hue turned back, dimmed)
+    normal     EOX's light relief (OpenStreetMap and others) with EOX's roads, tinted here (0.26.1)
+    night      the same, darkened here (inverted, hue turned back, dimmed), the roads left white
     satellite  Sentinel-2 cloudless (EOX, CC BY-NC-SA 4.0: non-commercial)
     terrain    EOX's terrain rendering (OpenStreetMap and elevation data)
 
-All four name the towns themselves, from GeoNames (0.24.4; the OpenStreetMap two since 0.25.3), over the track.
+All four name the towns themselves, from GeoNames (0.24.4; the light and dark ones since 0.25.3), over the track,
+and none carries names of its own (0.26.1), so no town is named twice.
     none       no map: the track on black
 
 OpenStreetMap's own tile servers are not used: their policy rules out automated fetching that no one is looking
@@ -56,14 +57,18 @@ GEONAMES_LINK = ("GeoNames", "https://www.geonames.org/")
 PLACES_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "places5000.tsv.gz")
 MAX_NAMES = 26                               # the towns named on a map, the largest first, none over another (0.25.2: 16 before)
 MAP_STYLES = {
-    # 0.25.3: the two OpenStreetMap maps name the towns as the terrain and satellite ones do: OSM's own labels, drawn
-    # for a screen, shrink to an unreadable grey once the map is reduced to the post's size (seen on the real posts)
-    "normal": {"layers": [("osm_3857", "jpg")], "names": "dark", "words": "an OpenStreetMap map",
+    # 0.26.1: the light and dark maps are built from two EOX layers that carry no names, the light relief and the
+    # roads, under the names ZenithBoard draws. 0.25.3 drew those names over EOX's OpenStreetMap layer, whose own
+    # labels stayed underneath: every town twice, a few pixels apart (seen on the real posts, EWG8QR over Nancy).
+    # EOX has no OpenStreetMap layer without its labels. The roads layer is white; the light map tints it.
+    "normal": {"layers": [("terrain-light_3857", "jpg"), ("streets_3857", "png")], "roads": (214, 140, 60),
+               "names": "dark", "words": "a light relief map with the main roads",
                "credit": "Map \u00a9 OpenStreetMap, EOX, GeoNames", "links": [OSM_LINK, EOX_LINK, GEONAMES_LINK],
-               "credit_full": "\u00a9 OpenStreetMap contributors, rendering \u00a9 EOX (maps.eox.at); place names: GeoNames (CC BY 4.0)"},
-    "night": {"layers": [("osm_3857", "jpg")], "night": True, "names": "light", "words": "a darkened OpenStreetMap map",
+               "credit_full": "\u00a9 OpenStreetMap contributors and others, rendering \u00a9 EOX (maps.eox.at); place names: GeoNames (CC BY 4.0)"},
+    "night": {"layers": [("terrain-light_3857", "jpg"), ("streets_3857", "png")], "night": True,
+              "names": "light", "words": "a dark relief map with the main roads",
               "credit": "Map \u00a9 OpenStreetMap, EOX, GeoNames", "links": [OSM_LINK, EOX_LINK, GEONAMES_LINK],
-              "credit_full": "\u00a9 OpenStreetMap contributors, rendering \u00a9 EOX (maps.eox.at); place names: GeoNames (CC BY 4.0)"},
+              "credit_full": "\u00a9 OpenStreetMap contributors and others, rendering \u00a9 EOX (maps.eox.at); place names: GeoNames (CC BY 4.0)"},
     # 0.24.4: the terrain and satellite maps name the towns themselves (from GeoNames, "names"), in place of EOX's label
     # layer, which named one village in forty kilometres on a real post over Metz
     "terrain": {"layers": [("terrain_3857", "jpg")], "names": "dark", "words": "a terrain map",
@@ -271,6 +276,15 @@ def darken(tile):
     return ImageEnhance.Brightness(Image.merge("HSV", (h, s, v)).convert("RGB")).enhance(0.85)
 
 
+def tint(tile, color):
+    """EOX's roads layer, white roads with a grey edge, in a colour for the light map: each pixel keeps its share of
+    light, so the edge stays darker than the road (0.26.1)."""
+    a = tile.getchannel("A")
+    lum = tile.convert("L")
+    bands = [lum.point(lambda v, c=c: int(c * (0.55 + 0.45 * v / 255))) for c in color]
+    return Image.merge("RGBA", bands + [a])
+
+
 PLANE = [(0, -1.0), (0.09, -0.86), (0.10, -0.28), (0.96, 0.14), (0.96, 0.28), (0.10, 0.10), (0.08, 0.60),
          (0.38, 0.82), (0.38, 0.94), (0.0, 0.86), (-0.38, 0.94), (-0.38, 0.82), (-0.08, 0.60), (-0.10, 0.10),
          (-0.96, 0.28), (-0.96, 0.14), (-0.10, -0.28), (-0.09, -0.86)]   # a generic airliner from above, nose up
@@ -412,6 +426,8 @@ def draw_map(trace, plane, color, units="metric", mode="normal", cache_dir=None,
                 at = (tx * 256 - ox, ty * 256 - oy)
                 if ext == "png":
                     tile = tile.convert("RGBA")
+                    if style.get("roads"):
+                        tile = tint(tile, style["roads"])
                     img.paste(tile, at, tile)
                 else:
                     tile = darken(tile) if style.get("night") else tile.convert("RGB")
