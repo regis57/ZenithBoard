@@ -160,7 +160,7 @@ class MapTests(unittest.TestCase):
     def test_names_along_the_track_first(self):
         # 0.28.0, RYR5ZK (Brussels → Pisa): a dozen towns in the north of the map, far from the track. Places away
         # from the track are named only when the track's surroundings give fewer than three.
-        rows = [("Northcity", 49.80, 6.40, 500000), ("Alongone", 49.30, 6.42, 8000), ("Alongtwo", 49.10, 6.45, 6000),
+        rows = [("Northcity", 49.10, 6.30, 500000), ("Alongone", 49.30, 6.42, 8000), ("Alongtwo", 49.10, 6.45, 6000),
                 ("Alongthree", 48.95, 6.47, 5500), ("Lonely", 48.60, 6.10, 2000)]
         path = os.path.join(self.d, "along.tsv.gz")
         mlp.write(rows, path, 49.2, 6.4, 200, ["FR"])
