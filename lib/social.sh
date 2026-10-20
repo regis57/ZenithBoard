@@ -245,6 +245,35 @@ social_set_photolink() {
     echo "Photo link: OFF. Posts carry no link to a photo."
   fi
 }
+# 0.27.0: the town names of the maps from the region's own list, made here from GeoNames' country files: every
+# populated place within 400 km, ranked by population or, where GeoNames knows none, by rank (capital, province seat,
+# district seat, village). The shipped lists name the places whose population GeoNames knows: a map over a region
+# where it knows few (Indonesia) was left almost bare. Off by default; on downloads the files once (about 20 MB
+# around Metz) and keeps a few hundred kilobytes; on again makes it again; off deletes it.
+SOCIAL_PLACES_FILE="places-local.tsv.gz"
+social_set_places() {
+  local f="$SOCIAL_DIR/$SOCIAL_PLACES_FILE" lat lon
+  case "${1:-}" in
+    on)
+      lat=$(cfg_get LAT 0); lon=$(cfg_get LON 0)
+      if [ "$lat" = 0 ] && [ "$lon" = 0 ]; then echo "Set the antenna's position first (sudo zenithboard location LAT LON)."; return 1; fi
+      social_prepare_dir || return 1
+      echo "Making the region's list of places from GeoNames (the country files around this Pi; a few minutes on a Pi 3B)..."
+      python3 "$ZB_HOME/tools/make_local_places.py" "$lat" "$lon" "$f" "$(cfg_get SOCIAL_PLACES_KM 400)" || return 1
+      chown "$ZB_USER:$ZB_USER" "$f" 2>/dev/null || true
+      cfg_set SOCIAL_PLACES 1 ;;
+    off)
+      cfg_set SOCIAL_PLACES 0; rm -f "$f" ;;
+    "") ;;
+    *) echo "Town names: on (make the region's list, or make it again) or off (back to the shipped lists)"; return 1 ;;
+  esac
+  [ -z "${1:-}" ] || systemctl try-restart "$SOCIAL_UNIT.service" 2>/dev/null || true
+  if [ "$(cfg_get SOCIAL_PLACES 0)" = 1 ] && [ -f "$f" ]; then
+    echo "Town names: the region's own list ($f). Make it again after moving the antenna: sudo zenithboard social places on. Back to the shipped lists: sudo zenithboard social places off"
+  else
+    echo "Town names: the lists shipped with ZenithBoard (towns of 5 000 or more, villages when a map is short). The region's own list: sudo zenithboard social places on"
+  fi
+}
 social_set_map() {
   social_valid_in "${1:-}" $SOCIAL_MAPS || { echo "Map: $SOCIAL_MAPS (rotate: the four maps in turn)"; return 1; }
   cfg_set SOCIAL_MAP "$1"
@@ -332,17 +361,24 @@ social_menu() {
       words "2  Words and rules: place name, radius, gap, what is worth a post" \
       picture "3  The picture: dot-matrix or split-flap, colour, map" \
       photolink "4  Link to the Planespotters photo page: $( [ "$(cfg_get SOCIAL_PHOTOLINK 0)" = 1 ] && echo ON || echo OFF )" \
-      test "5  Try it: draw the picture and show the text, post nothing" \
-      toggle "6  Switch sharing $( [ "$(social_state)" = on ] && echo OFF || echo ON )" \
-      post "7  Post now, once" \
-      status "8  Status" \
-      remove "9  Remove: account, state and service" \
+      places "5  Town names from the region's own list (GeoNames, downloaded once): $( [ "$(cfg_get SOCIAL_PLACES 0)" = 1 ] && echo ON || echo OFF )" \
+      test "6  Try it: draw the picture and show the text, post nothing" \
+      toggle "7  Switch sharing $( [ "$(social_state)" = on ] && echo OFF || echo ON )" \
+      post "8  Post now, once" \
+      status "9  Status" \
+      remove "10 Remove: account, state and service" \
       back "Return to the previous menu") || return 0
     case "$c" in
       setup) social_setup || true ;;
       words) social_setup_words && wt_msg "Saved." 7 || true ;;
       picture) social_setup_picture || true ;;
       photolink) social_set_photolink "$( [ "$(cfg_get SOCIAL_PHOTOLINK 0)" = 1 ] && echo off || echo on )" >/dev/null; wt_msg "$(social_set_photolink)" 10 ;;
+      places)
+        if [ "$(cfg_get SOCIAL_PLACES 0)" = 1 ]; then
+          wt_yesno "Town names come from the region's own list.\n\nGo back to the lists shipped with ZenithBoard (and delete the region's list)?" 10 && social_set_places off >/dev/null
+        elif wt_yesno "Name the towns on the maps from the region's own list?\n\nThe Pi downloads GeoNames' files of the countries within 400 km (about 20 MB around Metz, once) and keeps every populated place, ranked by population or, where it is unknown, by rank (capital, province seat, village). Useful where the shipped lists know few towns. Nothing about this Pi is sent." 14; then
+          clear; social_set_places on; read -rp "Press Enter to continue..." _
+        fi ;;
       test) clear; social_need_tools && social_prepare_dir && sudo -u "$ZB_USER" python3 "$SOCIAL_PY" test; read -rp "Press Enter to continue..." _ ;;
       toggle) clear; if [ "$(social_state)" = on ]; then social_off; else social_on; fi; read -rp "Press Enter to continue..." _ ;;
       post) clear; social_need_tools && social_prepare_dir && sudo -u "$ZB_USER" python3 "$SOCIAL_PY" post; read -rp "Press Enter to continue..." _ ;;

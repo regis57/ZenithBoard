@@ -60,6 +60,11 @@ PLACES_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "
 # all: every town of 5 000 there is in the valley, a few kilometres beyond the map's edge.
 SMALL_PLACES_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "places1000.tsv.gz")
 MIN_NAMES = 3
+# 0.27.0: the region's own list, made on the Pi from GeoNames' country files (tools/make_local_places.py, `social
+# places on`): every populated place within 400 km, weighted by population or, where GeoNames knows none (almost every
+# village in Indonesia), by its rank. social.py sets the path when the owner switched it on; None: the shipped lists.
+LOCAL_PLACES_FILE = None
+TIERS = (5000, 1000, 0)                      # weights a map goes down through until it names MIN_NAMES places
 MAX_NAMES = 26                               # the towns named on a map, the largest first, none over another (0.25.2: 16 before)
 MAP_STYLES = {
     # 0.26.1: the light and dark maps are built from two EOX layers that carry no names, the light relief and the
@@ -375,6 +380,38 @@ def _small_places(lat0, lat1, lon0, lon1):
     return out
 
 
+def _local_places(lat0, lat1, lon0, lon1):
+    """[(name, lat, lon, weight)] of the region's list inside the box, or None when there is no such list or the box
+    is not inside the area it covers (a farthest aircraft beyond it): the shipped lists are used then."""
+    if not LOCAL_PLACES_FILE:
+        return None
+    out = []
+    try:
+        with gzip.open(LOCAL_PLACES_FILE, "rt", encoding="utf-8") as fh:
+            for line in fh:
+                if line.startswith("# centre "):
+                    clat, clon, reach = (float(v) for v in line.split()[2:5])
+                    for la, lo in ((lat0, lon0), (lat0, lon1), (lat1, lon0), (lat1, lon1)):
+                        if _km(clat, clon, la, lo) > reach:
+                            return None
+                    continue
+                if line.startswith("#"):
+                    continue
+                n, la, lo, wt = line.rstrip("\n").split("\t")
+                la, lo = float(la), float(lo)
+                if lat0 <= la <= lat1 and lon0 <= lo <= lon1:
+                    out.append((n, la, lo, int(wt)))
+    except (OSError, ValueError):
+        return None                              # unreadable: the shipped lists, as before
+    return out
+
+
+def _km(la1, lo1, la2, lo2):
+    la1, lo1, la2, lo2 = map(math.radians, (la1, lo1, la2, lo2))
+    h = math.sin((la2 - la1) / 2) ** 2 + math.cos(la1) * math.cos(la2) * math.sin((lo2 - lo1) / 2) ** 2
+    return 2 * 6371.0088 * math.asin(min(1.0, math.sqrt(h)))
+
+
 def _lat_of(py, z):
     """The latitude of a row of pixels of the world at zoom z (the inverse of world_px)."""
     n = 256.0 * (2 ** z)
@@ -383,7 +420,8 @@ def _lat_of(py, z):
 
 def _draw_names(img, z, ox, oy, w, h, band, tone, plane_at=None):
     """The towns inside the map, the largest first, each with a dot and its name on a halo; never over another name,
-    the north box or the legend and credit band. A map with fewer than MIN_NAMES of them takes villages too (0.26.2)."""
+    the north box or the legend and credit band. A map with fewer than MIN_NAMES of them takes villages too (0.26.2).
+    With the region's own list (0.27.0), the same, by weight: towns, then villages, then any populated place."""
     d = ImageDraw.Draw(img)
     fnt = font(13)                                # 0.25.2, from the owner: smaller names, more of them (16 before)
     fill, halo = ((255, 255, 255), (0, 0, 0)) if tone == "light" else ((30, 30, 30), (255, 255, 255))
@@ -412,9 +450,18 @@ def _draw_names(img, z, ox, oy, w, h, band, tone, plane_at=None):
             d.text((tx, y), name, font=fnt, fill=fill, anchor="lm", stroke_width=2, stroke_fill=halo)
             shown[0] += 1
 
+    lat0, lat1 = _lat_of(oy + h, z), _lat_of(oy, z)
+    lon1 = lon0 + 360.0 * w / (256.0 * 2 ** z)
+    local = _local_places(lat0, lat1, lon0, lon1)
+    if local is not None:                         # 0.27.0: the region's list, the heaviest first, down the tiers
+        for tier in TIERS:
+            name_all([p for p in local if p[3] >= tier])
+            if shown[0] >= MIN_NAMES:
+                break
+        return shown[0]
     name_all([p for p in places() if lon0 - 0.5 <= p[2] <= lon0 + deg])
     if shown[0] < MIN_NAMES:
-        name_all(_small_places(_lat_of(oy + h, z), _lat_of(oy, z), lon0, lon0 + 360.0 * w / (256.0 * 2 ** z)))
+        name_all(_small_places(lat0, lat1, lon0, lon1))
     return shown[0]
 
 
