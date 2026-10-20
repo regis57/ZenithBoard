@@ -248,7 +248,7 @@ social_set_photolink() {
 # 0.27.0: the town names of the maps from the region's own list, made here from GeoNames' country files: every
 # populated place within 400 km, ranked by population or, where GeoNames knows none, by rank (capital, province seat,
 # district seat, village). The shipped lists name the places whose population GeoNames knows: a map over a region
-# where it knows few (Indonesia) was left almost bare. Off by default; on downloads the files once (about 20 MB
+# where it knows few (Indonesia) was left almost bare. Off by default; on downloads the files once (about 24 MB
 # around Metz) and keeps a few hundred kilobytes; on again makes it again; off deletes it.
 SOCIAL_PLACES_FILE="places-local.tsv.gz"
 social_set_places() {
@@ -376,7 +376,7 @@ social_menu() {
       places)
         if [ "$(cfg_get SOCIAL_PLACES 0)" = 1 ]; then
           wt_yesno "Town names come from the region's own list.\n\nGo back to the lists shipped with ZenithBoard (and delete the region's list)?" 10 && social_set_places off >/dev/null
-        elif wt_yesno "Name the towns on the maps from the region's own list?\n\nThe Pi downloads GeoNames' files of the countries within 400 km (about 20 MB around Metz, once) and keeps every populated place, ranked by population or, where it is unknown, by rank (capital, province seat, village). Useful where the shipped lists know few towns. Nothing about this Pi is sent." 14; then
+        elif wt_yesno "Name the towns on the maps from the region's own list?\n\nThe Pi downloads GeoNames' files of the countries within 400 km (about 24 MB around Metz, once) and keeps every populated place, ranked by population or, where it is unknown, by rank (capital, province seat, village). Useful where the shipped lists know few towns. Nothing about this Pi is sent." 14; then
           clear; social_set_places on; read -rp "Press Enter to continue..." _
         fi ;;
       test) clear; social_need_tools && social_prepare_dir && sudo -u "$ZB_USER" python3 "$SOCIAL_PY" test; read -rp "Press Enter to continue..." _ ;;

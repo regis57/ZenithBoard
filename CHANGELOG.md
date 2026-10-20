@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.27.2
+- `social places on` downloads only the countries with a place of 500 or more within 400 km, measured place by place (GeoNames' cities500, rounded to a tenth of a degree, `flightinfo/data/country-cells.json.gz`, 300 KB). It went by one-degree cells with an 80 km margin, and the reference Pi downloaded the Czech and British files (5.2 MB) for no place within reach: the nearest British place of 500, Deal, is 408 km away. Around Metz: nine files, 24 MB.
+
 ## 0.27.1
 - The region's list of places (`social places on`) is readable by its owner only, the service (0600, was 0644): its first lines give the centre of the area, the receiver's position. Found by CodeQL on 0.27.0.
 
