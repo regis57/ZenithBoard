@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **21 October 2026**, version **0.38.0**.
+Last updated: **21 October 2026**, version **0.39.0**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -47,6 +47,7 @@ Treat these as likely-working rather than known-working, and please report what 
 | graphs1090 (0.32.0, optional) | Its author's installer was read in full and `on`/`off` tested against stand-ins; never run on a Pi |
 | The summaries posted by the service (0.33.0–0.38.0) | `weekly test` ran on the Pi; no scheduled post has gone out yet. The daily and thirty-day summaries and the queue shared by all of them (0.38.0) are tested with a simulated clock only. The first weekly post is due on Sunday 25 October 19:00 if switched on; the airline lists cover a whole week from 1 November |
 | Posts 2 to 4 and the page's lists with real data over weeks | Cargo by callsign prefix (40 operators checked against published sources), military by database mark and address block, countries by ICAO address block: checked on made-up and tar1090-db data; a month of the real sky is still to come |
+| The web console (0.39.0, a test) | Previewed at desktop and phone width against a stand-in `zenithboard`; requests, sessions, pairing and the root helper unit-tested. The `.path` unit, the helper as root, an update run from the page and pairing a real iPhone are still to be done on the Pi |
 | The page's last 24 hours (0.37.0) | Their lists need the last-seen column written since 0.37.0: complete from a day after the update |
 
 ## Known rough edges
@@ -62,6 +63,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 21 October 2026, 01:06 | The owner asked for a web console to try, removable if it does not satisfy, "right the first time": a wizard, ZenithBoard's look, a password or Face ID / a QR code on his iPhone ("careful with the black background"), a phone layout, a menu with no endless scrolling, links to the pages that exist or will. 0.39.0, built while he slept. Face ID / passkeys are not possible over plain HTTP at a home address (WebAuthn needs HTTPS under a domain); a one-time QR code, dark on white, signs the phone in instead |
 | 21 October 2026, 00:56 | End of the evening: 0.31.0 to 0.38.0 shipped in one night (statistics, graphs1090, the summaries and their four posts, real flags, the page's new look and toggle, `health` and `memory`). The owner asked for the Roadmap and this page to say where things stand: Plane Finder moves to *proven*, the summaries and graphs1090 join *Now*, and a web console is written down as a proposal, not started |
 | 21 October 2026, 00:25 | The owner liked the page ("so zenithboard") and asked for the countries column aligned with the other two and named *most registered in*; and for summaries every 24 hours, 7 days and 30 days, each at a chosen day and time, with the posts picked, and what two at the same time would do. 0.38.0; previewed on made-up statistics |
 | 20 October 2026, 23:58 | `sudo zenithboard memory` again: 155 MB for all the services after the evening's restarts (social 22 MB, Plane Finder 19, the wall 19), 653 MB available; `/social/preview2`–`4` now say why they have no picture. The owner shared ZenithBoard's banners (the name in amber dots, the split-flap *OVERHEAD NOW*) and asked for the statistics page in that look, with a 24 h / 7 days / 30 days toggle that every chart follows except the sky by hour, and the weekly posts' lists on it, provided it does not overload the Pi: 0.37.0. Previewed at desk and phone width on made-up statistics |

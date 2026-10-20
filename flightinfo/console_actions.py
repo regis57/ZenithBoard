@@ -1,0 +1,186 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+"""What the web console (0.39.0) may ask the Pi to do: one fixed list, read by both sides.
+
+The wall's server runs as the unprivileged `zenithboard` user and cannot change anything itself. When a signed-in
+browser asks for a change, the server checks it against this list and drops a small job file in a spool folder; a
+root helper started by systemd (tools/console_run.py) reads the file, checks it against this same list again, and
+runs the one `zenithboard` command it describes, as an argument list: never through a shell, never a command that is
+not written below. A value is only ever one of the values listed, a number in its range, or text matching its pattern.
+
+Left out on purpose, and done over SSH: uninstalling, Wi-Fi on/off/connect/forget/country and fixed addresses (one
+mistake cuts the Pi off the network the console is reached through), anything asking for a password, token or key
+(the Bluesky account, the domain name), posting to Bluesky, emptying statistics or logs, importing settings,
+`config-set` (any key, any value), and the old ACARS removal.
+"""
+import re
+
+HHMM = r"([01]?[0-9]|2[0-3]):[0-5][0-9]"
+ON_OFF = ("on", "off")
+THEMES = ("amber", "green", "red", "white", "turquoise")
+PERIODS = ("daily", "weekly", "monthly")
+
+SECTIONS = (
+    ("overview", "Overview"),
+    ("wall", "Wall"),
+    ("receiver", "Receiver"),
+    ("sharing", "Sharing"),
+    ("reliability", "Reliability"),
+    ("system", "System"),
+)
+
+# name: section, label, argv after `zenithboard` ({param} is replaced by its checked value; {param*} is split on
+# spaces), params as (name, kind, choices or range or pattern, optional), and how the page should treat it:
+#   read  -- only looks (status, health...): no confirmation, output shown
+#   long  -- may take minutes (updates, installers): said before it starts
+#   wall  -- restarts the wall's server, so the page reconnects by itself
+#   ask   -- the page asks "are you sure" first
+ACTIONS = {
+    # -- the wall
+    "units":        ("wall", "Units", ["units", "{value}"], [("value", "enum", ("metric", "imperial"))], "wall"),
+    "radius":       ("wall", "Detection radius", ["radius", "{value}"], [("value", "enum", ("1", "2", "5", "10", "15", "30", "50"))], "wall"),
+    "color":        ("wall", "Colour", ["color", "{value}"], [("value", "enum", THEMES)], "wall"),
+    "mode":         ("wall", "Look", ["mode", "{value}"], [("value", "enum", ("dots", "flap"))], "wall"),
+    "cycle":        ("wall", "Seconds per aircraft", ["cycle", "{value}"], [("value", "int", (2, 60))], "wall"),
+    "photos":       ("wall", "Aircraft photos", ["photos", "{value}"], [("value", "enum", ON_OFF)], "wall"),
+    "routes":       ("wall", "Flight routes", ["routes", "{value}"], [("value", "enum", ON_OFF)], "wall"),
+    "localdb":      ("wall", "Receiver map's aircraft database", ["data", "localdb", "{value}"], [("value", "enum", ON_OFF)], "wall"),
+    "data-auto":    ("wall", "Monthly aircraft-data refresh", ["data", "auto", "{value}"], [("value", "enum", ON_OFF)], ""),
+    "data-update":  ("wall", "Refresh the aircraft data now", ["data", "update"], [], "long"),
+    "data-status":  ("wall", "Aircraft data", ["data", "status"], [], "read"),
+    "presets":      ("wall", "Presets", ["preset", "list"], [], "read"),
+    # -- the receiver
+    "region":       ("receiver", "Region", ["region", "{value}"], [("value", "enum", ("world", "us"))], ""),
+    "location":     ("receiver", "Antenna position", ["location", "{lat}", "{lon}", "{alt}"],
+                     [("lat", "float", (-90, 90)), ("lon", "float", (-180, 180)), ("alt", "int", (-500, 9000), True)], "ask wall long"),
+    "stats":        ("receiver", "Statistics", ["stats", "{value}"], [("value", "enum", ON_OFF)], ""),
+    "stats-show":   ("receiver", "Statistics", ["stats"], [], "read"),
+    "stats-gaps":   ("receiver", "Unknown callsigns and types", ["stats", "gaps"], [], "read"),
+    "graphs":       ("receiver", "graphs1090", ["graphs", "{value}"], [("value", "enum", ON_OFF)], "long ask"),
+    "gain-check":   ("receiver", "Gain check", ["gain", "check"], [], "read"),
+    "gain-step":    ("receiver", "Gain one step", ["gain", "{value}"], [("value", "enum", ("up", "down"))], "ask"),
+    "gain-log":     ("receiver", "Gain log, 24 h", ["gain", "log", "{value}"], [("value", "enum", ON_OFF)], ""),
+    "status":       ("receiver", "Status", ["status"], [], "read"),
+    "mlat-guard":   ("receiver", "One MLAT client only", ["mlat-guard"], [], ""),
+    # -- sharing (the Bluesky account itself is set up over SSH: it asks for an app password)
+    "social":       ("sharing", "Social sharing", ["social", "{value}"], [("value", "enum", ON_OFF)], "ask"),
+    "social-status": ("sharing", "Sharing status", ["social", "status"], [], "read"),
+    "social-test":  ("sharing", "Try a post", ["social", "test"], [], "read long"),
+    "social-look":  ("sharing", "Picture", ["social", "look", "{value}"], [("value", "enum", ("dotmap", "flap", "alternate"))], ""),
+    "social-colour": ("sharing", "Picture colour", ["social", "colour", "{value}"], [("value", "enum", THEMES + ("wall", "rotate"))], ""),
+    "social-units": ("sharing", "Units of the posts", ["social", "units", "{value}"], [("value", "enum", ("metric", "imperial", "wall"))], ""),
+    "social-map":   ("sharing", "Map", ["social", "map", "{value}"], [("value", "enum", ("normal", "night", "satellite", "terrain", "none", "rotate"))], ""),
+    "social-photolink": ("sharing", "Photo link", ["social", "photolink", "{value}"], [("value", "enum", ON_OFF)], ""),
+    "social-sentence": ("sharing", "Words of a post", ["social", "sentence", "{value}"],
+                     [("value", "re", r"^(random|(factual|story|board|spotter|lookup)(,(factual|story|board|spotter|lookup)){0,4})$")], ""),
+    "social-gap":   ("sharing", "Least time between posts", ["social", "gap", "{value}"], [("value", "int", (0, 1440))], ""),
+    "summary":      ("sharing", "Summary", ["social", "summary", "{period}", "{value}"], [("period", "enum", PERIODS), ("value", "enum", ON_OFF)], ""),
+    "summary-at":   ("sharing", "Summary time", ["social", "summary", "{period}", "at", "{when*}"],
+                     [("period", "enum", PERIODS),
+                      ("when", "re", r"^(" + HHMM + r"|(mon|tue|wed|thu|fri|sat|sun) " + HHMM + r"|([1-9]|1[0-9]|2[0-8]) " + HHMM + r")$")], ""),
+    "summary-parts": ("sharing", "Summary posts", ["social", "summary", "{period}", "parts", "{value}"],
+                     [("period", "enum", PERIODS), ("value", "re", r"^[1-4](,[1-4]){0,3}$")], ""),
+    "summary-test": ("sharing", "Try a summary", ["social", "summary", "{period}", "test"], [("period", "enum", PERIODS)], "read long"),
+    "summaries":    ("sharing", "Summaries", ["social", "summary"], [], "read"),
+    # -- reliability
+    "watchdog":     ("reliability", "Hardware watchdog", ["watchdog", "{value}"], [("value", "enum", ON_OFF)], "ask"),
+    "netwatch":     ("reliability", "Network watchdog", ["netwatch", "{value}"], [("value", "enum", ON_OFF)], ""),
+    "keeplogs":     ("reliability", "Logs kept after a restart", ["keeplogs", "{value}"], [("value", "enum", ON_OFF)], ""),
+    "wifi-harden":  ("reliability", "Wi-Fi hardening", ["wifi", "harden", "{value}"], [("value", "enum", ON_OFF)], ""),
+    "patches":      ("reliability", "Daily security fixes", ["patches", "{value}"], [("value", "enum", ON_OFF)], ""),
+    "logs-auto":    ("reliability", "Daily log clean-up", ["logs", "auto", "{value}"], [("value", "enum", ON_OFF)], ""),
+    "health":       ("reliability", "Health", ["health"], [], "read"),
+    "memory":       ("reliability", "Memory", ["memory"], [], "read"),
+    "logs":         ("reliability", "Logs", ["logs", "{value}"], [("value", "enum", ("flightinfo", "decoder", "social", "uat"))], "read"),
+    "logs-review":  ("reliability", "Log size and warnings", ["logs", "review"], [], "read"),
+    # -- system
+    "security":     ("system", "Security check", ["security"], [], "read"),
+    "update-list":  ("system", "Installed components", ["update", "list"], [], "read"),
+    "update-quick": ("system", "Update ZenithBoard and the wall", ["update", "quick"], [], "ask long wall"),
+    "update":       ("system", "Update everything", ["update"], [], "ask long wall"),
+    "net-status":   ("system", "Network", ["net", "status"], [], "read"),
+    "wifi-status":  ("system", "Wi-Fi", ["wifi", "status"], [], "read"),
+    "ddns-status":  ("system", "Domain name", ["ddns", "status"], [], "read"),
+    "ddns-update":  ("system", "Refresh the domain name", ["ddns", "update"], [], ""),
+    "console-off":  ("system", "Turn the console off", ["console", "off"], [], "ask"),
+    "refresh":      ("overview", "Refresh", None, [], "read"),       # nothing to run: the helper only reads the state again
+}
+
+JOB_ID_RE = re.compile(r"^[0-9a-f]{16}$")
+
+
+class Refused(ValueError):
+    """An action or a value that is not in the list."""
+
+
+def _check(kind, rule, value):
+    value = str(value).strip()
+    if kind == "enum":
+        if value in rule:
+            return value
+    elif kind == "int":
+        if re.match(r"^-?\d{1,5}$", value) and rule[0] <= int(value) <= rule[1]:
+            return str(int(value))
+    elif kind == "float":
+        if re.match(r"^-?\d{1,3}(\.\d{1,7})?$", value) and rule[0] <= float(value) <= rule[1]:
+            return value
+    elif kind == "re":
+        if len(value) <= 64 and re.match(rule, value):
+            return value
+    raise Refused("not an allowed value")
+
+
+def build(name, params):
+    """-> the argument list after `zenithboard`, or None for "refresh". Raises Refused for anything not listed."""
+    spec = ACTIONS.get(name) if isinstance(name, str) else None
+    if spec is None:
+        raise Refused("unknown action")
+    params = params if isinstance(params, dict) else {}
+    known = {p[0] for p in spec[3]}
+    if set(params) - known:
+        raise Refused("unexpected value")
+    got = {}
+    for p in spec[3]:
+        pname, kind, rule = p[0], p[1], p[2]
+        optional = len(p) > 3 and p[3]
+        raw = params.get(pname, "")
+        if raw in ("", None):
+            if optional:
+                got[pname] = None
+                continue
+            raise Refused("missing value: %s" % pname)
+        got[pname] = _check(kind, rule, raw)
+    if spec[2] is None:
+        return None
+    argv = []
+    for tok in spec[2]:
+        m = re.match(r"^\{(\w+)(\*?)\}$", tok)
+        if not m:
+            argv.append(tok)
+        elif got[m.group(1)] is None:
+            continue
+        elif m.group(2):
+            argv.extend(got[m.group(1)].split(" "))
+        else:
+            argv.append(got[m.group(1)])
+    return argv
+
+
+def flags(name):
+    spec = ACTIONS.get(name)
+    return set(spec[4].split()) if spec else set()
+
+
+def catalog():
+    """What the page needs to draw a control: the label, the values it takes, the flags. Never the command."""
+    out = {}
+    for name, spec in ACTIONS.items():
+        params = []
+        for p in spec[3]:
+            item = {"name": p[0], "kind": p[1], "optional": bool(len(p) > 3 and p[3])}
+            if p[1] == "enum":
+                item["choices"] = list(p[2])
+            elif p[1] in ("int", "float"):
+                item["min"], item["max"] = p[2]
+            params.append(item)
+        out[name] = {"section": spec[0], "label": spec[1], "params": params, "flags": sorted(flags(name))}
+    return out

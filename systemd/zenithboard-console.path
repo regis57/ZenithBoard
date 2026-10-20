@@ -1,0 +1,10 @@
+[Unit]
+Description=ZenithBoard web console: a job from the console's page (0.39.0)
+
+[Path]
+# The wall's server drops one small file per job here; the helper takes them all, then this waits again.
+PathExistsGlob=/var/lib/zenithboard/console/state/spool/*.job
+Unit=zenithboard-console.service
+
+[Install]
+WantedBy=paths.target

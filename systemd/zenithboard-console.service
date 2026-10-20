@@ -1,0 +1,10 @@
+[Unit]
+Description=ZenithBoard web console helper: runs the console's jobs, from a fixed list (0.39.0)
+
+[Service]
+Type=oneshot
+# Root, because the jobs are zenithboard commands that change the Pi (they run with sudo by hand). What it may run is
+# the list in flightinfo/console_actions.py, checked again here; each as an argument list, never through a shell.
+ExecStart=/usr/bin/python3 /opt/zenithboard/tools/console_run.py
+Nice=5
+TimeoutStartSec=2h

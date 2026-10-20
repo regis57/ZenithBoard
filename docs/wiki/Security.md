@@ -39,6 +39,7 @@ ZenithBoard runs as root on a machine in your home, listens on your network, and
 | `/stats`, `/api/stats` | Same as the wall | Only when `STATS=1`. Counts and ranges per hour and per day; the antenna's position is not part of it. Since 0.22.0 also the farthest aircraft of the day and of the month, each with the large city nearest it and its distance from the antenna: two such lines narrow down where the antenna is, one more reason this page answers the home network only |
 | `/api/farthest` | Same as the wall | Only when `STATS=1`. What the statistics sample asks on the loopback: the farthest aircraft of today and yesterday, named, never with a position |
 | `/social/preview` | Same as the wall | The picture `zenithboard social test` drew, if any |
+| `/console` (0.39.0) | Home networks only, whatever `ALLOW_FROM` says, and only by an address or a local name | Only when `console on`. Behind a password (a scrypt hash in `console.env`) or a phone paired by a one-time QR code; it hands one action from a fixed list to a root helper. Plain HTTP: a cookie on your Wi-Fi is readable by someone who can read your Wi-Fi. See [Web console](Web-console) |
 
 **Do not forward any of these from the internet.** Nothing here expects a hostile visitor: there is no login on the wall, no rate limit, and no audit trail. To see your wall from outside, use a VPN into your home network. The dynamic-DNS feature exists so *you* can find your Pi, not so the world can.
 
@@ -46,7 +47,7 @@ Since 0.15.0 the wall enforces that itself: it answers only the private ranges (
 
 ## The services can only do their own job
 
-The wall server and the social sharing service run as the `zenithboard` system user, which cannot log in, inside a full systemd sandbox: no devices, no kernel tuning, modules or logs, no namespaces, no new privileges, an empty capability set, a restricted list of network families and a system-call filter. The wall server can write **nowhere** — it only reads.
+The wall server and the social sharing service run as the `zenithboard` system user, which cannot log in, inside a full systemd sandbox: no devices, no kernel tuning, modules or logs, no namespaces, no new privileges, an empty capability set, a restricted list of network families and a system-call filter. The wall server can write **nowhere** — it only reads — except, since 0.39.0, `/var/lib/zenithboard/console/state` (the web console's sessions and job spool; nothing there runs unless the root helper finds it on its fixed list).
 
 What that buys: a hole in the wall server stays a hole in a read-only program that can see `aircraft.json`, its own files and the internet. It cannot become a foothold on the Pi.
 

@@ -43,6 +43,7 @@ Run the whole set before pushing. It takes well under a minute, and the shell te
 | `test_server.py` → `FarthestTest`, `test_stats.sh` | The farthest aircraft (0.22.0): what the watch keeps and ignores, the nearest city against GeoNames' real positions (Luxembourg-City's nearest of 100 000 is Trier), no district and no position in what is written, the route check, the timer waiting for a route on its way, never replacing a farther record, pruning |
 | `test_layout.js` | The settings gear clears the photo and the silhouette on 15 screen sizes |
 | `test_update_verify.sh` | The update's signature check: the whole decision table, real expired and current gpg keys, the one-time question for older installs, and that the private download folder outlives the sub-shell that asked for it |
+| `test_console.py`, `test_console.sh` | The web console (0.39.0): the fixed list refuses anything else (shell characters, ranges, unknown actions); scrypt; home networks only and the Host check against DNS rebinding; the sign-in limits; sessions kept as hashes, their lifetimes, a sign-out for everyone; a pairing code working once; every request path (cookie flags, the CSRF header, the origin, JSON only); the root helper against a stand-in command, with forged, oversized and linked job files ignored; `console password`, `on`, `off`, `pair`, `forget` |
 | `test_docs.sh` | Every command the program accepts, and every line of its help, appears on the [Command reference](Command-reference) page |
 
 ## The two patterns

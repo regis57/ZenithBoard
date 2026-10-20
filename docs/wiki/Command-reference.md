@@ -158,6 +158,18 @@ And the things you may need to do by hand:
 | Which commit is about to be installed | `git -C ~/ZenithBoard rev-parse --short origin/main` | Compare with the top commit on GitHub while the update waits for your answer |
 | Are the pinned downloads still there? | `bash tools/check-links.sh` (in your clone) | The same check GitHub runs on the 1st of each month |
 
+## The web console
+
+A test since 0.39.0, off by default: the settings from a browser or a phone on your home network, at `http://PI:8080/console`. The reasoning and the limits are on [Web console](Web-console).
+
+| Command | sudo | What it does |
+|---|---|---|
+| `zenithboard console on` · `off` · `status` | yes for on and off | `on` makes its folders, installs its root helper (`zenithboard-console.path` and `.service`) and prints the address; `off` removes the helper and the pages stop answering at once, the password is kept. Menu: *Settings → 7 Web console* |
+| `zenithboard console password` | yes | Choose the console's password (asked twice, 10 characters at least, never on the command line). Kept as a scrypt hash in `/etc/zenithboard/console.env` (root:zenithboard 0640). Signs every browser and phone out |
+| `zenithboard console pair` | yes | A QR code (drawn by `qrencode` when installed, dark on a white square) and its link: a phone that opens it within five minutes is signed in for 30 days. Works once |
+| `zenithboard console signout` | yes | Sign every browser and phone out now |
+| `zenithboard console forget` | yes | `off`, then delete the password, the sessions and the record of what the console ran |
+
 ## Install, remove, try
 
 | Command | sudo | What it is for |
@@ -178,6 +190,7 @@ Listed so that nothing in `ps` or the journal is a mystery. Running them by hand
 | `zenithboard gain log run` | `zenithboard-gain-log.timer` | 15 minutes, if the gain log is on |
 | `zenithboard netwatch run` | `zenithboard-netwatch.timer` | 2 minutes, if the network watchdog is on |
 | `zenithboard logs auto-run` | `zenithboard-logs-clean.timer` | day, if automatic cleaning is on |
+| `zenithboard console state` | `zenithboard-console.service` (the console's helper, as root) | after each change made from the console: the facts its overview shows |
 | `zenithboard stats run` | `zenithboard-stats.timer` | 15 minutes, if statistics are on; runs as the `zenithboard` user |
 | `flightinfo/social.py run` | `zenithboard-social.service` | A service, if social sharing is on: reads `aircraft.json` every 5 s, asks the wall every 15 s, posts under the rules; runs as the `zenithboard` user |
 | `zenithboard ddns update` | `zenithboard-ddns.timer` | 5 minutes, if a name is set |

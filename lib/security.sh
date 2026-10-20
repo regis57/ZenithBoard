@@ -80,7 +80,9 @@ sec_units() {
   command -v systemd-analyze >/dev/null 2>&1 || { sec_line INFO "systemd-analyze is not available: sandboxes not measured"; return 0; }
   for u in /etc/systemd/system/zenithboard-*.service; do
     [ -f "$u" ] || continue
-    u=$(basename "$u"); n=$((n + 1))
+    u=$(basename "$u")
+    [ "$u" != zenithboard-console.service ] || continue      # 0.39.0: root by design, said by sec_console
+    n=$((n + 1))
     s=$(systemd-analyze security --no-pager "$u" 2>/dev/null | sed -n 's/.*Overall exposure level for .*: \([0-9.]*\).*/\1/p')
     [ -n "$s" ] || continue
     awk -v s="$s" 'BEGIN{exit !(s>6.5)}' && bad="$bad ${u%.service}($s)"
@@ -106,11 +108,24 @@ sec_secrets() {
   fi
 }
 
+# 0.39.0: the web console, when on: who it answers, how one signs in, and its root helper said for what it is
+sec_console() {
+  local f m o
+  [ "$(cfg_get CONSOLE 0)" = 1 ] || { sec_line OK "The web console is off"; return 0; }
+  sec_line INFO "The web console is on (/console): home networks only, whatever ALLOW_FROM says; its pages travel unencrypted on your network (plain HTTP)"
+  sec_line INFO "Its helper runs as root, outside a sandbox by design, and runs only the commands of its fixed list"
+  f="${CONSOLE_ENV:-$ZB_ETC/console.env}"
+  if [ ! -f "$f" ]; then sec_line INFO "No console password: only a phone paired with 'sudo zenithboard console pair' can sign in"; return 0; fi
+  m=$(stat -c %a "$f" 2>/dev/null); o=$(stat -c %U:%G "$f" 2>/dev/null)
+  if [ "$m" = 640 ] && [ "$o" = "root:$ZB_USER" ]; then sec_line OK "console.env is root:$ZB_USER, mode 640 (the password's hash, read by the wall only)"
+  else sec_line WARN "console.env is $o mode $m: the console password's hash may be readable by others" "sudo chown root:$ZB_USER $f && sudo chmod 640 $f"; fi
+}
+
 security_check() {
   SEC_WARN=0
   echo "Security check, ZenithBoard $ZB_VERSION on $(hostname 2>/dev/null)"
   echo
-  sec_wall; sec_updates; sec_legacy; sec_patches; sec_ssh; sec_ports; sec_units; sec_secrets
+  sec_wall; sec_updates; sec_legacy; sec_patches; sec_ssh; sec_ports; sec_units; sec_secrets; sec_console
   echo
   if [ "$SEC_WARN" = 0 ]; then echo "Nothing to fix."; else echo "$SEC_WARN thing(s) to look at. Each line above says how."; fi
   [ "$SEC_WARN" = 0 ]

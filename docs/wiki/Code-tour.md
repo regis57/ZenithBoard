@@ -16,6 +16,8 @@ flightinfo/static/      the wall itself: app.js, flap.js, scene.js, shapes, CSS
 flightinfo/aircraft.py  reading aircraft.json
 flightinfo/social.py    social sharing: the service that picks an aircraft and posts it to Bluesky
 flightinfo/social_card.py  the split-flap picture with its map (Pillow)
+flightinfo/console.py   the web console's side of the server (0.39.0): sign-in, sessions, pairing, jobs
+flightinfo/console_actions.py  the fixed list of what the console may run, read by the server and the root helper
 systemd/                the unit files
 tools/                  maintenance scripts (type-list refresh, demo photos, checkers), social-render.js (the dot-matrix picture)
 tests/                  the whole suite
@@ -66,6 +68,7 @@ One file, read top to bottom in five parts:
 | `shapes.js` | Aircraft seen from above, drawn as dots |
 | `flags.js` | Registration prefix to country, maker to country, and the flags themselves at 11 x 7 dots. No manufacturer mark is ever drawn |
 | `stats.html`, `stats.css`, `stats.js` | The `/stats` page: four headline numbers, the two farthest aircraft in words (`farthestLine`), and three charts from `/api/stats`, one series each, following the device's light or dark setting |
+| `console.html`, `console.css`, `console.js` | The web console (0.39.0): one section at a time, the wizard, Activity, pairing a phone with a QR code (`vendor/qrcode.js`, MIT). Reads `/console/api/*` |
 | `font5x7.js`, `format.js` | The dot font, and formatting numbers in metric or imperial units |
 
 The constants at the top of `app.js` — `GW`, `GH`, `SIL_BOX`, `PHOTO_BOX` — are the layout. Change one and `tests/test_layout.js` will tell you whether the settings gear still fits. See [The wall](The-wall).
@@ -81,5 +84,6 @@ The constants at the top of `app.js` — `GW`, `GH`, `SIL_BOX`, `PHOTO_BOX` — 
 | `zenithboard-netwatch.service` + `.timer` | The network watchdog | Every 2 min, if on |
 | `zenithboard-logs-clean.service` + `.timer` | Deletes log messages older than 7 days | Daily, if on |
 | `zenithboard-gain-log.service` + `.timer` | One gain measurement into the 24-hour CSV | Every 15 min, if on |
+| `zenithboard-console.path` + `.service` | The web console's root helper (`tools/console_run.py`): runs the jobs the console dropped, from its fixed list | When a job appears, if the console is on |
 
 The watchdog timers are `oneshot` services fired by a timer rather than long-running daemons: a crashed check cannot take the watchdog down with it, since the next tick starts a fresh one.
