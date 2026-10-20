@@ -55,6 +55,11 @@ OSM_LINK = ("OpenStreetMap", "https://www.openstreetmap.org/copyright")
 EOX_LINK = ("EOX", "https://maps.eox.at")
 GEONAMES_LINK = ("GeoNames", "https://www.geonames.org/")
 PLACES_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "places5000.tsv.gz")
+# 0.26.2: the villages of 1 000 to 4 999, read only for a map that names fewer than MIN_NAMES towns from the list
+# above. DAH1217, two minutes after leaving Metz-Nancy, went out on a 20 km strip east of the Moselle with no name at
+# all: every town of 5 000 there is in the valley, a few kilometres beyond the map's edge.
+SMALL_PLACES_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "places1000.tsv.gz")
+MIN_NAMES = 3
 MAX_NAMES = 26                               # the towns named on a map, the largest first, none over another (0.25.2: 16 before)
 MAP_STYLES = {
     # 0.26.1: the light and dark maps are built from two EOX layers that carry no names, the light relief and the
@@ -352,9 +357,33 @@ def places():
     return _places
 
 
+def _small_places(lat0, lat1, lon0, lon1):
+    """[(name, lat, lon, population)] of the villages of 1 000 to 4 999 inside the box, read from the file each time
+    (it is only read for a map that is short of names, so it is not kept in memory)."""
+    out = []
+    try:
+        with gzip.open(SMALL_PLACES_FILE, "rt", encoding="utf-8") as fh:
+            for line in fh:
+                if line.startswith("#"):
+                    continue
+                n, la, lo, pop = line.rstrip("\n").split("\t")
+                la, lo = float(la), float(lo)
+                if lat0 <= la <= lat1 and lon0 <= lo <= lon1:
+                    out.append((n, la, lo, int(pop)))
+    except (OSError, ValueError):
+        pass                                     # no file: the map keeps the towns it had
+    return out
+
+
+def _lat_of(py, z):
+    """The latitude of a row of pixels of the world at zoom z (the inverse of world_px)."""
+    n = 256.0 * (2 ** z)
+    return math.degrees(math.atan(math.sinh(math.pi * (1 - 2 * py / n))))
+
+
 def _draw_names(img, z, ox, oy, w, h, band, tone, plane_at=None):
     """The towns inside the map, the largest first, each with a dot and its name on a halo; never over another name,
-    the north box or the legend and credit band."""
+    the north box or the legend and credit band. A map with fewer than MIN_NAMES of them takes villages too (0.26.2)."""
     d = ImageDraw.Draw(img)
     fnt = font(13)                                # 0.25.2, from the owner: smaller names, more of them (16 before)
     fill, halo = ((255, 255, 255), (0, 0, 0)) if tone == "light" else ((30, 30, 30), (255, 255, 255))
@@ -363,23 +392,30 @@ def _draw_names(img, z, ox, oy, w, h, band, tone, plane_at=None):
         taken.append((plane_at[0] - 30, plane_at[1] - 30, plane_at[0] + 30, plane_at[1] + 30))
     deg = 360.0 * w / (256.0 * 2 ** z) + 0.5      # a cheap box around the view before the projection
     lon0 = ox * 360.0 / (256.0 * 2 ** z) - 180.0
-    shown = 0
-    for name, la, lo, pop in sorted((p for p in places() if lon0 - 0.5 <= p[2] <= lon0 + deg), key=lambda p: -p[3]):
-        x, y = world_px(la, lo, z)
-        x, y = x - ox, y - oy
-        if not (6 <= x <= w - 6 and 6 <= y <= h - 6):
-            continue
-        tw = d.textlength(name, font=fnt)
-        tx = x + 7 if x + 7 + tw <= w - 4 else x - 7 - tw
-        box = (tx - 3, y - 9, tx + tw + 3, y + 9)
-        if any(not (box[2] < t[0] or box[0] > t[2] or box[3] < t[1] or box[1] > t[3]) for t in taken):
-            continue
-        taken.append(box)
-        d.ellipse([x - 3, y - 3, x + 3, y + 3], fill=fill, outline=halo, width=1)
-        d.text((tx, y), name, font=fnt, fill=fill, anchor="lm", stroke_width=2, stroke_fill=halo)
-        shown += 1
-        if shown >= MAX_NAMES:
-            break
+    shown = [0]
+
+    def name_all(found):
+        for name, la, lo, pop in sorted(found, key=lambda p: -p[3]):
+            if shown[0] >= MAX_NAMES:
+                return
+            x, y = world_px(la, lo, z)
+            x, y = x - ox, y - oy
+            if not (6 <= x <= w - 6 and 6 <= y <= h - 6):
+                continue
+            tw = d.textlength(name, font=fnt)
+            tx = x + 7 if x + 7 + tw <= w - 4 else x - 7 - tw
+            box = (tx - 3, y - 9, tx + tw + 3, y + 9)
+            if any(not (box[2] < t[0] or box[0] > t[2] or box[3] < t[1] or box[1] > t[3]) for t in taken):
+                continue
+            taken.append(box)
+            d.ellipse([x - 3, y - 3, x + 3, y + 3], fill=fill, outline=halo, width=1)
+            d.text((tx, y), name, font=fnt, fill=fill, anchor="lm", stroke_width=2, stroke_fill=halo)
+            shown[0] += 1
+
+    name_all([p for p in places() if lon0 - 0.5 <= p[2] <= lon0 + deg])
+    if shown[0] < MIN_NAMES:
+        name_all(_small_places(_lat_of(oy + h, z), _lat_of(oy, z), lon0, lon0 + 360.0 * w / (256.0 * 2 ** z)))
+    return shown[0]
 
 
 def draw_map(trace, plane, color, units="metric", mode="normal", cache_dir=None, fetch=None, user_agent="ZenithBoard",

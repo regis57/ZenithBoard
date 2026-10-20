@@ -663,6 +663,29 @@ class FlapPictureTest(unittest.TestCase):
         social_card.draw_map(metz, EZY, "#ff0000", mode="none", fetch=lambda *a: None)
         self.assertNotIn("Metz", names, "no map, no names")
 
+    def test_villages_on_a_map_short_of_towns(self):
+        # 0.26.2, a real post: DAH1217, two minutes after leaving Metz-Nancy, on a 20 km strip east of the Moselle:
+        # no town of 5 000 in it, so no name at all. Villages of 1 000 to 4 999 fill in, only on such a map.
+        names = []
+        real = social_card.ImageDraw.ImageDraw.text
+        def spy(d, xy, text, *a, **k):
+            names.append(text)
+            return real(d, xy, text, *a, **k)
+        self.addCleanup(setattr, social_card.ImageDraw.ImageDraw, "text", real)
+        social_card.ImageDraw.ImageDraw.text = spy
+        east = [[49.12 + i * 0.0053, 6.37 - i * 0.0057, 3000, i * 5] for i in range(25)]     # Courcelles-Chaussy to Vigy
+        social_card.draw_map(east, EZY, "#00e0e0", mode="normal", w=420, h=840,
+                             fetch=lambda *a: fake_tile("terrain-light_3857", "jpg", 1, 1, 1))
+        self.assertIn("Vigy", names)
+        self.assertIn("Courcelles-Chaussy", names)
+        del names[:]
+        metz = [[48.95 + i * 0.0125, 6.2, 30000, i * 5] for i in range(37)]                   # Metz, Thionville, plenty
+        social_card.draw_map(metz, EZY, "#ff0000", mode="terrain", fetch=lambda *a: fake_tile("terrain_3857", "jpg", 1, 1, 1))
+        self.assertIn("Metz", names)
+        self.assertNotIn("Vigy", names, "a map with towns enough takes no village")
+        self.assertEqual(social_card._small_places(49.20, 49.21, 6.29, 6.31)[0][0], "Vigy")
+        self.assertAlmostEqual(social_card._lat_of(social_card.world_px(49.2, 6.3, 10)[1], 10), 49.2, places=6)
+
     def test_no_town_is_named_twice(self):
         # 0.26.1, from the real posts (EWG8QR over Nancy): the names ZenithBoard draws went over EOX's OpenStreetMap
         # layer, which writes its own: every town twice, a few pixels apart. A map that names its towns draws on
