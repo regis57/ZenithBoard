@@ -96,6 +96,7 @@ ZenithBoard $ZB_VERSION - ADSB Flight Info
   zenithboard social photolink on|off   end each post with a link to the aircraft's Planespotters photo page
   zenithboard social places on|off      name the towns on the maps from the region's own list (GeoNames, made on the Pi)
   zenithboard social sentence LIST      the words of a post: factual story board spotter lookup (several: a,b) or random
+  zenithboard social weekly on|off|test|post   a summary of the week on Sundays from 19:00 (off by default; needs statistics)
   zenithboard social map NAME|rotate    the map of the dotmap and flap looks: normal, night, satellite, terrain, none, or in turn
   zenithboard social test [HEX]         draw the picture and print the text, post nothing (see it at /social/preview)
   zenithboard social on|off|status      post the aircraft overhead as a picture of the wall (off by default)
@@ -310,10 +311,15 @@ case "${1:-}" in
       off)    root_or_die; social_off ;;
       test)   root_or_zb; social_need_tools && social_prepare_dir && { [ "$(id -u)" -ne 0 ] && python3 "$SOCIAL_PY" test "${3:-}" || sudo -u "$ZB_USER" python3 "$SOCIAL_PY" test "${3:-}"; } ;;
       post)   root_or_zb; social_need_tools && social_prepare_dir && { [ "$(id -u)" -ne 0 ] && python3 "$SOCIAL_PY" post "${3:-}" || sudo -u "$ZB_USER" python3 "$SOCIAL_PY" post "${3:-}"; } ;;
+      weekly)
+        case "${3:-}" in
+          test|post) root_or_zb; social_need_tools && social_prepare_dir && { [ "$(id -u)" -ne 0 ] && python3 "$SOCIAL_PY" "week-$3" || sudo -u "$ZB_USER" python3 "$SOCIAL_PY" "week-$3"; } ;;
+          *) [ -z "${3:-}" ] || root_or_die; social_set_weekly "${3:-}" ;;
+        esac ;;
       check)  root_or_die; python3 "$SOCIAL_PY" check ;;
       status) social_status ;;
       remove) root_or_die; social_remove ;;
-      *) die "Usage: zenithboard social setup|words|hashtags [WORD...]|gap [MINUTES]|picture|look dotmap|flap|alternate|colour NAME|units metric|imperial|wall|photolink on|off|places on|off|sentence LIST|map NAME|on|off|test [HEX]|post [HEX]|check|status|remove" ;;
+      *) die "Usage: zenithboard social setup|words|hashtags [WORD...]|gap [MINUTES]|picture|look dotmap|flap|alternate|colour NAME|units metric|imperial|wall|photolink on|off|places on|off|sentence LIST|weekly on|off|test|post|map NAME|on|off|test [HEX]|post [HEX]|check|status|remove" ;;
     esac ;;
   patches)
     case "${2:-status}" in

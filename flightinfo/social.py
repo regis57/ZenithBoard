@@ -20,6 +20,8 @@ photo, and the account secret (a Bluesky app password), which lives in /etc/zeni
     social.py test [HEX]     draw the picture and print the text for the best candidate (or HEX); posts nothing
     social.py post [HEX]     post now, once, whatever the gap
     social.py check          try the account: open a session on Bluesky
+    social.py week-test      draw the week's summary and print its text; posts nothing (0.33.0)
+    social.py week-post      post the week's summary now
     social.py status         what it would do right now
 
 Standard library only for the service and the network, like the rest of the wall; Pillow only for the looks with a
@@ -68,6 +70,7 @@ DEFAULTS = {
     "SOCIAL_UNITS": "",              # metric | imperial; empty = the wall's UNITS (0.24.3)
     "SOCIAL_MAP": "normal",
     "SOCIAL_PLACES": "0",            # 1: the town names from the region's own list (0.27.0, social places on)
+    "SOCIAL_WEEKLY": "0",            # 1: a summary of the week on Sundays from 19:00 (0.33.0, social weekly on)
     "SOCIAL_PHOTOLINK": "0",         # 1: a last line linking to the aircraft's Planespotters photo page (0.25.0)          # the map of the dotmap and flap looks: normal | night | satellite | terrain | none
 }
 STYLES = ("dotmap", "flap")
@@ -284,6 +287,8 @@ def prune_state(s, now):
                crossing (0.20.0): kept while the aircraft is inside, and an hour after it last was; the same airframe
                back later (the return flight, the next day) is a new crossing, and so is a new callsign
       posts    the times of the posts of the last day, for `social status`
+      post_days  day -> number of posts, eight days, for the weekly summary (0.33.0)
+      weekly   the ISO week of the last weekly summary, posted or skipped (0.33.0)
       since    the first day the service watched the sky (no history, no "rare", no "farthest")
     0.18.0 counted a type once per poll instead of once per aircraft; that history is dropped, not converted."""
     cut = day_of(now - 30 * 86400)
@@ -309,6 +314,8 @@ def prune_state(s, now):
         else:
             posted[h] = e
     s["posts"] = [t for t in s.get("posts", []) if isinstance(t, (int, float)) and now - t <= 86400]
+    week_cut = day_of(now - 8 * 86400)
+    s["post_days"] = {d: n for d, n in (s.get("post_days") or {}).items() if isinstance(d, str) and d >= week_cut}
     s.pop("farthest_day", None); s.pop("farthest_km", None)
     return s
 
@@ -356,6 +363,8 @@ def remember(state, p, when):
     """This aircraft is posted: its crossing starts being remembered, and the post is counted."""
     state.setdefault("posted", {})[str(p.get("hex", "")).lower()] = {"t": when, "flight": (p.get("flight") or "").strip()}
     state.setdefault("posts", []).append(when)
+    days = state.setdefault("post_days", {})            # 0.33.0: posts per day, for the weekly summary
+    days[day_of(when)] = int(days.get(day_of(when), 0)) + 1
 
 
 def note_types(state, planes, now):
@@ -1157,6 +1166,45 @@ def publish(p, trace, why, c, sec, dry=False, keep=None):
                 pass
 
 
+def publish_week(c, sec, now, state=None, dry=False, keep=None):
+    """The week's summary (0.33.0, social_week.py): draw, post, delete the picture. Returns {"bluesky": uri or
+    'FAILED ...'}, or {"skipped": why} when there is nothing to sum up (dry: the text instead)."""
+    import social_week as week
+    w = week.week_data(c, now=now, posts=(state or {}).get("post_days"))
+    if not w:
+        return {"skipped": "no statistics for these seven days (turn them on: sudo zenithboard stats on)"}
+    if flap_module() is None:
+        return {"skipped": "the weekly picture needs Pillow (install it: sudo zenithboard social test)"}
+    tags = str(c.get("SOCIAL_HASHTAGS", "")).strip()
+    tags = "" if tags.lower() == "none" else tags
+    area = area_words(c)
+    out = os.path.join(work_dir(), "week-%s.png" % uuid.uuid4().hex)
+    results = {}
+    try:
+        info = week.draw(w, theme_of(c), area, out)
+        text, alt = week.text(w, c, area, tags, fit_post), week.alt(w, area)
+        if keep:
+            try:
+                results["preview"] = keep_copy(out, keep)
+            except OSError as exc:
+                results["preview_error"] = "could not keep a copy: %s" % exc
+        if dry:
+            results.update(text=text, alt=alt, bytes=info["bytes"])
+            return results
+        try:
+            results["bluesky"] = post_bluesky(sec, text, out, alt, info["width"], info["height"], info["mime"])
+        except urllib.error.HTTPError as exc:
+            results["bluesky"] = "FAILED: " + _http_error_text(exc)
+        except Exception as exc:
+            results["bluesky"] = "FAILED: %s" % exc
+        return results
+    finally:
+        try:
+            os.unlink(out)
+        except OSError:
+            pass                                 # never drawn
+
+
 # --------------------------------------------------------------------------- commands
 def local_ip():
     import socket
@@ -1247,6 +1295,22 @@ def cmd_run():
                     last_ask = 0                         # another one may be waiting its turn: look again at the next read
                 else:
                     last_fail = now
+            # 0.33.0: the week's summary, Sunday from 19:00, once a week; a failure waits like a post's does
+            import social_week
+            if social_week.due(c, state, now) and bluesky_ready(sec) and now - last_fail >= RETRY_AFTER_FAIL_S:
+                try:
+                    results = publish_week(c, sec, now, state)
+                except Exception as exc:                 # a summary that cannot be made must not stop the service
+                    results = {"bluesky": "FAILED: %s" % exc}
+                if "skipped" in results:
+                    print("social: no weekly summary this week: %s" % results["skipped"], flush=True)
+                    state["weekly"] = social_week.week_key(now)
+                elif str(results.get("bluesky", "FAILED")).startswith("FAILED"):
+                    print("social: could not post the weekly summary: %s" % json.dumps(results), flush=True)
+                    last_fail = now
+                else:
+                    print("social: posted the weekly summary: %s" % json.dumps(results), flush=True)
+                    state["weekly"] = social_week.week_key(now)
             state["memory"] = dict(memory_mb(), since=started)  # for `social status`: since this start
             save_state(state)
         if now - last_summary >= 3600:
@@ -1337,6 +1401,33 @@ def cmd_post(hex_code=None):
     return 0 if ok else 1
 
 
+def cmd_week(post=False):
+    """`social weekly test`: the summary of the seven days ending today, drawn and shown, nothing posted;
+    `social weekly post`: posted now. Either way, Sunday's own post still goes out."""
+    c = cfg()
+    state = prune_state(load_state(), time.time())
+    sec = account()
+    if post and not bluesky_ready(sec):
+        print("No Bluesky account is set up: run  sudo zenithboard social setup")
+        return 1
+    r = publish_week(c, sec, time.time(), state, dry=not post, keep=None if post else os.path.join(STATE_DIR, "preview"))
+    if "skipped" in r:
+        print("Nothing to sum up: %s." % r["skipped"])
+        return 1
+    if post:
+        print("bluesky: %s" % r.get("bluesky", "?"))
+        return 0 if not str(r.get("bluesky", "FAILED")).startswith("FAILED") else 1
+    port = int(server.cfg_float(c, "PORT", 8080))
+    print("Picture: %s (%s bytes)" % (r.get("preview") or r.get("preview_error"), r.get("bytes")))
+    print("See it:  http://%s:%d/social/preview" % (local_ip(), port))
+    print("Text:")
+    print("  " + r["text"].replace("\n", "\n  "))
+    print("Alt text: " + r["alt"])
+    print("The service posts it %s." % ("on Sundays from 19:00" if server.cfg_bool(c, "SOCIAL_WEEKLY", "0")
+                                         else "only once it is on: sudo zenithboard social weekly on"))
+    return 0
+
+
 def cmd_check():
     sec = account()
     if not bluesky_ready(sec):
@@ -1386,6 +1477,8 @@ def cmd_status():
     print("Town names on the maps: %s" % places_words(c))
     print("Post sentence: %s%s   (change: sudo zenithboard social sentence ...)" % (",".join(sentences_of(c)),
           "  (one drawn at each post)" if len(sentences_of(c)) > 1 else ""))
+    print("Weekly summary: %s" % ("on, Sundays from 19:00" if server.cfg_bool(c, "SOCIAL_WEEKLY", "0")
+                                  else "off   (sudo zenithboard social weekly on)"))
     if unreadable(STATE_DIR) or unreadable(os.path.join(STATE_DIR, "state.json")):
         blind.append(STATE_DIR)
         print("History: %s cannot read the service's state folder" % who)
@@ -1433,6 +1526,8 @@ def main(argv):
         return cmd_post(arg)
     if cmd == "check":
         return cmd_check()
+    if cmd in ("week-test", "week-post"):
+        return cmd_week(post=(cmd == "week-post"))
     if cmd == "status":
         return cmd_status()
     print(__doc__)

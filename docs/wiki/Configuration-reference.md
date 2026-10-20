@@ -78,6 +78,7 @@ The dynamic-DNS **token is not stored here.** It is asked for interactively and 
 | `SOCIAL_STYLE` | `dotmap` | `zenithboard social look dotmap\|flap\|alternate` | The picture: the dot-matrix wall with a map, the split-flap board with a map, or the two in turn. `dots` (the track in dots, no map) was taken out in 0.24.0 and is read as `dotmap` |
 | `SOCIAL_PLACES` | `0` | `zenithboard social places on\|off` | `1`: the town names of the maps from the region's own list, `/var/lib/zenithboard/social/places-local.tsv.gz` (0.27.0) |
 | `SOCIAL_PLACES_KM` | `400` | `zenithboard config-set SOCIAL_PLACES_KM 300`, then `social places on` | How far around the receiver that list reaches (50 to 1 000 km) |
+| `SOCIAL_WEEKLY` | `0` | `zenithboard social weekly on\|off` | `1`: a summary of the week on Sundays from 19:00, from the statistics (0.33.0) |
 | `SOCIAL_SENTENCE` | `factual` | `zenithboard social sentence LIST` | The words of a post: `factual`, `story`, `board`, `spotter`, `lookup`, several (`story,lookup`) or `random` (0.29.0) |
 | `SOCIAL_PHOTOLINK` | `0` | `zenithboard social photolink on\|off` | `1`: a last line linking to the aircraft's Planespotters photo page, with the photographer's name (0.25.0) |
 | `SOCIAL_UNITS` | empty | `zenithboard social units metric\|imperial\|wall` | The posts' units, picture and text; empty = the wall's `UNITS` (0.24.3) |

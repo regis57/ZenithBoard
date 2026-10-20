@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **20 October 2026**, version **0.32.0**.
+Last updated: **20 October 2026**, version **0.33.0**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -55,6 +55,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 21 October 2026, 00:30 | The weekly summary post (0.33.0), the last part of the owner's choice when Grafana left. Previewed with the real code on thirty days of made-up statistics, amber and turquoise. Not yet on the reference Pi: `sudo zenithboard social weekly test` there is the first real one |
 | 20 October 2026, 23:30 | graphs1090 offered as an option (0.32.0), the second half of the owner's choice when Grafana left. Its installer and uninstaller were read in full (commit 2f96314); running it in the session's own machine was not allowed, so `on` and `off` are tested against stand-ins only. **Not yet run on the reference Pi**: what `zenithboard graphs status` says there (collectd's memory, the size in `/run`) goes here |
 | 20 October 2026, 23:00 | With ACARS and Grafana gone, what Grafana would have shown went onto the wall's own statistics page (0.31.0): the sky by hour over fourteen days, the airlines and types most seen, how high they fly. Checked against the real server with thirty days of made-up samples, light, dark and phone width. Not yet on the reference Pi: the lists start filling on its first quarter hour after the update |
 | 20 October 2026, 22:00 | The owner decided to take ACARS out, and Grafana with it once its use as a statistics board was weighed (100 to 200 MB on a Pi 3B, a third-party plugin, publishing only by opening the Pi to the internet or through a cloud account): 0.30.0. The reference Pi never had them installed |
