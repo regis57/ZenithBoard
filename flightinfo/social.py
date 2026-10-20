@@ -29,6 +29,7 @@ import datetime
 import gzip
 import json
 import os
+import random
 import re
 import subprocess
 import sys
@@ -61,6 +62,7 @@ DEFAULTS = {
     "SOCIAL_GAP_MIN": "0",           # at least this long between two posts; 0 = none: every crossing is posted (0.20.0)
     "SOCIAL_RULES": "rare,military,helicopter,heavy,farthest",
     "SOCIAL_HASHTAGS": "#ADSB #avgeek #ZenithBoard",
+    "SOCIAL_SENTENCE": "factual",     # 0.29.0: factual | story | board | spotter | lookup, several (a,b) or random
     "SOCIAL_STYLE": "dotmap",        # the picture: dotmap (dot-matrix wall + map) | flap (split-flap + map) | alternate
     "SOCIAL_THEME": "",              # its colour: amber | green | red | white | turquoise; empty = the wall's THEME
     "SOCIAL_UNITS": "",              # metric | imperial; empty = the wall's UNITS (0.24.3)
@@ -667,7 +669,107 @@ def photo_line(p, c):
     return line, [(line, link)]
 
 
-def post_text(p, c, why=None, credit=None, photo=None):
+# 0.29.0, asked for by the owner: the post's words in one of five shapes, filled from the flight's own data (templates,
+# never generated text: the account says so). None of them gives the distance or the direction from the receiver.
+SENTENCES = ("factual", "story", "board", "spotter", "lookup")
+OPENINGS = {"rare": "Rare visitor: ", "military": "Military traffic: ", "heavy": "Heavy overhead: ",
+            "helicopter": "Helicopter: ", "farthest": "New 30-day range record: "}
+STYLED_MAX = 220                 # a shaped text longer than this goes back to the factual one, which can be cut cleanly
+
+
+def sentences_of(c):
+    """The shapes the owner chose, in order; unknown words are left out, nothing valid gives factual."""
+    words = [w.strip().lower() for w in str(c.get("SOCIAL_SENTENCE", "factual") or "factual").split(",")]
+    if "random" in words:
+        return list(SENTENCES)
+    return [w for w in words if w in SENTENCES] or ["factual"]
+
+
+def sentence_for(c, rng=random):
+    return rng.choice(sentences_of(c))
+
+
+def _a(word):
+    """"an Airbus", "an easyJet", but "a Eurowings", "a United": a vowel said as "you" takes "a"."""
+    w = word.lower()
+    vowel = w[:1] in "aeiou" and not w.startswith(("eu", "uni", "us", "one"))
+    return ("an " if vowel else "a ") + word
+
+
+def speed_words(gs_kt, units):
+    if not gs_kt:
+        return ""
+    if units == "imperial":
+        return "%d%skt" % (int(round(gs_kt)), NBSP)
+    return "%d%skm/h" % (int(round(gs_kt * 1.852)), NBSP)
+
+
+def height_words(alt_ft, units):
+    """"10.6 km" or "34,700 ft": the look-up shape says how high in round words."""
+    if not alt_ft:
+        return ""
+    if units == "imperial":
+        return "{:,}".format(int(round(alt_ft / 100.0) * 100)) + NBSP + "ft"
+    return ("%.1f" % (alt_ft * 0.3048 / 1000.0)) + NBSP + "km"
+
+
+def styled_text(shape, p, c, why=None, now=None):
+    """The post's text in one of the shapes other than factual, or None when the flight lacks what the shape needs
+    (an airline or a type) or the result is too long: the factual text is used then."""
+    units = units_of(c)
+    flight = (p.get("flight") or "").strip()
+    cs = hashtag_callsign(flight)
+    reg = p.get("registration") or ""
+    typ = nice_type(p)
+    airline = p.get("airline") or ""
+    military = bool(p.get("military")) and airline in ("", "MILITARY")
+    heli = p.get("shape") == "heli"
+    if airline == "MILITARY":
+        airline = ""
+    what = " ".join(x for x in ("military" if military else airline, typ or ("helicopter" if heli else "")) if x)
+    if not what or why == "farthest":           # a range record is nowhere near overhead: the factual words say so
+        return None
+    alt = metres(p.get("alt_ft"), units) or ""
+    speed = speed_words(p.get("gs_kt"), units)
+    r = p.get("route") or {}
+    a = (r.get("from") or {}).get("city") or (r.get("from") or {}).get("name") or ""
+    b = (r.get("to") or {}).get("city") or (r.get("to") or {}).get("name") or ""
+    area = area_words(c)                          # "above Trémery", or the owner's own phrase ("near Metz")
+    place = place_name(c) if area.startswith("above ") else ""
+    clock = time.strftime("%H:%M", time.localtime(now))
+    if shape == "story":
+        text = _a(what)
+        text = text[0].upper() + text[1:]
+        if a and b:
+            text += " bound for %s from %s" % (b, a)
+        text += " has just crossed the sky" + (" " + area if area else "") + (", %s up." % alt if alt else ".")
+        text += (" " + cs) if cs else ""
+    elif shape == "board":
+        lines = ["\u2708 " + " · ".join(x for x in (cs, reg) if x), "%s \u2192 %s" % (a, b) if a and b else "",
+                 " · ".join(x for x in (typ, alt, speed) if x),
+                 ((area[0].upper() + area[1:] + " at " + clock) if area else "")]
+        text = "\n".join(x for x in lines if x.strip())
+    elif shape == "spotter":
+        text = (reg + ", " if reg else "") + _a(what)
+        if a and b:
+            text += ", flying %s \u2192 %s" % (a, b)
+        if cs and cs.replace("#", "") != reg.replace("-", ""):
+            text += " as " + cs
+        rest = " ".join(x for x in (alt, area, ("at " + speed) if speed else "") if x)
+        text += (": " + rest + ".") if rest else "."
+    elif shape == "lookup":
+        who = " ".join(x for x in ((airline or ("military" if military else "")), cs or reg or typ) if x)
+        text = ("Look up, %s! " % place) if place else "Look up! "
+        text += "%s is passing %s overhead" % (who or _a(what), height_words(p.get("alt_ft"), units) or "")
+        text = text.replace("passing  overhead", "passing overhead")
+        text += (" on its way from %s to %s." % (a, b)) if a and b else "."
+    else:
+        return None
+    text = OPENINGS.get(why, "") + text
+    return text if len(text) <= STYLED_MAX else None
+
+
+def post_text(p, c, why=None, credit=None, photo=None, shape=None):
     """The post. English, short, nothing the wall does not know. Starts with the flight ("Flight Etihad #ETD11K"),
     ends with the place ("above Trémery"); a range record ends with where it was seen from instead, since it was
     nowhere near overhead. credit: the map's credit line, when the picture has a map."""
@@ -712,6 +814,11 @@ def post_text(p, c, why=None, credit=None, photo=None):
         parts.append(height)
         parts.append(area_words(c))
     text = " · ".join(x for x in parts if x)          # starts with the flight itself: no icon in front of it
+    if why in ("rare", "heavy"):                 # 0.29.0: the reason, said first (the others already say theirs)
+        text = OPENINGS[why] + text
+    shape = shape or sentence_for(c)
+    if shape != "factual":
+        text = styled_text(shape, p, c, why) or text
     tags = str(c.get("SOCIAL_HASHTAGS", "")).strip()
     if tags.lower() == "none":                   # set so: no hashtags at all, not even #helicopter
         tags = ""
@@ -1277,6 +1384,8 @@ def cmd_status():
                                                                gap_words(c), ", ".join(sorted(rules_of(c))) or "none"))
     print("Hashtags: %s   (change: sudo zenithboard social hashtags ...)" % c.get("SOCIAL_HASHTAGS"))
     print("Town names on the maps: %s" % places_words(c))
+    print("Post sentence: %s%s   (change: sudo zenithboard social sentence ...)" % (",".join(sentences_of(c)),
+          "  (one drawn at each post)" if len(sentences_of(c)) > 1 else ""))
     if unreadable(STATE_DIR) or unreadable(os.path.join(STATE_DIR, "state.json")):
         blind.append(STATE_DIR)
         print("History: %s cannot read the service's state folder" % who)

@@ -245,6 +245,23 @@ social_set_photolink() {
     echo "Photo link: OFF. Posts carry no link to a photo."
   fi
 }
+# 0.29.0: the shape of the post's words: factual (as before), story, board, spotter, lookup; several, comma-separated,
+# or random: one is drawn at each post. Templates filled from the flight's data; never the distance or direction.
+SOCIAL_SENTENCES="factual story board spotter lookup"
+social_ticked() { case ",$(cfg_get SOCIAL_SENTENCE factual)," in *",$1,"*|*",random,"*) echo ON ;; *) echo OFF ;; esac; }
+social_set_sentence() {
+  local v=${1:-} w ok=1
+  if [ -n "$v" ]; then
+    v=$(printf '%s' "$v" | tr 'A-Z ' 'a-z,' | tr -s ',' | sed 's/^,//; s/,$//')
+    if [ "$v" != random ]; then
+      for w in ${v//,/ }; do case " $SOCIAL_SENTENCES " in *" $w "*) ;; *) ok=0 ;; esac; done
+    fi
+    [ "$ok" = 1 ] || { echo "Sentence: one or more of  $SOCIAL_SENTENCES  (comma-separated), or random"; return 1; }
+    cfg_set SOCIAL_SENTENCE "$v"
+    systemctl try-restart "$SOCIAL_UNIT.service" 2>/dev/null || true
+  fi
+  echo "Post sentence: $(cfg_get SOCIAL_SENTENCE factual)$(case "$(cfg_get SOCIAL_SENTENCE factual)" in *,*|random) echo "  (one drawn at each post)" ;; esac)"
+}
 # 0.27.0: the town names of the maps from the region's own list, made here from GeoNames' country files: every
 # populated place within 400 km, ranked by population or, where GeoNames knows none, by rank (capital, province seat,
 # district seat, village). The shipped lists name the places whose population GeoNames knows: a map over a region
@@ -362,17 +379,29 @@ social_menu() {
       picture "3  The picture: dot-matrix or split-flap, colour, map" \
       photolink "4  Link to the Planespotters photo page: $( [ "$(cfg_get SOCIAL_PHOTOLINK 0)" = 1 ] && echo ON || echo OFF )" \
       places "5  Town names from the region's own list (GeoNames, downloaded once): $( [ "$(cfg_get SOCIAL_PLACES 0)" = 1 ] && echo ON || echo OFF )" \
-      test "6  Try it: draw the picture and show the text, post nothing" \
-      toggle "7  Switch sharing $( [ "$(social_state)" = on ] && echo OFF || echo ON )" \
-      post "8  Post now, once" \
-      status "9  Status" \
-      remove "10 Remove: account, state and service" \
+      sentence "6  The words of a post: $(cfg_get SOCIAL_SENTENCE factual)" \
+      test "7  Try it: draw the picture and show the text, post nothing" \
+      toggle "8  Switch sharing $( [ "$(social_state)" = on ] && echo OFF || echo ON )" \
+      post "9  Post now, once" \
+      status "10 Status" \
+      remove "11 Remove: account, state and service" \
       back "Return to the previous menu") || return 0
     case "$c" in
       setup) social_setup || true ;;
       words) social_setup_words && wt_msg "Saved." 7 || true ;;
       picture) social_setup_picture || true ;;
       photolink) social_set_photolink "$( [ "$(cfg_get SOCIAL_PHOTOLINK 0)" = 1 ] && echo off || echo on )" >/dev/null; wt_msg "$(social_set_photolink)" 10 ;;
+      sentence)
+        local picks
+        picks=$(wt_check "The words of a post. Tick one or more (Space = tick): with several, one is drawn at each post.\n(On RYR5ZK, Brussels to Pisa, above Trémery.)" \
+          factual "Flight Ryanair #RYR5ZK · Boeing 737-800 · Brussels → Pisa · altitude 10 570 m" "$(social_ticked factual)" \
+          story "A Ryanair Boeing 737-800 bound for Pisa from Brussels has just crossed the sky..." "$(social_ticked story)" \
+          board "✈ #RYR5ZK · EI-ENK / Brussels → Pisa / Boeing 737-800 · 10 570 m · 720 km/h" "$(social_ticked board)" \
+          spotter "EI-ENK, a Ryanair Boeing 737-800, flying Brussels → Pisa as #RYR5ZK: ..." "$(social_ticked spotter)" \
+          lookup "Look up, Trémery! Ryanair #RYR5ZK is passing 10.6 km overhead..." "$(social_ticked lookup)") || continue
+        picks=$(printf '%s' "$picks" | tr -d '"' | tr ' ' ',')
+        [ -n "$picks" ] || picks=factual
+        wt_msg "$(social_set_sentence "$picks")" 8 ;;
       places)
         if [ "$(cfg_get SOCIAL_PLACES 0)" = 1 ]; then
           wt_yesno "Town names come from the region's own list.\n\nGo back to the lists shipped with ZenithBoard (and delete the region's list)?" 10 && social_set_places off >/dev/null
