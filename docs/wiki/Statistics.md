@@ -3,7 +3,7 @@
 Off by default. Switched on, the Pi takes one sample every fifteen minutes and keeps thirty days of them, so that three questions have an answer: how many messages per hour, how far the antenna reaches, how many aircraft a day.
 
 ```bash
-sudo zenithboard stats on      # or: sudo zenithboard menu -> 4 Settings -> Receiver -> 5 Statistics
+sudo zenithboard stats on      # or: sudo zenithboard menu -> 3 Settings -> Receiver -> 5 Statistics
 zenithboard stats              # in the terminal
 ```
 

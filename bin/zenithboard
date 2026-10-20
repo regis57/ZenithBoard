@@ -9,8 +9,8 @@ HERE="$(dirname "$(readlink -f "$0")")"
 . "$HERE/../lib/adsb.sh"
 # shellcheck source=lib/flightinfo.sh
 . "$HERE/../lib/flightinfo.sh"
-# shellcheck source=lib/acars.sh
-. "$HERE/../lib/acars.sh"
+# shellcheck source=lib/legacy.sh
+. "$HERE/../lib/legacy.sh"
 # shellcheck source=lib/logs.sh
 . "$HERE/../lib/logs.sh"
 # shellcheck source=lib/reliability.sh
@@ -70,9 +70,9 @@ ZenithBoard $ZB_VERSION - ADSB Flight Info
   zenithboard color amber|green|red|white|turquoise   dot colour of every wall (amber is the default)
   zenithboard mode dots|flap            look of the wall: dot matrix (default) or split-flap airport board
   zenithboard cycle SECONDS             seconds each aircraft stays on the wall
-  zenithboard acars password [new|set]  the Grafana admin password ZenithBoard set (show it, draw a new one, choose one)
+  zenithboard acars remove              take away ACARS and Grafana left by a ZenithBoard before 0.30.0 (asks a typed word)
   zenithboard patches on|off|status     Debian security fixes installed by themselves, daily (feeders left alone, no reboot)
-  zenithboard security                  what this Pi does right now: who can read the wall, updates, Grafana, SSH, ports, sandboxes
+  zenithboard security                  what this Pi does right now: who can read the wall, updates, SSH, ports, sandboxes
   zenithboard stats                     today, yesterday, 30 days, and messages per hour as a sparkline
   zenithboard stats on|off|status       collect a sample every 15 minutes (off by default; the page is /stats)
   zenithboard stats csv|clear           the raw samples / empty them
@@ -106,11 +106,11 @@ ZenithBoard $ZB_VERSION - ADSB Flight Info
   zenithboard data auto on|off          monthly automatic refresh of that list (default: on)
   zenithboard data status               when it was last refreshed
   zenithboard data localdb on|off       read registrations and models from tar1090's database on this Pi (default: off)
-  zenithboard update                    upgrade ZenithBoard + decoder + feeders + ACARS + Grafana
+  zenithboard update                    upgrade ZenithBoard + decoder + feeders
   zenithboard update list               what is installed and can be updated one by one
   zenithboard update only NAME...       update just those (e.g. readsb flightinfo)
   zenithboard mlat-guard                re-enforce a single MLAT client
-  zenithboard logs [flightinfo|acars|decoder|uat|social]   show the last 100 lines of a service
+  zenithboard logs [flightinfo|decoder|uat|social]   show the last 100 lines of a service
   zenithboard logs usage|review         size of the system logs / size + recent warnings
   zenithboard logs limit MB|default     cap the size of the system logs (10-2000 MB)
   zenithboard logs clean                delete ALL logs now
@@ -133,7 +133,7 @@ cmd_status() {
   echo "${C_B}ZenithBoard $ZB_VERSION${C_0}   units: $(cfg_get UNITS metric)   position: $(cfg_get LAT ?) , $(cfg_get LON ?)"
   if wifi_has_nm && [ -n "$(wifi_iface)" ]; then echo "Wi-Fi: $(wifi_summary)   (details: zenithboard wifi status)"; fi
   if [ "$(cfg_get DDNS_PROVIDER none)" != none ]; then echo "Domain name: $(ddns_summary)   (details: zenithboard ddns status)"; fi
-  echo "Hardware: $(pi_model || true)  RAM: $(mem_avail_mb) / $(mem_total_mb) MB free$(is_low_mem && echo '  (1 GB: everything but ACARS/Grafana, see wiki Hardware)')"
+  echo "Hardware: $(pi_model || true)  RAM: $(mem_avail_mb) / $(mem_total_mb) MB free$(is_low_mem && echo '  (1 GB: enough for everything, see wiki Hardware)')"
   echo "Decoder / feeders:"
   if [ -n "$dec" ]; then show_state "Decoder ($dec)" true "$dec"; else echo "  Decoder                    not installed"; fi
   show_state "ADSB Exchange" is_adsbx adsbexchange-feed
@@ -143,9 +143,6 @@ cmd_status() {
   if is_region_us || is_uat978; then show_state "978 MHz UAT (dump978-fa)" is_uat978 dump978-fa; fi
   echo "Displays:"
   show_state "FlightInfo wall" is_flightinfo zenithboard-flightinfo
-  show_state "ACARS decoder" is_acars zenithboard-acarsdec
-  show_state "ACARS ingester" is_acars zenithboard-acars-ingest
-  show_state "Grafana" is_grafana grafana-server
   local n; n=$(mlat_count)
   if [ "${n:-0}" -le 1 ]; then echo "MLAT clients running: ${n:-0}  ${C_G}(OK: max 1)${C_0}"; else echo "MLAT clients running: $n  ${C_R}(too many! run: sudo zenithboard mlat-guard)${C_0}"; fi
   local j; j=$(decoder_json)
@@ -163,7 +160,7 @@ cmd_status() {
     echo "Local map: http://$(local_ip)$m   (port 80, no clash with the wall on $(cfg_get PORT 8080))"
     echo "ADSB Exchange feed status: https://www.adsbexchange.com/myip/"
   fi
-  is_acars && echo "ACARS:    http://$(local_ip):3000/"
+  acars_notice
 }
 
 # The map served on port 80 comes from readsb (tar1090) or from the optional ADSB Exchange web interface,
@@ -316,8 +313,8 @@ case "${1:-}" in
     esac ;;
   acars)
     case "${2:-}" in
-      password) root_or_die; grafana_password_cmd "${3:-show}" ;;
-      *) die "Usage: zenithboard acars password [new|set]" ;;
+      remove) root_or_die; acars_remove ;;
+      *) die "Usage: sudo zenithboard acars remove   (ACARS and Grafana are no longer part of ZenithBoard since 0.30.0)" ;;
     esac ;;
   photos)
     case "${2:-}" in
@@ -339,7 +336,7 @@ case "${1:-}" in
     case "${2:-}" in
       list) zb_update_list ;;
       quick) root_or_die; if is_flightinfo; then zb_update --only zenithboard flightinfo; else zb_update --only zenithboard; fi ;;
-      only) root_or_die; [ -n "${3:-}" ] || die "Usage: sudo zenithboard update only NAME...   (names: zenithboard readsb dump1090 adsbx piaware fr24 planefinder flightinfo acars; see: zenithboard update list)"; shift 2; zb_update --only "$@" ;;
+      only) root_or_die; [ -n "${3:-}" ] || die "Usage: sudo zenithboard update only NAME...   (names: zenithboard readsb dump1090 adsbx piaware fr24 planefinder flightinfo; see: zenithboard update list)"; shift 2; zb_update --only "$@" ;;
       *) root_or_die; zb_update "${2:-}" ;;
     esac ;;
   update-components) root_or_die; shift; zb_update_components "$@" ;;
@@ -452,9 +449,8 @@ case "${1:-}" in
       uat) journalctl -u dump978-fa -u skyaware978 -n 100 --no-pager ;;
       flightinfo) journalctl -u zenithboard-flightinfo -n 100 --no-pager ;;
       social) journalctl -u zenithboard-social -n 100 --no-pager ;;
-      acars) journalctl -u zenithboard-acarsdec -u zenithboard-acars-ingest -n 100 --no-pager ;;
       decoder) journalctl -u "$(cfg_get DECODER readsb)" -n 100 --no-pager ;;
-      *) die "Usage: zenithboard logs [flightinfo|acars|decoder|social]" ;;
+      *) die "Usage: zenithboard logs [flightinfo|decoder|uat|social]" ;;
     esac ;;
   menu) root_or_die; exec "$HERE/../install.sh" ;;
   version|--version) echo "ZenithBoard $ZB_VERSION" ;;

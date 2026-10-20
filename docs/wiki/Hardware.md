@@ -1,6 +1,6 @@
 # Hardware
 
-Which Raspberry Pi ZenithBoard needs, from what was measured rather than guessed, and what happens if you move it to another one. The short version: **a Pi 3B with 1 GB is enough for everything except ACARS**, and a bigger board brings nothing you would see for ADS-B.
+Which Raspberry Pi ZenithBoard needs, from what was measured rather than guessed, and what happens if you move it to another one. The short version: **a Pi 3B with 1 GB is enough for everything ZenithBoard does**, and a bigger board brings nothing you would see for ADS-B.
 
 ## What the reference Pi runs, measured
 
@@ -19,12 +19,12 @@ The project's reference Pi is a Raspberry Pi 3 Model B (1 GB), outdoors, on Wi-F
 
 ## Which board for what
 
-| Board | ADS-B + feeders + wall + social sharing | + ACARS & Grafana (a second dongle) |
-|---|---|---|
-| **Pi 3B / 3B+ (1 GB)** | **Measured: comfortable**, with ADS-B Exchange and two more feeders. A third extra feeder (Plane Finder) has not been measured. Ethernet or a strong Wi-Fi signal, and the official power supply | Not recommended: about 900 MB more needed; Grafana is slow and `acarsdec` takes long to build |
-| **Pi 4, 1 GB** | Comfortable (estimate: the same software, a faster processor) | Not recommended: about 900 MB more needed |
-| **Pi 4, 2 GB or more / Pi 5** | Comfortable, and nothing more to gain over a Pi 3B (estimate) | **The board for ACARS** (estimate) |
-| Pi Zero 2 W (512 MB) / Pi 2 | ADS-B and the wall only, no extra feeders (estimate) | No |
+| Board | ADS-B + feeders + wall + social sharing |
+|---|---|
+| **Pi 3B / 3B+ (1 GB)** | **Measured: comfortable**, with ADS-B Exchange and two more feeders. A third extra feeder (Plane Finder) has not been measured. Ethernet or a strong Wi-Fi signal, and the official power supply |
+| **Pi 4, 1 GB** | Comfortable (estimate: the same software, a faster processor) |
+| **Pi 4, 2 GB or more / Pi 5** | Comfortable, and nothing more to gain over a Pi 3B (estimate) |
+| Pi Zero 2 W (512 MB) / Pi 2 | ADS-B and the wall only, no extra feeders (estimate) |
 
 Only the Pi 3B row is measured. The others are reasoned from it, and say so; a report from another board is welcome (see [Contributing](Contributing)).
 
@@ -43,7 +43,7 @@ What a Pi 4 would change, against a Pi 3B, for ADS-B, the feeders, the wall and 
 | Power | More: Raspberry Pi gives a typical bare-board draw of 600 mA for a Pi 4 against 400 mA for a Pi 3B, and recommends a 3 A supply against 2.5 A ([its power table](https://github.com/raspberrypi/documentation/blob/master/documentation/asciidoc/computers/raspberry-pi/power-supplies.adoc)) |
 | Heat | It runs warmer: give it a heatsink or a ventilated case, outdoors especially |
 
-The one reason to move is **ACARS with Grafana**, which needs about 900 MB more and a second dongle with its own antenna anyway ([HARDWARE.md](https://github.com/regis57/ZenithBoard/blob/main/docs/HARDWARE.md)).
+Until 0.29.0 the one reason to move was **ACARS with Grafana**, which needed about 900 MB more and a second dongle. ACARS left ZenithBoard in 0.30.0: there is no reason left in ZenithBoard itself.
 
 ## Moving the SD card to another Pi
 
@@ -52,7 +52,7 @@ Asked about on the reference Pi in October 2026, with a Pi 4 (2 GB) to hand; aft
 **What comes across as it is**
 
 * **The system.** Raspberry Pi OS is one image for the Pi 3, 4 and 5; a card written for one starts on the others.
-* **ZenithBoard.** It stores nothing about the board. It reads the model and the memory when it needs them — `zenithboard health` will name the new board, and the ACARS warning lifts by itself on a board with 2 GB or more. It does not touch the boot files (`config.txt`, `cmdline.txt`).
+* **ZenithBoard.** It stores nothing about the board. It reads the model and the memory when it needs them — `zenithboard health` will name the new board. It does not touch the boot files (`config.txt`, `cmdline.txt`).
 * **The feeders' identities**, which live on the card: Flightradar24's sharing key in `/etc/fr24feed.ini`; PiAware's feeder ID in `/var/cache/piaware/feeder_id`, which is how FlightAware recognises a site set up since 2017, rather than by the board's network address ([FlightAware's explanation](https://discussions.flightaware.com/t/how-piaware-feeders-are-identified-updated-2017-07-16/19811?page=2)); ADS-B Exchange's client keeps its own ID on the card too. Write down the PiAware one before you move: `cat /var/cache/piaware/feeder_id`.
 * **MLAT**, since the antenna, and so the position, does not move.
 * **Your settings, history and statistics**: all on the card.

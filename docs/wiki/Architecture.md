@@ -12,11 +12,9 @@ readsb (or dump1090-fa) --- aircraft.json ---> FlightInfo server ---> tablet / T
                                       +--> FlightAware     (MLAT off)
                                       +--> Flightradar24   (MLAT off)
                                       +--> Plane Finder
-
-131 MHz dongle --> acarsdec --> UDP JSON --> ingester --> SQLite --> Grafana
 ```
 
-Two independent chains. The ADS-B chain is the project; the ACARS chain is optional and shares nothing with it but the Pi.
+One chain. An ACARS chain (acarsdec, an ingester into SQLite, Grafana) was part of ZenithBoard until 0.29.0 and left it in 0.30.0.
 
 ## The processes
 
@@ -25,9 +23,6 @@ Two independent chains. The ADS-B chain is the project; the ACARS chain is optio
 | `readsb` or `dump1090-fa` | Decodes 1090 MHz into `aircraft.json` and a Beast stream | Its own package |
 | **FlightInfo server** | `flightinfo/server.py`. Reads `aircraft.json`, works out what is in range, looks up names, routes and photos, serves the wall. With statistics on, a thread of it also looks at `aircraft.json` every five seconds for the day's farthest aircraft (0.22.0), kept in memory | `zenithboard-flightinfo.service` |
 | Feeder clients | One process per sharing service, each reading the Beast stream | Their own packages |
-| `acarsdec` | Decodes ACARS on a second dongle, sends JSON over UDP | `zenithboard-acarsdec.service` |
-| ACARS ingester | `acars/acars_ingest.py`. Filters, writes to SQLite, deletes old rows hourly | `zenithboard-acars-ingest.service` |
-| Grafana | Shows the ACARS database | Its own package |
 
 Everything ZenithBoard installs lives in `/opt/zenithboard`. Nothing else is touched outside `/etc/zenithboard`, `/var/lib/zenithboard` and the systemd unit directory.
 
@@ -54,15 +49,12 @@ The server never writes to the config. It reads it at each request, so a setting
 | `http://<pi>:8080/` | The wall. Change with `zenithboard config-set PORT 8090` |
 | `http://<pi>:8081/` | The demo, only while `zenithboard-demo` runs |
 | `http://<pi>/tar1090/` | Your receiver's own map, on port 80 |
-| `http://<pi>:3000/` | Grafana, only with ACARS |
 | `http://<pi>:30053/` | Plane Finder's setup page |
 | `127.0.0.1:30005` | The decoder's Beast stream. Local only; the feeders connect here |
 
 ## The two rules that are not obvious from the code
 
 **One MLAT client.** Multilateration needs your receiver's timing, and several clients doing it at once on one receiver degrade all of them. ADSB Exchange owns the only MLAT client; the installer switches MLAT off in PiAware and Flightradar24. `zenithboard status` counts running MLAT processes so you can check it is exactly one, and `zenithboard mlat-guard` puts it back if a package update re-enables one.
-
-**ACARS retention is a rolling week.** The ingester drops acknowledgements, link tests and empty messages before storing anything, then deletes rows older than `ACARS_RETENTION_DAYS` (7 by default) every hour. The database does not grow without bound and the SD card is not asked to hold a year of chatter.
 
 ## Timers
 

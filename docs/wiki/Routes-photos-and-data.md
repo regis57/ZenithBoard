@@ -55,7 +55,7 @@ When the decoder does not know an airframe, the wall asks adsbdb for its registr
 
 From a real post: EWG8QR, 9H-EWG (4D2087), a Eurowings A320, went out with no registration and no model. adsbdb answered *unknown aircraft* and hexdb *n/a*; the database of tar1090, the receiver map, knew it (`4D2087 → 9H-EWG, A320`).
 
-tar1090's installer keeps that database on the card, in `/usr/local/share/tar1090/git-db/db`, and updates it when tar1090 updates. `sudo zenithboard data localdb on` (menu *4 Settings → 3 Wall → 9*) makes the wall read it first, before adsbdb and hexdb, which are then asked only for what it does not know. Off by default; `off` goes back to the decoder, adsbdb and hexdb alone.
+tar1090's installer keeps that database on the card, in `/usr/local/share/tar1090/git-db/db`, and updates it when tar1090 updates. `sudo zenithboard data localdb on` (menu *3 Settings → 3 Wall → 9*) makes the wall read it first, before adsbdb and hexdb, which are then asked only for what it does not know. Off by default; `off` goes back to the decoder, adsbdb and hexdb alone.
 
 * Nothing is downloaded and nothing leaves the Pi for it.
 * The database is in files named after the first characters of the hex code (`4.js` for 4D2087), gzip'd JSON. The wall reads the one it needs, keeps four in memory (about 25 MB at most) and remembers 4 000 answers.

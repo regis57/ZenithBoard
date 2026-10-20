@@ -10,11 +10,11 @@ ZenithBoard turns a Raspberry Pi (4 or newer recommended) and a cheap USB radio 
 
 1. **An ADS-B receiver** that feeds **ADSB Exchange** (mandatory base layer) and, if you want, **FlightAware**, **Flightradar24** and **Plane Finder** — with **one single MLAT client**, because several at once overload a Raspberry Pi.
 2. **FlightInfo**, a responsive **flight wall** for any tablet or screen with a browser, in **dot matrix** or in the style of an **old airport split-flap board**. It automatically cycles through every aircraft inside the radius you choose (1, 2, 5, 10, 15, 30 or 50 km / miles) — callsign, type, altitude, speed, where the flight comes from and goes to, distance and direction — and refreshes itself.
-3. **ACARS** *(optional)*: aircraft text messages collected with a second dongle and shown in **Grafana**, filtered, and automatically rolled and cleaned every 7 days.
+3. **Social sharing** *(optional)*: the aircraft crossing a radius you choose, posted to **Bluesky** as a picture of the wall beside a map of its track.
 
 Everything is installed from one menu, and you can come back at any time to add or remove parts.
 
-> **Status:** running every day on the author's Raspberry Pi (Raspberry Pi OS, Debian 13) with readsb, ADSB Exchange and Flightradar24. Parts that could not be tried on real hardware yet (978 MHz UAT for the US, ACARS) are marked as such. Please open an issue with anything that breaks. The full picture of what is proven and what is not is in the wiki: **[Project status](https://github.com/regis57/ZenithBoard/wiki/Project-status)**.
+> **Status:** running every day on the author's Raspberry Pi (Raspberry Pi OS, Debian 13) with readsb, ADSB Exchange and Flightradar24. Parts that could not be tried on real hardware yet (978 MHz UAT for the US) are marked as such. Please open an issue with anything that breaks. The full picture of what is proven and what is not is in the wiki: **[Project status](https://github.com/regis57/ZenithBoard/wiki/Project-status)**.
 
 Inspired by [jprochazka/adsb-receiver](https://github.com/jprochazka/adsb-receiver). ZenithBoard is an independent project with a smaller scope, not a fork.
 
@@ -45,7 +45,7 @@ The story behind the project: [ZenithBoard on regis-hennequin.info](https://regi
 | **Every command** | One table per subject, with what each one is for: **[Command reference](https://github.com/regis57/ZenithBoard/wiki/Command-reference)** (wiki) |
 | **The wiki** | [Roadmap](https://github.com/regis57/ZenithBoard/wiki/Roadmap) · [Project status](https://github.com/regis57/ZenithBoard/wiki/Project-status) · [Architecture](https://github.com/regis57/ZenithBoard/wiki/Architecture) · [Settings](https://github.com/regis57/ZenithBoard/wiki/Configuration-reference) · [Commands](https://github.com/regis57/ZenithBoard/wiki/Command-reference) · [Testing](https://github.com/regis57/ZenithBoard/wiki/Testing) · [Security](https://github.com/regis57/ZenithBoard/wiki/Security) · [Providers](https://github.com/regis57/ZenithBoard/wiki/Providers) · [Social sharing](https://github.com/regis57/ZenithBoard/wiki/Social-sharing) |
 
-**Which defaults does what?** Everything in menu *4 Settings* (and `zenithboard ...`) sets the **default for every screen**. The gear icon on a tablet, or a link such as `?mode=flap`, only overrides it **for that tablet**; the gear's *Reset* returns the tablet to the Pi's default. So the two do not duplicate each other: one is the house rule, the other a personal choice.
+**Which defaults does what?** Everything in menu *3 Settings* (and `zenithboard ...`) sets the **default for every screen**. The gear icon on a tablet, or a link such as `?mode=flap`, only overrides it **for that tablet**; the gear's *Reset* returns the tablet to the Pi's default. So the two do not duplicate each other: one is the house rule, the other a personal choice.
 
 ---
 
@@ -55,16 +55,15 @@ The story behind the project: [ZenithBoard on regis-hennequin.info](https://regi
 
 | Item | Notes |
 |---|---|
-| Raspberry Pi **3B or newer** | 1 GB is enough for ADS-B, the feeders, the wall and social sharing — measured on a Pi 3B, see [Which Raspberry Pi?](#which-raspberry-pi). 2 GB or more only for ACARS + Grafana. Raspberry Pi OS **Lite** (Bookworm or newer) |
+| Raspberry Pi **3B or newer** | 1 GB is enough for ADS-B, the feeders, the wall and social sharing — measured on a Pi 3B, see [Which Raspberry Pi?](#which-raspberry-pi). Raspberry Pi OS **Lite** (Bookworm or newer) |
 | Micro-SD card 16 GB+ | |
 | **RTL-SDR dongle** + **1090 MHz antenna** | A dongle with a built-in 1090 filter (e.g. "ADS-B" or "FlightAware Pro Stick") gives the best range. |
-| *(optional)* a **second** RTL-SDR dongle + 131 MHz antenna | Only for ACARS. The ADS-B dongle cannot do both. See [docs/HARDWARE.md](docs/HARDWARE.md). |
 | An old tablet or any screen | Anything with a modern browser on your home Wi-Fi. |
 | Accounts | A free [ADSB Exchange](https://www.adsbexchange.com/myip/) key is asked during setup. FlightAware / Flightradar24 / Plane Finder accounts only if you choose them. |
 
 ### Which Raspberry Pi?
 
-**Do not buy a bigger Pi for this unless you want ACARS.** How far you hear depends on the antenna, the dongle and the gain; the processor plays no part in it. The project's reference Pi is a 3B with 1 GB, and it has room to spare:
+**Do not buy a bigger Pi for this.** How far you hear depends on the antenna, the dongle and the gain; the processor plays no part in it. The project's reference Pi is a 3B with 1 GB, and it has room to spare:
 
 | The reference Pi 3B (1 GB, outdoors, on Wi-Fi), measured 17 October 2026 | |
 |---|---|
@@ -73,14 +72,14 @@ The story behind the project: [ZenithBoard on regis-hennequin.info](https://regi
 | Social sharing | about 30–40 MB at rest; while it draws a picture, about 105 MB at most, plus Node up to 65 MB for a second or two |
 | Temperature, power | 36 °C; no under-voltage and no throttling since the last start |
 
-| Board | ADS-B + feeders + wall + social sharing | + ACARS & Grafana (a second dongle) |
-|---|---|---|
-| **Pi 3B / 3B+ (1 GB)** | **Measured: comfortable**, with ADS-B Exchange and two more feeders (a third, Plane Finder, not measured). Ethernet or a strong Wi-Fi signal, and the official power supply | Not recommended: about 900 MB more needed; Grafana is slow and `acarsdec` takes long to build |
-| **Pi 4, 1 GB** | Comfortable (estimate: the same software, a faster processor) | Not recommended: about 900 MB more needed |
-| **Pi 4, 2 GB or more / Pi 5** | Comfortable, and nothing more to gain for these over a Pi 3B (estimate) | **The board for ACARS** (estimate) |
-| Pi Zero 2 W (512 MB) / Pi 2 | ADS-B and the wall only, no extra feeders (estimate) | No |
+| Board | ADS-B + feeders + wall + social sharing |
+|---|---|
+| **Pi 3B / 3B+ (1 GB)** | **Measured: comfortable**, with ADS-B Exchange and two more feeders (a third, Plane Finder, not measured). Ethernet or a strong Wi-Fi signal, and the official power supply |
+| **Pi 4, 1 GB** | Comfortable (estimate: the same software, a faster processor) |
+| **Pi 4, 2 GB or more / Pi 5** | Comfortable, and nothing more to gain for these over a Pi 3B (estimate) |
+| Pi Zero 2 W (512 MB) / Pi 2 | ADS-B and the wall only, no extra feeders (estimate) |
 
-The installer detects the board and its memory, warns you once, and marks ACARS as *not recommended* in the menu on low-memory or older boards (you can still continue). `zenithboard status` and `zenithboard health` show the free memory.
+The installer detects the board and its memory and tells you once what it is good for. `zenithboard status` and `zenithboard health` show the free memory.
 
 **Already running on a Pi 3B, with a Pi 4 in a drawer?** The SD card would boot in it with everything as it is — the same system, ZenithBoard reads the board when it needs to, and the feeders keep their identities, which live on the card. But it needs a USB-C supply, may get another address from your router, draws more power and runs warmer, and for ADS-B it brings nothing you would see. What changes, and how to go back, on the wiki: **[Hardware](https://github.com/regis57/ZenithBoard/wiki/Hardware)**.
 
@@ -123,20 +122,20 @@ The first run asks, once:
 <p align="center"><img src="docs/images/install-2-units.png" alt="Choosing metric or imperial units" width="400"></p>
 
 ### 5. Use the menu
-After the questions, the installer shows its main menu. *4 Settings* is organised in the order of a first setup, in six groups: **1 Network** (Wi-Fi, fixed IP, domain name), **2 Receiver** (region, units, antenna position, dongle gain, statistics: what the dongle and its antenna are used for), **3 ZenithBoard wall** (radius, look, colour, seconds per aircraft, photos, routes, monthly data refresh, presets), **4 Logs**, **5 Reliability** (watchdogs, saved logs, health check, Debian patches) and **6 Social sharing** (Bluesky). *6 Update* has a quick entry first — ZenithBoard and the wall in seconds, the feeders left alone — then everything at once, or the components you tick. *7 Maintenance* saves your settings to a file (no secrets in it), restores them from one, and holds the uninstall, which asks you to type the word `uninstall` rather than press Enter once too often. You can come back to it at any time with `sudo ./install.sh` (or `sudo zenithboard menu`) to add or remove things.
+After the questions, the installer shows its main menu. *3 Settings* is organised in the order of a first setup, in six groups: **1 Network** (Wi-Fi, fixed IP, domain name), **2 Receiver** (region, units, antenna position, dongle gain, statistics: what the dongle and its antenna are used for), **3 ZenithBoard wall** (radius, look, colour, seconds per aircraft, photos, routes, monthly data refresh, presets), **4 Logs**, **5 Reliability** (watchdogs, saved logs, health check, Debian patches) and **6 Social sharing** (Bluesky). *5 Update* has a quick entry first — ZenithBoard and the wall in seconds, the feeders left alone — then everything at once, or the components you tick. *6 Maintenance* saves your settings to a file (no secrets in it), restores them from one, and holds the uninstall, which asks you to type the word `uninstall` rather than press Enter once too often. You can come back to it at any time with `sudo ./install.sh` (or `sudo zenithboard menu`) to add or remove things.
 
 Everything in the menus also exists as a command, which is quicker once you know what you want: `zenithboard status`, `sudo zenithboard update`, `zenithboard gain check`… The full list, grouped by subject with what each command is for, is the **[Command reference](https://github.com/regis57/ZenithBoard/wiki/Command-reference)** in the wiki.
 
-<p align="center"><img src="docs/images/install-3-menu.png" alt="The ZenithBoard 0.26.1 main menu: ADSB, FlightInfo, ACARS, Settings, Status, Update, Maintenance, Exit" width="520"></p>
+<p align="center"><img src="docs/images/install-3-menu.png" alt="The ZenithBoard 0.26.1 main menu: ADSB, FlightInfo, ACARS, Settings, Status, Update, Maintenance, Exit (ACARS left in 0.30.0)" width="520"></p>
 
-<p align="center"><img src="docs/images/install-4-settings.png" alt="4 Settings: Network, Receiver, ZenithBoard wall, Logs, Reliability, Social sharing" width="400">&nbsp;<img src="docs/images/install-5-maintenance.png" alt="7 Maintenance: save my settings to a file, restore settings from a file, uninstall everything (asks you to type the word)" width="400">&nbsp;<img src="docs/images/install-6-update.png" alt="6 Update: quick (ZenithBoard and the wall only), all, pick, list" width="400"></p>
+<p align="center"><img src="docs/images/install-4-settings.png" alt="3 Settings: Network, Receiver, ZenithBoard wall, Logs, Reliability, Social sharing" width="400">&nbsp;<img src="docs/images/install-5-maintenance.png" alt="6 Maintenance: save my settings to a file, restore settings from a file, uninstall everything (asks you to type the word)" width="400">&nbsp;<img src="docs/images/install-6-update.png" alt="5 Update: quick (ZenithBoard and the wall only), all, pick, list" width="400"></p>
 <p align="center"><em>Settings, Maintenance and Update in 0.26.1. The Wi-Fi name on the Settings screen is replaced by MyHomeWiFi.</em></p>
 
 **1 · ADSB** — pick the decoder (**readsb** is recommended; **dump1090-fa** is supported as an alternative; both feed the same local port so every feeder works with either). Then tick where to share. *ADSB Exchange is always on.* The ADSB Exchange script will ask for a station name and your position, and prints a link to see your feed. FlightAware prints a claim link; **Flightradar24** runs FR24's own sign-up after printing what to answer (paste your *sharing key* — flightradar24.com → account → *My data sharing* — if you already feed FR24; otherwise Enter); Beast, `127.0.0.1`, port `30005` and MLAT no are enforced afterwards; Plane Finder finishes setup on a small web page. Unticking an installed feeder removes it after a confirmation.
 
 **2 · FlightInfo** — installs the wall. At the end it prints the address, e.g. `http://192.168.1.50:8080/`.
 
-**3 · ACARS** *(optional)* — asks for the second dongle's serial number and your frequencies, builds `acarsdec`, installs Grafana and a ready-made dashboard at `http://<pi-address>:3000/` (login `admin`; the password ZenithBoard set is shown by `sudo zenithboard acars password`).
+*ACARS (menu 3 until 0.29.0) left ZenithBoard in 0.30.0: it was never run on the reference Pi and needed about 900 MB more than a 1 GB board has. A Pi that installed it keeps it until `sudo zenithboard acars remove`; `zenithboard status` says so.*
 
 ### 6. Put the wall on the tablet
 Open the address that menu *2 FlightInfo* printed at the end (`http://<pi-address>:8080/`, also shown by `zenithboard status`) in the tablet's browser. Tap the browser's *Add to Home Screen* for a full-screen app look, or tap the faint gear in the bottom-right corner → **Full screen**. The screen stays awake and the page reloads itself if the Pi restarts.
@@ -151,11 +150,11 @@ zenithboard status
 
 # 2. Network
 
-Everything below lives in the menu *4 Settings → 1 Network*, and is also available as `zenithboard` commands. One place for everything about how the Pi connects, **in the order you usually need it**: first *how it joins the network* (Wi-Fi), then *which address it has* (fixed IP), then *how to reach it from outside* (a domain name). Each part is optional, and **none of them changes which link is used**: a plugged Ethernet cable always stays the preferred connection, Wi-Fi is the fallback.
+Everything below lives in the menu *3 Settings → 1 Network*, and is also available as `zenithboard` commands. One place for everything about how the Pi connects, **in the order you usually need it**: first *how it joins the network* (Wi-Fi), then *which address it has* (fixed IP), then *how to reach it from outside* (a domain name). Each part is optional, and **none of them changes which link is used**: a plugged Ethernet cable always stays the preferred connection, Wi-Fi is the fallback.
 
 ### Wi-Fi
 
-Menu *4 Settings → Network → 1 Wi-Fi* sets up the Pi's Wi-Fi without leaving the installer. It uses NetworkManager, the default on Raspberry Pi OS Bookworm and newer. On a Pi that does not have it (older images), the menu offers to install and enable it, after an explicit confirmation: the network is interrupted for a few seconds, `dhcpcd` is switched off, and Wi-Fi networks stored the old way are not carried over. Do it with the Ethernet cable plugged in (the command is `sudo zenithboard wifi install-nm`).
+Menu *3 Settings → Network → 1 Wi-Fi* sets up the Pi's Wi-Fi without leaving the installer. It uses NetworkManager, the default on Raspberry Pi OS Bookworm and newer. On a Pi that does not have it (older images), the menu offers to install and enable it, after an explicit confirmation: the network is interrupted for a few seconds, `dhcpcd` is switched off, and Wi-Fi networks stored the old way are not carried over. Do it with the Ethernet cable plugged in (the command is `sudo zenithboard wifi install-nm`).
 
 **A wired Ethernet cable is still the best choice for a feeder, and it stays the preferred connection.** When the cable is plugged in it carries all the traffic (lowest route metric); Wi-Fi is only the fallback and takes over if the cable is unplugged. The menu reminds you of this when you open it, and warns you before any change that could cut an SSH session running over Wi-Fi.
 
@@ -176,7 +175,7 @@ Supported: networks with a password (WPA2, WPA3) and open networks. Not supporte
 
 ### Fixed IP address
 
-Menu *4 Settings → Network → 2 Fixed IP*.
+Menu *3 Settings → Network → 2 Fixed IP*.
 
 By default your router hands the Pi an address that may change. A **fixed address** keeps `http://<pi>:8080/` the same on every tablet, and is required if you later want to reach the wall from outside.
 
@@ -202,7 +201,7 @@ Pick **which connection** gets the address (the Ethernet profile, a Wi-Fi profil
 
 ### A name for your wall
 
-Menu *4 Settings → Network → 3 Domain name*.
+Menu *3 Settings → Network → 3 Domain name*.
 
 A **dynamic-DNS** service gives you a free name such as `myplanes.duckdns.org`. The Pi tells the service its current home address **every 5 minutes** (also after a reboot), so the name always finds your home even when your internet provider changes the address. You can then open the wall, and optionally the **tar1090 receiver map**, away from home.
 
@@ -236,7 +235,6 @@ In the menu, **Help me choose** explains these three, **Set up** asks for the na
 | `http://<pi>:8081/` | ZenithBoard **demo** | Only while `zenithboard-demo` runs |
 | `http://<pi>/tar1090/` | **Map of your own receiver** | Served on **port 80**, so it never clashes with 8080. Installed with readsb. If you also ran the ADSB Exchange web interface installer, that one is at `http://<pi>/adsbx/`. `zenithboard status` prints whichever you have. |
 | <https://www.adsbexchange.com/myip/> | ADSB Exchange feed status | Open it from the same network as the Pi: it tells you whether your feed is received |
-| `http://<pi>:3000/` | Grafana (ACARS) | Only if ACARS is installed |
 | `http://<pi>:30053/` | Plane Finder setup page | Only if Plane Finder is installed |
 
 `zenithboard status` prints the ones that apply to your Pi.
@@ -282,7 +280,7 @@ Two looks, same data. **Dot matrix** (default) is the dot display above. **Split
 | **Try it on one tablet only** | add `?mode=flap` to the address, e.g. `http://PI-IP:8080/?mode=flap` (back: `?mode=dots`) |
 | **On the tablet** | gear icon → *Style* → *Split-flap* (gear → *Reset* returns to the Pi's default) |
 | **Every screen** | `sudo zenithboard mode flap` (back to the default: `sudo zenithboard mode dots`) |
-| **Menu** | `sudo zenithboard menu` → *4 Settings → 3 Wall → Look* |
+| **Menu** | `sudo zenithboard menu` → *3 Settings → 3 Wall → Look* |
 | **Without a Pi** | `./bin/zenithboard-demo`, then open `http://localhost:8081/?mode=flap` |
 
 Not convincing? Nothing to undo: the dot matrix stays the default until you change it, and any of the ways above switches back at once. Colours work in both looks. Devices that ask for reduced motion get the final text without the rolling.
@@ -294,7 +292,7 @@ The dots are **amber by default**. Pick amber, green, red, white or turquoise (`
 | Where | How |
 |---|---|
 | **Every screen** | `sudo zenithboard color green` (back to the default: `sudo zenithboard color amber`) |
-| **Menu** | `sudo zenithboard menu` → *4 Settings → 3 Wall → Colour* |
+| **Menu** | `sudo zenithboard menu` → *3 Settings → 3 Wall → Colour* |
 | **One tablet only** | Tap the faint gear in the bottom-right corner → *Colour*. Or open `http://<pi>:8080/?theme=red`. The gear's **Reset** returns that tablet to the Pi's colour. |
 
 ## Units, radius and position
@@ -304,7 +302,7 @@ Three ways, pick the one that suits you.
 | Where | How |
 |---|---|
 | **Command line** (affects every screen) | `sudo zenithboard units imperial` · `sudo zenithboard units metric` · `sudo zenithboard radius 5` · `sudo zenithboard cycle 8` |
-| **Menu** | `sudo zenithboard menu` → *4 Settings* (network, receiver, wall, logs) |
+| **Menu** | `sudo zenithboard menu` → *3 Settings* (network, receiver, wall, logs) |
 | **On the tablet** (that tablet only) | Tap the faint gear in the bottom-right corner: units, radius, seconds per plane, colour (amber / green / red / white / turquoise). Or use a link, see [Tablet links](#tablet-links-one-address-per-look) below. |
 
 Radius presets are **1, 2, 5, 10, 15, 30, 50** — read as kilometres in metric mode and miles in imperial mode. Changes apply immediately, no restart or reinstall.
@@ -332,7 +330,7 @@ Each tablet can have its own look through the link you open. The settings are re
 sudo zenithboard location 49.1193 6.1757 180      # latitude, longitude, altitude in metres
 ```
 
-(or menu *4 Settings → 2 Receiver → Antenna position*). The position is updated **everywhere ZenithBoard can reach**: the wall, readsb / dump1090-fa, ADSB Exchange (including its MLAT) and Plane Finder. A summary then lists anything only the provider's website can change (FlightAware and Flightradar24 hold your position in your online account) with the page to open.
+(or menu *3 Settings → 2 Receiver → Antenna position*). The position is updated **everywhere ZenithBoard can reach**: the wall, readsb / dump1090-fa, ADSB Exchange (including its MLAT) and Plane Finder. A summary then lists anything only the provider's website can change (FlightAware and Flightradar24 hold your position in your online account) with the page to open.
 
 All settings live in one readable file: `/etc/zenithboard/config.env`.
 
@@ -373,7 +371,7 @@ Military aircraft are drawn in grey and labelled `MILITARY` when they have no ai
 To show full model names and to recognise newly registered type codes, ZenithBoard can download a free list of about 2,800 aircraft types from the [tar1090-db](https://github.com/wiedehopf/tar1090-db) project (itself derived from the Mictronics aircraft database). The list is downloaded **to your Pi only** and is never part of this repository.
 
 * **On by default** when FlightInfo is installed: downloaded once at install, then refreshed **once a month** (it also catches up after the Pi was switched off).
-* Turn it off or on: **`sudo zenithboard data auto off`** / **`on`**, or the menu *4 Settings → 3 Wall → Monthly aircraft-data refresh*.
+* Turn it off or on: **`sudo zenithboard data auto off`** / **`on`**, or the menu *3 Settings → 3 Wall → Monthly aircraft-data refresh*.
 * Refresh now: `sudo zenithboard data update`. Check: `zenithboard data status`.
 * A failed download (no internet, broken file) changes nothing: the previous list stays in use, and the wall works without the list at all.
 
@@ -382,12 +380,12 @@ To show full model names and to recognise newly registered type codes, ZenithBoa
 ADS-B only carries the aircraft's identity, position, altitude and speed: **it never says where the flight comes from or goes to.** ZenithBoard therefore looks the route up from the callsign (for example `DLH4YK`) on [adsbdb.com](https://www.adsbdb.com/), a free community database, and shows the city when it fits in the 14 characters of the text column, otherwise the airport's name, otherwise the city cut at a word (`FRANKFURT`, never `FRANKFURT AM`). Accents are removed because the dot font has none (`ZÜRICH` → `ZURICH`).
 
 * **Aircraft model fallback:** when your receiver does not know an aircraft's type or registration, the model row (`A320 F-ZZAA`, or the model name) is completed from adsbdb using the aircraft's 24-bit address. This is part of the same setting: with routes off, nothing is sent. Unknown aircraft keep an empty model row.
-* **Registrations from the receiver map's database, offline (0.26.0, off by default):** `sudo zenithboard data localdb on` (or menu *4 Settings → 3 Wall → 9*). The receiver map, tar1090, keeps an aircraft database on the card (`/usr/local/share/tar1090/git-db/db`) and updates it itself. With this on, the wall reads the registration and model there first, before asking adsbdb and hexdb: nothing is downloaded and nothing leaves the Pi. It knows airframes the online services do not: 9H-EWG (4D2087), a Eurowings A320, went out on a post with no registration because adsbdb and hexdb did not know it. About 25 MB of memory at most for the parts of the database in use. `zenithboard data status` says whether it is on and which version tar1090 has.
+* **Registrations from the receiver map's database, offline (0.26.0, off by default):** `sudo zenithboard data localdb on` (or menu *3 Settings → 3 Wall → 9*). The receiver map, tar1090, keeps an aircraft database on the card (`/usr/local/share/tar1090/git-db/db`) and updates it itself. With this on, the wall reads the registration and model there first, before asking adsbdb and hexdb: nothing is downloaded and nothing leaves the Pi. It knows airframes the online services do not: 9H-EWG (4D2087), a Eurowings A320, went out on a post with no registration because adsbdb and hexdb did not know it. About 25 MB of memory at most for the parts of the database in use. `zenithboard data status` says whether it is on and which version tar1090 has.
 * **The airline name comes with the route.** adsbdb's answer names the airline too, so an airline outside the built-in list of ninety is shown by name from its first looked-up flight on (kept in memory until the next restart). The built-in list keeps priority.
 * **No route is shown** for aircraft whose callsign is not an airline callsign (private planes, helicopters, military) or that are not in the database: the two rows stay empty.
 * **It is an indication, not a guarantee.** A callsign can be reused for another route, and the database is maintained by volunteers.
 * **Answers that cannot be this flight are dropped** (rather than shown wrong): the same airport as origin and destination, an aircraft far from the line between the two airports (more than 120 km, or 20 % of the route length), or one flying away from the destination. The row stays empty then, unless a second source ([hexdb.io](https://www.hexdb.io/), asked only in that case, once per callsign) knows a route the aircraft can really be on (it also handles callsigns with several legs, such as A-B-A). A real flight that takes a long detour can be hidden too; that is the price of not showing wrong routes.
-* **Privacy:** only the callsign of an aircraft in your radius (and, with statistics on, of the day's farthest aircraft, for the statistics page) is sent to adsbdb.com (and, when its answer is impossible, to hexdb.io, with the code of an airport when its position is needed), never your position. Requests are spaced out (one every 1.5 s) and answers are kept for 12 hours. Turn it off if you prefer nothing to leave the Pi: `sudo zenithboard routes off` (or menu *4 Settings → 3 Wall → Flight origin/destination*).
+* **Privacy:** only the callsign of an aircraft in your radius (and, with statistics on, of the day's farthest aircraft, for the statistics page) is sent to adsbdb.com (and, when its answer is impossible, to hexdb.io, with the code of an airport when its position is needed), never your position. Requests are spaced out (one every 1.5 s) and answers are kept for 12 hours. Turn it off if you prefer nothing to leave the Pi: `sudo zenithboard routes off` (or menu *3 Settings → 3 Wall → Flight origin/destination*).
 * Needs internet on the Pi; the wall works without it. If a lookup fails (network hiccup) it is retried after one minute.
 * **Route missing on a flight you know?** Run `zenithboard routes test TRA913C` (use your callsign): it asks adsbdb from your Pi and prints what it knows, or why it could not. `zenithboard logs flightinfo` lists failed lookups.
 
@@ -395,7 +393,7 @@ ADS-B only carries the aircraft's identity, position, altitude and speed: **it n
 
 Photos come from the [Planespotters.net photo API](https://www.planespotters.net/photo/api), looked up by the aircraft's hex address. They belong to their photographers: the wall shows each photo unmodified, with the photographer's name and a link to the page on Planespotters. As Planespotters' [photo API terms](https://www.planespotters.net/photo/api) require, **the tablet loads each picture straight from Planespotters** (so it needs internet for photos; without it, the animated sky is shown), and the Pi keeps no picture: it only asks the API which photo there is, and remembers the answer a day at most (0.24.5; until then the Pi fetched the pictures for the tablet). The photos are never posted to Bluesky.
 
-* Turn photos off or on: `sudo zenithboard photos off` / `on` (or menu *4 Settings → 3 Wall → Photos*). With photos off, the animated sky scene is shown for every aircraft.
+* Turn photos off or on: `sudo zenithboard photos off` / `on` (or menu *3 Settings → 3 Wall → Photos*). With photos off, the animated sky scene is shown for every aircraft.
 * Not every aircraft has a photo; those show the animated scene.
 * Planespotters limits how fast it can be asked and answers `403 Forbidden` to bursts, so the wall queues its lookups and makes **at most one request every 2 seconds**. With a busy sky the first aircraft of a cycle may show the animated scene and get its photo on the next pass. A refused lookup is retried ten minutes later, never remembered as "no photo".
 * Check that your Pi can really reach the service, without waiting for an aircraft: `zenithboard photos test`. It asks Planespotters about a few well-photographed airliners and downloads one image. Add a hex address to test one aircraft: `zenithboard photos test 3c6444`.
@@ -424,7 +422,7 @@ The gain is how much the dongle amplifies the radio signal. Too low and distant 
 
 | | |
 |---|---|
-| **Menu** | `sudo zenithboard menu` → *4 Settings → 2 Receiver → 4 Gain* |
+| **Menu** | `sudo zenithboard menu` → *3 Settings → 2 Receiver → 4 Gain* |
 | **Check** | `zenithboard gain check` reads the decoder's own statistics of the last 15 minutes (messages, farthest aircraft, **share of very strong messages**) and says *too high*, *good* or *room to raise* |
 | **Change** | `sudo zenithboard gain set max` · `gain set 40.2` · `gain down` · `gain up` · `gain set default` · the real steps: `zenithboard gain steps` |
 | **Record 24 h** | `sudo zenithboard gain log on` · `gain log show` · `gain log clear` — a measurement every 15 minutes as a CSV table |
@@ -439,9 +437,9 @@ The gain is how much the dongle amplifies the radio signal. Too low and distant 
 
 ## 978 MHz UAT (United States)
 
-In the United States many general-aviation aircraft transmit on **978 MHz (UAT)** instead of 1090 MHz; the rest of the world uses 1090 MHz only. ZenithBoard therefore asks for your **region** at the first run (change it any time: `sudo zenithboard region us|world`, or menu *4 Settings → 2 Receiver → Region*). Only with `us` the optional UAT step appears: menu *1 ADSB* → tick **978 MHz UAT**.
+In the United States many general-aviation aircraft transmit on **978 MHz (UAT)** instead of 1090 MHz; the rest of the world uses 1090 MHz only. ZenithBoard therefore asks for your **region** at the first run (change it any time: `sudo zenithboard region us|world`, or menu *3 Settings → 2 Receiver → Region*). Only with `us` the optional UAT step appears: menu *1 ADSB* → tick **978 MHz UAT**.
 
-* **What you need:** a **second SDR dongle** with its own serial number (`rtl_eeprom -d 1 -s 00000978`) and, for real range, a **978 MHz antenna** (a 1090 MHz antenna is poor at 978 MHz). The installer asks for that dongle's serial and refuses the serial already used for 1090 MHz ADS-B or ACARS.
+* **What you need:** a **second SDR dongle** with its own serial number (`rtl_eeprom -d 1 -s 00000978`) and, for real range, a **978 MHz antenna** (a 1090 MHz antenna is poor at 978 MHz). The installer asks for that dongle's serial and refuses the serial already used for 1090 MHz ADS-B.
 * **What gets installed:** FlightAware's `dump978-fa` and `skyaware978` (from the FlightAware package repository). UAT aircraft are written to `/run/skyaware978/aircraft.json`; the **wall merges them with the 1090 MHz aircraft** (an aircraft heard on both appears once). If PiAware is installed it is pointed at the 978 MHz receiver as well (check your FlightAware stats page).
 * **Check it:** `sudo zenithboard status` shows the 978 MHz service and how many aircraft it hears; `sudo zenithboard logs uat` shows its log.
 * **Not shared with other feeders:** ADSB Exchange, Flightradar24 and Plane Finder keep receiving 1090 MHz only. The tar1090 map does not show UAT unless you add the `skyaware978` instance yourself ([tar1090 documentation](https://github.com/wiedehopf/tar1090#978-uat-support)).
@@ -453,22 +451,22 @@ In the United States many general-aviation aircraft transmit on **978 MHz (UAT)*
 
 ## Updating and uninstalling
 
-**One command updates everything** (ZenithBoard itself from GitHub, readsb / dump1090-fa, ADSB Exchange, FlightAware, Flightradar24, Plane Finder, FlightInfo, acarsdec, Grafana). Your settings are kept:
+**One command updates everything** (ZenithBoard itself from GitHub, readsb / dump1090-fa, ADSB Exchange, FlightAware, Flightradar24, Plane Finder, FlightInfo). Your settings are kept:
 
 ```bash
 sudo zenithboard update
 ```
 
-**Or update only ZenithBoard and the wall**, in seconds, when a new version is out and the feeders need nothing: menu *6 Update → ZenithBoard and the wall only*, or `sudo zenithboard update quick`.
+**Or update only ZenithBoard and the wall**, in seconds, when a new version is out and the feeders need nothing: menu *5 Update → ZenithBoard and the wall only*, or `sudo zenithboard update quick`.
 
-**Or update only some components.** Menu *6 Update → Choose what to update* shows the installed components as a list: tick the ones you want (Space), Enter to go. The same from the command line:
+**Or update only some components.** Menu *5 Update → Choose what to update* shows the installed components as a list: tick the ones you want (Space), Enter to go. The same from the command line:
 
 ```bash
 zenithboard update list                        # what is installed (and its version when known)
 sudo zenithboard update only readsb flightinfo # just those two
 ```
 
-Names: `zenithboard` (the ZenithBoard code itself), `readsb`, `dump1090`, `adsbx`, `piaware`, `fr24`, `planefinder`, `flightinfo`, `acars`. Only what is installed is offered.
+Names: `zenithboard` (the ZenithBoard code itself), `readsb`, `dump1090`, `adsbx`, `piaware`, `fr24`, `planefinder`, `flightinfo`. Only what is installed is offered.
 
 **Which version do I have?** `zenithboard version` (also shown at the top of the menu and in `zenithboard status`). After an update it should show the newest version listed in the [changelog](CHANGELOG.md); if the update could not fetch the code it prints `NOT updated: staying on version ...`. On a tablet the version is in the gear panel — with a link to the statistics page beside it while statistics are on — and at the foot of the statistics page, each linked to that version's release notes on GitHub — a link, not a lookup: nothing is asked of GitHub unless you tap it.
 
@@ -480,14 +478,14 @@ cd ~/ZenithBoard && git fetch origin && git reset --hard origin/main && sudo ./i
 sudo zenithboard update
 ```
 
-The same is available in the menu (*6 Update*). Run it whenever a provider releases a new version, or once a month.
+The same is available in the menu (*5 Update*). Run it whenever a provider releases a new version, or once a month.
 
 ```bash
 sudo zenithboard menu                                 # add or remove any component at any time
 sudo /opt/zenithboard/install.sh --uninstall-all      # remove everything
 ```
 
-**Keep your settings as a file**, to put them back after a fresh install or to move them to another Pi — menu *7 Maintenance*, or:
+**Keep your settings as a file**, to put them back after a fresh install or to move them to another Pi — menu *6 Maintenance*, or:
 
 ```bash
 zenithboard settings export                    # zenithboard-settings-HOST-DATE.env, no secret in it
@@ -514,20 +512,20 @@ Provider by provider, how to fix it yourself, and what the maintainer does: wiki
 
 Every service writes to the system journal, which already limits itself (up to 10 % of the disk, at most 4 GB, and it is kept in memory on many Pi setups). On a small SD card you may want less. Nothing changes unless you ask.
 
-| Menu *4 Settings → 4 Logs* | Command |
+| Menu *3 Settings → 4 Logs* | Command |
 |---|---|
 | **Review** (size, limit, recent warnings) | `zenithboard logs usage` · `zenithboard logs review` |
 | **Size**: set a maximum | `sudo zenithboard logs limit 50` (10-2000 MB) · `sudo zenithboard logs limit default` |
 | **Automatic cleaning** (off by default): every day, messages older than 7 days are removed, so the last 7 days are always there | `sudo zenithboard logs auto on` · `off` · `status` |
 | **Delete everything now** | `sudo zenithboard logs clean` |
 
-The limit applies to all system logs (it is a journald setting, written to `/etc/systemd/journald.conf.d/zenithboard.conf`). To read a service's log: `zenithboard logs flightinfo|decoder|acars|uat`.
+The limit applies to all system logs (it is a journald setting, written to `/etc/systemd/journald.conf.d/zenithboard.conf`). To read a service's log: `zenithboard logs flightinfo|decoder|uat|social`.
 
 ---
 
 ## Statistics: messages per hour, range, aircraft per day (optional)
 
-Off by default. `sudo zenithboard stats on` (or menu 4 → Receiver → 5) takes one sample every fifteen minutes and keeps thirty days of them. Then `http://<pi-address>:8080/stats` shows today's numbers and three charts, and `zenithboard stats` prints the same in the terminal with a sparkline of the day's hours. The daily aircraft count is a floor: a sample every fifteen minutes misses an aircraft that crossed in less. About 6 KB a day on the card; `stats off` stops it and keeps the files. `zenithboard stats gaps` lists what the wall could not name or draw over those thirty days — callsign prefixes shown without an airline name, type codes drawn with the generic silhouette — which is how the next airline lookup and the next silhouettes get chosen on figures rather than guesses. Details on the wiki: [Statistics](https://github.com/regis57/ZenithBoard/wiki/Statistics).
+Off by default. `sudo zenithboard stats on` (or menu 3 → Receiver → 5) takes one sample every fifteen minutes and keeps thirty days of them. Then `http://<pi-address>:8080/stats` shows today's numbers and three charts, and `zenithboard stats` prints the same in the terminal with a sparkline of the day's hours. The daily aircraft count is a floor: a sample every fifteen minutes misses an aircraft that crossed in less. About 6 KB a day on the card; `stats off` stops it and keeps the files. `zenithboard stats gaps` lists what the wall could not name or draw over those thirty days — callsign prefixes shown without an airline name, type codes drawn with the generic silhouette — which is how the next airline lookup and the next silhouettes get chosen on figures rather than guesses. Details on the wiki: [Statistics](https://github.com/regis57/ZenithBoard/wiki/Statistics).
 
 Under the four numbers, two lines name **the farthest aircraft of the day and of the thirty days**: when, the airline and flight number, where it flew from and to, the model, the altitude, the distance, and the city of 100 000 inhabitants or more nearest to it (`18/10 14:32 · easyJet U21234 (EZY1234) · Edinburgh (EDI) → Saint-Louis (BSL) · … · 329 km, 55 km from Lille, FR`). The decoder only says how far, so with statistics on the wall watches its aircraft list every five seconds and keeps the farthest one; the route comes from the same lookup as the wall's, the city from a list shipped with ZenithBoard ([GeoNames](https://www.geonames.org/), CC BY 4.0), with nothing asked of the internet for it.
 
@@ -548,11 +546,11 @@ sudo zenithboard social test      # draw the picture and print the text; post no
 sudo zenithboard social on        # from now on, under your rules; off at any time
 ```
 
-Or menu *4 Settings → 6 Social sharing*. The wizard tries the account before going on, then asks for the place to name in the posts (your words), the sharing radius, the minimum gap between posts, the rules, and the picture: its look, its colour (the wall's, or any of its five), its map. **Nothing that gives your position away leaves the Pi**: no distance, no bearing, no photo; the track and the map are centred on the aircraft and nothing marks the receiver. The map comes from EOX's tile service, credited and linked in every post, cached on the Pi for a month. The secret lives in a root-owned file the service alone can read, the picture is drawn in memory and deleted after each post, and `zenithboard security` checks all of it. Why Bluesky and not X, Threads or Instagram, how to get the app password step by step, what each rule and each map means: wiki **[Social sharing](https://github.com/regis57/ZenithBoard/wiki/Social-sharing)**.
+Or menu *3 Settings → 6 Social sharing*. The wizard tries the account before going on, then asks for the place to name in the posts (your words), the sharing radius, the minimum gap between posts, the rules, and the picture: its look, its colour (the wall's, or any of its five), its map. **Nothing that gives your position away leaves the Pi**: no distance, no bearing, no photo; the track and the map are centred on the aircraft and nothing marks the receiver. The map comes from EOX's tile service, credited and linked in every post, cached on the Pi for a month. The secret lives in a root-owned file the service alone can read, the picture is drawn in memory and deleted after each post, and `zenithboard security` checks all of it. Why Bluesky and not X, Threads or Instagram, how to get the app password step by step, what each rule and each map means: wiki **[Social sharing](https://github.com/regis57/ZenithBoard/wiki/Social-sharing)**.
 
 ## Reliability: when the Pi freezes or loses its network (optional)
 
-A Pi that runs for months can freeze or lose its network at night. Everything here is **off until you turn it on**: menu *4 Settings → 5 Reliability*, or commands.
+A Pi that runs for months can freeze or lose its network at night. Everything here is **off until you turn it on**: menu *3 Settings → 5 Reliability*, or commands.
 
 | What | What it does | Menu / command |
 |---|---|---|
@@ -573,7 +571,7 @@ ZenithBoard runs as root, listens on your network and installs other people's so
 
 * **The wall answers your home network only.** It has no login, by design: it is meant for a tablet on your home network, so it answers the private address ranges and gives everyone else a 403, forwarded port or not. To see it from outside, use a VPN into your home; to open it on purpose, `sudo zenithboard config-set ALLOW_FROM any`.
 * **The services can only do their own job.** Every ZenithBoard service runs inside a systemd sandbox that keeps only what its job needs; the wall server runs as a system user that cannot log in and cannot write anywhere. Check it with `systemd-analyze security zenithboard-flightinfo` (about 1.3 on a Pi 3B: 0 is locked down, 10 is open).
-* **Nothing is left at a default password, and the OS can patch itself.** Grafana gets a generated admin password at install (`sudo zenithboard acars password` shows it), and `sudo zenithboard patches on` installs Debian's security fixes daily, from the security channel only, feeders untouched.
+* **Nothing is left at a default password, and the OS can patch itself.** `sudo zenithboard patches on` installs Debian's security fixes daily, from the security channel only, feeders untouched.
 * **`zenithboard security` checks all of this on the running Pi** and says how to close whatever is open. On the author's own Pi it reports two warnings and both are decisions: the Debian patches are left for the owner to switch on, and SSH passwords stay because the Pi is reached from the home network only.
 * **The repository is guarded too:** `main` accepts pull requests only, squash-merged, signed, with the tests and CodeQL green; GitHub secret scanning and push protection are on.
 * **Updates are checked before they run.** `sudo zenithboard update` verifies the signature on the new code before `install.sh` runs as root. The first time, it lists GitHub's signing keys and asks you to confirm — compare with the key ID behind the **Verified** badge on GitHub. After that it is silent; a bad signature stops it outright. On a fork, `sudo zenithboard config-set UPDATE_VERIFY 0`.
@@ -603,13 +601,9 @@ readsb (or dump1090-fa) --- aircraft.json ---> FlightInfo server ---> tablet (do
                                       +--> FlightAware     (MLAT off)
                                       +--> Flightradar24   (MLAT off)
                                       +--> Plane Finder
-
-131 MHz dongle --> acarsdec --> UDP JSON --> ingester (filter, 7-day rolling) --> SQLite --> Grafana
 ```
 
 **Single MLAT:** ADSB Exchange owns the only MLAT client. The installer switches MLAT off in PiAware and Flightradar24, and `zenithboard status` counts running MLAT processes so you can verify it is exactly one.
-
-**ACARS retention:** the ingester drops acknowledgements, link tests and empty messages (configurable in `config.env`) and deletes everything older than `ACARS_RETENTION_DAYS` (default 7) every hour.
 
 The processes, the files each one reads and writes, and the timers are set out in the wiki: **[Architecture](https://github.com/regis57/ZenithBoard/wiki/Architecture)**.
 
@@ -617,13 +611,11 @@ The processes, the files each one reads and writes, and the timers are set out i
 
 | Symptom | Try |
 |---|---|
-| Wall says **NO DATA – RECEIVER NOT RESPONDING** | `zenithboard status` — is the decoder running? `zenithboard logs decoder`. Dongle plugged in and not shared with ACARS? |
+| Wall says **NO DATA – RECEIVER NOT RESPONDING** | `zenithboard status` — is the decoder running? `zenithboard logs decoder`. Dongle plugged in? |
 | Wall says NO FLIGHTS for a long time | Raise the radius (`sudo zenithboard radius 30`). Check `zenithboard status` for the aircraft count. |
 | Wall opens but looks cropped | Use the gear → **Full screen**, or *Add to Home Screen*. |
 | Two MLAT clients in `status` | `sudo zenithboard mlat-guard` |
-| ACARS panels empty | `zenithboard logs acars`; confirm the ACARS dongle serial in `zenithboard config` and that frequencies are correct for your region. |
 | `apt update` says the **Flightradar24 repository "is not signed"** (`SHA1 is not considered secure`) | Debian 13 (trixie) rejects the SHA1 signature of FR24's first key. `sudo zenithboard update` installs FR24's 2026 key, **only if its fingerprint is `ED84 3290 A602 4136 85E5 7D43 6F77 03F6 5FA1 BDAF`**, and never turns signature checking off. Then add Flightradar24 again from menu *1 ADSB*. |
-| Grafana asks for a login | `admin`, and the password from `sudo zenithboard acars password`. Menu 3 can allow anonymous *viewing* on your LAN only. |
 
 ---
 
@@ -633,8 +625,7 @@ The processes, the files each one reads and writes, and the timers are set out i
 * **FlightAware and Flightradar24 store your antenna position on their websites**: after `zenithboard location`, update it there too (the command tells you where).
 * **The airline name list is built in** (about 90 major airlines). Other airlines are named from the route lookup, once it has answered for one of their flights since the last restart; until then, and with routes off, they show the callsign only.
 * **Routes are looked up by callsign, not by flight.** A callsign can be reused for the other direction, so impossible answers are dropped rather than shown — a blank route row is better than a wrong one.
-* **ACARS legality differs per country** — check your local rules before collecting ACARS messages.
-* **Some parts have never run on real hardware**, among them the 978 MHz UAT receiver, the fixed-IP menu, Plane Finder and ACARS. They are written and unit-tested against stand-in programs, which proves the logic and nothing about the hardware.
+* **Some parts have never run on real hardware**, among them the 978 MHz UAT receiver, the fixed-IP menu and Plane Finder. They are written and unit-tested against stand-in programs, which proves the logic and nothing about the hardware.
 
 Which is which, what has been proven on a real Pi, and the field log of what has actually gone wrong: **[Project status](https://github.com/regis57/ZenithBoard/wiki/Project-status)** in the wiki.
 
@@ -643,7 +634,7 @@ Which is which, what has been proven on a real Pi, and the field log of what has
 The whole suite, what each test covers, and the two patterns it is built on are in the wiki: **[Testing](https://github.com/regis57/ZenithBoard/wiki/Testing)** and **[Contributing](https://github.com/regis57/ZenithBoard/wiki/Contributing)**. The short version — run this before opening a pull request, it is exactly what CI runs:
 
 ```bash
-shellcheck -x -S warning install.sh bin/zenithboard bin/run-acarsdec bin/zenithboard-demo lib/*.sh tests/*.sh
+shellcheck -x -S warning install.sh bin/zenithboard bin/zenithboard-demo lib/*.sh tests/*.sh
 python3 -m unittest discover -s tests -v
 for t in tests/test_*.sh; do bash "$t" || echo "FAIL $t"; done
 for t in tests/test_*.js; do node "$t" || echo "FAIL $t"; done

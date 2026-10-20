@@ -2,7 +2,7 @@
 # shellcheck disable=SC2034
 # shellcheck shell=bash
 # Third-party pins. Bump here when an upstream moves; everything else reads these.
-ZB_VERSION="0.29.0"
+ZB_VERSION="0.30.0"
 
 # FlightAware APT repository package (provides piaware and dump1090-fa). FlightAware renamed it from
 # piaware-repository (9.0.1) to flightaware-apt-repository; see https://www.flightaware.com/adsb/piaware/install
@@ -39,6 +39,3 @@ PF_VERSION_ARM64="5.4.211"
 PF_URL_ARMHF="https://client-v2.planefinder.net/pfclient_${PF_VERSION_ARMHF}_armhf.deb"
 PF_URL_ARM64="https://client-v2.planefinder.net/pfclient_${PF_VERSION_ARM64}_arm64.deb"
 
-# acarsdec (ACARS decoder), built from source
-ACARSDEC_REPO="https://github.com/TLeconte/acarsdec.git"
-ACARSDEC_REF="master"

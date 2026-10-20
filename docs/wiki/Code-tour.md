@@ -10,14 +10,12 @@ About 5,000 lines in three languages, each chosen for where it has to run: shell
 install.sh              the menu-driven installer (also the uninstaller)
 bin/zenithboard         the whole command line
 bin/zenithboard-demo    a fake sky, for working without hardware
-bin/run-acarsdec        wrapper that builds acarsdec's arguments from config.env
 lib/*.sh                one module per subject, sourced by both install.sh and bin/zenithboard
 flightinfo/server.py    the wall's web server and all its lookups
 flightinfo/static/      the wall itself: app.js, flap.js, scene.js, shapes, CSS
 flightinfo/aircraft.py  reading aircraft.json
 flightinfo/social.py    social sharing: the service that picks an aircraft and posts it to Bluesky
 flightinfo/social_card.py  the split-flap picture with its map (Pillow)
-acars/acars_ingest.py   ACARS UDP -> SQLite, with retention
 systemd/                the unit files
 tools/                  maintenance scripts (type-list refresh, demo photos, checkers), social-render.js (the dot-matrix picture)
 tests/                  the whole suite
@@ -42,7 +40,6 @@ docs/wiki/              the source of this wiki
 | `ddns.sh` | DuckDNS, No-IP, FreeDNS |
 | `logs.sh` | Size, review, cap, clean, the daily clean-up |
 | `uat.sh` | The optional 978 MHz receiver (United States) |
-| `acars.sh` | `acarsdec`, the ingester, Grafana |
 | `update.sh` | Updating everything, or one component |
 
 Two conventions throughout: a menu's back entry is always the single word `back`, and no module reads a setting directly — it goes through `cfg_get`, so a missing key falls back to the default in `common.sh`.
@@ -84,7 +81,5 @@ The constants at the top of `app.js` — `GW`, `GH`, `SIL_BOX`, `PHOTO_BOX` — 
 | `zenithboard-netwatch.service` + `.timer` | The network watchdog | Every 2 min, if on |
 | `zenithboard-logs-clean.service` + `.timer` | Deletes log messages older than 7 days | Daily, if on |
 | `zenithboard-gain-log.service` + `.timer` | One gain measurement into the 24-hour CSV | Every 15 min, if on |
-| `zenithboard-acarsdec.service` | The ACARS decoder | With ACARS |
-| `zenithboard-acars-ingest.service` | ACARS into SQLite | With ACARS |
 
 The watchdog timers are `oneshot` services fired by a timer rather than long-running daemons: a crashed check cannot take the watchdog down with it, since the next tick starts a fresh one.

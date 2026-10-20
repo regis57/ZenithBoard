@@ -10,7 +10,6 @@ ZenithBoard runs as root on a machine in your home, listens on your network, and
 |---|---|---|
 | Your network | The wall has no login **by design**. It answers home networks only (`ALLOW_FROM=private`): a forwarded port meets a 403 from the internet until you open it on purpose | 0.15.0 |
 | The wall server | Runs as a `nologin` system user inside a full systemd sandbox; can write nowhere | 0.12.0 |
-| The ACARS ingester | Same sandbox; listens on `127.0.0.1` only; parameterised SQL | 0.12.0 |
 | Its HTTP answers | Every header value comes from a fixed table inside the program | 0.12.2 |
 | Photos | The address must be `https` inside `planespotters.net` or `plnspttrs.net` before it is handed to the tablet | 0.11.1, 0.12.4, 0.24.5 |
 | Files it serves | Real-path check: nothing outside its own folders, symlinks included | always |
@@ -18,8 +17,7 @@ ZenithBoard runs as root on a machine in your home, listens on your network, and
 | Downloads run as root | Private `mktemp` folder (mode 700), https only, no downgrade on redirect | 0.12.0, fixed in 0.12.1 |
 | Third-party installers | **Trusted, not checked** — written down below | always |
 | Package signatures | Never turned off. The Flightradar24 key is installed only if its fingerprint matches | always |
-| Secrets | The dynamic-DNS token, the Grafana password and the Bluesky app password never go on a command line, into `config.env` or into a log; they live in root-owned files (the social one readable by the service's group) | always; Grafana 0.15.0; social 0.18.0 |
-| Grafana | ZenithBoard sets the admin password itself at install and at update, so `admin`/`admin` is never left open | 0.15.0 |
+| Secrets | The dynamic-DNS token and the Bluesky app password never go on a command line, into `config.env` or into a log; they live in root-owned files (the social one readable by the service's group) | always; social 0.18.0 |
 | The operating system | Debian's security fixes can install themselves daily, from the security channel only; the feeders are left alone | 0.15.0 |
 | Checking all of it | `zenithboard security` reads the running Pi and says what is open and how to close it | 0.15.0 |
 | The repository | CodeQL, shellcheck, pinned actions, Dependabot, a monthly check of the download addresses | 0.11.1 |
@@ -35,7 +33,6 @@ ZenithBoard runs as root on a machine in your home, listens on your network, and
 | The wall, port 8080 | Home networks (`ALLOW_FROM=private`) | No login: it is meant to be opened by a tablet with no keyboard. Anyone outside the private ranges gets a 403, forwarded port or not |
 | `/api/planes`, `/api/config` | Same | Aircraft in range, and display settings. **The antenna's exact position is never sent** |
 | tar1090, port 80 | Same | Installed by readsb, not by ZenithBoard |
-| Grafana, port 3000 | Same | Only with ACARS. Login `admin` with the password ZenithBoard set: `sudo zenithboard acars password` |
 | Plane Finder, port 30053 | Same | Its own setup page |
 | SkyAware, port 8504 (or 8978) | Same | Served by FlightAware's lighttpd, not by ZenithBoard. `zenithboard security` names it |
 | `/stats`, `/api/stats` | Same as the wall | Only when `STATS=1`. Counts and ranges per hour and per day; the antenna's position is not part of it. Since 0.22.0 also the farthest aircraft of the day and of the month, each with the large city nearest it and its distance from the antenna: two such lines narrow down where the antenna is, one more reason this page answers the home network only |
@@ -48,7 +45,7 @@ Since 0.15.0 the wall enforces that itself: it answers only the private ranges (
 
 ## The services can only do their own job
 
-The wall server and the ACARS ingester run as the `zenithboard` system user, which cannot log in, inside a full systemd sandbox: no devices, no kernel tuning, modules or logs, no namespaces, no new privileges, an empty capability set, a restricted list of network families and a system-call filter. The wall server can write **nowhere** — it only reads.
+The wall server and the social sharing service run as the `zenithboard` system user, which cannot log in, inside a full systemd sandbox: no devices, no kernel tuning, modules or logs, no namespaces, no new privileges, an empty capability set, a restricted list of network families and a system-call filter. The wall server can write **nowhere** — it only reads.
 
 What that buys: a hole in the wall server stays a hole in a read-only program that can see `aircraft.json`, its own files and the internet. It cannot become a foothold on the Pi.
 
@@ -65,7 +62,6 @@ Every ZenithBoard service is sandboxed since 0.15.0, each keeping only what its 
 | Unit | Score | What it keeps, and why |
 |---|---|---|
 | `zenithboard-flightinfo` | 1.3 | Nothing: it reads, and talks to the internet for photos and routes |
-| `zenithboard-acars-ingest` | 1.3 | Writes `acars.db` |
 | `zenithboard-gain-log` | 1.0 | Runs as the `zenithboard` user, not root, since 0.15.0: it reads `stats.json` and appends one CSV line |
 | `zenithboard-social` | 1.3 | Reads `aircraft.json`, asks the wall on the loopback, writes its own state folder (and the map tiles' cache in it), posts over the internet. Node or Pillow runs inside the same box to draw the picture |
 | `zenithboard-logs-clean` | 1.4 | May write the journal folder, nothing else |
@@ -73,7 +69,6 @@ Every ZenithBoard service is sandboxed since 0.15.0, each keeping only what its 
 | `zenithboard-data-refresh` | 4.2 | Writes the aircraft-type list |
 | `zenithboard-netwatch` | 4.2 | Keeps raw sockets for `ping`, netlink and D-Bus for `nmcli` and `systemctl`, and **no system-call filter**: a filter that killed `ping` would leave the Pi unwatched without a sound |
 | `zenithboard-wifi` | 3.9 | Keeps `CAP_NET_ADMIN` for `iw reg set` and `/dev/rfkill` |
-| `zenithboard-acarsdec` | 6.0 | Drives a USB dongle, so devices cannot be taken away from it |
 
 ## The code is checked before it is run
 
@@ -125,7 +120,7 @@ The installer runs other people's installers, as root, straight from the network
 | `readsb-install.sh` | wiedehopf/adsb-scripts on GitHub |
 | `feed.sh`, `feed-update.sh` | adsbexchange.com |
 | `install_fr24_rpi.sh` | repo-feed.flightradar24.com |
-| `.deb` packages | FlightAware, Plane Finder, Grafana |
+| `.deb` packages | FlightAware, Plane Finder |
 
 **This is a real trust decision, and it is not hidden.** Installing ZenithBoard means trusting those projects as much as you trust this one. Pinning a checksum for each would break on every one of their releases, so what is pinned instead is the *address*, in `lib/versions.sh`, where you can read it before running anything. A monthly check (below) says when one of those addresses stops answering, and [When a provider changes something](Providers) says what happens then.
 
@@ -153,7 +148,6 @@ What is left is the GitHub Actions used by CI. They are **pinned to a commit, no
 
 | Alert | Why it stays |
 |---|---|
-| `acars.db` is mode 0640 | Grafana reads it through the `zenithboard` group; others get nothing |
 | `types.json` is mode 0644 | A public list of aircraft model names, written by root and read by the wall server as another user; not world-writable |
 
 **Tools that are not used, and why**, since the question comes up: **Trivy** reads lockfiles, and there are none. **OWASP ZAP** tests running web applications, and this one is five routes with no login, no forms and no database — it was read line by line instead, which is how the photo-address problem was found. **Opengrep/Semgrep** would duplicate what CodeQL and shellcheck already cover.

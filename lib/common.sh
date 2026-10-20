@@ -80,13 +80,6 @@ BIND_ADDRESS=0.0.0.0
 ALLOW_FROM=private
 DECODER=readsb
 ADSB_SDR=
-ACARS_SDR=
-ACARS_FREQS=131.525 131.725 131.825
-ACARS_RETENTION_DAYS=7
-ACARS_IGNORE_EMPTY=1
-ACARS_IGNORE_LABELS=_d,Q0,SQ
-ACARS_UDP_PORT=5555
-ACARS_DB=/var/lib/zenithboard/acars.db
 DEF
 }
 
@@ -114,8 +107,6 @@ is_piaware()     { pkg_installed piaware; }
 is_fr24()        { pkg_installed fr24feed; }
 is_planefinder() { pkg_installed pfclient; }
 is_flightinfo()  { unit_exists zenithboard-flightinfo; }
-is_acars()       { unit_exists zenithboard-acarsdec; }
-is_grafana()     { pkg_installed grafana; }
 
 installed_decoder() { if is_readsb; then echo readsb; elif is_dump1090; then echo dump1090-fa; fi; }
 decoder_json()   { echo "/run/$(cfg_get DECODER readsb)/aircraft.json"; }

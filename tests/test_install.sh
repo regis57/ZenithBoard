@@ -100,10 +100,10 @@ run resumed ok world metric 49.1 6.1 0 10 0
 check "the wizard runs again after a cancel"        '[ "$rc" = 0 ] && grep -q "^LAT=49.1$" "$t/etc/config.env" && grep -q "^menu	ZenithBoard" "$t/resumed.screens"'
 
 # ---- the menu texts the README promises
-run colours 4 wall color CANCEL back back 0
+run colours 3 wall color CANCEL back back 0
 check "wall colour offers the five colours of the wall" 'grep "^radiolist	Dot colour" "$t/colours.screens" | grep -q "\[amber green red white turquoise \]"'
 check "the wall menu names them"                     'grep -q "Colour: amber, green, red, white, turquoise\" " install.sh'
-run settings 4 back 0
+run settings 3 back 0
 check "settings: six groups, as the README says"     'grep "^menu	Settings" "$t/settings.screens" | grep -q "\[network receiver wall logs reliability social back \]" && grep -q "in six groups" README.md'
 check "settings: Wi-Fi on with no network reads \"not connected\", not \"ON, \"" 'grep "^menu	Settings" "$t/settings.screens" | grep -q "Wi-Fi ON, not connected"'
 check "README: the wall address comes from menu 2"   'grep -q "menu \*2 FlightInfo\* printed" README.md && ! grep -q "address from step 2" README.md'

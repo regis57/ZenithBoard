@@ -5,7 +5,7 @@
 ensure_zb_user() {
   id "$ZB_USER" >/dev/null 2>&1 || useradd --system --home-dir "$ZB_DATA" --shell /usr/sbin/nologin "$ZB_USER"
   # 2751: anyone may walk through to data/ (so `zenithboard status` works without sudo) but only the service
-  # may list the folder, which keeps the ACARS database out of sight.
+  # may list the folder, which keeps the statistics and the social state out of sight.
   install -d -o "$ZB_USER" -g "$ZB_USER" -m 2751 "$ZB_DATA"
   # the downloaded aircraft-type list is read by the wall server (user zenithboard): world-readable, root-writable
   install -d -m 755 "$ZB_DATA/data"
@@ -31,8 +31,9 @@ deploy_files() {
   local src; src="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
   if [ "$src" != "$ZB_HOME" ]; then
     install -d -m 755 "$ZB_HOME"
+    # acars/ is removed and no longer copied: ACARS left ZenithBoard in 0.30.0
     rm -rf "${ZB_HOME:?}/flightinfo" "${ZB_HOME:?}/acars" "${ZB_HOME:?}/lib" "${ZB_HOME:?}/bin" "${ZB_HOME:?}/systemd" "${ZB_HOME:?}/tools"
-    cp -r "$src/flightinfo" "$src/acars" "$src/lib" "$src/bin" "$src/systemd" "$src/tools" "$src/install.sh" "$src/LICENSE" "$ZB_HOME/"
+    cp -r "$src/flightinfo" "$src/lib" "$src/bin" "$src/systemd" "$src/tools" "$src/install.sh" "$src/LICENSE" "$ZB_HOME/"
     printf '%s\n' "$src" > "$ZB_HOME/.source"      # where to `git pull` from when updating
   fi
   chmod +x "$ZB_HOME/install.sh" "$ZB_HOME"/bin/*

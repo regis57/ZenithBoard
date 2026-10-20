@@ -89,17 +89,9 @@ The dynamic-DNS **token is not stored here.** It is asked for interactively and 
 
 The hardware watchdog and the persistent logs are **not** keys: they are system files, and `zenithboard watchdog status` / `keeplogs status` read the real state rather than a remembered one.
 
-## ACARS
+## ACARS (until 0.29.0)
 
-| Key | Default | What it does |
-|---|---|---|
-| `ACARS_SDR` | empty | Serial of the ACARS dongle. Must differ from `ADSB_SDR` |
-| `ACARS_FREQS` | `131.525 131.725 131.825` | Frequencies in MHz, up to 8. The US set is `131.550 130.025 129.125` |
-| `ACARS_RETENTION_DAYS` | `7` | Rows older than this are deleted hourly |
-| `ACARS_IGNORE_EMPTY` | `1` | Drop messages with no text |
-| `ACARS_IGNORE_LABELS` | `_d,Q0,SQ` | Labels dropped before storing: acknowledgements and link tests |
-| `ACARS_UDP_PORT` | `5555` | Where `acarsdec` sends and the ingester listens. Local only |
-| `ACARS_DB` | `/var/lib/zenithboard/acars.db` | The SQLite file Grafana reads |
+The `ACARS_*` settings belonged to the ACARS chain that left ZenithBoard in 0.30.0. They do nothing now; `sudo zenithboard acars remove` deletes them with the rest.
 
 ## Defaults in the code
 

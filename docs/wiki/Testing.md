@@ -9,7 +9,7 @@ No test framework is installed. Python uses `unittest` from the standard library
 Exactly what CI runs:
 
 ```bash
-shellcheck -x -S warning install.sh bin/zenithboard bin/run-acarsdec bin/zenithboard-demo lib/*.sh tests/*.sh
+shellcheck -x -S warning install.sh bin/zenithboard bin/zenithboard-demo lib/*.sh tests/*.sh
 python3 -m unittest discover -s tests -v
 for t in tests/test_*.sh; do bash "$t" || echo "FAIL $t"; done
 for t in tests/test_*.js; do node "$t" || echo "FAIL $t"; done
@@ -23,7 +23,7 @@ Run the whole set before pushing. It takes well under a minute, and the shell te
 |---|---|
 | `test_server.py` | Route plausibility, the hexdb second opinion and its cache, what `build_planes` shows |
 | `test_aircraft.py` | Reading `aircraft.json`, merging 1090 MHz with UAT |
-| `test_acars.py` | The ingester: filtering, storing, retention |
+| `test_legacy.sh` | 0.30.0: what an older ZenithBoard left of ACARS and Grafana is found, said by status and update (never removed by an update), removed by `acars remove` after the typed word; no menu or command offers ACARS any more |
 | `test_update_types.py` | The monthly aircraft-type refresh |
 | `test_gain.sh` | The real gain steps, editing `RECEIVER_OPTIONS`, reading `stats.json`, the advice, the 24-hour log and its pruning |
 | `test_reliability.sh` | Both watchdogs, the netwatch decisions, the Wi-Fi diagnosis and reset, the health screen |
