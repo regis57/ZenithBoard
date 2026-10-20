@@ -157,6 +157,21 @@ class MapTests(unittest.TestCase):
         self.assertIn("Middle", got)
         self.assertNotIn("Nextdoor", got)
 
+    def test_names_along_the_track_first(self):
+        # 0.28.0, RYR5ZK (Brussels → Pisa): a dozen towns in the north of the map, far from the track. Places away
+        # from the track are named only when the track's surroundings give fewer than three.
+        rows = [("Northcity", 49.80, 6.40, 500000), ("Alongone", 49.30, 6.42, 8000), ("Alongtwo", 49.10, 6.45, 6000),
+                ("Alongthree", 48.95, 6.47, 5500), ("Lonely", 48.60, 6.10, 2000)]
+        path = os.path.join(self.d, "along.tsv.gz")
+        mlp.write(rows, path, 49.2, 6.4, 200, ["FR"])
+        tr = [[48.85 + i * 0.022, 6.48 - i * 0.003, 10000, i * 30] for i in range(25)]
+        got = self.names(tr, path)
+        self.assertTrue({"Alongone", "Alongtwo", "Alongthree"} <= set(got), got)
+        self.assertNotIn("Northcity", got)
+        few = os.path.join(self.d, "few.tsv.gz")
+        mlp.write([r for r in rows if not r[0].startswith("Along")], few, 49.2, 6.4, 200, ["FR"])
+        self.assertIn("Northcity", self.names(tr, few), "nothing along the track: the whole map, as before")
+
     def test_outside_the_region_the_shipped_lists(self):
         metz = [[48.95 + i * 0.0125, 6.2, 30000, i * 5] for i in range(37)]
         self.assertIn("Metz", self.names(metz, self.local))

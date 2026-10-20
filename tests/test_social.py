@@ -652,7 +652,8 @@ class FlapPictureTest(unittest.TestCase):
         img, shown = social_card.draw_map(metz, dict(EZY, track=2), "#ff0000", mode="terrain",
                                           fetch=lambda *a: fake_tile("terrain_3857", "jpg", 1, 1, 1))
         self.assertEqual(shown, "terrain")
-        self.assertTrue({"Metz", "Thionville", "Hayange", "Woippy"} <= set(names), names)
+        self.assertTrue({"Metz", "Thionville", "Talange", "Woippy"} <= set(names), names)
+        self.assertNotIn("Hayange", names, "0.28.0: 10 km off a track along the Moselle, not named when the track's surroundings give enough")
         # 0.25.3: the two OpenStreetMap maps too, whose own labels were unreadable once reduced on the real posts
         for mode in ("normal", "night"):
             del names[:]
