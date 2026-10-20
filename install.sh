@@ -179,7 +179,7 @@ settings_receiver_menu() {
 settings_wall_menu() {
   local c
   while true; do
-    c=$(wt_menu "ZenithBoard wall settings (defaults for every screen; a tablet can override them with its gear icon)\n\nRadius: $(cfg_get RADIUS)    Look: $(cfg_get DISPLAY_MODE dots)    Colour: $(wall_theme)    Seconds per aircraft: $(cfg_get CYCLE_SECONDS)\nPhotos: $(cfg_get SHOW_PHOTOS)    Routes: $(cfg_get SHOW_ROUTES 1)    Monthly data refresh: $( [ "$(cfg_get AUTO_DATA_REFRESH 1)" = 1 ] && echo ON || echo OFF )" \
+    c=$(wt_menu "ZenithBoard wall settings (defaults for every screen; a tablet can override them with its gear icon)\n\nRadius: $(cfg_get RADIUS)    Look: $(cfg_get DISPLAY_MODE dots)    Colour: $(wall_theme)    Seconds per aircraft: $(cfg_get CYCLE_SECONDS)\nPhotos: $(cfg_get SHOW_PHOTOS)    Routes: $(cfg_get SHOW_ROUTES 1)    Monthly data refresh: $( [ "$(cfg_get AUTO_DATA_REFRESH 1)" = 1 ] && echo ON || echo OFF )    Offline database: $( [ "$(cfg_get LOCAL_DB 0)" = 1 ] && echo ON || echo OFF )" \
       radius "1  Detection radius" \
       style "2  Look: dot matrix / split-flap airport board" \
       color "3  Colour: amber, green, red, white, turquoise" \
@@ -188,6 +188,7 @@ settings_wall_menu() {
       routes "6  Flight origin/destination on/off" \
       data "7  Monthly aircraft-data refresh on/off" \
       presets "8  Presets: a name for a tablet's own choices (?p=NAME in its address)" \
+      localdb "9  Registrations from the receiver map's database (offline) on/off" \
       back "Return to the previous menu") || return 0
     case "$c" in
       style) settings_style && restart_flightinfo && wt_msg "Look saved: $(cfg_get DISPLAY_MODE dots).\n\nThis is the default for every screen. A tablet that chose its own look (?mode=... or the gear icon) keeps it until you press Reset in its gear panel." 11 ;;
@@ -200,6 +201,11 @@ settings_wall_menu() {
         if wt_yesno "Refresh the aircraft model list automatically once a month?\n\n(Downloads a free list of aircraft names from GitHub. Needs internet on the Pi; the wall works without it.)" 12; then cfg_set AUTO_DATA_REFRESH 1; else cfg_set AUTO_DATA_REFRESH 0; fi
         data_refresh_apply ;;
       presets) presets_menu ;;
+      localdb)
+        if wt_yesno "Read registrations and models from tar1090's aircraft database on this Pi?\n\nThe receiver map (tar1090) keeps this database on the card and updates it itself. It knows aircraft that adsbdb and hexdb do not (9H-EWG, a Eurowings A320, for one). Nothing is downloaded and nothing is sent to the internet.\n\nNow: $( [ "$(cfg_get LOCAL_DB 0)" = 1 ] && echo ON || echo OFF )" 15; then
+          [ -d "$(cfg_get LOCAL_DB_DIR /usr/local/share/tar1090/git-db/db)" ] && cfg_set LOCAL_DB 1 || wt_msg "No tar1090 database at $(cfg_get LOCAL_DB_DIR /usr/local/share/tar1090/git-db/db).\n\nIt comes with the receiver map (tar1090)." 10
+        else cfg_set LOCAL_DB 0; fi
+        restart_flightinfo ;;
       *) return 0 ;;
     esac
   done

@@ -26,7 +26,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.25.4"
+VERSION = "0.26.0"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -69,6 +69,8 @@ DEFAULTS = {
     "STATS": "0",               # the 15-minute statistics timer; /stats and /api/stats say so when it is off
     "DISPLAY_MODE": "dots",     # dots (dot matrix) | flap (split-flap airport board)
     "SHOW_ROUTES": "1",         # where the flight comes from / goes to (looked up by callsign on adsbdb.com)
+    "LOCAL_DB": "0",            # 0.26.0: read registrations and models from tar1090's aircraft database on this Pi
+    "LOCAL_DB_DIR": "/usr/local/share/tar1090/git-db/db",
     "PORT": "8080",
     "BIND_ADDRESS": "0.0.0.0",  # the interface the wall listens on; 127.0.0.1 keeps it to this Pi (a reverse proxy, say)
     "ALLOW_FROM": "private",    # who may read the wall: private (home networks only), any, or networks like 10.8.0.0/24,192.168.1.0/24
@@ -532,7 +534,7 @@ def checked_route(flight, lat, lon, track, gs, route_lookup, route_fallback):
 
 
 def build_planes(data, lat, lon, radius_km, airlines=None, photo_lookup=None, demo=False, types=None, route_lookup=None,
-                 aircraft_lookup=None, route_fallback=None, only_hex=None):
+                 aircraft_lookup=None, route_fallback=None, only_hex=None, local_db=None):
     """Return (planes_in_radius_sorted_by_distance, total_with_position). only_hex: that aircraft alone, so asking
     about one far aircraft (social sharing's range record) does not set off lookups for everything in between."""
     airlines = airlines or {}
@@ -576,6 +578,11 @@ def build_planes(data, lat, lon, radius_km, airlines=None, photo_lookup=None, de
         # The decoder only knows the type and the registration when its aircraft database has the airframe. When it
         # does not, ask adsbdb.com (by the aircraft's hex code) so the model is still shown and the silhouette fits.
         reg, code, found = ac.get("r"), ac.get("t"), None
+        if local_db and not (reg and code) and not demo:
+            found = local_aircraft(ac.get("hex"), local_db)
+            if found:
+                reg = reg or found.get("registration")
+                code = code or found.get("icao_type")
         if aircraft_lookup is not None and not (reg and code) and not (demo and ac.get("t")):
             found = aircraft_lookup(ac.get("hex"))
             if found:
@@ -1110,6 +1117,83 @@ def lookup_aircraft(hex_code):
 lookup_aircraft.pending = lambda hex_code: _aircraft.pending((hex_code or "").strip().upper())
 
 
+# --------------------------------------------------------------------------- aircraft, offline (tar1090's database)
+# 0.26.0, from a real post: EWG8QR (4D2087, 9H-EWG) went out with no registration and no model. adsbdb answered
+# "unknown aircraft", hexdb "n/a"; tar1090's database, which the receiver map's installer keeps on the Pi and updates
+# itself, knew it. Read from the card, nothing asked of the internet. Its layout (wiedehopf/tar1090-db, db/*.js):
+# gzip'd JSON files named by the first characters of the hex code; in each, the rest of the code -> [registration,
+# ICAO type, flags, description], and "children": the longer prefixes that have a file of their own.
+LOCAL_DB_SHARDS = 4                 # parsed files kept in memory (one is about a megabyte of JSON)
+LOCAL_DB_HEXES = 4000               # answers kept, found or not
+_localdb_shards = {}                # (dir, prefix) -> dict, in the order they were read
+_localdb_hexes = {}                 # (dir, hex) -> answer or None
+_localdb_lock = threading.Lock()
+
+
+def _localdb_shard(d, prefix):
+    key = (d, prefix)
+    with _localdb_lock:
+        if key in _localdb_shards:
+            return _localdb_shards[key]
+    try:
+        import gzip
+        with open(os.path.join(d, prefix + ".js"), "rb") as fh:
+            raw = fh.read()
+        try:
+            raw = gzip.decompress(raw)
+        except OSError:
+            pass                                 # a plain JSON file is read as it is
+        data = json.loads(raw.decode("utf-8"))
+        data = data if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        data = None
+    with _localdb_lock:
+        while len(_localdb_shards) >= LOCAL_DB_SHARDS:
+            _localdb_shards.pop(next(iter(_localdb_shards)))
+        _localdb_shards[key] = data
+    return data
+
+
+def local_db_dir(cfg):
+    """The folder of tar1090's database when LOCAL_DB is on and the folder is there; None otherwise."""
+    if not cfg_bool(cfg, "LOCAL_DB"):
+        return None
+    d = str(cfg.get("LOCAL_DB_DIR") or DEFAULTS["LOCAL_DB_DIR"]).strip()
+    return d if os.path.isdir(d) else None
+
+
+def local_aircraft(hex_code, d):
+    """-> {"registration", "icao_type", "type", "manufacturer"} from tar1090's database in folder d, or None."""
+    h = (hex_code or "").strip().upper()
+    if not d or not HEX_RE.match(h):
+        return None
+    with _localdb_lock:
+        if (d, h) in _localdb_hexes:
+            return _localdb_hexes[(d, h)]
+    found, n = None, 1
+    while n <= len(h):
+        shard = _localdb_shard(d, h[:n])
+        if not shard:
+            break
+        entry = shard.get(h[n:])
+        if isinstance(entry, list) and entry:
+            reg = str(entry[0] or "").strip()
+            code = str(entry[1] or "").strip().upper() if len(entry) > 1 else ""
+            desc = str(entry[3] or "").strip() if len(entry) > 3 else ""
+            if reg or code:
+                found = {"registration": reg, "icao_type": code, "type": desc, "manufacturer": ""}
+            break
+        children = shard.get("children") or []
+        if h[:n + 1] not in children:
+            break
+        n += 1
+    with _localdb_lock:
+        if len(_localdb_hexes) >= LOCAL_DB_HEXES:
+            _localdb_hexes.clear()
+        _localdb_hexes[(d, h)] = found
+    return found
+
+
 # --------------------------------------------------------------------------- the farthest aircraft of the day (0.22.0)
 # The decoder's stats.json says how far the farthest aircraft was, never which one. So, with statistics on, the server
 # looks at aircraft.json every few seconds and keeps, for today and yesterday, the aircraft whose position was the
@@ -1248,6 +1332,11 @@ def describe_farthest(rec, cfg, route_lookup=None, route_fallback=None, aircraft
     if waiting:
         pending.append("route")
     reg, code, found = rec.get("registration"), rec.get("type"), None
+    local_db = local_db_dir(cfg)
+    if local_db and not (reg and code):
+        found = local_aircraft(rec.get("hex"), local_db)
+        if found:
+            reg, code = reg or found.get("registration"), code or found.get("icao_type")
     if aircraft_lookup is not None and not (reg and code):
         found = aircraft_lookup(rec.get("hex"))
         if found:
@@ -1377,7 +1466,7 @@ class Handler(BaseHTTPRequestHandler):
         only = only if re.match(r"^[0-9a-f]{6}$", only) else None     # an ICAO address or nothing: no other input reaches the loop
         planes, total = build_planes(data, cfg_float(cfg, "LAT", 0), cfg_float(cfg, "LON", 0), radius_km,
                                      load_airlines(cfg), lookup, demo, load_types(cfg), route_lookup, aircraft_lookup, route_fallback,
-                                     only_hex=only)
+                                     only_hex=only, local_db=local_db_dir(cfg))
         return self._send(200, {"planes": planes, "total": total, "radius_km": radius_km,
                                 "server_id": SERVER_ID, "updated": time.time()})
 

@@ -8,6 +8,7 @@ The wall knows four things the radio does not tell it: which airline a callsign 
 |---|---|---|
 | Airline name | Built-in list of about 90 major airlines; beyond it, the name the route answer carries (since 0.17.0) | No for the list; the rest rides on the route lookup |
 | Aircraft model name | `types.json`, refreshed monthly | Only for the refresh |
+| Registration and model, when the decoder does not know them | tar1090's database on the Pi if `data localdb on` (0.26.0, off by default), then [adsbdb.com](https://www.adsbdb.com/), then [hexdb.io](https://hexdb.io/) | No for tar1090's; yes for the others |
 | Route (from → to) | [adsbdb.com](https://www.adsbdb.com/) by callsign, with [hexdb.io](https://www.hexdb.io/) as a second opinion | Yes |
 | Photo | [Planespotters](https://www.planespotters.net/) by ICAO hex | Yes |
 | Silhouette | Drawn in code from the aircraft type | No |
@@ -49,6 +50,17 @@ The airport positions used for these checks are never displayed. They exist only
 ### Registration and model: a second opinion (0.25.1)
 
 When the decoder does not know an airframe, the wall asks adsbdb for its registration and model; when adsbdb answers *unknown aircraft*, it asks [hexdb.io](https://hexdb.io/) once, the same service that gives the second opinion on routes. Found on a real post: TF-AKE (4CC54B), an Air Atlanta Icelandic cargo 747, unknown to adsbdb, known to hexdb. When neither knows it, the posts' pictures leave no blank row: the rows below move up.
+
+### Registration and model: the receiver map's database, offline (0.26.0)
+
+From a real post: EWG8QR, 9H-EWG (4D2087), a Eurowings A320, went out with no registration and no model. adsbdb answered *unknown aircraft* and hexdb *n/a*; the database of tar1090, the receiver map, knew it (`4D2087 → 9H-EWG, A320`).
+
+tar1090's installer keeps that database on the card, in `/usr/local/share/tar1090/git-db/db`, and updates it when tar1090 updates. `sudo zenithboard data localdb on` (menu *4 Settings → 3 Wall → 9*) makes the wall read it first, before adsbdb and hexdb, which are then asked only for what it does not know. Off by default; `off` goes back to the decoder, adsbdb and hexdb alone.
+
+* Nothing is downloaded and nothing leaves the Pi for it.
+* The database is in files named after the first characters of the hex code (`4.js` for 4D2087), gzip'd JSON. The wall reads the one it needs, keeps four in memory (about 25 MB at most) and remembers 4 000 answers.
+* Another folder: `sudo zenithboard config-set LOCAL_DB_DIR /path/to/db`. With no such folder, `on` says so and changes nothing.
+* `zenithboard data status` names its version (the `version` file next to `db`).
 
 ## Photos
 

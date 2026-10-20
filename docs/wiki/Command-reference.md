@@ -128,6 +128,7 @@ All three are off until you turn them on. How they decide, and how to read a bad
 | `zenithboard data update` | yes | Refresh the aircraft-model list now |
 | `zenithboard data status` | | When it was last refreshed |
 | `zenithboard data auto on` · `off` | yes | The monthly refresh (on by default) |
+| `zenithboard data localdb on` · `off` | yes | Read registrations and models from tar1090's aircraft database on this Pi, before adsbdb and hexdb (0.26.0, off by default). Without `on`/`off`: whether it is on and tar1090's database version |
 
 ## Security and trust
 
