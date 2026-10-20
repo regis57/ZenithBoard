@@ -16,11 +16,9 @@ sudo zenithboard social test       # draw the picture, print the text, post noth
 sudo zenithboard social on         # from now on, under the rules you chose
 ```
 
-What it looks like on Bluesky — the author's account, [@zenithboard.bsky.social](https://bsky.app/profile/zenithboard.bsky.social), on its first afternoon: a Lufthansa A340 posted by the service under `heavy` in the split-flap look (turquoise, night map), and a Eurowings A320 in the dot-matrix look.
+What it looks like on Bluesky — the author's account, [@zenithboard.bsky.social](https://bsky.app/profile/zenithboard.bsky.social), on 20 October 2026 (0.26.1): a KLM Cityhopper Embraer in the split-flap look on the satellite map, then a Tunisair A320 in the dot-matrix look, each with the photographer's link to Planespotters.
 
-<img src="https://github.com/regis57/ZenithBoard/raw/main/docs/images/social-feed.png" alt="The ZenithBoard account on Bluesky: the profile with its automated-account badge, a split-flap post with a map, a dot-matrix post" width="420">
-
-Those two were drawn by 0.19.0; since 0.19.3 the route rows give the city — `→SAN JOSE` and `→PALMA` where these show `→JUAN SANTAMAR` and `→PALMA DE`.
+<img src="https://github.com/regis57/ZenithBoard/raw/main/docs/images/social-feed.png" alt="The ZenithBoard account on Bluesky: the profile with its automated-account badge, a split-flap post (KLC70R, Torino to Amsterdam, satellite map), a dot-matrix post (TAR954, Tunis to Brussels)" width="420">
 
 Why Bluesky alone: X closed its free API in February 2026 and charges per post; Threads and Instagram cannot take an uploaded picture, they fetch it from a public address, which would mean putting the Pi on the internet. Bluesky takes the picture directly, costs nothing, and its API is open. Mastodon was supported in 0.18 and taken out in 0.19.0; an update removes its token from the Pi (revoke it on your instance too). See [When a provider changes something](Providers) for the general attitude.
 
@@ -107,11 +105,15 @@ The wall's rows as the tablet shows them (`FLT  EWG11S`, `REG  D-AIDO`, then air
 
 `sudo zenithboard social look dotmap` (0.23.0, asked for by the owner; the default since 0.24.0): the map is the split-flap look's, below — the same four maps, the same credit, the same `social map` setting and its `rotate` — with the track, the aircraft, the key and north. Node draws the dots with that column left dark and says where it is; Pillow lays the map there and writes a JPEG under Bluesky's limit. The map is a strip 400 pixels wide and 800 high, so when the aircraft would land under the key, the view is chosen in the part above the key and the credit: an aircraft flying south ends above the key, not under it. With `social map none` the strip shows the track on black over a faint grid, and nothing is fetched.
 
-*Above: a real post from the reference Pi, 18 October 2026, with the terrain map. The track is drawn thinner since 0.24.1. When the tiles do not come, the strip shows the track on a dark grid, with no credit.*
+*Above: a real post from the reference Pi, 20 October 2026 (0.26.1), with the satellite map: TAR954, Tunis to Brussels. When the tiles do not come, the strip shows the track on a dark grid, with no credit.*
 
 ### Split-flap with a map
 
-![The split-flap picture, normal map](https://github.com/regis57/ZenithBoard/raw/main/docs/images/social-flap.jpg)
+![The split-flap picture, light map: EWG86P, Palma to Cologne, a real post of 20 October 2026](https://github.com/regis57/ZenithBoard/raw/main/docs/images/social-flap.jpg)
+
+![The split-flap picture, dark map: KLM82K, Bâle/Mulhouse to Amsterdam, a real post of 20 October 2026](https://github.com/regis57/ZenithBoard/raw/main/docs/images/social-flap-night.jpg)
+
+*Real posts from the reference Pi, 20 October 2026 (0.26.1): the light map (`normal`) and the dark one (`night`), each town named once.*
 
 The board as the wall's split-flap look draws it — the same nine rows, without the flags, fourteen letters wide instead of sixteen so the map gets the room — beside a map centred on the track. On the map: the track and the aircraft in the picture's colour, edged in black so they read on any background; a key in the corner (`LAST 10 MIN`, and a scale bar in km or miles); north; and the map's credit along the bottom.
 
