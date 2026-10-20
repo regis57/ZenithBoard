@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.27.1
+- The region's list of places (`social places on`) is readable by its owner only, the service (0600, was 0644): its first lines give the centre of the area, the receiver's position. Found by CodeQL on 0.27.0.
+
 ## 0.27.0
 - **Town names anywhere in the world: the region's own list.** `sudo zenithboard social places on` (menu *Social sharing → 5*, off by default) downloads GeoNames' files of the countries within 400 km once (about 30 MB around Metz), keeps every populated place within 400 km, weighted by its population or, where GeoNames knows none, by its rank (capital, province, district, subdistrict, village seat, village), and names the maps from it. GeoNames knows the population of 540 of Indonesia's 258 055 populated places, so the shipped lists left maps over Sumba, Borneo or Mongolia bare: on test maps, East Sumba 0 → 11 names, Pontianak 0 → 19, Ulaanbaatar 3 → 12, Lima 8 → 24, Trémery 8 → 9; Innsbruck's 2-minute map 11 → 4 (the shipped list counted its districts). `on` again remakes it; `off` deletes it. Asked for by the owner.
 - **The maps go down the tiers by weight**, the same for both kinds of list: 5 000 and more, then 1 000, then any place, until three are named.

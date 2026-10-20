@@ -141,7 +141,9 @@ def write(rows, out, lat, lon, reach_km, codes):
     tmp = out + ".tmp"
     with gzip.GzipFile(tmp, "wb", mtime=0) as fh:
         fh.write(("\n".join(lines) + "\n").encode("utf-8"))
-    os.chmod(tmp, 0o644)
+    # 0.27.1, from CodeQL: the "centre" line is the receiver's position (rounded): readable by its owner only.
+    # `social places on` hands it to the zenithboard user, which the service runs as.
+    os.chmod(tmp, 0o600)
     os.replace(tmp, out)
 
 
