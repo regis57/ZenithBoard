@@ -428,24 +428,36 @@ def _draw_names(img, z, ox, oy, w, h, band, tone, plane_at=None):
     taken = [(w - 52, 0, w, 70), (0, h - band, w, h)]
     if plane_at:                                  # the aircraft itself stays clear
         taken.append((plane_at[0] - 30, plane_at[1] - 30, plane_at[0] + 30, plane_at[1] + 30))
+    fixed = list(taken)                           # north, the legend band, the aircraft: no dot under them either
     deg = 360.0 * w / (256.0 * 2 ** z) + 0.5      # a cheap box around the view before the projection
     lon0 = ox * 360.0 / (256.0 * 2 ** z) - 180.0
     shown = [0]
+    done = set()                                  # a place named once, whatever tier offers it again
 
     def name_all(found):
         for name, la, lo, pop in sorted(found, key=lambda p: -p[3]):
             if shown[0] >= MAX_NAMES:
                 return
+            if (name, la, lo) in done:
+                continue
             x, y = world_px(la, lo, z)
             x, y = x - ox, y - oy
             if not (6 <= x <= w - 6 and 6 <= y <= h - 6):
                 continue
             tw = d.textlength(name, font=fnt)
-            tx = x + 7 if x + 7 + tw <= w - 4 else x - 7 - tw
-            box = (tx - 3, y - 9, tx + tw + 3, y + 9)
-            if any(not (box[2] < t[0] or box[0] > t[2] or box[3] < t[1] or box[1] > t[3]) for t in taken):
+            # right of the dot, or left of it when the right is taken or off the map (0.27.0: Waingapu, under the
+            # aircraft's clear square on a test over Sumba, had room on its left)
+            for tx in (x + 7, x - 7 - tw):
+                box = (tx - 3, y - 9, tx + tw + 3, y + 9)
+                if box[0] >= 2 and box[2] <= w - 2 and \
+                        not any(not (box[2] < t[0] or box[0] > t[2] or box[3] < t[1] or box[1] > t[3]) for t in taken):
+                    break
+            else:
                 continue
+            if any(not (x + 3 < t[0] or x - 3 > t[2] or y + 3 < t[1] or y - 3 > t[3]) for t in fixed):
+                continue                          # the dot itself under the aircraft, north or the legend
             taken.append(box)
+            done.add((name, la, lo))
             d.ellipse([x - 3, y - 3, x + 3, y + 3], fill=fill, outline=halo, width=1)
             d.text((tx, y), name, font=fnt, fill=fill, anchor="lm", stroke_width=2, stroke_fill=halo)
             shown[0] += 1

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.27.0
+- **Town names anywhere in the world: the region's own list.** `sudo zenithboard social places on` (menu *Social sharing → 5*, off by default) downloads GeoNames' files of the countries within 400 km once (about 30 MB around Metz), keeps every populated place within 400 km, weighted by its population or, where GeoNames knows none, by its rank (capital, province, district, subdistrict, village seat, village), and names the maps from it. GeoNames knows the population of 540 of Indonesia's 258 055 populated places, so the shipped lists left maps over Sumba, Borneo or Mongolia bare: on test maps, East Sumba 0 → 10 names, Pontianak 0 → 16, Ulaanbaatar 2 → 11, Lima 8 → 23, Trémery 8 → 9. `on` again remakes it; `off` deletes it. Asked for by the owner.
+- **The maps go down the tiers by weight**, the same for both kinds of list: 5 000 and more, then 1 000, then any place, until three are named.
+- A town's name goes left of its dot when the right is taken; a place is never named twice.
+
 ## 0.26.2
 - **Villages on a map short of towns.** A map that names fewer than three towns of 5 000 inhabitants or more names the villages of 1 000 to 4 999 too, the largest first, under the same rules. From a real post: DAH1217, two minutes after leaving Metz-Nancy, went out on a strip east of the Moselle with no name at all; every town of 5 000 there is in the valley, just beyond the map's edge. The new list (`flightinfo/data/places1000.tsv.gz`, GeoNames, CC BY 4.0, made by `tools/make_places.py --small`, 68 000 places, 950 KB) is read only for such a map, never kept in memory. Asked for by the owner.
 
