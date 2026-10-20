@@ -46,14 +46,14 @@ check "sample: 2 aircraft with a position (the ~ one is not real)" '[ "$(cut -d,
 check "sample: 3 aircraft seen today"             '[ "$(cut -d, -f5 <<<"$row")" = 3 ]'
 check "day file: three real hex codes, sorted"    '[ "$(tr "\n" " " < "$(stats_day_file "$today")")" = "3c6444 4ca123 a1b2c3 " ]'
 
-check "fleet file (0.31.0): callsign, altitude, type; no ~ address" '[ "$(grep -c . "$(stats_fleet_file "$today")")" = 3 ] && grep -q "^3c6444	DLH4YK	36000	A320		$" "$(stats_fleet_file "$today")" && grep -q "^4ca123	RYR5ZK				$" "$(stats_fleet_file "$today")"'
+check "fleet file (0.31.0): callsign, altitude, type; no ~ address" '[ "$(grep -c . "$(stats_fleet_file "$today")")" = 3 ] && grep -q "^3c6444	DLH4YK	36000	A320			[0-9][0-9][0-9][0-9]$" "$(stats_fleet_file "$today")" && grep -q "^4ca123	RYR5ZK					[0-9][0-9][0-9][0-9]$" "$(stats_fleet_file "$today")"'
 
 # a second sample with one new aircraft and one gone: the day's count only grows
 cat > "$t/run/readsb/aircraft.json" <<'J'
 {"aircraft":[{"hex":"3c6444","lat":49.1,"lon":6.2,"alt_baro":12000},{"hex":"ff0001","lat":49.5,"lon":6.5}]}
 J
 stats_run
-check "fleet: a blank keeps what was known, the altitude is the latest" 'grep -q "^3c6444	DLH4YK	12000	A320		$" "$(stats_fleet_file "$today")" && [ "$(grep -c . "$(stats_fleet_file "$today")")" = 4 ]'
+check "fleet: a blank keeps what was known, the altitude is the latest" 'grep -q "^3c6444	DLH4YK	12000	A320			[0-9][0-9][0-9][0-9]$" "$(stats_fleet_file "$today")" && [ "$(grep -c . "$(stats_fleet_file "$today")")" = 4 ]'
 check "second sample: 4 distinct aircraft today"  '[ "$(tail -1 "$STATS_FILE" | cut -d, -f5)" = 4 ]'
 check "second sample: 2 with a position now"      '[ "$(tail -1 "$STATS_FILE" | cut -d, -f4)" = 2 ]'
 
@@ -67,14 +67,14 @@ cat > "$t/run/readsb/aircraft.json" <<'J'
 J
 stats_run
 f=$(stats_fleet_file "$today")
-check "localdb: a new aircraft gets its type from tar1090's database" 'grep -q "^4d2087	EWG8QR	32000	A320		$" "$f"'
-check "localdb: one not in it stays without; one already known is not looked up" 'grep -q "^4d9999					$" "$f" && grep -q "^ff0001		5000			$" "$f"'
+check "localdb: a new aircraft gets its type from tar1090's database" 'grep -q "^4d2087	EWG8QR	32000	A320			[0-9][0-9][0-9][0-9]$" "$f"'
+check "localdb: one not in it stays without; one already known is not looked up" 'grep -q "^4d9999						[0-9][0-9][0-9][0-9]$" "$f" && grep -q "^ff0001		5000				[0-9][0-9][0-9][0-9]$" "$f"'
 cfg_set LOCAL_DB_DIR "$t/none"
 cat > "$t/run/readsb/aircraft.json" <<'J'
 {"aircraft":[{"hex":"4d6a8e","alt_baro":1000}]}
 J
 stats_run
-check "localdb: a missing folder is no error, the sample is written" 'grep -q "^4d6a8e		1000			$" "$f" && [ "$(tail -1 "$STATS_FILE" | cut -d, -f5)" = 7 ]'
+check "localdb: a missing folder is no error, the sample is written" 'grep -q "^4d6a8e		1000				[0-9][0-9][0-9][0-9]$" "$f" && [ "$(tail -1 "$STATS_FILE" | cut -d, -f5)" = 7 ]'
 # 0.36.0: the emitter category and the military mark, from the decoder or from tar1090's database ("10")
 python3 -c 'import gzip, json, sys; open(sys.argv[1], "wb").write(gzip.compress(json.dumps({"D2087": ["9H-EWG", "A320", "00", ""], "6A8E": ["G-EZUH", "A319", "00", ""], "0F001": ["", "A400", "10", ""]}).encode()))' "$t/db/4.js"
 python3 -c 'import gzip, json, sys; open(sys.argv[1], "wb").write(gzip.compress(json.dumps({"F001": ["ZZ001", "C30J", "10", ""]}).encode()))' "$t/db/3.js"
@@ -84,10 +84,10 @@ cat > "$t/run/readsb/aircraft.json" <<'J'
 {"aircraft":[{"hex":"40f001","flight":"RRR4321","alt_baro":24000,"category":"A5"},{"hex":"3f001a","category":"B6"},{"hex":"ae1234","dbFlags":1,"t":"K35R","category":"A5"},{"hex":"3b0001","category":"A1"}]}
 J
 stats_run
-check "category and military: from the database's flags"        'grep -q "^40f001	RRR4321	24000	A400	A5	1$" "$f"'
-check "category and military: from the decoder's dbFlags"      'grep -q "^ae1234			K35R	A5	1$" "$f"'
-check "a drone's category is kept"                              'grep -q "^3f001a				B6	$" "$f"'
-check "a line of 0.31.0 is read, and filled in"                 'grep -q "^3b0001	OLDFMT	1000	C172	A1	$" "$f"'
+check "category and military: from the database's flags"        'grep -q "^40f001	RRR4321	24000	A400	A5	1	[0-9][0-9][0-9][0-9]$" "$f"'
+check "category and military: from the decoder's dbFlags"      'grep -q "^ae1234			K35R	A5	1	[0-9][0-9][0-9][0-9]$" "$f"'
+check "a drone's category is kept"                              'grep -q "^3f001a				B6		[0-9][0-9][0-9][0-9]$" "$f"'
+check "a line of 0.31.0 is read, and filled in"                 'grep -q "^3b0001	OLDFMT	1000	C172	A1		[0-9][0-9][0-9][0-9]$" "$f"'
 cfg_set LOCAL_DB 0
 
 # dump1090-fa: no top-level messages count, accepted is a list

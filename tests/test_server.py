@@ -736,7 +736,8 @@ class StatsTest(unittest.TestCase):
     """What the stats timer wrote, turned into what the page shows. Written against a folder made here."""
 
     def test_the_sky_by_hour(self):
-        # 0.31.0: fourteen rows of 24 hours, the average of the aircraft with a position over the hour's samples
+        # 0.31.0: rows of 24 hours, the average of the aircraft with a position over the hour's samples; thirty rows
+        # since 0.37.0 (fourteen before), whatever the page's toggle says
         import datetime
         d = self._dir()
         now = datetime.datetime(2026, 10, 20, 22, 0)
@@ -744,10 +745,60 @@ class StatsTest(unittest.TestCase):
             fh.write("when,messages,farthest_km,aircraft_pos,aircraft_seen\n2026-10-20 13:00,1,1,30,1\n"
                      "2026-10-20 13:15,1,1,40,1\n2026-10-19 09:30,1,1,12,1\n2026-09-01 09:30,1,1,99,1\n")
         h = server.read_stats(d, now)["heat"]
-        self.assertEqual(len(h), 14)
+        self.assertEqual(len(h), 30)
         self.assertEqual((h[-1]["day"], h[-1]["hours"][13], h[-1]["hours"][12]), ("2026-10-20", 35.0, None))
         self.assertEqual(h[-2]["hours"][9], 12.0)
         self.assertNotIn("2026-09-01", [r["day"] for r in h])
+
+    def test_the_toggle_24_hours_7_days_30_days(self):
+        # 0.37.0: each range its totals and one series: by hour for 24 hours, by day for 7 and 30
+        import datetime
+        d = self._dir()
+        now = datetime.datetime(2026, 10, 20, 22, 10)
+        lines = ["when,messages,farthest_km,aircraft_pos,aircraft_seen",
+                 "2026-10-20 21:00,500,300,20,100", "2026-10-20 21:15,700,310,22,110", "2026-10-20 08:00,100,250,5,40",
+                 "2026-10-19 23:00,50,280,3,500", "2026-10-19 21:30,60,330,4,490",       # yesterday: before and after 22h10
+                 "2026-10-15 12:00,1000,350,30,800", "2026-09-30 12:00,9,400,1,9"]
+        with open(os.path.join(d, "stats.csv"), "w") as fh:
+            fh.write("\n".join(lines) + "\n")
+        for day, hexes in (("2026-10-20", "aaaaa1 aaaaa2"), ("2026-10-19", "aaaaa2 aaaaa3"), ("2026-10-15", "aaaaa4")):
+            with open(os.path.join(d, "seen-" + day), "w") as fh:
+                fh.write("\n".join(hexes.split()) + "\n")
+        w = server.read_stats(d, now, "24h")["window"]
+        self.assertEqual((w["range"], len(w["labels"]), w["labels"][-1]), ("24h", 24, "22h"))
+        self.assertEqual(w["totals"]["messages"], 500 + 700 + 100 + 50, "21:30 yesterday is more than 24 hours ago")
+        self.assertEqual(w["totals"]["farthest_km"], 310)
+        self.assertEqual(w["totals"]["busiest_hour"], 21)
+        self.assertEqual(w["aircraft"][w["labels"].index("21h")], 21.0, "the average with a position")
+        w = server.read_stats(d, now, "7d")["window"]
+        self.assertEqual((len(w["labels"]), w["labels"][0], w["labels"][-1]), (7, "14/10", "20/10"))
+        self.assertEqual(w["totals"]["aircraft"], 4, "distinct over the days' files")
+        self.assertEqual(w["totals"]["farthest_km"], 350)
+        self.assertEqual(w["totals"]["farthest_when"], "2026-10-15 12:00")
+        self.assertEqual(w["aircraft"][-1], 2)
+        w = server.read_stats(d, now, "30d")["window"]
+        self.assertEqual(len(w["labels"]), 30)
+        self.assertIn(400, w["farthest"], "the 30th of September is within thirty days")
+        self.assertEqual(server.read_stats(d, now, "nonsense")["window"]["range"], "30d")
+
+    def test_the_fleet_by_range(self):
+        # 0.37.0: 24 hours reads today's file and yesterday's from the same time on (the last-seen column)
+        import datetime
+        d = self._dir()
+        now = datetime.datetime(2026, 10, 20, 22, 10)
+        with open(os.path.join(d, "fleet-2026-10-20"), "w") as fh:
+            fh.write("4ca001\tRYR1\t30000\tB738\t\t\t0900\n")
+        with open(os.path.join(d, "fleet-2026-10-19"), "w") as fh:
+            fh.write("4ca002\tRYR2\t30000\tB738\t\t\t2300\n4ca003\tRYR3\t30000\tB738\t\t\t2000\n4ca004\tRYR4\t30000\tB738\n")
+        with open(os.path.join(d, "fleet-2026-10-10"), "w") as fh:
+            fh.write("4ca005\tRYR5\t30000\tB738\t\t\t1200\n")
+        cfg = {"UNITS": "metric"}
+        self.assertEqual(server.read_fleet(cfg, d, now, rng="24h")["airlines"], [("Ryanair", 2)])
+        self.assertEqual(server.read_fleet(cfg, d, now, rng="7d")["airlines"], [("Ryanair", 4)])
+        self.assertEqual(server.read_fleet(cfg, d, now, rng="30d")["airlines"], [("Ryanair", 5)])
+        self.assertEqual(server.read_fleet(cfg, d, now, rng="24h")["types"][0][0], "Boeing 737-800", "as the posts write it")
+        self.assertEqual(server.nice_name("AIRBUS A-320neo"), "Airbus A320neo")
+        self.assertEqual(server.nice_name("DE HAVILLAND CANADA DHC-8-400"), "De Havilland Canada DHC-8-400")
 
     def test_the_fleet_of_thirty_days(self):
         # 0.31.0: airlines by callsign prefix, types from the file (the sample looked them up), altitudes in bands;
@@ -842,6 +893,11 @@ class StatsTest(unittest.TestCase):
 
         def get(path):
             c = http.client.HTTPConnection("127.0.0.1", port, timeout=5); c.request("GET", path); r = c.getresponse(); b = r.read(); c.close(); return r.status, b
+        # 0.37.0: the page's flags, two capital letters and nothing else
+        self.assertEqual(get("/flags/FR.png")[0], 200)
+        self.assertEqual(get("/flags/fr.png")[0], 404)
+        self.assertEqual(get("/flags/../server.py")[0], 404)
+        self.assertEqual(get("/flags/ZZ.png")[0], 404)
         st, body = get("/social/preview3")
         self.assertEqual(st, 404)
         self.assertIn(b"nothing to say", body)
@@ -887,6 +943,9 @@ class StatsTest(unittest.TestCase):
             st, body = get("/api/stats")
             j = json.loads(body)
             self.assertTrue(j["enabled"]); self.assertEqual(j["samples"], 1); self.assertEqual(j["days"][0]["farthest_km"], 312)
+            self.assertEqual(j["window"]["range"], "30d", "no range: thirty days, as before 0.37.0")
+            self.assertEqual(json.loads(get("/api/stats?range=7d")[1])["window"]["range"], "7d")
+            self.assertEqual(json.loads(get("/api/stats?range=../x")[1])["window"]["range"], "30d")
             self.assertEqual(j["version"], server.VERSION)
         finally:
             httpd.shutdown(); httpd.server_close()

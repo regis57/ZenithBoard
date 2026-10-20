@@ -592,22 +592,9 @@ def metres(alt_ft, units):
 
 
 def nice_type(p):
+    """"AIRBUS A-320neo" -> "Airbus A320neo" (server.nice_name since 0.37.0, shared with the statistics page)."""
     name = p.get("type_name") or ""
-    if name:
-        # "AIRBUS A-320neo" -> "Airbus A320neo"; the list writes makers in capitals and models with a dash
-        name = re.sub(r"\bA-(\d)", r"A\1", name)
-        words = name.split()
-        # makers are written in capitals (AIRBUS, BOEING, HELICOPTERS); model codes keep their letters (KC-135R, A320neo)
-        out = []
-        for w in words:
-            if w == "DE":                           # "DE HAVILLAND" is De Havilland, not DE Havilland
-                out.append("De")
-            elif w.isupper() and w.isalpha() and len(w) > 3:
-                out.append(w.capitalize())
-            else:
-                out.append(w)
-        return " ".join(out)
-    return p.get("type") or ""
+    return server.nice_name(name) if name else (p.get("type") or "")
 
 
 def place_name(c):

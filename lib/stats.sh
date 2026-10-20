@@ -62,7 +62,7 @@ stats_run() {
   # tar1090's aircraft database, when `data localdb on`: the type of an aircraft the decoder did not give one
   ldb=""; [ "$(cfg_get LOCAL_DB 0)" = 1 ] && ldb=$(cfg_get LOCAL_DB_DIR /usr/local/share/tar1090/git-db/db)
   n=$(python3 - "$sj" "$aj" "$(stats_day_file "$day")" "$(stats_fleet_file "$day")" "$ldb" "$ZB_HOME/flightinfo" <<'PY'
-import json, sys, os
+import json, sys, os, time
 sj, aj, dayfile, fleetfile, localdb, flightinfo = sys.argv[1:7]
 try:
     j = json.load(open(sj))
@@ -88,13 +88,14 @@ try:
             except (TypeError, ValueError):
                 mil = ""
             fleet[h] = [str(a.get("flight") or "").strip().upper(), str(int(alt)) if isinstance(alt, (int, float)) else "",
-                        str(a.get("t") or "").strip().upper(), str(a.get("category") or "").strip().upper()[:2], mil]
+                        str(a.get("t") or "").strip().upper(), str(a.get("category") or "").strip().upper()[:2], mil,
+                        time.strftime("%H%M")]
 except Exception:
     pass
 # the fleet file: what was known before is kept, a blank never replaces a value, the altitude is the latest.
-# 0.36.0: two more columns, the emitter category (A1 light ... B1 glider, B6 drone) and a military mark; a line of
-# 0.31.0 has four columns and is read as before
-WIDTH = 5
+# 0.36.0: two more columns, the emitter category (A1 light ... B1 glider, B6 drone) and a military mark; 0.37.0 one
+# more, the time last seen (HHMM), for the statistics page's last 24 hours. Older lines are read as before
+WIDTH = 6
 known = {}
 try:
     for line in open(fleetfile):
