@@ -260,7 +260,7 @@ social_set_places() {
       social_prepare_dir || return 1
       echo "Making the region's list of places from GeoNames (the country files around this Pi; a few minutes on a Pi 3B)..."
       python3 "$ZB_HOME/tools/make_local_places.py" "$lat" "$lon" "$f" "$(cfg_get SOCIAL_PLACES_KM 400)" || return 1
-      chown "$ZB_USER:$ZB_USER" "$f" 2>/dev/null || true; chmod 640 "$f" 2>/dev/null || true
+      chown "$ZB_USER:$ZB_USER" "$f" 2>/dev/null || true; chmod 600 "$f" 2>/dev/null || true
       cfg_set SOCIAL_PLACES 1 ;;
     off)
       cfg_set SOCIAL_PLACES 0; rm -f "$f" ;;

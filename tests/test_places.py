@@ -85,7 +85,7 @@ class ListTests(unittest.TestCase):
         self.assertIn("# centre -9.65 120.26 200", text)
         self.assertIn("Waingapu\t-9.6567\t120.2641\t50000", text)
         self.assertIn("Creative Commons Attribution 4.0", text)
-        self.assertEqual(os.stat(out).st_mode & 0o777, 0o640, "the centre is the receiver's position: not world-readable")
+        self.assertEqual(os.stat(out).st_mode & 0o777, 0o600, "the centre is the receiver's position: not world-readable")
 
         def down(req, timeout=None):
             raise OSError("no internet")
