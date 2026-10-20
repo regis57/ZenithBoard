@@ -72,7 +72,7 @@ CORRIDOR_PX = 70
 # CONTEXT_MIN inhabitants or more, CONTEXT_GAP_PX apart from any other name (asked for by the owner on the preview)
 CONTEXT_MAX = 3
 CONTEXT_MIN = 50000
-CONTEXT_GAP_PX = 150
+CONTEXT_GAP_PX = 90
 # 0.27.0: the region's own list, made on the Pi from GeoNames' country files (tools/make_local_places.py, `social
 # places on`): every populated place within 400 km, weighted by population or, where GeoNames knows none (almost every
 # village in Indonesia), by its rank. social.py sets the path when the owner switched it on; None: the shipped lists.
