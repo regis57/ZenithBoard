@@ -171,6 +171,11 @@ class MapTests(unittest.TestCase):
         small_city = os.path.join(self.d, "smallcity.tsv.gz")
         mlp.write([r if r[0] != "Northcity" else ("Northcity", r[1], r[2], 9000) for r in rows], small_city, 49.2, 6.4, 200, ["FR"])
         self.assertNotIn("Northcity", self.names(tr, small_city), "a town of 9 000 off the track is not")
+        # a track lined with towns (RYR5ZK through Belgium filled all 26 names along it): room is kept for the cities
+        crowded = rows + [("Town%d" % i, 48.86 + i * 0.021, 6.478 - i * 0.003, 9000 + i) for i in range(30)]
+        many = os.path.join(self.d, "crowded.tsv.gz")
+        mlp.write(crowded, many, 49.2, 6.4, 200, ["FR"])
+        self.assertIn("Northcity", self.names(tr, many))
         few = os.path.join(self.d, "few.tsv.gz")
         mlp.write([r for r in rows if not r[0].startswith("Along")], few, 49.2, 6.4, 200, ["FR"])
         self.assertIn("Northcity", self.names(tr, few), "nothing along the track: the whole map, as before")

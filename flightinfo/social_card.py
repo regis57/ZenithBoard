@@ -515,8 +515,8 @@ def _draw_names(img, z, ox, oy, w, h, band, tone, plane_at=None, track=None):
         tiers = [[p for p in places() if lon0 - 0.5 <= p[2] <= lon0 + deg], small]
         spare = small
     for along in ((True, False) if track else (False,)):
-        for found in tiers:
-            name_all(found, 0, along)
+        for found in tiers:                       # along the track, CONTEXT_MAX places are kept for the cities around
+            name_all(found, 0, along, (MAX_NAMES - CONTEXT_MAX - shown[0]) if along else MAX_NAMES)
             if shown[0] >= MIN_NAMES:
                 break
         if along and shown[0] >= MIN_NAMES:       # enough along the track: a few cities around, before the gaps
