@@ -69,10 +69,10 @@ GAP_PX = 120
 # MIN_NAMES, as it did before.
 CORRIDOR_PX = 70
 # ...and, for the reader to know where the map is, the largest cities elsewhere on it: at most CONTEXT_MAX, of
-# CONTEXT_MIN inhabitants or more, CONTEXT_GAP_PX apart from any other name (asked for by the owner on the preview)
+# CONTEXT_MIN inhabitants or more, CONTEXT_GAP_PX apart from one another (asked for by the owner on the preview)
 CONTEXT_MAX = 3
 CONTEXT_MIN = 50000
-CONTEXT_GAP_PX = 90
+CONTEXT_GAP_PX = 150
 # 0.27.0: the region's own list, made on the Pi from GeoNames' country files (tools/make_local_places.py, `social
 # places on`): every populated place within 400 km, weighted by population or, where GeoNames knows none (almost every
 # village in Indonesia), by its rank. social.py sets the path when the owner switched it on; None: the shipped lists.
@@ -467,7 +467,8 @@ def _draw_names(img, z, ox, oy, w, h, band, tone, plane_at=None, track=None):
     if len(track) > 60:                           # a long trace: every few points is enough for a distance
         track = track[::len(track) // 60 + 1] + [track[-1]]
 
-    def name_all(found, gap=0, along=True, most=MAX_NAMES):
+    def name_all(found, gap=0, along=True, most=MAX_NAMES, against=None):
+        against = dots if against is None else against
         start = shown[0]
         for name, la, lo, pop in sorted(found, key=lambda p: -p[3]):
             if shown[0] >= MAX_NAMES or shown[0] - start >= most:
@@ -480,7 +481,7 @@ def _draw_names(img, z, ox, oy, w, h, band, tone, plane_at=None, track=None):
                 continue
             if along and track and _off_track(x, y, track) > CORRIDOR_PX:
                 continue
-            if gap and any((x - a) ** 2 + (y - b) ** 2 < gap * gap for a, b in dots):
+            if gap and any((x - a) ** 2 + (y - b) ** 2 < gap * gap for a, b in against):
                 continue
             tw = d.textlength(name, font=fnt)
             # right of the dot, or left of it when the right is taken or off the map (0.27.0: Waingapu, under the
@@ -497,6 +498,8 @@ def _draw_names(img, z, ox, oy, w, h, band, tone, plane_at=None, track=None):
             taken.append(box)
             done.add((name, la, lo))
             dots.append((x, y))
+            if against is not dots:
+                against.append((x, y))
             d.ellipse([x - 3, y - 3, x + 3, y + 3], fill=fill, outline=halo, width=1)
             d.text((tx, y), name, font=fnt, fill=fill, anchor="lm", stroke_width=2, stroke_fill=halo)
             shown[0] += 1
@@ -519,7 +522,7 @@ def _draw_names(img, z, ox, oy, w, h, band, tone, plane_at=None, track=None):
         name_all(spare, GAP_PX, along)
         if shown[0] >= MIN_NAMES:
             if along:                             # the names along the track were enough: a few cities around
-                name_all([p for p in tiers[0] if p[3] >= CONTEXT_MIN], CONTEXT_GAP_PX, False, CONTEXT_MAX)
+                name_all([p for p in tiers[0] if p[3] >= CONTEXT_MIN], CONTEXT_GAP_PX, False, CONTEXT_MAX, [])
             break
     return shown[0]
 
