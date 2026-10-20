@@ -63,6 +63,16 @@ MIN_NAMES = 3
 # 0.27.3: then the empty parts. SWR3AG over the Moselle plateau named seven towns, all on the edges, and nothing in
 # the 30 km between them: a village is added where no name is within GAP_PX of its dot, the heaviest first.
 GAP_PX = 120
+# 0.28.0: the names go along the track. RYR5ZK (Brussels → Pisa) named Lier, Geel, Hasselt, Maastricht and a dozen
+# more in the north of its map, far from a track that ran from Namur to Luxembourg. A map names the places within
+# CORRIDOR_PX of the track (towns, then villages in the gaps); the rest of the map only when that gives fewer than
+# MIN_NAMES, as it did before.
+CORRIDOR_PX = 70
+# ...and, for the reader to know where the map is, the largest cities elsewhere on it: at most CONTEXT_MAX, of
+# CONTEXT_MIN inhabitants or more, CONTEXT_GAP_PX apart from one another (asked for by the owner on the preview)
+CONTEXT_MAX = 3
+CONTEXT_MIN = 50000
+CONTEXT_GAP_PX = 150
 # 0.27.0: the region's own list, made on the Pi from GeoNames' country files (tools/make_local_places.py, `social
 # places on`): every populated place within 400 km, weighted by population or, where GeoNames knows none (almost every
 # village in Indonesia), by its rank. social.py sets the path when the owner switched it on; None: the shipped lists.
@@ -421,11 +431,24 @@ def _lat_of(py, z):
     return math.degrees(math.atan(math.sinh(math.pi * (1 - 2 * py / n))))
 
 
-def _draw_names(img, z, ox, oy, w, h, band, tone, plane_at=None):
+def _off_track(x, y, track):
+    """The distance in pixels from (x, y) to the track, a list of (x, y) points; 0 without a track."""
+    if len(track) < 2:
+        return 0.0 if not track else math.hypot(x - track[0][0], y - track[0][1])
+    best = 1e9
+    for (ax, ay), (bx, by) in zip(track, track[1:]):
+        dx, dy = bx - ax, by - ay
+        t = 0.0 if dx == dy == 0 else max(0.0, min(1.0, ((x - ax) * dx + (y - ay) * dy) / float(dx * dx + dy * dy)))
+        best = min(best, math.hypot(x - ax - t * dx, y - ay - t * dy))
+    return best
+
+
+def _draw_names(img, z, ox, oy, w, h, band, tone, plane_at=None, track=None):
     """The towns inside the map, the largest first, each with a dot and its name on a halo; never over another name,
     the north box or the legend and credit band. A map with fewer than MIN_NAMES of them takes villages too (0.26.2).
     With the region's own list (0.27.0), the same, by weight: towns, then villages, then any populated place. Then
-    the empty parts: a village where no name is within GAP_PX (0.27.3)."""
+    the empty parts: a village where no name is within GAP_PX (0.27.3). All of it along the track, within CORRIDOR_PX;
+    the whole map only when the track's surroundings give fewer than MIN_NAMES (0.28.0)."""
     d = ImageDraw.Draw(img)
     fnt = font(13)                                # 0.25.2, from the owner: smaller names, more of them (16 before)
     fill, halo = ((255, 255, 255), (0, 0, 0)) if tone == "light" else ((30, 30, 30), (255, 255, 255))
@@ -440,9 +463,15 @@ def _draw_names(img, z, ox, oy, w, h, band, tone, plane_at=None):
 
     dots = []
 
-    def name_all(found, gap=0):
+    track = track or []
+    if len(track) > 60:                           # a long trace: every few points is enough for a distance
+        track = track[::len(track) // 60 + 1] + [track[-1]]
+
+    def name_all(found, gap=0, along=True, most=MAX_NAMES, against=None):
+        against = dots if against is None else against
+        start = shown[0]
         for name, la, lo, pop in sorted(found, key=lambda p: -p[3]):
-            if shown[0] >= MAX_NAMES:
+            if shown[0] >= MAX_NAMES or shown[0] - start >= most:
                 return
             if (name, la, lo) in done:
                 continue
@@ -450,7 +479,9 @@ def _draw_names(img, z, ox, oy, w, h, band, tone, plane_at=None):
             x, y = x - ox, y - oy
             if not (6 <= x <= w - 6 and 6 <= y <= h - 6):
                 continue
-            if gap and any((x - a) ** 2 + (y - b) ** 2 < gap * gap for a, b in dots):
+            if along and track and _off_track(x, y, track) > CORRIDOR_PX:
+                continue
+            if gap and any((x - a) ** 2 + (y - b) ** 2 < gap * gap for a, b in against):
                 continue
             tw = d.textlength(name, font=fnt)
             # right of the dot, or left of it when the right is taken or off the map (0.27.0: Waingapu, under the
@@ -467,6 +498,8 @@ def _draw_names(img, z, ox, oy, w, h, band, tone, plane_at=None):
             taken.append(box)
             done.add((name, la, lo))
             dots.append((x, y))
+            if against is not dots:
+                against.append((x, y))
             d.ellipse([x - 3, y - 3, x + 3, y + 3], fill=fill, outline=halo, width=1)
             d.text((tx, y), name, font=fnt, fill=fill, anchor="lm", stroke_width=2, stroke_fill=halo)
             shown[0] += 1
@@ -475,17 +508,22 @@ def _draw_names(img, z, ox, oy, w, h, band, tone, plane_at=None):
     lon1 = lon0 + 360.0 * w / (256.0 * 2 ** z)
     local = _local_places(lat0, lat1, lon0, lon1)
     if local is not None:                         # 0.27.0: the region's list, the heaviest first, down the tiers
-        for tier in TIERS:
-            name_all([p for p in local if p[3] >= tier])
+        tiers = [[p for p in local if p[3] >= tier] for tier in TIERS]
+        spare = local
+    else:
+        small = _small_places(lat0, lat1, lon0, lon1)
+        tiers = [[p for p in places() if lon0 - 0.5 <= p[2] <= lon0 + deg], small]
+        spare = small
+    for along in ((True, False) if track else (False,)):
+        for found in tiers:                       # along the track, CONTEXT_MAX places are kept for the cities around
+            name_all(found, 0, along, (MAX_NAMES - CONTEXT_MAX - shown[0]) if along else MAX_NAMES)
             if shown[0] >= MIN_NAMES:
                 break
-        name_all(local, GAP_PX)
-        return shown[0]
-    name_all([p for p in places() if lon0 - 0.5 <= p[2] <= lon0 + deg])
-    small = _small_places(lat0, lat1, lon0, lon1)
-    if shown[0] < MIN_NAMES:
-        name_all(small)
-    name_all(small, GAP_PX)
+        if along and shown[0] >= MIN_NAMES:       # enough along the track: a few cities around, before the gaps
+            name_all([p for p in tiers[0] if p[3] >= CONTEXT_MIN], CONTEXT_GAP_PX, False, CONTEXT_MAX, [])
+        name_all(spare, GAP_PX, along)
+        if shown[0] >= MIN_NAMES:
+            break
     return shown[0]
 
 
@@ -572,7 +610,8 @@ def draw_map(trace, plane, color, units="metric", mode="normal", cache_dir=None,
     # the real posts). Each town's dot stays where the town is; the aircraft keeps its clear square.
     if shown != "none" and style.get("names"):
         at = world_px(trace[-1][0], trace[-1][1], z) if trace else None
-        _draw_names(img, z, ox, oy, w, h, band, style["names"], (at[0] - ox, at[1] - oy) if at else None)
+        line = [(world_px(p[0], p[1], z)[0] - ox, world_px(p[0], p[1], z)[1] - oy) for p in trace]
+        _draw_names(img, z, ox, oy, w, h, band, style["names"], (at[0] - ox, at[1] - oy) if at else None, line)
 
     # legend, north, credit: drawn at their size, on see-through dark boxes so they read on any map
     d = ImageDraw.Draw(img, "RGBA")

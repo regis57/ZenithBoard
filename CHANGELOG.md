@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.28.0
+- **The town names follow the track.** A map names the places within 70 pixels of the aircraft's track first (towns, then villages in the gaps), and three of the largest cities elsewhere on it (50 000 or more, spread apart) so the reader knows where the map is; the rest of the map only when the track's surroundings give fewer than three names. RYR5ZK (Brussels → Pisa) named Lier, Geel, Hasselt, Maastricht and a dozen more in the north of its map, far from a track running from Namur to Luxembourg; the same map now names Namur, Ciney, Rochefort, Bastogne, Arlon, Luxembourg, Esch, Hayange and Metz along the line, and Leuven, Aachen and Trier around it. Previewed on four real posts (RYR5ZK, RYR6JR, SKV615, EJU86EN) with the real code, the region's list and EOX's tiles. Asked for by the owner.
+
 ## 0.27.3
 - **The empty parts of a map get a village.** After the towns, a map names the heaviest village wherever no name is within 120 pixels of it, up to the 26 names it holds at most. SWR3AG (Swiss, Zurich → Luxembourg) went out over the Moselle plateau with seven towns, all on the edges, and nothing in the 30 km between them; previewed with the real code, the region's list and EOX's tiles, the same map now names Boulay-Moselle, Bouzonville, Rémilly, Verny, Morhange, Château-Salins and Dieuze in that space. Raising the three-names threshold was tried first and changed nothing there (the map had seven). Both kinds of list, shipped and the region's own.
 
