@@ -348,6 +348,10 @@ class RouteTests(unittest.TestCase):
         self.assertEqual(server.city_of_airport("Palma de Mallorca Airport", 39.5517, 2.73881), "Palma de Mallorca")
         self.assertEqual(server.city_of_airport("Frankfurt-Hahn Airport", 49.9487, 7.26389), "Frankfurt-Hahn")
         self.assertEqual(server.city_of_airport("London Stansted Airport", 51.885, 0.235), "London Stansted")
+        # 0.25.4, a real post: KLM105 read "Amsterdam Schiphol -> Cape Town"
+        self.assertEqual(server.city_of_airport("Amsterdam Airport Schiphol", 52.3086, 4.76389), "Amsterdam")
+        self.assertEqual(server.city_of_airport("Paris Charles de Gaulle Airport", 49.0097, 2.54778), "Paris Charles de Gaulle")
+        self.assertEqual(server.city_of_airport("Milan-Malpensa Airport", 45.6306, 8.72811), "Milan-Malpensa")
         self.assertEqual(server.city_of_airport("Turin Airport (Caselle Airport)"), "Turin", "without a position")
         self.assertEqual(server.city_of_airport(""), "")
         real, server._hexdb_json = server._hexdb_json, lambda path: {
