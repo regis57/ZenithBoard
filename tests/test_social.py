@@ -1589,6 +1589,62 @@ class WeeklyTest(unittest.TestCase):
         self.assertEqual({cargo[c] for c in ("BCS", "DHK", "DHX", "DAE", "DHA")}, {"DHL"})
         self.assertEqual((cargo["FDX"], cargo["CLX"], cargo["TAY"]), ("FedEx", "Cargolux", "ASL Airlines Belgium"))
 
+    def add_military_and_general_aviation(self):
+        # 0.36.0 columns: flight, altitude, type, category, military mark
+        with open(os.path.join(self.d, "fleet-2026-10-15"), "w") as fh:
+            fh.write("ae1001\tRCH123\t30000\tC17\tA5\t\n")          # a US military address: military by its range
+            fh.write("ae1002\t\t25000\tK35R\tA5\t1\n")
+            fh.write("3b7a01\tCTM1234\t28000\tA400\tA5\t1\n")       # French civil block, marked military by the database
+            fh.write("3c0f01\t\t35000\tEUFI\t\t\n")                 # a fighter: military by its class
+            fh.write("3c1a01\t\t1500\tEC45\tA7\t\n3c1a02\t\t1200\tEC45\tA7\t\n")
+            fh.write("3c1a03\t\t2000\tC172\tA1\t\n3c1a04\t\t3000\tGLID\tB1\t\n3c1a05\t\t400\t\tB6\t\n")
+            fh.write("4b1a01\t\t41000\tFA7X\tA2\t\n")                # a Swiss business jet
+
+    def test_military_and_general_aviation(self):
+        import social_week
+        import server
+        self.add_military_and_general_aviation()
+        w = self.week()
+        mil = {e["cc"]: e for e in w["military"]}
+        self.assertEqual(w["military_total"], 4)
+        self.assertEqual(mil["US"]["total"], 2)
+        self.assertEqual(w["military"][0]["cc"], "US", "the most represented country first")
+        self.assertEqual(mil["FR"]["models"][0][1], 1)
+        self.assertEqual(mil["DE"]["total"], 1, "the Typhoon, by its class")
+        self.assertNotIn("EC45", str(w["military"]))
+        m = social_week.misc_lists(w)
+        self.assertEqual((m["heli"]["total"], m["light"]["total"], m["glider"]["total"], m["other"]["total"]), (2, 1, 1, 1))
+        self.assertEqual(m["other"]["models"], [("Drone", 1)])
+        self.assertIn(("CH", 1), w["bizjet_countries"])
+        self.assertTrue(social_week.has_part(w, 3) and social_week.has_part(w, 4))
+        t = social_week.text_military(w, "above Trémery", "#ADSB", social.fit_post)
+        self.assertTrue(t.startswith("Military aircraft above Trémery, 12–18 October: 4 aircraft from 3 countries."), t)
+        self.assertIn("United States: ", t)
+        t = social_week.text_misc(w, "above Trémery", "#ADSB", social.fit_post)
+        self.assertTrue(t.startswith("General aviation above Trémery, 12–18 October: 2 helicopters, 1 light aircraft, 1 glider, 1 drone or balloon."), t)
+        for txt in (t, social_week.alt_military(w, "above Trémery"), social_week.alt_misc(w, "above Trémery")):
+            self.assertNotRegex(txt, r"\d\s?(km|mi|nm)\b|RCH123|CTM1234|ae1001", "no distance, no callsign, no address")
+        flags = social_week.flag_pixels(["US", "FR", "DE", "ZZ"])
+        self.assertEqual(sorted(flags), ["DE", "FR", "US"], "the wall's flags; none for an unknown code")
+        self.assertEqual(social_week.flag_pixels(["FR"], node="/nonexistent/node"), {}, "no Node: no flags, no error")
+        for draw, args in ((social_week.draw_military, (flags,)), (social_week.draw_misc, ()), (social_week.draw_second, (flags,))):
+            info = draw(w, "red", "above Trémery", os.path.join(self.d, "c.png"), *args)
+            self.assertEqual((info["width"], info["height"]), (1200, 675))
+        self.assertEqual((server.icao_country("3c6444"), server.icao_country("ae1234"), server.icao_country("4b1a01")), ("DE", "US", "CH"))
+        self.assertTrue(server.in_military_range("ae1234"))
+        self.assertFalse(server.in_military_range("3c6444"))
+        self.assertEqual([server.misc_group(*a) for a in (("heli", ""), (None, "A7"), (None, "B6"), ("light", ""), ("narrow", "A3"))],
+                         ["heli", "heli", "drone", "light", None])
+
+    def test_publish_parts_three_and_four(self):
+        self.addCleanup(setattr, social.server, "STATS_DIR", social.server.STATS_DIR)
+        social.server.STATS_DIR = self.d
+        now = time.mktime(self.now.timetuple())
+        self.assertIn("no military aircraft", social.publish_week(self.c, {}, now, {}, dry=True, part=3)["skipped"])
+        self.add_military_and_general_aviation()
+        self.assertTrue(social.publish_week(self.c, {}, now, {}, dry=True, part=3)["text"].startswith("Military aircraft above Trémery"))
+        self.assertTrue(social.publish_week(self.c, {}, now, {}, dry=True, part=4)["text"].startswith("General aviation above Trémery"))
+
     def test_the_lists_shrink_before_a_line_goes(self):
         import social_week
         w = self.week()
@@ -1692,7 +1748,8 @@ class WeeklyTest(unittest.TestCase):
         self.assertGreaterEqual(sent[1] - sent[0], social.RETRY_AFTER_FAIL_S)
         self.assertEqual(state.get("weekly"), "2026-W42")
 
-    def run_loop(self, start, hours, results1, results2):
+    def run_loop(self, start, hours, results):
+        """The service loop on a Sunday evening. results: {part: [answers in turn]} (the last one repeats)."""
         import contextlib
         clock = [start]
         sent, state = [], warm()
@@ -1705,11 +1762,11 @@ class WeeklyTest(unittest.TestCase):
             if clock[0] > start + hours * 3600:
                 raise Stop()
 
-        def fake_publish(c, sec, now, st, second=False):
-            sent.append((now, second))
-            n = len([x for x in sent if x[1] == second])
-            seq = results2 if second else results1
-            return seq[min(n, len(seq)) - 1]
+        def fake_publish(c, sec, now, st, second=False, part=None):
+            part = part or (2 if second else 1)
+            sent.append((now, part))
+            seq = results.get(part) or [{"skipped": "-"}]
+            return seq[min(len([x for x in sent if x[1] == part]), len(seq)) - 1]
         for name, fake in (("read_aircraft", lambda c: []), ("account", lambda: {"BLUESKY_HANDLE": "h", "BLUESKY_APP_PASSWORD": "p"}),
                            ("one_poll", lambda c, st, tr, ac, now: ([], None)), ("load_state", lambda: state),
                            ("save_state", lambda st: None), ("cfg", lambda: dict(self.c)), ("merge_disk", lambda st: st),
@@ -1723,33 +1780,42 @@ class WeeklyTest(unittest.TestCase):
                 social.cmd_run()
         return sent, state
 
-    def test_the_second_post_two_minutes_later(self):
+    OK = {"bluesky": "at://did/post/1"}
+    BAD = {"bluesky": "FAILED: 503"}
+
+    def sunday(self):
         import datetime
-        start = time.mktime(datetime.datetime(2026, 10, 18, 18, 58).timetuple())
-        ok = {"bluesky": "at://did/post/1"}
-        sent, state = self.run_loop(start, 2, [ok], [ok])
-        firsts = [t for t, sec in sent if not sec]
-        seconds = [t for t, sec in sent if sec]
-        self.assertEqual((len(firsts), len(seconds)), (1, 1), "each once")
-        self.assertGreaterEqual(seconds[0] - firsts[0], social.SECOND_AFTER_S)
-        self.assertLess(seconds[0] - firsts[0], social.SECOND_AFTER_S + 30)
+        return time.mktime(datetime.datetime(2026, 10, 18, 18, 58).timetuple())
+
+    def test_four_posts_two_minutes_apart(self):
+        # 0.35.0 the second, 0.36.0 the third (military) and the fourth (helicopters, light aircraft, gliders)
+        sent, state = self.run_loop(self.sunday(), 2, {1: [self.OK], 2: [self.OK], 3: [self.OK], 4: [self.OK]})
+        self.assertEqual([p for _, p in sent], [1, 2, 3, 4], "each once, in order")
+        times = [t for t, _ in sent]
+        for a, b in zip(times, times[1:]):
+            self.assertGreaterEqual(b - a, social.SECOND_AFTER_S)
+            self.assertLess(b - a, social.SECOND_AFTER_S + 30)
         self.assertNotIn("weekly2", state)
 
-    def test_the_second_waits_after_a_failure_and_never_without_the_first(self):
-        import datetime
-        start = time.mktime(datetime.datetime(2026, 10, 18, 18, 58).timetuple())
-        ok, bad = {"bluesky": "at://did/post/1"}, {"bluesky": "FAILED: 503"}
-        sent, state = self.run_loop(start, 2, [ok], [bad, ok])
-        seconds = [t for t, sec in sent if sec]
+    def test_a_post_with_nothing_to_say_gives_its_turn(self):
+        sent, state = self.run_loop(self.sunday(), 2, {1: [self.OK], 2: [{"skipped": "no cargo"}], 3: [self.OK], 4: [self.OK]})
+        parts = dict((p, t) for t, p in sent)
+        self.assertEqual(sorted(parts), [1, 2, 3, 4])
+        self.assertLess(parts[3] - parts[1], social.SECOND_AFTER_S + 30, "the military post where the cargo one would have been")
+
+    def test_a_failure_waits_and_never_without_the_first(self):
+        sent, state = self.run_loop(self.sunday(), 2, {1: [self.OK], 2: [self.BAD, self.OK], 3: [self.OK], 4: [self.OK]})
+        seconds = [t for t, p in sent if p == 2]
         self.assertEqual(len(seconds), 2)
         self.assertGreaterEqual(seconds[1] - seconds[0], social.RETRY_AFTER_FAIL_S)
-        sent, state = self.run_loop(start, 2, [{"skipped": "no statistics"}], [ok])
-        self.assertEqual([sec for _, sec in sent], [False], "the first skipped: no second")
-        sent, state = self.run_loop(start, 6, [ok], [bad])
-        seconds = [t for t, sec in sent if sec]
+        self.assertEqual([p for _, p in sent][-2:], [3, 4])
+        sent, state = self.run_loop(self.sunday(), 2, {1: [{"skipped": "no statistics"}]})
+        self.assertEqual([p for _, p in sent], [1], "the first skipped: no others")
+        sent, state = self.run_loop(self.sunday(), 6, {1: [self.OK], 2: [self.BAD]})
+        seconds = [t for t, p in sent if p == 2]
         self.assertLessEqual(seconds[-1] - seconds[0], social.SECOND_LATE_S, "dropped when hours late")
+        self.assertNotIn(3, [p for _, p in sent], "and the rest with it: Bluesky is not answering")
         self.assertNotIn("weekly2", state)
-
 
 if __name__ == "__main__":
     unittest.main()

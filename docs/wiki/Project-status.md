@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **20 October 2026**, version **0.35.0**.
+Last updated: **20 October 2026**, version **0.36.0**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -55,6 +55,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 20 October 2026, 23:26 | The owner sketched the second weekly card: each cargo airline with its most seen model, and the business jets' countries of registration with flags; and asked for two more weekly posts, military aircraft by country and general aviation. 0.36.0. The countries come from the ICAO address blocks (Annex 10, as tabulated by tar1090), the military mark from tar1090's database (the first flag of an entry: `10` military, as tar1090 reads it) and tar1090-db's military address ranges; checked on the real database (23 065 entries marked `10`). Previewed on made-up statistics; not yet on the Pi |
 | 20 October 2026, 23:06 | The owner asked for the models most seen beside the airlines on the weekly card, and a second weekly post two minutes later: cargo airlines and business jets by make and model. 0.35.0. The cargo list's 40 codes were each checked against a published source; Turkish, Qatar and Emirates freighters fly under their passenger prefixes (THY6147, QTR8486, UAE9807 are 777Fs), so a callsign cannot count them. Previewed on made-up statistics; not yet on the Pi |
 | 20 October 2026, 22:53 | First `social weekly test` on the reference Pi (0.33.0): *14–20 October: 6 435 aircraft heard, 353.3 million messages decoded. Busiest day: Friday, 2 745 aircraft. Busiest hour: 17:00. Most seen: Ryanair (14), British Airways (8), easyJet (8). Top type: BOEING 737-800.* The owner saw at once that 14 Ryanair cannot be right in a week of 6 435 aircraft: the airline lists had begun with 0.31.0 two hours earlier. 0.34.1 leaves the airlines and the type out until their lists cover the week, and writes the type as the posts do |
 | 20 October 2026, 22:42 | Plane Finder installed: the reference Pi now feeds four networks (ADSB Exchange, FlightAware, Flightradar24, Plane Finder), and Plane Finder's own page showed its feed. `zenithboard health` then: 575 MB free, no swap, 34 °C, power OK, card 6 % full, previous boot ended normally. The owner asked for the card's size on that screen and for a command showing threads and memory: 0.34.0 (`Card: ... GB used of ... GB`, `zenithboard memory`) |

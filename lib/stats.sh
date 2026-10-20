@@ -83,33 +83,44 @@ try:
             if a.get("lat") is not None:
                 pos += 1
             alt = a.get("alt_baro")
-            fleet[h] = (str(a.get("flight") or "").strip().upper(), str(int(alt)) if isinstance(alt, (int, float)) else "",
-                        str(a.get("t") or "").strip().upper())
+            try:
+                mil = "1" if int(a.get("dbFlags") or 0) & 1 else ""     # the decoder's own database, when it has one
+            except (TypeError, ValueError):
+                mil = ""
+            fleet[h] = [str(a.get("flight") or "").strip().upper(), str(int(alt)) if isinstance(alt, (int, float)) else "",
+                        str(a.get("t") or "").strip().upper(), str(a.get("category") or "").strip().upper()[:2], mil]
 except Exception:
     pass
-# the fleet file: what was known before is kept, a blank never replaces a value, the altitude is the latest
+# the fleet file: what was known before is kept, a blank never replaces a value, the altitude is the latest.
+# 0.36.0: two more columns, the emitter category (A1 light ... B1 glider, B6 drone) and a military mark; a line of
+# 0.31.0 has four columns and is read as before
+WIDTH = 5
 known = {}
 try:
     for line in open(fleetfile):
         f = line.rstrip("\n").split("\t")
-        if len(f) == 4 and f[0]:
-            known[f[0]] = f[1:]
+        if len(f) >= 4 and f[0]:
+            known[f[0]] = (f[1:] + [""] * WIDTH)[:WIDTH]
 except FileNotFoundError:
     pass
-# an aircraft new to the day with no type from the decoder is looked up once in tar1090's database, here rather than
-# by the page: a few dozen addresses a quarter hour instead of thirty days' worth at once on a Pi 3B (0.31.0)
-untyped = [h for h, v in fleet.items() if h not in known and not v[2]]
-types = {}
-if untyped and localdb and os.path.isdir(localdb):
+# an aircraft new to the day is looked up once in tar1090's database, here rather than by the page: a few dozen
+# addresses a quarter hour instead of thirty days' worth at once on a Pi 3B (0.31.0); its type when the decoder gave
+# none, and since 0.36.0 its military mark
+new = [h for h in fleet if h not in known]
+info = {}
+if new and localdb and os.path.isdir(localdb):
     try:
         sys.path.insert(0, flightinfo)
         import server
-        types = server.local_types(untyped, localdb)
+        info = server.local_info(new, localdb)
     except Exception:
-        types = {}
-for h, (fl, alt, typ) in fleet.items():
-    old_f = known.get(h, ["", "", ""])
-    known[h] = [fl or old_f[0], alt or old_f[1], typ or old_f[2] or types.get(h, "")]
+        info = {}
+for h, v in fleet.items():
+    old_f = known.get(h, [""] * WIDTH)
+    db = info.get(h) or {}
+    v[2] = v[2] or db.get("t", "")
+    v[4] = v[4] or ("1" if db.get("mil") else "")
+    known[h] = [v[k] or old_f[k] for k in range(WIDTH)]
 if known:
     ftmp = fleetfile + ".tmp"
     with open(ftmp, "w") as fh:

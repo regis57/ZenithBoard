@@ -26,7 +26,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.35.0"
+VERSION = "0.36.0"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -241,6 +241,80 @@ HEAT_DAYS = 14
 FLEET_TOP = 10
 NOT_AIRCRAFT = {"GND", "TWR", "GRND", "SERV", "EMER"}
 CALLSIGN_PREFIX = re.compile(r"^([A-Z]{3})\d")
+# 0.36.0, the weekly posts: what is neither an airliner, a business jet nor military, by group
+MISC_GROUPS = ("heli", "light", "glider", "balloon", "drone")
+MISC_UNKNOWN = {"heli": "Helicopter, type unknown", "light": "Light aircraft, type unknown", "glider": "Glider, type unknown",
+                "balloon": "Balloon or airship", "drone": "Drone"}
+_icao_blocks, _icao_starts, _mil_ranges = [], [], []
+
+
+def _top(counts, n=FLEET_TOP):
+    return sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))[:n]
+
+
+def misc_group(shape, category):
+    """The group of an aircraft that is not an airliner: by the wall's class, else by the emitter category it sends
+    (DO-260: A7 rotorcraft, A1 light, B1 glider, B2 lighter than air, B4 ultralight, B6 unmanned)."""
+    cat = (category or "").upper()
+    if shape == "heli" or cat == "A7":
+        return "heli"
+    if shape == "glider" or cat == "B1":
+        return "glider"
+    if shape == "balloon" or cat == "B2":
+        return "balloon"
+    if cat == "B6":
+        return "drone"
+    if shape in ("light", "twinprop") or cat in ("A1", "B4"):
+        return "light"
+    return None
+
+
+def _load_blocks():
+    if not _icao_blocks:
+        try:
+            with open(os.path.join(DATA_DIR, "icao_countries.json"), encoding="utf-8") as fh:
+                rows = json.load(fh)["blocks"]
+            _icao_blocks.extend(sorted((int(a, 16), int(b, 16), cc, name) for a, b, cc, name in rows))
+            _icao_starts.extend(b[0] for b in _icao_blocks)
+        except (OSError, ValueError, KeyError, TypeError):
+            pass
+        try:
+            with open(os.path.join(DATA_DIR, "military_ranges.json"), encoding="utf-8") as fh:
+                _mil_ranges.extend((int(a, 16), int(b, 16)) for a, b in json.load(fh)["military"])
+        except (OSError, ValueError, KeyError, TypeError):
+            pass
+
+
+def icao_country(hex_code):
+    """The ISO code of the state an ICAO address is allocated to ("" when unknown): the country of registration."""
+    _load_blocks()
+    try:
+        n = int(str(hex_code), 16)
+    except ValueError:
+        return ""
+    import bisect                                 # thirty days of aircraft at each page load: a search, not a scan
+    i = bisect.bisect_right(_icao_starts, n) - 1
+    if i >= 0 and _icao_blocks[i][0] <= n <= _icao_blocks[i][1]:
+        return _icao_blocks[i][2]
+    return ""
+
+
+def country_name(cc):
+    _load_blocks()
+    for _, _, c, name in _icao_blocks:
+        if c == cc and cc:
+            return name
+    return "Unknown country"
+
+
+def in_military_range(hex_code):
+    """An address in a block allocated to military aircraft (tar1090-db's ranges, as tar1090 marks them)."""
+    _load_blocks()
+    try:
+        n = int(str(hex_code), 16)
+    except ValueError:
+        return False
+    return any(a <= n <= b for a, b in _mil_ranges)
 _cargo = {}
 
 
@@ -259,9 +333,16 @@ _fleet_cache = {"key": None, "data": None}
 
 
 def local_types(hexes, d):
-    """0.31.0: {hex: type code} for many addresses at once, from tar1090's database in folder d, for the statistics'
-    fleet files (lib/stats.sh). The addresses are walked in order and only the files on the current path are kept,
-    so each file is read once, and the wall's own caches (local_aircraft) are neither used nor emptied."""
+    """0.31.0: {hex: type code} for many addresses at once (see local_info)."""
+    return {h: v["t"] for h, v in local_info(hexes, d).items() if v.get("t")}
+
+
+def local_info(hexes, d):
+    """{hex: {"t": type code, "mil": military}} for many addresses at once, from tar1090's database in folder d, for
+    the statistics' fleet files (lib/stats.sh). The addresses are walked in order and only the files on the current
+    path are kept, so each file is read once, and the wall's own caches (local_aircraft) are neither used nor emptied.
+    0.36.0: the military mark, the first character of the entry's flags ("10": military; "0010": the address is
+    private), as tar1090 reads it (planeObject.js: data[2][0] == '1')."""
     out, path = {}, {}
     if not d:
         return out
@@ -281,8 +362,9 @@ def local_types(hexes, d):
             entry = shard.get(h[n:])
             if isinstance(entry, list) and entry:
                 code = str(entry[1] or "").strip().upper() if len(entry) > 1 else ""
-                if code:
-                    out[h.lower()] = code
+                flags = str(entry[2] or "") if len(entry) > 2 else ""
+                if code or flags.startswith("1"):
+                    out[h.lower()] = {"t": code, "mil": flags.startswith("1")}
                 break
             if h[:n + 1] not in (shard.get("children") or []):
                 break
@@ -313,32 +395,52 @@ def read_fleet(cfg, stats_dir=None, now=None, since=None):
             with open(os.path.join(stats_dir, n), encoding="utf-8") as fh:
                 for line in fh:
                     f = line.rstrip("\n").split("\t")
-                    if len(f) != 4 or not HEX_RE.match(f[0].upper()):
+                    if len(f) < 4 or not HEX_RE.match(f[0].upper()):
                         continue
-                    old = fleet.get(f[0], ["", "", ""])
-                    fleet[f[0]] = [f[1] or old[0], f[2] or old[1], f[3] or old[2]]
+                    # flight, altitude, type; since 0.36.0 the category and the military mark (older lines: blank)
+                    v = (f[1:] + [""] * 5)[:5]
+                    old = fleet.get(f[0], [""] * 5)
+                    fleet[f[0]] = [v[k] or old[k] for k in range(5)]
         except OSError:
             continue
     airlines, types, cargo = load_airlines(cfg), load_types(cfg), load_cargo()
     by_airline, by_type, by_cargo, by_biz, alts, typed = {}, {}, {}, {}, [], 0
+    cargo_models, biz_countries, mil, misc = {}, {}, {}, {g: {} for g in MISC_GROUPS}
     for h in sorted(fleet):
-        flight, alt, code = fleet[h]
+        flight, alt, code, cat, milmark = fleet[h]
         icao, info = airline_for(flight, airlines)
         if icao:
             name = (info or {}).get("name") or icao
             by_airline[name] = by_airline.get(name, 0) + 1
-        m = CALLSIGN_PREFIX.match(flight.upper())
-        if m and m.group(1) in cargo:             # 0.35.0: the cargo airlines, by their own callsign prefix
-            by_cargo[cargo[m.group(1)]] = by_cargo.get(cargo[m.group(1)], 0) + 1
         if code in NOT_AIRCRAFT:                  # tar1090's database lists airport vehicles and towers too: not counted
             continue
+        d = describe_type({"t": code, "category": cat}, types) if (code or cat) else {}
+        label = (d.get("type_name") or code) if code else ""
+        shape = d.get("shape")
+        m = CALLSIGN_PREFIX.match(flight.upper())
+        if m and m.group(1) in cargo:             # 0.35.0: the cargo airlines, by their own callsign prefix
+            name = cargo[m.group(1)]
+            by_cargo[name] = by_cargo.get(name, 0) + 1
+            if label:                             # 0.36.0: and the model each flies most
+                cm = cargo_models.setdefault(name, {})
+                cm[label] = cm.get(label, 0) + 1
         if code:
             typed += 1
-            d = describe_type({"t": code}, types)
-            label = d["type_name"] or code
             by_type[label] = by_type.get(label, 0) + 1
-            if d.get("shape") == "bizjet":        # 0.35.0: the business jets, by make and model (the wall's own classes)
-                by_biz[label] = by_biz.get(label, 0) + 1
+        military = milmark == "1" or in_military_range(h) or aircraft.is_military(shape)
+        cc = icao_country(h)
+        if military:                              # 0.36.0: by the country its address belongs to, then the model
+            e = mil.setdefault(cc, {})
+            k = label or "Unknown type"
+            e[k] = e.get(k, 0) + 1
+        elif shape == "bizjet" and code:          # 0.35.0: the business jets, by make and model (the wall's own classes)
+            by_biz[label] = by_biz.get(label, 0) + 1
+            biz_countries[cc] = biz_countries.get(cc, 0) + 1          # 0.36.0: and the country they are registered in
+        else:
+            g = misc_group(shape, cat)
+            if g:                                 # 0.36.0: helicopters, light aircraft, gliders, balloons, drones
+                k = label or MISC_UNKNOWN[g]
+                misc[g][k] = misc[g].get(k, 0) + 1
         try:
             if int(alt) > 0:
                 alts.append(int(alt))
@@ -357,6 +459,12 @@ def read_fleet(cfg, stats_dir=None, now=None, since=None):
             "types": sorted(by_type.items(), key=lambda kv: (-kv[1], kv[0]))[:FLEET_TOP],
             "cargo": sorted(by_cargo.items(), key=lambda kv: (-kv[1], kv[0]))[:FLEET_TOP], "cargo_total": sum(by_cargo.values()),
             "bizjets": sorted(by_biz.items(), key=lambda kv: (-kv[1], kv[0]))[:FLEET_TOP], "bizjet_total": sum(by_biz.values()),
+            "cargo_models": {n: max(v.items(), key=lambda kv: (kv[1], kv[0])) for n, v in cargo_models.items()},
+            "bizjet_countries": _top(biz_countries),
+            "military": sorted(({"cc": c, "country": country_name(c), "total": sum(v.values()), "models": _top(v)}
+                                for c, v in mil.items()), key=lambda e: (-e["total"], e["country"]))[:FLEET_TOP],
+            "military_total": sum(sum(v.values()) for v in mil.values()),
+            "misc": {g: {"total": sum(v.values()), "models": _top(v)} for g, v in misc.items()},
             "altitudes": {"labels": labels, "counts": bands}}
     _fleet_cache.update(key=key, data=data)
     return data
@@ -1581,8 +1689,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._file(STATIC_DIR, "stats.html")
         if path == "/social/preview":                 # the picture `zenithboard social test` drew, to look at before posting anything
             return self._file(SOCIAL_DIR, social_preview_name())
-        if path == "/social/preview2":                # the weekly second post's picture (0.35.0, social weekly test)
-            return self._file(SOCIAL_DIR, "preview2.png")
+        if path in ("/social/preview2", "/social/preview3", "/social/preview4"):   # the weekly posts' pictures (0.35.0, 0.36.0)
+            return self._file(SOCIAL_DIR, "preview%s.png" % path[-1])
         if path.startswith("/demo/") and cfg_bool(cfg, "DEMO"):
             return self._file(DEMO_DIR, path[len("/demo/"):])
         return self._static(path)

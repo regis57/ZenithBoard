@@ -124,22 +124,40 @@ When the hashtags would not fit in Bluesky's 300 characters, the lists go down f
 
 ![The weekly summary card (a preview, made-up figures)](https://raw.githubusercontent.com/regis57/ZenithBoard/main/docs/images/social-weekly.png)
 
-**Two minutes later, a second post (0.35.0): the cargo airlines and the business jets.**
+**Then three more, two minutes apart (0.35.0 and 0.36.0)**, each with its own card:
+
+**2. Cargo airlines and business jets.** Each cargo airline with the model it flew most (*DHL · Boeing 767-300 (18) … 39*); the business jets by make and model; and the countries the business jets are registered in, with the wall's own flags, a bar and the count.
 
 > Cargo and business jets above Trémery, 12–18 October: 42 cargo aircraft, 31 business jets.
 > Cargo: DHL (18), FedEx (9), UPS (6).
 > Business jets: Cessna Citation Excel (7), Pilatus PC-24 (5), Dassault Falcon 7X (4).
-> #ADSB #avgeek #ZenithBoard
 
 ![The second weekly card: cargo airlines and business jets (a preview, made-up figures)](https://raw.githubusercontent.com/regis57/ZenithBoard/main/docs/images/social-weekly-2.png)
 
-* **Cargo airlines** are told by their own callsign prefix, from `flightinfo/data/cargo_airlines.json`: 40 dedicated cargo operators, each code checked against a published source on 20 October 2026 (FedEx, UPS, DHL's five airlines counted together as DHL, AeroLogic, Lufthansa Cargo, Cargolux, ASL Airlines, Atlas, Kalitta, Martinair Cargo, Challenge, Swiftair, West Atlantic and others). Turkish, Qatar, Emirates, Air France and the like fly their freighters under their passenger prefix (THY6147 is a 777F, so is QTR8486): a callsign cannot tell them apart, so they are not counted as cargo. Nor are mixed passenger and cargo operators, or airlines no longer flying.
-* **Business jets** are the aircraft the wall itself draws as business jets, counted by make and model (*Cessna Citation Excel*, *Dassault Falcon 7X*). Never a registration or a callsign: a private jet belongs to someone.
-* It follows the first post by two minutes, which Bluesky takes without trouble (its limits are in hundreds of posts an hour). A failure waits ten minutes like any post, and after four hours it is dropped rather than posted late. There is no second post when the first was not posted, when the lists do not cover the week yet, or when the week had neither cargo airline nor business jet.
+**3. Military aircraft**, by country, the most represented first: the country's flag, then its makes and models, each with a bar and the count (two a country on the card, ten rows at most).
+
+> Military aircraft above Trémery, 12–18 October: 23 aircraft from 5 countries.
+> United States: KC-135 Stratotanker (4), C-17 Globemaster III (2).
+> Germany: Airbus A400M Atlas (5). …
+
+![The third weekly card: military aircraft by country (a preview, made-up figures)](https://raw.githubusercontent.com/regis57/ZenithBoard/main/docs/images/social-weekly-3.png)
+
+**4. General aviation**: helicopters, light aircraft (a Cessna 172, a Robin DR400), gliders, and drones and balloons together, a column each with its total and its makes and models.
+
+![The fourth weekly card: general aviation (a preview, made-up figures)](https://raw.githubusercontent.com/regis57/ZenithBoard/main/docs/images/social-weekly-4.png)
+
+How each is told:
+
+* **Cargo airlines** by their own callsign prefix, from `flightinfo/data/cargo_airlines.json`: 40 dedicated cargo operators, each code checked against a published source on 20 October 2026 (FedEx, UPS, DHL's five airlines counted together as DHL, AeroLogic, Lufthansa Cargo, Cargolux, ASL Airlines, Atlas, Kalitta, Martinair Cargo, Challenge, Swiftair, West Atlantic and others). Turkish, Qatar, Emirates, Air France and the like fly their freighters under their passenger prefix (THY6147 is a 777F, so is QTR8486): a callsign cannot tell them apart, so they are not counted as cargo.
+* **Business jets** as the wall itself classes them, by make and model. **Their country** is the state the aircraft's ICAO address is allocated to, which is the state it is registered in (ICAO Annex 10; the table in `flightinfo/data/icao_countries.json` is tar1090's). Never a registration or a callsign: a private jet belongs to someone.
+* **Military aircraft**: marked so by the decoder's database or tar1090's, or with an address in a block allocated to military aircraft (`flightinfo/data/military_ranges.json`, tar1090-db's), or of a combat class (fighter, bomber). The country is the address's, as for business jets. A military helicopter or business jet is counted here, not in the other posts.
+* **General aviation**: by the wall's class, or else by the category the aircraft sends (A7 rotorcraft, A1 light, B1 glider, B2 balloon, B4 ultralight, B6 drone). A drone or a glider without a type is counted as *Drone* or *Glider, type unknown*.
+* **The flags** are the wall's own, dot by dot (`flags.js`, drawn through `tools/flag-pixels.js`); a country without one shows its two letters in a box.
+* Two minutes between posts is nothing for Bluesky (its limits are in hundreds of posts an hour). A post with nothing to say that week gives its turn to the next. A failure waits ten minutes like any post; after four hours it is dropped, and the ones after it too, rather than posted late. None of them goes out without the first, nor before the lists cover the week.
 
 **What it never says**: a distance, a direction, a range. The farthest aircraft of the week is left out on purpose: named with the city nearest it, two such posts would narrow down where the antenna is. Only your own words for the place (the area of the wizard) say where.
 
-Once a week (the ISO week): a Pi switched off on Sunday evening posts nothing on Monday, a summary a day late not being what the account promises. A post that fails waits ten minutes like any other; a week with no statistics is skipped, said once in the journal (`zenithboard logs social`). `sudo zenithboard social weekly test` draws this week's two posts so far and prints their texts, posting nothing (see them at `/social/preview` and `/social/preview2`); `social weekly post` posts the first now, `social weekly post2` the second, and Sunday's still go out. The airlines, the models, the cargo airlines and the business jets come from the fleet lists of 0.31.0, and only once those lists cover the whole week (0.34.1): the first test on the reference Pi, the evening the lists began, put *6 435 aircraft heard* beside *Ryanair (14)*, a week against two hours. Until then the text leaves them out, the picture says from which week they will be shown, and `weekly test` says it too. Lists begun on a Tuesday are first in the summary of the Sunday twelve days later. The type is written as the posts write it (*Boeing 737-800*, not *BOEING 737-800*). The crossings posted are counted from 0.33.0.
+Once a week (the ISO week): a Pi switched off on Sunday evening posts nothing on Monday, a summary a day late not being what the account promises. A post that fails waits ten minutes like any other; a week with no statistics is skipped, said once in the journal (`zenithboard logs social`). `sudo zenithboard social weekly test` draws this week's four posts so far and prints their texts, posting nothing (see them at `/social/preview`, `/social/preview2`, `/social/preview3` and `/social/preview4`); `social weekly post` posts the first now (`post2`, `post3`, `post4` the others), and Sunday's still go out. The airlines, the models, the cargo airlines, the business jets, the military aircraft and general aviation come from the fleet lists of 0.31.0 (the category and the military mark from 0.36.0), and only once those lists cover the whole week (0.34.1): the first test on the reference Pi, the evening the lists began, put *6 435 aircraft heard* beside *Ryanair (14)*, a week against two hours. Until then the text leaves them out, the picture says from which week they will be shown, and `weekly test` says it too. Lists begun on a Tuesday are first in the summary of the Sunday twelve days later. The type is written as the posts write it (*Boeing 737-800*, not *BOEING 737-800*). The crossings posted are counted from 0.33.0.
 
 ## The picture
 
