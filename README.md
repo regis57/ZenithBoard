@@ -74,12 +74,12 @@ The story behind the project: [ZenithBoard on regis-hennequin.info](https://regi
 
 | Board | ADS-B + feeders + wall + social sharing |
 |---|---|
-| **Pi 3B / 3B+ (1 GB)** | **Measured: comfortable**, with ADS-B Exchange and two more feeders (a third, Plane Finder, not measured). Ethernet or a strong Wi-Fi signal, and the official power supply |
+| **Pi 3B / 3B+ (1 GB)** | **Measured: comfortable**, with ADS-B Exchange and three more feeders (FlightAware, Flightradar24, Plane Finder): 575 MB of 1 GB still available. Ethernet or a strong Wi-Fi signal, and the official power supply |
 | **Pi 4, 1 GB** | Comfortable (estimate: the same software, a faster processor) |
 | **Pi 4, 2 GB or more / Pi 5** | Comfortable, and nothing more to gain for these over a Pi 3B (estimate) |
 | Pi Zero 2 W (512 MB) / Pi 2 | ADS-B and the wall only, no extra feeders (estimate) |
 
-The installer detects the board and its memory and tells you once what it is good for. `zenithboard status` and `zenithboard health` show the free memory.
+The installer detects the board and its memory and tells you once what it is good for. `zenithboard status` and `zenithboard health` show the free memory; `sudo zenithboard memory` what each service uses, with its threads and open files.
 
 **Already running on a Pi 3B, with a Pi 4 in a drawer?** The SD card would boot in it with everything as it is — the same system, ZenithBoard reads the board when it needs to, and the feeders keep their identities, which live on the card. But it needs a USB-C supply, may get another address from your router, draws more power and runs warmer, and for ADS-B it brings nothing you would see. What changes, and how to go back, on the wiki: **[Hardware](https://github.com/regis57/ZenithBoard/wiki/Hardware)**.
 
@@ -629,7 +629,7 @@ The processes, the files each one reads and writes, and the timers are set out i
 * **FlightAware and Flightradar24 store your antenna position on their websites**: after `zenithboard location`, update it there too (the command tells you where).
 * **The airline name list is built in** (about 90 major airlines). Other airlines are named from the route lookup, once it has answered for one of their flights since the last restart; until then, and with routes off, they show the callsign only.
 * **Routes are looked up by callsign, not by flight.** A callsign can be reused for the other direction, so impossible answers are dropped rather than shown — a blank route row is better than a wrong one.
-* **Some parts have never run on real hardware**, among them the 978 MHz UAT receiver, the fixed-IP menu and Plane Finder. They are written and unit-tested against stand-in programs, which proves the logic and nothing about the hardware.
+* **Some parts have never run on real hardware**, among them the 978 MHz UAT receiver and the fixed-IP menu. Plane Finder has fed from the reference Pi since 20 October 2026. They are written and unit-tested against stand-in programs, which proves the logic and nothing about the hardware.
 
 Which is which, what has been proven on a real Pi, and the field log of what has actually gone wrong: **[Project status](https://github.com/regis57/ZenithBoard/wiki/Project-status)** in the wiki.
 

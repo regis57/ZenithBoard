@@ -52,6 +52,7 @@ ZenithBoard $ZB_VERSION - ADSB Flight Info
   zenithboard net static IP MASK GATEWAY [cloudflare|google|router|"DNS DNS"] [PROFILE]   fixed address (MASK: 255.255.255.0 or 24)
   zenithboard net dhcp [PROFILE]        back to an automatic address
   zenithboard health                    one screen: power, temperature, memory, card, how the last boot ended, problems in the logs
+  zenithboard memory                    memory, threads and open files, service by service (sudo: exact figures)
   zenithboard watchdog|netwatch|keeplogs on|off|status   hardware watchdog / network watchdog / logs kept after a restart (all off by default)
   zenithboard gain check                is the dongle gain right? (reads the decoder statistics, gives advice)
   zenithboard gain set DB|max|default|up|down   change the gain (one step at a time is best); steps: zenithboard gain steps
@@ -380,6 +381,7 @@ case "${1:-}" in
       *) die "Usage: zenithboard net status|static IP MASK GATEWAY [DNS]|dhcp" ;;
     esac ;;
   health) health_check ;;
+  memory|threads) python3 "$ZB_HOME/tools/memory_report.py" ;;
   watchdog) case "${2:-status}" in on) root_or_die; watchdog_on ;; off) root_or_die; watchdog_off ;; status) echo "Hardware watchdog: $(watchdog_state)" ;; *) die "Usage: zenithboard watchdog on|off|status" ;; esac ;;
   keeplogs) case "${2:-status}" in on) root_or_die; keeplogs_on ;; off) root_or_die; keeplogs_off ;; status) echo "Saved logs: $(keeplogs_state)" ;; *) die "Usage: zenithboard keeplogs on|off|status" ;; esac ;;
   netwatch) case "${2:-status}" in on) root_or_die; netwatch_on ;; off) root_or_die; netwatch_off ;; run) root_or_die; netwatch_run ;; status) netwatch_status ;; *) die "Usage: zenithboard netwatch on|off|status" ;; esac ;;

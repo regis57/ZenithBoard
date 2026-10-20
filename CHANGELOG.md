@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.34.0
+- **`zenithboard health` gives the card's size**: `Card: 6% full: 1.7 GB used of 31.2 GB, 28.1 GB free (the card: 31.9 GB)`, the system's partition from `df` and the card under it from `lsblk`. The memory line says free of how much. Asked for by the owner.
+- **`zenithboard memory`** (or `threads`; menu *3 Settings → 5 Reliability → Memory*): memory, peak, threads, open files and processes for each service, the largest first, then the whole Pi (memory, swap, threads, load), what runs outside the services, and the six largest processes. Read from `/proc` per service cgroup, since systemd has no memory figure on Raspberry Pi OS (the kernel's memory controller is off). With sudo, memory is PSS, which adds up, and open files are counted. Asked for by the owner once the Pi fed four networks.
+- Plane Finder feeds from the reference Pi (20 October 2026): the README, Hardware and Project status say so, with the memory still available (575 MB).
+
 ## 0.33.0
 - **A summary of the week on Bluesky.** `sudo zenithboard social weekly on` (menu *Social sharing → 7*, off by default): on Sundays from 19:00 the service posts the seven days ending that day, from the statistics: aircraft heard, messages decoded, the busiest day and hour, the three airlines and the type most seen, and the crossings the account posted. The Pi draws its picture (Pillow, 1200 × 675, in the posts' colour): the counts, the week by hour as dots, the airlines as bars, their names in plain text.
 - Never a distance, a direction or a range: the farthest aircraft of the week is left out, since with the city nearest it two such posts would place the antenna.
