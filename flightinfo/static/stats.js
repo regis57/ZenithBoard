@@ -78,6 +78,40 @@
     mount.innerHTML = ""; mount.appendChild(s);
   }
 
+  // 0.31.0: the sky by hour, a row per day and a column per hour, darker where more aircraft were overhead
+  function heat(mount, rows) {
+    var W = 720, L = 50, T = 4, B = 22, R = 8, cw = (W - L - R) / 24, ch = 14, H = T + rows.length * ch + B;
+    var max = 0;
+    rows.forEach(function (r) { r.hours.forEach(function (v) { if (v !== null && v > max) max = v; }); });
+    var s = el("svg", { viewBox: "0 0 " + W + " " + H }), ax = el("g", { "class": "axis" });
+    rows.forEach(function (r, i) {
+      var y = T + i * ch;
+      if (i % 2 === 0 || rows.length <= 7) ax.appendChild(el("text", { x: L - 6, y: y + ch - 3, "text-anchor": "end" }, shortDay(r.day)));
+      r.hours.forEach(function (v, hh) {
+        var x = L + hh * cw, c = el("rect", { "class": "cell" + (v === null ? " none" : ""), x: x + 1, y: y + 1, width: cw - 2, height: ch - 2, rx: 2 });
+        if (v !== null) c.setAttribute("opacity", (0.08 + 0.92 * (max ? v / max : 0)).toFixed(2));
+        c.addEventListener("mousemove", function (e) { showTip(e, shortDay(r.day) + " " + (hh < 10 ? "0" : "") + hh + "h: " + (v === null ? "no sample" : fmt(v) + " aircraft")); });
+        c.addEventListener("mouseleave", hideTip);
+        s.appendChild(c);
+      });
+    });
+    for (var hh = 0; hh < 24; hh += 3) ax.appendChild(el("text", { x: L + hh * cw + cw / 2, y: H - 6, "text-anchor": "middle" }, (hh < 10 ? "0" : "") + hh + "h"));
+    s.appendChild(ax);
+    mount.innerHTML = ""; mount.appendChild(s);
+  }
+  function ranks(mount, pairs, empty) {
+    mount.innerHTML = "";
+    if (!pairs || !pairs.length) { var p = document.createElement("p"); p.className = "empty"; p.textContent = empty; mount.appendChild(p); return; }
+    var max = pairs[0][1], ol = document.createElement("ol");
+    pairs.forEach(function (kv) {
+      var li = document.createElement("li"), f = document.createElement("span"), n = document.createElement("span"), nm = document.createElement("span");
+      f.className = "fill"; f.style.width = (100 * kv[1] / max).toFixed(1) + "%";
+      nm.className = "name"; nm.textContent = kv[0]; n.className = "n"; n.textContent = fmt(kv[1]);
+      li.appendChild(f); li.appendChild(nm); li.appendChild(n); ol.appendChild(li);
+    });
+    mount.appendChild(ol);
+  }
+
   // The farthest aircraft, in words (0.22.0): "18/10 14:32 · Ryanair FR8526 (RYR8526) · Charleroi (CRL) → Reggio
   // Calabria (REG) · Boeing 737-800 EI-DCL · 11 280 m · 322 km, near Lyon, FR (12 km)". Whatever is not known is left
   // out rather than guessed: no airline, no route, no city each simply drop their part.
@@ -145,6 +179,15 @@
     var half = window.innerWidth >= 760 ? 360 : 720;
     line($("c-far"), dl, fv, " km", every, fv.indexOf(Math.max.apply(null, fv)), half);
     bars($("c-planes"), dl, pv, "", every, pv.indexOf(Math.max.apply(null, pv)), half);
+    if (d.heat && d.heat.length) heat($("c-heat"), d.heat);
+    var fl = d.fleet || {};
+    var since = fl.days ? " Counted since this page's fleet lists began (ZenithBoard 0.31.0): " + fl.days + " day" + (fl.days > 1 ? "s" : "") + "." : "";
+    ranks($("c-airlines"), fl.airlines, "Nothing yet: the lists start with ZenithBoard 0.31.0, on the next quarter hour.");
+    ranks($("c-types"), fl.types, fl.aircraft ? "No type known: the decoder has no aircraft database. Turn on tar1090's, offline: sudo zenithboard data localdb on" : "Nothing yet.");
+    if (fl.altitudes && fl.aircraft) {
+      bars($("c-alt"), fl.altitudes.labels, fl.altitudes.counts, "", 1, fl.altitudes.counts.indexOf(Math.max.apply(null, fl.altitudes.counts)));
+      $("c-alt-sub").textContent = "\u00b7 distinct aircraft by altitude in " + (fl.alt_unit || "km") + ", 30 days, the altitude last seen." + since;
+    }
     var rows = "<tr><th>Day</th><th>Aircraft</th><th>Messages</th><th>Farthest km</th><th>Samples</th></tr>";
     d.days.slice().reverse().forEach(function (x) { rows += "<tr><td>" + x.day + "</td><td>" + fmt(x.aircraft) + "</td><td>" + fmt(x.messages) + "</td><td>" + x.farthest_km + "</td><td>" + x.samples + "</td></tr>"; });
     $("table").innerHTML = rows;

@@ -27,7 +27,7 @@ cat > "$t/run/readsb/stats.json" <<'J'
 {"last15min":{"messages":2412,"max_distance":311900,"local":{"accepted":[2400,12],"strong_signals":60}},"total":{"messages":99}}
 J
 cat > "$t/run/readsb/aircraft.json" <<'J'
-{"now":1,"aircraft":[{"hex":"3c6444","lat":49.1,"lon":6.2},{"hex":"4ca123","lat":49.3,"lon":6.0},{"hex":"a1b2c3"},{"hex":"~2a0001","lat":48.9,"lon":6.1}]}
+{"now":1,"aircraft":[{"hex":"3c6444","lat":49.1,"lon":6.2,"flight":"DLH4YK  ","alt_baro":36000,"t":"A320"},{"hex":"4ca123","lat":49.3,"lon":6.0,"flight":"RYR5ZK","alt_baro":"ground"},{"hex":"a1b2c3"},{"hex":"~2a0001","lat":48.9,"lon":6.1}]}
 J
 
 check "off at first"                              '[ "$(stats_state)" = off ]'
@@ -46,13 +46,36 @@ check "sample: 2 aircraft with a position (the ~ one is not real)" '[ "$(cut -d,
 check "sample: 3 aircraft seen today"             '[ "$(cut -d, -f5 <<<"$row")" = 3 ]'
 check "day file: three real hex codes, sorted"    '[ "$(tr "\n" " " < "$(stats_day_file "$today")")" = "3c6444 4ca123 a1b2c3 " ]'
 
+check "fleet file (0.31.0): callsign, altitude, type; no ~ address" '[ "$(grep -c . "$(stats_fleet_file "$today")")" = 3 ] && grep -q "^3c6444	DLH4YK	36000	A320$" "$(stats_fleet_file "$today")" && grep -q "^4ca123	RYR5ZK		$" "$(stats_fleet_file "$today")"'
+
 # a second sample with one new aircraft and one gone: the day's count only grows
 cat > "$t/run/readsb/aircraft.json" <<'J'
-{"aircraft":[{"hex":"3c6444","lat":49.1,"lon":6.2},{"hex":"ff0001","lat":49.5,"lon":6.5}]}
+{"aircraft":[{"hex":"3c6444","lat":49.1,"lon":6.2,"alt_baro":12000},{"hex":"ff0001","lat":49.5,"lon":6.5}]}
 J
 stats_run
+check "fleet: a blank keeps what was known, the altitude is the latest" 'grep -q "^3c6444	DLH4YK	12000	A320$" "$(stats_fleet_file "$today")" && [ "$(grep -c . "$(stats_fleet_file "$today")")" = 4 ]'
 check "second sample: 4 distinct aircraft today"  '[ "$(tail -1 "$STATS_FILE" | cut -d, -f5)" = 4 ]'
 check "second sample: 2 with a position now"      '[ "$(tail -1 "$STATS_FILE" | cut -d, -f4)" = 2 ]'
+
+# tar1090's database, with `data localdb on` (0.31.0): an aircraft new to the day with no type from the decoder gets
+# the database's; one already in the file is not looked up again
+mkdir -p "$t/db"
+python3 -c 'import gzip, json, sys; open(sys.argv[1], "wb").write(gzip.compress(json.dumps({"D2087": ["9H-EWG", "A320", "00", "AIRBUS A-320"], "6A8E": ["G-EZUH", "A319", "00", ""]}).encode()))' "$t/db/4.js"
+cfg_set LOCAL_DB 1; cfg_set LOCAL_DB_DIR "$t/db"
+cat > "$t/run/readsb/aircraft.json" <<'J'
+{"aircraft":[{"hex":"4d2087","flight":"EWG8QR","alt_baro":32000},{"hex":"ff0001","alt_baro":5000},{"hex":"4d9999"}]}
+J
+stats_run
+f=$(stats_fleet_file "$today")
+check "localdb: a new aircraft gets its type from tar1090's database" 'grep -q "^4d2087	EWG8QR	32000	A320$" "$f"'
+check "localdb: one not in it stays without; one already known is not looked up" 'grep -q "^4d9999			$" "$f" && grep -q "^ff0001		5000	$" "$f"'
+cfg_set LOCAL_DB_DIR "$t/none"
+cat > "$t/run/readsb/aircraft.json" <<'J'
+{"aircraft":[{"hex":"4d6a8e","alt_baro":1000}]}
+J
+stats_run
+check "localdb: a missing folder is no error, the sample is written" 'grep -q "^4d6a8e		1000	$" "$f" && [ "$(tail -1 "$STATS_FILE" | cut -d, -f5)" = 7 ]'
+cfg_set LOCAL_DB 0
 
 # dump1090-fa: no top-level messages count, accepted is a list
 cat > "$t/run/readsb/stats.json" <<'J'
@@ -77,8 +100,9 @@ check "prune: the header is still first"                        '[ "$(head -1 "$
 
 # ---- the terminal view
 out=$(stats_show)
-check "show: today's aircraft count is the day file"  'printf "%s" "$out" | grep -q "Today  *4 aircraft seen"'
-check "show: today's messages are summed"             'printf "%s" "$out" | grep -q "$((2412 + 2412 + 1520)) messages"'
+# four samples of the readsb file and one of dump1090's; seven distinct aircraft (three of them from the localdb samples)
+check "show: today's aircraft count is the day file"  'printf "%s" "$out" | grep -q "Today  *7 aircraft seen"'
+check "show: today's messages are summed"             'printf "%s" "$out" | grep -q "$((2412 * 4 + 1520)) messages"'
 check "show: farthest today"                          'printf "%s" "$out" | grep -q "farthest 312 km"'
 spark=$(printf "%s\n" "$out" | grep -A1 "Messages per hour today" | tail -1)
 check "show: a sparkline of 24 bars"                  '[ "$(python3 -c "import sys; print(len(sys.argv[1].strip()))" "$spark")" = 24 ]'

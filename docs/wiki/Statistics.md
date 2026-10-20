@@ -21,7 +21,9 @@ Every quarter hour, as the `zenithboard` user and inside the same sandbox as the
 | `aircraft_pos` | Aircraft with a position at that moment |
 | `aircraft_seen` | Distinct aircraft seen so far that day |
 
-It also notes every aircraft's address into a file for the day, `seen-YYYY-MM-DD`, one per line, so the day's count is the number of distinct aircraft. About 6 KB a day on the card. After thirty days a line, or a day file, is removed.
+It also notes every aircraft's address into a file for the day, `seen-YYYY-MM-DD`, one per line, so the day's count is the number of distinct aircraft. After thirty days a line, or a day file, is removed.
+
+**The fleet of the day (0.31.0).** Each sample also writes, for every aircraft in the decoder's list, a line to `fleet-YYYY-MM-DD`: its address, callsign, barometric altitude in feet and type code, tab-separated. One line per aircraft and per day: a later sample updates the altitude, and a blank never replaces what an earlier sample knew (the callsign often comes after the first position). No position is written. The type is in the decoder's list only when it loads an aircraft database; otherwise, when [`data localdb on`](Command-reference) is set, the sample looks each aircraft new to the day up once in tar1090's database (a few dozen addresses a quarter hour, each of the database's files read once, the wall's own caches left alone). Without either, the types list says so; aircraft sampled before `localdb on` keep no type. With the address file, about 30 KB a day on the card; kept thirty days like the rest, emptied by `stats clear`.
 
 **What the wall could not name or draw (0.21.0).** Each sample also asks the wall, on the loopback, which aircraft are inside its radius, and notes once per aircraft the callsign prefixes shown without an airline name and the type codes drawn with the generic silhouette, in `gaps-YYYY-MM-DD` files kept thirty days. `zenithboard stats gaps` prints the counts; what they are for is on the [Roadmap](Roadmap#deciding-the-airline-lookup-and-the-new-silhouettes-on-figures).
 
@@ -37,9 +39,17 @@ At the edge of range the decoder often has an aircraft's positions before its ca
 
 ## The page
 
-Four numbers for today — aircraft, messages with the busiest hour, the farthest aircraft, the best distance of the thirty days — then two lines naming the farthest aircraft of today and of the thirty days, then three charts: messages per hour over the last twenty-four hours, the farthest aircraft per day, aircraft per day. One colour per chart, a tooltip on each bar or point, and the same numbers as a table underneath. It follows the device's light or dark setting and needs nothing from the internet.
+Four numbers for today — aircraft, messages with the busiest hour, the farthest aircraft, the best distance of the thirty days — then two lines naming the farthest aircraft of today and of the thirty days, then the charts: messages per hour over the last twenty-four hours, the farthest aircraft per day, aircraft per day, and four more since 0.31.0:
+
+* **The sky by hour**: a row per day of the last fourteen, a column per hour, darker where more aircraft had a position (the average of that hour's samples). A cell with no sample is grey. The rush hours and the quiet nights show at a glance, and so does a day the receiver was off.
+* **Airlines most seen** and **types most seen**: the ten with the most distinct aircraft over the thirty days, by the same airline names as the wall (from the callsign) and the type codes. Ground vehicles and the airport's own transmitters (GND, TWR, GRND, SERV, EMER) are left out.
+* **How high**: distinct aircraft by the altitude last seen, in bands of 1 km (metric) or 5 000 ft (imperial), following the wall's units.
+
+The three lists count from the day 0.31.0 first sampled; the page says over how many days. One colour per chart, a tooltip on each bar or point, and the same numbers as a table underneath. It follows the device's light or dark setting and needs nothing from the internet.
 
 ![The statistics page with the two lines under the four numbers (a preview, made-up figures)](https://raw.githubusercontent.com/regis57/ZenithBoard/main/docs/images/stats-farthest.png)
+
+![The sky by hour, the airlines and types most seen and how high they fly (a preview, made-up figures)](https://raw.githubusercontent.com/regis57/ZenithBoard/main/docs/images/stats-fleet.png)
 
 The line leaves out what is not known rather than guess it: no airline, no route, no city each drop their part. A city within 50 km reads *near Lyon, FR (12 km)*; farther, over the sea or open country, *85 km from Brugge, BE*. Altitude follows the wall's units; distances are in km, like the rest of the page.
 

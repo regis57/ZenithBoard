@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **20 October 2026**, version **0.30.1**.
+Last updated: **20 October 2026**, version **0.31.0**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -55,6 +55,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 20 October 2026, 23:00 | With ACARS and Grafana gone, what Grafana would have shown went onto the wall's own statistics page (0.31.0): the sky by hour over fourteen days, the airlines and types most seen, how high they fly. Checked against the real server with thirty days of made-up samples, light, dark and phone width. Not yet on the reference Pi: the lists start filling on its first quarter hour after the update |
 | 20 October 2026, 22:00 | The owner decided to take ACARS out, and Grafana with it once its use as a statistics board was weighed (100 to 200 MB on a Pi 3B, a third-party plugin, publishing only by opening the Pi to the internet or through a cloud account): 0.30.0. The reference Pi never had them installed |
 | 20 October 2026, 21:30 | The owner asked for other words than the factual post; five shapes proposed on RYR5ZK, all chosen, with the reason said first. 0.29.0 |
 | 20 October 2026, 21:00 | Four posts of the evening (RYR5ZK, RYR6JR, SKV615, EJU86EN): on RYR5ZK the north of the map was full of Belgian and Dutch towns unrelated to a track from Namur to Luxembourg. 0.28.0 names along the track first, with three large cities around for orientation (the owner chose that over the track alone). First try: the towns along a track through Belgium filled the 26 names before any city around; three places are now kept for them |

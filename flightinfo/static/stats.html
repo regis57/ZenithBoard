@@ -13,7 +13,7 @@
       <p id="sub" class="sub">Loading&hellip;</p>
     </header>
     <section id="off" hidden>
-      <p>Statistics are off. They cost about 6 KB a day on the card and are collected every 15 minutes once you turn them on:</p>
+      <p>Statistics are off. They cost about 30 KB a day on the card and are collected every 15 minutes once you turn them on:</p>
       <pre>sudo zenithboard stats on</pre>
       <p>Then come back here. <a href="/">The wall</a>.</p>
     </section>
@@ -36,6 +36,10 @@
         <figure class="wide"><figcaption>Messages per hour <span>&middot; last 24 hours</span></figcaption><div id="c-msgs"></div></figure>
         <figure><figcaption>Farthest aircraft <span>&middot; km, per day</span></figcaption><div id="c-far"></div></figure>
         <figure><figcaption>Aircraft seen <span>&middot; per day, a floor</span></figcaption><div id="c-planes"></div></figure>
+        <figure class="wide"><figcaption>The sky by hour <span>&middot; aircraft with a position, on average, last 14 days</span></figcaption><div id="c-heat"></div></figure>
+        <figure><figcaption>Airlines most seen <span>&middot; distinct aircraft, 30 days</span></figcaption><div id="c-airlines" class="ranks"></div></figure>
+        <figure><figcaption>Types most seen <span>&middot; distinct aircraft, 30 days</span></figcaption><div id="c-types" class="ranks"></div></figure>
+        <figure class="wide"><figcaption>How high <span id="c-alt-sub">&middot; distinct aircraft, 30 days</span></figcaption><div id="c-alt"></div></figure>
       </div>
       <details><summary>The same numbers as a table</summary><div class="scroller"><table id="table"></table></div></details>
       <p class="note">A sample every 15 minutes misses an aircraft that crossed in less, so a day's aircraft count is a floor, never a total. Messages are what the receiver decoded. <a href="/">The wall</a> &middot; <code>zenithboard stats</code> prints the same in the terminal. Cities of 100&nbsp;000 inhabitants or more: <a href="https://www.geonames.org/" target="_blank" rel="noopener noreferrer">GeoNames</a>, CC&nbsp;BY&nbsp;4.0.</p>

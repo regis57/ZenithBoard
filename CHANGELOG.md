@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.31.0
+- **The statistics page shows what Grafana would have.** Four new charts on `/stats`: **the sky by hour** (fourteen days by twenty-four hours, darker where more aircraft were overhead), **the airlines** and **the aircraft types most seen** (the ten with the most distinct aircraft over thirty days), and **how high** they fly (bands of 1 km or 5 000 ft, following the wall's units). Ground vehicles and the airport's own transmitters are not counted.
+- For them each sample now writes the day's aircraft with their callsign, altitude and type to `fleet-YYYY-MM-DD` (no position): about 30 KB a day on the card instead of 6, kept thirty days, emptied by `stats clear`. The types come from the decoder when it has an aircraft database, otherwise from tar1090's with `sudo zenithboard data localdb on`, looked up by the sample once per aircraft and day, never by the page (thirty days of addresses at once would take a Pi 3B minutes). The lists start on the first quarter hour after the update.
+- Previewed against the real server with thirty days of made-up samples, light and dark, desktop and phone width. The choice of the owner when ACARS and Grafana left (0.30.0).
+
 ## 0.30.1
 - A Pi still running ACARS keeps the ingester and acarsdec's launcher through an update: 0.30.0's update replaced `/opt/zenithboard` without them, and their services would have failed while the update said it removed nothing. They go with `sudo zenithboard acars remove`. Found re-reading the update path for regressions; no Pi was concerned (the reference Pi never had ACARS).
 

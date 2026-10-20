@@ -1,12 +1,13 @@
 # shellcheck shell=bash
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Statistics (menu 4 Settings -> Receiver -> Statistics, and `zenithboard stats ...`).
+# Statistics (menu 3 Settings -> Receiver -> Statistics, and `zenithboard stats ...`).
 #
 # Nothing on the Pi keeps history by itself: the decoder's stats.json holds the last fifteen minutes and the total
 # since it started, and aircraft.json is the present moment. So, when switched on, a timer runs this every fifteen
 # minutes on the quarter hour and writes one line: messages in those fifteen minutes, the farthest aircraft in km,
 # how many aircraft had a position. It also notes every aircraft seen into a small file for the day, so the day's
-# count is the number of distinct aircraft. Thirty days are kept, then pruned. About 6 KB a day on the card.
+# count is the number of distinct aircraft, and, since 0.31.0, each aircraft's callsign, altitude and type into
+# another (the airlines, types and altitudes of the page). Thirty days are kept, then pruned. About 30 KB a day on the card.
 #
 # A fifteen-minute sample misses an aircraft that crossed in less than that, so the daily count is a floor, and
 # both the page and the command say so. Off by default: `stats on` starts the timer, `stats off` stops it and
@@ -21,6 +22,9 @@ STATS_AIRCRAFT_DIR="${ZB_STATS_DIR:-/run}"          # where the decoder writes a
 
 stats_state() { [ "$(cfg_get STATS 0)" = 1 ] && echo on || echo off; }
 stats_day_file() { echo "$STATS_DIR/seen-$1"; }   # stats_day_file YYYY-MM-DD
+# 0.31.0: per aircraft of the day, what the statistics page counts: callsign, altitude (ft), type when the decoder
+# knows it. One tab-separated line per aircraft, about 25 KB a day.
+stats_fleet_file() { echo "$STATS_DIR/fleet-$1"; }
 
 stats_install_units() {
   [ -f "$ZB_HOME/systemd/$STATS_UNIT.service" ] || return 0
@@ -44,20 +48,22 @@ stats_on()  { stats_prepare_dir || { echo "Could not make $STATS_DIR"; return 1;
               echo "Statistics are ON: one line every 15 minutes in $STATS_FILE, $STATS_DAYS days kept."
               echo "Read them with 'zenithboard stats' or at http://$(local_ip):$(cfg_get PORT 8080)/stats"; }
 stats_off() { cfg_set STATS 0; stats_remove_units; echo "Statistics are OFF. The files are kept in $STATS_DIR (empty them: zenithboard stats clear)."; }
-stats_clear() { rm -f "$STATS_DIR"/seen-* "$STATS_DIR"/gaps-* "$STATS_DIR"/farthest-* 2>/dev/null; [ -d "$STATS_DIR" ] && echo "$STATS_HEADER" > "$STATS_FILE"; echo "Statistics emptied ($STATS_DIR)."; }
+stats_clear() { rm -f "$STATS_DIR"/seen-* "$STATS_DIR"/gaps-* "$STATS_DIR"/farthest-* "$STATS_DIR"/fleet-* 2>/dev/null; [ -d "$STATS_DIR" ] && echo "$STATS_HEADER" > "$STATS_FILE"; echo "Statistics emptied ($STATS_DIR)."; }
 
 # One sample. Reads the decoder's two files; writes one CSV line and today's aircraft. Silent when there is
 # nothing to read: a decoder that is not running is not an error worth a journal line every quarter hour.
 stats_run() {
-  local d sj aj now day n msgs far pos seen
+  local d sj aj now day n msgs far pos seen ldb
   d=$(cfg_get DECODER ""); [ -n "$d" ] || d=$(installed_decoder); [ -n "$d" ] || return 0
   sj="$STATS_AIRCRAFT_DIR/$d/stats.json"; aj="$STATS_AIRCRAFT_DIR/$d/aircraft.json"
   [ -r "$sj" ] || return 0
   stats_prepare_dir || return 0
   now=$(date '+%Y-%m-%d %H:%M'); day=${now%% *}
-  n=$(python3 - "$sj" "$aj" "$(stats_day_file "$day")" <<'PY'
+  # tar1090's aircraft database, when `data localdb on`: the type of an aircraft the decoder did not give one
+  ldb=""; [ "$(cfg_get LOCAL_DB 0)" = 1 ] && ldb=$(cfg_get LOCAL_DB_DIR /usr/local/share/tar1090/git-db/db)
+  n=$(python3 - "$sj" "$aj" "$(stats_day_file "$day")" "$(stats_fleet_file "$day")" "$ldb" "$ZB_HOME/flightinfo" <<'PY'
 import json, sys, os
-sj, aj, dayfile = sys.argv[1:4]
+sj, aj, dayfile, fleetfile, localdb, flightinfo = sys.argv[1:7]
 try:
     j = json.load(open(sj))
 except Exception:
@@ -68,7 +74,7 @@ msgs = w.get("messages")
 if msgs is None:                       # dump1090-fa has no top-level count: use what the receiver accepted
     acc = l.get("accepted"); msgs = sum(acc) if isinstance(acc, list) else (acc or 0)
 far = round((w.get("max_distance") or 0) / 1000.0)
-seen, pos = set(), 0
+seen, pos, fleet = set(), 0, {}
 try:
     for a in (json.load(open(aj)).get("aircraft") or []):
         h = str(a.get("hex", "")).lower().strip()
@@ -76,8 +82,39 @@ try:
             seen.add(h)
             if a.get("lat") is not None:
                 pos += 1
+            alt = a.get("alt_baro")
+            fleet[h] = (str(a.get("flight") or "").strip().upper(), str(int(alt)) if isinstance(alt, (int, float)) else "",
+                        str(a.get("t") or "").strip().upper())
 except Exception:
     pass
+# the fleet file: what was known before is kept, a blank never replaces a value, the altitude is the latest
+known = {}
+try:
+    for line in open(fleetfile):
+        f = line.rstrip("\n").split("\t")
+        if len(f) == 4 and f[0]:
+            known[f[0]] = f[1:]
+except FileNotFoundError:
+    pass
+# an aircraft new to the day with no type from the decoder is looked up once in tar1090's database, here rather than
+# by the page: a few dozen addresses a quarter hour instead of thirty days' worth at once on a Pi 3B (0.31.0)
+untyped = [h for h, v in fleet.items() if h not in known and not v[2]]
+types = {}
+if untyped and localdb and os.path.isdir(localdb):
+    try:
+        sys.path.insert(0, flightinfo)
+        import server
+        types = server.local_types(untyped, localdb)
+    except Exception:
+        types = {}
+for h, (fl, alt, typ) in fleet.items():
+    old_f = known.get(h, ["", "", ""])
+    known[h] = [fl or old_f[0], alt or old_f[1], typ or old_f[2] or types.get(h, "")]
+if known:
+    ftmp = fleetfile + ".tmp"
+    with open(ftmp, "w") as fh:
+        fh.write("".join("%s\t%s\n" % (h, "\t".join(v)) for h, v in sorted(known.items())))
+    os.replace(ftmp, fleetfile)
 old = set()
 try:
     old = set(x.strip() for x in open(dayfile) if x.strip())
@@ -197,9 +234,9 @@ stats_prune() {
   cut=$(date -d "$STATS_DAYS days ago" '+%Y-%m-%d %H:%M' 2>/dev/null) || return 0
   tmp="$STATS_FILE.tmp"
   { echo "$STATS_HEADER"; awk -F, -v c="$cut" 'NR>1 && $1 >= c' "$STATS_FILE"; } > "$tmp" && mv "$tmp" "$STATS_FILE"
-  for f in "$STATS_DIR"/seen-* "$STATS_DIR"/gaps-* "$STATS_DIR"/farthest-*; do
+  for f in "$STATS_DIR"/seen-* "$STATS_DIR"/gaps-* "$STATS_DIR"/farthest-* "$STATS_DIR"/fleet-*; do
     [ -f "$f" ] || continue
-    d=${f##*/}; d=${d#seen-}; d=${d#gaps-}; d=${d#farthest-}     # the YYYY-MM-DD after the prefix
+    d=${f##*/}; d=${d#seen-}; d=${d#gaps-}; d=${d#farthest-}; d=${d#fleet-}     # the YYYY-MM-DD after the prefix
     [ "$d" \< "${cut%% *}" ] && rm -f "$f"
   done
   return 0
