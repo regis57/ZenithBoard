@@ -52,7 +52,8 @@ on Wi-Fi, near Trémery (Moselle). The owner tests on it; a session never reache
 5. Commit as the owner: `git -c user.name=regis57 -c user.email=regis.hennequin@gmail.com commit`.
    **No `Co-authored-by`, no "Generated with" lines** — the owner's standing rule.
 6. Push, open the PR with `gh api repos/regis57/ZenithBoard/pulls` (body from a file), wait for the five checks
-   (CodeQL, analyze python, analyze javascript, test ×2), then squash-merge with
+   (CodeQL, analyze python, analyze javascript, test ×2) **and check each one's conclusion is `success`** — 0.27.0
+   was merged with CodeQL failing because only "completed" was checked — then squash-merge with
    `gh api -X PUT .../pulls/N/merge -f merge_method=squash -f sha=…`. Check `commits/main` is verified and
    `releases/latest` carries the new tag (the release workflow tags `v<version>` by itself).
 7. Sync the wiki: GitHub's wiki is a separate repository; `docs/wiki/*.md` is the source. From the owner's
@@ -60,7 +61,11 @@ on Wi-Fi, near Trémery (Moselle). The owner tests on it; a session never reache
    `raw.githubusercontent.com/regis57/ZenithBoard/main/docs/wiki/NAME.md`, fetch `/wiki/NAME/_edit`, POST the
    form with `wiki[body]`, `wiki[format]=markdown`, `wiki[commit]`, and verify the stored body equals the file.
    A new page goes through `/wiki/_new` first. Without his browser, say the wiki is not synced.
-8. Tell the owner, in French, what changed and, when the Pi needs it, the command:
+8. **Documentation after every change, without being asked** (the owner's standing rule, 20 October 2026):
+   README, `docs/wiki/*.md`, CHANGELOG, the field log in Project-status (what the owner's paste or recording
+   showed), and the pictures in `docs/images/` when what they show has changed, then the wiki sync of step 7.
+   A doc-only change goes through the same PR and checks, with no version bump. Report the pages updated.
+9. Tell the owner, in French, what changed and, when the Pi needs it, the command:
    `cd ~/ZenithBoard && sudo zenithboard update` (or `sudo zenithboard update quick` for ZenithBoard and the
    wall alone). A config value the owner set is never changed by an update: the update says so and gives the command.
 

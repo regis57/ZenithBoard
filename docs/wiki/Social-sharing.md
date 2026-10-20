@@ -111,9 +111,9 @@ The wall's rows as the tablet shows them (`FLT  EWG11S`, `REG  D-AIDO`, then air
 
 ![The split-flap picture, light map: EWG86P, Palma to Cologne, a real post of 20 October 2026](https://github.com/regis57/ZenithBoard/raw/main/docs/images/social-flap.jpg)
 
-![The split-flap picture, dark map: KLM82K, Bâle/Mulhouse to Amsterdam, a real post of 20 October 2026](https://github.com/regis57/ZenithBoard/raw/main/docs/images/social-flap-night.jpg)
+![The split-flap picture, dark map: CFE844, BA CityFlyer, London to Milan, a real post of 20 October 2026 with the region's own list of places](https://github.com/regis57/ZenithBoard/raw/main/docs/images/social-flap-night.jpg)
 
-*Real posts from the reference Pi, 20 October 2026 (0.26.1): the light map (`normal`) and the dark one (`night`), each town named once.*
+*Real posts from the reference Pi, 20 October 2026: the light map (`normal`, 0.26.1) and the dark one (`night`, 0.27.2, with the region's own list of places: Hayange, Florange, Villerupt and Aubange beside Metz and Luxembourg), each town named once.*
 
 The board as the wall's split-flap look draws it — the same nine rows, without the flags, fourteen letters wide instead of sixteen so the map gets the room — beside a map centred on the track. On the map: the track and the aircraft in the picture's colour, edged in black so they read on any background; a key in the corner (`LAST 10 MIN`, and a scale bar in km or miles); north; and the map's credit along the bottom.
 
