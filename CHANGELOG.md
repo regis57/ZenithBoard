@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.30.1
+- A Pi still running ACARS keeps the ingester and acarsdec's launcher through an update: 0.30.0's update replaced `/opt/zenithboard` without them, and their services would have failed while the update said it removed nothing. They go with `sudo zenithboard acars remove`. Found re-reading the update path for regressions; no Pi was concerned (the reference Pi never had ACARS).
+
 ## 0.30.0
 - **ACARS and Grafana leave ZenithBoard.** The owner's decision: they were never run on the reference Pi, needed about 900 MB more than a 1 GB board has, and what Grafana could show is better done by the wall's own statistics page. Gone: menu 3, `acarsdec`'s build, the ingester, both services, the Grafana install and its password handling, the `ACARS_*` defaults, `zenithboard acars password`, `zenithboard logs acars`, the `acars` update component.
 - **The main menu is renumbered**: 1 ADSB, 2 FlightInfo, 3 Settings, 4 Status, 5 Update, 6 Maintenance, 0 Exit.
