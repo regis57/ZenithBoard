@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.35.0
+- **The weekly card names the models too**: the week by hour is smaller, and under it the airlines and the models most seen side by side. The text gains *Models: Airbus A320 (…), Boeing 737-800 (…), …*; its lines are shorter (*Busiest: Friday (612 aircraft) and 17:00.*), and when the hashtags would not fit the lists go down to two names, then one, before a line is dropped.
+- **A second weekly post, two minutes after the first: the cargo airlines and the business jets.** Cargo airlines by their own callsign prefix, from a list of 40 dedicated cargo operators each checked against a published source (`flightinfo/data/cargo_airlines.json`; DHL's airlines counted together). Turkish, Qatar, Emirates and others fly cargo under their passenger prefix and cannot be counted. Business jets as the wall classes them, by make and model, never with a registration. A failure waits ten minutes, and after four hours the post is dropped; no second post without the first, nor when the lists do not cover the week, nor when there is nothing to say.
+- `social weekly test` shows both posts (`/social/preview` and `/social/preview2`); `social weekly post2` posts the second now.
+- Asked for by the owner. Previewed with the real code on made-up statistics; not yet on a Pi.
+
 ## 0.34.1
 - **The weekly summary names the airlines and the type only when their lists cover the whole week.** The first `social weekly test` on the reference Pi said *6 435 aircraft heard* and *Most seen: Ryanair (14), British Airways (8), easyJet (8)*: the week's aircraft came from the statistics' day files, the airlines from lists begun two hours earlier with 0.31.0. Seen by the owner. Until the lists cover the week, the text leaves both out, the picture says from which week they are shown (the week ending 1 November on the reference Pi), and `weekly test` says it as well.
 - The type is written as the posts write it: *Boeing 737-800*, not *BOEING 737-800*.

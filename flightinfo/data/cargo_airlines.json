@@ -1,0 +1,167 @@
+{
+ "_comment": [
+  "Dedicated cargo airlines by ICAO designator, the callsign prefix: the weekly post's cargo list (0.35.0).",
+  "Each code checked on 20 October 2026 against the source given. DHL's airlines (EAT Leipzig, DHL Air UK, DHL International Aviation ME, DHL Aero Expreso, DHL Air Austria) are counted together as DHL.",
+  "Left out: airlines that fly cargo under their passenger prefix (THY, QTR, UAE, AFR, CPA, KAL, ETH, ETD), which a callsign cannot tell apart; mixed passenger and cargo operators (FPO, ABD); and airlines no longer flying (ABW, BBD, FAH, RUN, WGN, PAC)."
+ ],
+ "FDX": {
+  "name": "FedEx",
+  "source": "https://en.wikipedia.org/wiki/FedEx_Express"
+ },
+ "UPS": {
+  "name": "UPS",
+  "source": "https://en.wikipedia.org/wiki/UPS_Airlines"
+ },
+ "BCS": {
+  "name": "DHL",
+  "source": "https://en.wikipedia.org/wiki/European_Air_Transport_Leipzig"
+ },
+ "DHK": {
+  "name": "DHL",
+  "source": "https://en.wikipedia.org/wiki/DHL_Air_UK"
+ },
+ "DHX": {
+  "name": "DHL",
+  "source": "https://en.wikipedia.org/wiki/DHL_International_Aviation_ME"
+ },
+ "DAE": {
+  "name": "DHL",
+  "source": "https://en.wikipedia.org/wiki/DHL_Aero_Expreso"
+ },
+ "DHA": {
+  "name": "DHL",
+  "source": "https://airplanes.live/airline/dha/"
+ },
+ "BOX": {
+  "name": "AeroLogic",
+  "source": "https://en.wikipedia.org/wiki/AeroLogic"
+ },
+ "GEC": {
+  "name": "Lufthansa Cargo",
+  "source": "https://en.wikipedia.org/wiki/Lufthansa_Cargo"
+ },
+ "CLX": {
+  "name": "Cargolux",
+  "source": "https://en.wikipedia.org/wiki/Cargolux"
+ },
+ "ICV": {
+  "name": "Cargolux Italia",
+  "source": "https://en.wikipedia.org/wiki/Cargolux_Italia"
+ },
+ "ABR": {
+  "name": "ASL Airlines Ireland",
+  "source": "https://en.wikipedia.org/wiki/ASL_Airlines_Ireland"
+ },
+ "TAY": {
+  "name": "ASL Airlines Belgium",
+  "source": "https://en.wikipedia.org/wiki/ASL_Airlines_Belgium"
+ },
+ "GTI": {
+  "name": "Atlas Air",
+  "source": "https://en.wikipedia.org/wiki/Atlas_Air"
+ },
+ "CKS": {
+  "name": "Kalitta Air",
+  "source": "https://en.wikipedia.org/wiki/Kalitta_Air"
+ },
+ "MPH": {
+  "name": "Martinair Cargo",
+  "source": "https://en.wikipedia.org/wiki/Martinair"
+ },
+ "CKK": {
+  "name": "China Cargo Airlines",
+  "source": "https://en.wikipedia.org/wiki/China_Cargo_Airlines"
+ },
+ "CAO": {
+  "name": "Air China Cargo",
+  "source": "https://en.wikipedia.org/wiki/Air_China_Cargo"
+ },
+ "CSS": {
+  "name": "SF Airlines",
+  "source": "https://en.wikipedia.org/wiki/SF_Airlines"
+ },
+ "NCA": {
+  "name": "Nippon Cargo Airlines",
+  "source": "https://en.wikipedia.org/wiki/Nippon_Cargo_Airlines"
+ },
+ "AZG": {
+  "name": "Silk Way West",
+  "source": "https://en.wikipedia.org/wiki/Silk_Way_West_Airlines"
+ },
+ "AZQ": {
+  "name": "Silk Way",
+  "source": "https://en.wikipedia.org/wiki/Silk_Way_Airlines"
+ },
+ "NPT": {
+  "name": "West Atlantic",
+  "source": "https://en.wikipedia.org/wiki/West_Atlantic_UK"
+ },
+ "SWN": {
+  "name": "West Atlantic",
+  "source": "https://en.wikipedia.org/wiki/West_Atlantic"
+ },
+ "MNB": {
+  "name": "MNG Airlines",
+  "source": "https://en.wikipedia.org/wiki/MNG_Airlines"
+ },
+ "ICL": {
+  "name": "Challenge Airlines",
+  "source": "https://airhex.com/airlines/challenge-airlines-il/"
+ },
+ "CHG": {
+  "name": "Challenge Airlines",
+  "source": "https://airhex.com/airlines/challenge-airlines-be/"
+ },
+ "CHZ": {
+  "name": "Challenge Airlines",
+  "source": "https://airhex.com/airlines/challenge-airlines-mt/"
+ },
+ "SWT": {
+  "name": "Swiftair",
+  "source": "https://en.wikipedia.org/wiki/Swiftair"
+ },
+ "SQC": {
+  "name": "Singapore Airlines Cargo",
+  "source": "https://planefinder.net/data/flight/SQ7859"
+ },
+ "SRR": {
+  "name": "Maersk Air Cargo",
+  "source": "https://en.wikipedia.org/wiki/Maersk_Air_Cargo"
+ },
+ "EXN": {
+  "name": "Exin",
+  "source": "https://sprinkle.com/airline/EXN"
+ },
+ "CGF": {
+  "name": "Cargoair",
+  "source": "https://en.wikipedia.org/wiki/Cargoair"
+ },
+ "KZU": {
+  "name": "ULS Airlines Cargo",
+  "source": "https://en.wikipedia.org/wiki/ULS_Airlines_Cargo"
+ },
+ "CMA": {
+  "name": "CMA CGM Air Cargo",
+  "source": "https://en.wikipedia.org/wiki/CMA_CGM_Air_Cargo"
+ },
+ "ATG": {
+  "name": "Aerotranscargo",
+  "source": "https://en.wikipedia.org/wiki/Aerotranscargo"
+ },
+ "HGO": {
+  "name": "One Air",
+  "source": "https://en.wikipedia.org/wiki/One_Air"
+ },
+ "AIH": {
+  "name": "AirZeta",
+  "source": "https://en.wikipedia.org/wiki/AirZeta"
+ },
+ "LCO": {
+  "name": "LATAM Cargo",
+  "source": "https://en.wikipedia.org/wiki/LATAM_Cargo_Chile"
+ },
+ "CJT": {
+  "name": "Cargojet",
+  "source": "https://en.wikipedia.org/wiki/Cargojet"
+ }
+}

@@ -113,20 +113,33 @@ Several shapes, comma-separated (`story,spotter,lookup`), or `random`: one is dr
 
 `sudo zenithboard social weekly on` (menu *Social sharing → 7*, off by default): on Sundays from 19:00 the service posts the seven days ending that day, from the [statistics](Statistics) — so statistics must be on. The text:
 
-> The week above Trémery, 12–18 October: 3 587 aircraft heard, 58.7 million messages decoded.
-> Busiest day: Monday, 612 aircraft. Busiest hour: 13:00.
-> Most seen: Ryanair (2 144), easyJet (1 171), Lufthansa (762).
-> Top type: Airbus A320.
+> The week above Trémery, 12–18 October: 3 587 aircraft, 58.7 million messages.
+> Busiest: Friday (612 aircraft) and 17:00.
+> Airlines: Ryanair (2 144), easyJet (1 171), Lufthansa (762).
+> Models: Airbus A320 (2 007), Boeing 737-800 (1 818), Airbus A320neo (776).
 > Posted here: 41 crossings.
 > #ADSB #avgeek #ZenithBoard
 
-The lines after the first are dropped from the end when the hashtags would not fit in Bluesky's 300 characters; the first always stays. The picture is drawn by the Pi (Pillow, 1200 × 675) in the posts' colour: the counts, the week by hour (a dot per hour, brighter where more aircraft had a position, as on the statistics page) and the airlines most seen as bars, with their names in plain text — no logos.
+When the hashtags would not fit in Bluesky's 300 characters, the lists go down from three names to two, then one, and only then are lines dropped from the end; the first line always stays, and the hashtags stay whole. The picture is drawn by the Pi (Pillow, 1200 × 675) in the posts' colour: the counts, the week by hour (a dot per hour, brighter where more aircraft had a position, as on the statistics page), and under it, side by side since 0.35.0, the airlines and the models most seen as bars, their names in plain text — no logos.
 
 ![The weekly summary card (a preview, made-up figures)](https://raw.githubusercontent.com/regis57/ZenithBoard/main/docs/images/social-weekly.png)
 
+**Two minutes later, a second post (0.35.0): the cargo airlines and the business jets.**
+
+> Cargo and business jets above Trémery, 12–18 October: 42 cargo aircraft, 31 business jets.
+> Cargo: DHL (18), FedEx (9), UPS (6).
+> Business jets: Cessna Citation Excel (7), Pilatus PC-24 (5), Dassault Falcon 7X (4).
+> #ADSB #avgeek #ZenithBoard
+
+![The second weekly card: cargo airlines and business jets (a preview, made-up figures)](https://raw.githubusercontent.com/regis57/ZenithBoard/main/docs/images/social-weekly-2.png)
+
+* **Cargo airlines** are told by their own callsign prefix, from `flightinfo/data/cargo_airlines.json`: 40 dedicated cargo operators, each code checked against a published source on 20 October 2026 (FedEx, UPS, DHL's five airlines counted together as DHL, AeroLogic, Lufthansa Cargo, Cargolux, ASL Airlines, Atlas, Kalitta, Martinair Cargo, Challenge, Swiftair, West Atlantic and others). Turkish, Qatar, Emirates, Air France and the like fly their freighters under their passenger prefix (THY6147 is a 777F, so is QTR8486): a callsign cannot tell them apart, so they are not counted as cargo. Nor are mixed passenger and cargo operators, or airlines no longer flying.
+* **Business jets** are the aircraft the wall itself draws as business jets, counted by make and model (*Cessna Citation Excel*, *Dassault Falcon 7X*). Never a registration or a callsign: a private jet belongs to someone.
+* It follows the first post by two minutes, which Bluesky takes without trouble (its limits are in hundreds of posts an hour). A failure waits ten minutes like any post, and after four hours it is dropped rather than posted late. There is no second post when the first was not posted, when the lists do not cover the week yet, or when the week had neither cargo airline nor business jet.
+
 **What it never says**: a distance, a direction, a range. The farthest aircraft of the week is left out on purpose: named with the city nearest it, two such posts would narrow down where the antenna is. Only your own words for the place (the area of the wizard) say where.
 
-Once a week (the ISO week): a Pi switched off on Sunday evening posts nothing on Monday, a summary a day late not being what the account promises. A post that fails waits ten minutes like any other; a week with no statistics is skipped, said once in the journal (`zenithboard logs social`). `sudo zenithboard social weekly test` draws this week's so far and prints the text, posting nothing (see it at `/social/preview`); `social weekly post` posts it now, and Sunday's still goes out. The airlines and the type come from the fleet lists of 0.31.0, and only once those lists cover the whole week (0.34.1): the first test on the reference Pi, the evening the lists began, put *6 435 aircraft heard* beside *Ryanair (14)*, a week against two hours. Until then the text leaves them out, the picture says from which week they will be shown, and `weekly test` says it too. Lists begun on a Tuesday are first in the summary of the Sunday twelve days later. The type is written as the posts write it (*Boeing 737-800*, not *BOEING 737-800*). The crossings posted are counted from 0.33.0.
+Once a week (the ISO week): a Pi switched off on Sunday evening posts nothing on Monday, a summary a day late not being what the account promises. A post that fails waits ten minutes like any other; a week with no statistics is skipped, said once in the journal (`zenithboard logs social`). `sudo zenithboard social weekly test` draws this week's two posts so far and prints their texts, posting nothing (see them at `/social/preview` and `/social/preview2`); `social weekly post` posts the first now, `social weekly post2` the second, and Sunday's still go out. The airlines, the models, the cargo airlines and the business jets come from the fleet lists of 0.31.0, and only once those lists cover the whole week (0.34.1): the first test on the reference Pi, the evening the lists began, put *6 435 aircraft heard* beside *Ryanair (14)*, a week against two hours. Until then the text leaves them out, the picture says from which week they will be shown, and `weekly test` says it too. Lists begun on a Tuesday are first in the summary of the Sunday twelve days later. The type is written as the posts write it (*Boeing 737-800*, not *BOEING 737-800*). The crossings posted are counted from 0.33.0.
 
 ## The picture
 
