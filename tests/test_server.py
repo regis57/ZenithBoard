@@ -340,6 +340,36 @@ class RouteTests(unittest.TestCase):
             server._hexdb_json = real
             server._airport_cache.clear()
 
+    def test_a_town_for_hexdbs_airports(self):
+        # 0.25.3, the real hexdb answers behind the posts: an airport's name and position, no town ("location" absent)
+        self.assertEqual(server.city_of_airport("Brussels South Charleroi Airport", 50.4592, 4.45382), "Charleroi")
+        self.assertEqual(server.city_of_airport("Turin Airport (Caselle Airport)", 45.2008, 7.64963), "Turin")
+        self.assertEqual(server.city_of_airport("Weeze Airport (Niederrhein Airport)", 51.6024, 6.14217), "Weeze")
+        self.assertEqual(server.city_of_airport("Palma de Mallorca Airport", 39.5517, 2.73881), "Palma de Mallorca")
+        self.assertEqual(server.city_of_airport("Frankfurt-Hahn Airport", 49.9487, 7.26389), "Frankfurt-Hahn")
+        self.assertEqual(server.city_of_airport("London Stansted Airport", 51.885, 0.235), "London Stansted")
+        self.assertEqual(server.city_of_airport("Turin Airport (Caselle Airport)"), "Turin", "without a position")
+        self.assertEqual(server.city_of_airport(""), "")
+        real, server._hexdb_json = server._hexdb_json, lambda path: {
+            "country_code": "BE", "region_name": "Hainaut", "iata": "CRL", "icao": "EBCI",
+            "airport": "Brussels South Charleroi Airport", "latitude": 50.4592, "longitude": 4.45382}
+        server._airport_cache.clear()
+        try:
+            a = server._hexdb_airport("EBCI")
+            self.assertEqual((a["city"], a["name"]), ("Charleroi", "Brussels South Charleroi Airport"))
+        finally:
+            server._hexdb_json = real
+            server._airport_cache.clear()
+
+    def test_the_small_words_of_a_town_in_lower_case(self):
+        # 0.25.3: adsbdb writes "Palma De Mallorca"; the town writes "Palma de Mallorca"
+        self.assertEqual(server.tidy_place("Palma De Mallorca"), "Palma de Mallorca")
+        self.assertEqual(server.tidy_place("Frankfurt Am Main"), "Frankfurt am Main")
+        self.assertEqual(server.tidy_place("La Rochelle"), "La Rochelle")
+        self.assertEqual(server.tidy_place("Metz"), "Metz")
+        a = server._airport({"municipality": "Palma De Mallorca", "name": "Palma de Mallorca Airport", "icao_code": "LEPA"})
+        self.assertEqual(a["city"], "Palma de Mallorca")
+
     def test_wall_takes_the_second_opinion_only_when_the_first_is_wrong(self):
         ema = {"iata": "EMA", "icao": "EGNX", "name": "East Midlands", "city": "East Midlands", "country": "GB", "lat": 52.83, "lon": -1.33}
         lux = {"iata": "LUX", "icao": "ELLX", "name": "Luxembourg", "city": "Luxembourg", "country": "LU", "lat": 49.63, "lon": 6.20}

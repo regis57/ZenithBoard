@@ -793,7 +793,7 @@ def _airport(a):
     if not isinstance(a, dict):
         return None
     out = {"iata": str(a.get("iata_code") or ""), "icao": str(a.get("icao_code") or ""),
-           "name": str(a.get("name") or ""), "city": str(a.get("municipality") or ""),
+           "name": str(a.get("name") or ""), "city": tidy_place(a.get("municipality") or ""),
            "country": str(a.get("country_iso_name") or "")}
     for key, src in (("lat", "latitude"), ("lon", "longitude")):     # kept only to check the route is plausible, never shown
         v = a.get(src)
@@ -926,8 +926,10 @@ def _hexdb_airport(code):
         lat, lon = d.get("latitude"), d.get("longitude")
         ok = isinstance(lat, (int, float)) and isinstance(lon, (int, float))
         a = {"iata": str(d.get("iata") or ""), "icao": code, "name": str(d.get("airport") or ""),
-             "city": str(d.get("location") or ""), "country": str(d.get("country_code") or ""),
+             "city": tidy_place(str(d.get("location") or "")), "country": str(d.get("country_code") or ""),
              "lat": float(lat), "lon": float(lon)} if ok else None
+        if a and not a["city"]:          # hexdb gives no town (seen on the real posts, 0.25.3): taken from the name
+            a["city"] = city_of_airport(a["name"], a["lat"], a["lon"])
     except urllib.error.HTTPError as exc:
         if exc.code != 404:
             raise
@@ -937,6 +939,62 @@ def _hexdb_airport(code):
             _airport_cache.clear()
         _airport_cache[code] = a
     return a
+
+
+# 0.25.3: the posts said "Brussels South Charleroi Airport -> Turin Airport (Caselle Airport)" where adsbdb's routes
+# say "Milan" or "Weeze": hexdb's airports carry a name and no town. The town is made from the name: what is in
+# brackets and the words that only say "airport" go; and when the name opens on a city that is not by the airport
+# ("Brussels" South Charleroi, 45 km away) while a later word is a town by it ("Charleroi", 5 km), that town is kept.
+PLACES_FILE = os.path.join(DATA_DIR, "places5000.tsv.gz")
+AIRPORT_TOWN_KM = 30
+AIRPORT_WORDS_RE = re.compile(r"\b(International|Intl|Regional|Airport|Airfield|Aerodrome|Air Base|Airbase)\b", re.I)
+PLACE_PARTICLES = {"de", "del", "della", "di", "da", "do", "dos", "das", "du", "des", "la", "las", "le", "les", "los",
+                   "am", "an", "im", "sur", "en", "y", "on"}
+
+
+def tidy_place(name):
+    """'Palma De Mallorca' -> 'Palma de Mallorca', 'Frankfurt Am Main' -> 'Frankfurt am Main': the small words inside a
+    town's name in lower case, as the town writes it (adsbdb capitalises every word). The first word is left as it is."""
+    words = str(name or "").split(" ")
+    return " ".join(w.lower() if i and w.lower() in PLACE_PARTICLES else w for i, w in enumerate(words)).strip()
+
+
+def _towns_near(lat, lon, km=AIRPORT_TOWN_KM):
+    """{name: distance_km} of the GeoNames places of 5 000 or more within km of the point; {} without the list."""
+    out, dlat = {}, km / 111.0
+    dlon = km / (111.0 * max(0.1, math.cos(math.radians(lat))))
+    try:
+        import gzip
+        with gzip.open(PLACES_FILE, "rt", encoding="utf-8") as fh:
+            for line in fh:
+                if line.startswith("#"):
+                    continue
+                n, la, lo, _pop = line.rstrip("\n").split("\t")
+                la, lo = float(la), float(lo)
+                if abs(la - lat) <= dlat and abs(lo - lon) <= dlon:
+                    d = haversine_km(lat, lon, la, lo)
+                    if d <= km and d < out.get(n, 1e9):
+                        out[n] = d
+    except (OSError, ValueError):
+        return {}
+    return out
+
+
+def city_of_airport(name, lat=None, lon=None):
+    """The town an airport's name stands for: 'Turin Airport (Caselle Airport)' -> 'Turin',
+    'Brussels South Charleroi Airport' -> 'Charleroi' (with its position), 'Frankfurt-Hahn Airport' -> 'Frankfurt-Hahn'."""
+    n = re.sub(r"\s*\([^)]*\)", "", str(name or ""))
+    n = re.sub(r"\s{2,}", " ", AIRPORT_WORDS_RE.sub("", n)).strip(" -,")
+    if not n:
+        return str(name or "")
+    words = [w for w in re.split(r"[ -]", n) if w]
+    if len(words) > 1 and isinstance(lat, (int, float)) and isinstance(lon, (int, float)):
+        near = _towns_near(lat, lon)
+        if near and words[0] not in near:
+            for w in words[1:]:
+                if w in near:
+                    return w
+    return tidy_place(n)
 
 
 def parse_hexdb_route(text):
