@@ -468,6 +468,49 @@ class UatMergeTests(unittest.TestCase):
 
 
 
+class LocalDatabaseTests(unittest.TestCase):
+    """0.26.0: tar1090's aircraft database on the Pi. EWG8QR (4D2087) went out with no registration and no model;
+    adsbdb and hexdb did not know it. The shard below is cut from tar1090-db 3.14.1722 (db/4.js), with its real entry
+    for 4D2087; the child file 40.js stands for the longer prefixes."""
+
+    def setUp(self):
+        import gzip, tempfile
+        self.d = tempfile.mkdtemp()
+        self.addCleanup(__import__("shutil").rmtree, self.d)
+        with open(os.path.join(self.d, "4.js"), "wb") as fh:
+            fh.write(gzip.compress(json.dumps({"D2087": ["9H-EWG", "A320", "00", "AIRBUS A-320"], "children": ["40"]}).encode()))
+        with open(os.path.join(self.d, "40.js"), "wb") as fh:
+            fh.write(gzip.compress(json.dumps({"6A8E": ["G-EZUH", "A319", "00", "AIRBUS A-319"]}).encode()))
+        server._localdb_shards.clear(); server._localdb_hexes.clear()
+        self.addCleanup(server._localdb_shards.clear); self.addCleanup(server._localdb_hexes.clear)
+
+    def test_the_real_entry_and_a_child_file(self):
+        self.assertEqual(server.local_aircraft("4d2087", self.d),
+                         {"registration": "9H-EWG", "icao_type": "A320", "type": "AIRBUS A-320", "manufacturer": ""})
+        self.assertEqual(server.local_aircraft("406A8E", self.d)["registration"], "G-EZUH")
+        self.assertIsNone(server.local_aircraft("4D9999", self.d))
+        self.assertIsNone(server.local_aircraft("A12345", self.d), "no file for that prefix")
+        self.assertIsNone(server.local_aircraft("zzz", self.d))
+        self.assertIsNone(server.local_aircraft("4D2087", None))
+
+    def test_off_by_default_and_only_with_the_folder(self):
+        self.assertIsNone(server.local_db_dir({}))
+        self.assertEqual(server.local_db_dir({"LOCAL_DB": "1", "LOCAL_DB_DIR": self.d}), self.d)
+        self.assertIsNone(server.local_db_dir({"LOCAL_DB": "1", "LOCAL_DB_DIR": self.d + "/none"}))
+
+    def test_the_wall_takes_it_before_asking_the_internet(self):
+        asked = []
+        def online(h):
+            asked.append(h); return None
+        data = {"aircraft": [{"hex": "4d2087", "flight": "EWG8QR  ", "lat": LAT + 0.01, "lon": LON, "alt_baro": 32000,
+                              "gs": 440, "track": 0}]}
+        planes, _ = server.build_planes(data, LAT, LON, 10, aircraft_lookup=online, local_db=self.d)
+        self.assertEqual((planes[0]["registration"], planes[0]["type"]), ("9H-EWG", "A320"))
+        self.assertEqual(asked, [], "found on the card: nothing asked online")
+        planes, _ = server.build_planes(data, LAT, LON, 10, aircraft_lookup=online)
+        self.assertIsNone(planes[0]["registration"]); self.assertEqual(asked, ["4d2087"], "off: as before")
+
+
 class AircraftLookupTests(unittest.TestCase):
     SAMPLE = {"response": {"aircraft": {"type": "C Series 300", "icao_type": "BCS3", "manufacturer": "Bombardier",
                                         "mode_s": "4B1805", "registration": "HB-JCN"}}}

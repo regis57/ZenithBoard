@@ -103,6 +103,7 @@ ZenithBoard $ZB_VERSION - ADSB Flight Info
   zenithboard data update               refresh the aircraft model list now (names for the silhouettes)
   zenithboard data auto on|off          monthly automatic refresh of that list (default: on)
   zenithboard data status               when it was last refreshed
+  zenithboard data localdb on|off       read registrations and models from tar1090's database on this Pi (default: off)
   zenithboard update                    upgrade ZenithBoard + decoder + feeders + ACARS + Grafana
   zenithboard update list               what is installed and can be updated one by one
   zenithboard update only NAME...       update just those (e.g. readsb flightinfo)
@@ -153,6 +154,7 @@ cmd_status() {
     echo "Aircraft photos (Planespotters): $( [ "$(cfg_get SHOW_PHOTOS 1)" = 1 ] && echo "ON" || echo "OFF (turn on: sudo zenithboard photos on)" )"
     echo "Flight routes (adsbdb.com):      $( [ "$(cfg_get SHOW_ROUTES 1)" = 1 ] && echo "ON" || echo "OFF (turn on: sudo zenithboard routes on)" )"
     data_refresh_status
+    localdb_status
   fi
   if is_adsbx; then
     local m; m=$(local_map_path)
@@ -183,6 +185,28 @@ data_refresh_status() {
   fi
 }
 
+# 0.26.0: the receiver map's own aircraft database (tar1090), read on the card: registrations and models that adsbdb
+# and hexdb do not know (EWG8QR, 9H-EWG, went out without them). Off by default.
+localdb_dir() { cfg_get LOCAL_DB_DIR /usr/local/share/tar1090/git-db/db; }
+localdb_status() {
+  local d v; d=$(localdb_dir); v=$(cat "${d%/db}/version" 2>/dev/null)
+  if [ "$(cfg_get LOCAL_DB 0)" = 1 ]; then
+    if [ -d "$d" ]; then echo "Aircraft database on this Pi (tar1090): ON, version ${v:-unknown}  ($d)"
+    else echo "Aircraft database on this Pi (tar1090): ON, but $d is missing (install the receiver map, tar1090)"; fi
+  else
+    echo "Aircraft database on this Pi (tar1090): OFF$( [ -d "$d" ] && echo " (found, version ${v:-unknown}; turn on: sudo zenithboard data localdb on)" )"
+  fi
+}
+localdb_set() {
+  local d; d=$(localdb_dir)
+  if [ "$1" = 1 ] && [ ! -d "$d" ]; then
+    die "No tar1090 aircraft database at $d. It comes with the receiver map (tar1090); another folder: sudo zenithboard config-set LOCAL_DB_DIR /path/to/db"
+  fi
+  cfg_set LOCAL_DB "$1"; restart_flightinfo
+  if [ "$1" = 1 ]; then echo "The wall now reads registrations and models from tar1090's database on this Pi first ($d), then asks adsbdb and hexdb for the rest. Nothing is downloaded: tar1090 keeps it up to date."
+  else echo "The wall no longer reads tar1090's database: registrations and models come from the decoder, adsbdb and hexdb, as before."; fi
+}
+
 cmd_config() { echo "# $ZB_CONFIG"; cat "$ZB_CONFIG" 2>/dev/null || echo "(no configuration yet - run: sudo ./install.sh)"; }
 
 case "${1:-}" in
@@ -210,8 +234,16 @@ case "${1:-}" in
         case "${3:-}" in on) cfg_set AUTO_DATA_REFRESH 1 ;; off) cfg_set AUTO_DATA_REFRESH 0 ;; *) die "Usage: zenithboard data auto on|off" ;; esac
         data_refresh_apply
         echo "Monthly aircraft data refresh: $( [ "$(cfg_get AUTO_DATA_REFRESH 1)" = 1 ] && echo ON || echo OFF )" ;;
-      status) data_refresh_status ;;
-      *) die "Usage: zenithboard data update | auto on|off | status" ;;
+      localdb)
+        [ -z "${3:-}" ] || root_or_die
+        case "${3:-}" in
+          on)  localdb_set 1 ;;
+          off) localdb_set 0 ;;
+          "")  localdb_status ;;
+          *)   die "Usage: zenithboard data localdb on|off" ;;
+        esac ;;
+      status) data_refresh_status; localdb_status ;;
+      *) die "Usage: zenithboard data update | auto on|off | localdb on|off | status" ;;
     esac ;;
   settings)
     case "${2:-}" in
