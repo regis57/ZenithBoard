@@ -15,7 +15,7 @@ knows it, otherwise a figure from its rank. social_card.py names the heaviest fi
     python3 tools/make_local_places.py LAT LON OUT [KM]          the region's list (run by: zenithboard social places on)
     python3 tools/make_local_places.py --grid cities500.json      flightinfo/data/country-cells.json.gz, at build time
 
-The files come from https://download.geonames.org/export/dump/ (Creative Commons Attribution 4.0): about 20 MB for a
+The files come from https://download.geonames.org/export/dump/ (Creative Commons Attribution 4.0): about 24 MB for a
 receiver in Lorraine (France, Germany, Belgium, Luxembourg, the Netherlands, Switzerland...), downloaded once, read a
 line at a time and deleted; the list kept is a few hundred kilobytes. Nothing about the receiver is sent: the
 country files are the same for everyone.
@@ -56,25 +56,33 @@ def weight(fcode, population):
 
 
 # ---------------------------------------------------------------------------------------------- which countries
+GRID_STEP = 0.1             # degrees: the places of the grid file are rounded to this, so within about 7 km
+
+
 def countries_near(lat, lon, reach_km, grid=None):
-    """The countries with a populated place in a one-degree cell whose centre is within reach (plus half a cell)."""
+    """The countries with a place of 500 or more (GeoNames' cities500) within reach. A country whose places of 500 are
+    all beyond reach brings at most a few hamlets at the very edge of the list's area: it is not downloaded.
+    0.27.2: one-degree cells and an 80 km margin made the reference Pi download the Czech and British files for no
+    place at all (the nearest British place of 500, Deal, is 408 km away)."""
     if grid is None:
         with gzip.open(GRID_FILE, "rt", encoding="utf-8") as fh:
-            grid = json.load(fh)["cells"]
-    out = set()
-    for key, codes in grid.items():
-        la, lo = (int(v) for v in key.split(","))
-        if km(lat, lon, la + 0.5, lo + 0.5) <= reach_km + 80:
-            out.update(codes)
+            grid = json.load(fh)
+    step, out = grid["step"], []
+    dlat = reach_km / 111.0 + step
+    for code, flat in grid["points"].items():
+        for i in range(0, len(flat), 2):
+            la, lo = flat[i] * step, flat[i + 1] * step
+            if abs(la - lat) <= dlat and km(lat, lon, la, lo) <= reach_km:
+                out.append(code)
+                break
     return sorted(out)
 
 
-def build_grid(cities):
-    cells = {}
+def build_grid(cities, step=GRID_STEP):
+    seen = {}
     for c in cities:
-        key = "%d,%d" % (math.floor(float(c["latitude"])), math.floor(float(c["longitude"])))
-        cells.setdefault(key, set()).add(c["countrycode"])
-    return {"cells": {k: sorted(v) for k, v in sorted(cells.items())}}
+        seen.setdefault(c["countrycode"], set()).add((round(float(c["latitude"]) / step), round(float(c["longitude"]) / step)))
+    return {"step": step, "points": {cc: [v for p in sorted(pts) for v in p] for cc, pts in sorted(seen.items())}}
 
 
 # ---------------------------------------------------------------------------------------------- one country file
@@ -173,7 +181,7 @@ def main(argv):
             grid = build_grid(json.load(fh).values())
         with gzip.GzipFile(GRID_FILE, "wb", mtime=0) as out:
             out.write(json.dumps(grid, separators=(",", ":")).encode("utf-8"))
-        print("%d cells written to %s" % (len(grid["cells"]), GRID_FILE))
+        print("%d countries written to %s" % (len(grid["points"]), GRID_FILE))
         return 0
     if len(argv) not in (4, 5):
         print(__doc__, file=sys.stderr)

@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **20 October 2026**, version **0.27.1**.
+Last updated: **20 October 2026**, version **0.27.2**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -57,6 +57,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 20 October 2026, 18:30 | 0.27.2, from the line above: the countries are chosen by their places of 500 or more within 400 km, not by one-degree cells with a margin. Around Trémery: AT BE CH DE FR IT LI LU NL, 24 MB; CZ and GB are no longer downloaded. Run `social places on` again to see it; the list kept is the same |
 | 20 October 2026, 18:20 | 0.27.1 on the reference Pi: `social places on` downloaded eleven country files (AT BE CH CZ DE FR GB IT LI LU NL, 29.4 MB in all) and kept 55 164 places in 676 KB, the same count as the test run in the browser. Two files gave no place within 400 km (CZ and GB: their cells reach within the margin, their places do not). The social service afterwards: 30 MB of memory, as before |
 | 20 October 2026, night | The owner asked whether the town names would work for a user in Indonesia. Measured: GeoNames knows the population of 540 of Indonesia's 258 055 populated places (ID.txt); the shipped lists name 479 places of 5 000 there against 2 074 in France. Test maps with the shipped lists named nothing over East Sumba and Pontianak. 0.27.0 makes a region's own list on the Pi from GeoNames' country files, ranked by population or administrative rank; checked at twelve places on four continents with the real files and tiles (see Social sharing) |
 | 20 October 2026, evening | DAH1217 (Air Algérie, Metz-Nancy → Algiers, 3 030 m) went out on the light map with no town named. Reproduced with the real code: two minutes of track make a 20 km by 40 km strip, east of the Moselle when the aircraft is a few kilometres east of the receiver; every town of 5 000 is in the valley, just beyond the edge. 0.26.2 adds the villages of 1 000 to 4 999 (GeoNames) on a map with fewer than three names: Vigy, Courcelles-Chaussy, Boulay-Moselle there. Asked for by the owner |

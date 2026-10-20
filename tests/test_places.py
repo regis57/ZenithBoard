@@ -51,10 +51,15 @@ class ListTests(unittest.TestCase):
         self.assertEqual([r[0] for r in kept], ["Waingapu", "Kawangu", "Laau"], "heaviest first, a part of the town out")
 
     def test_countries_within_reach(self):
-        self.assertEqual(mlp.countries_near(-9.65, 120.26, 400), ["ID", "TL"])
+        self.assertEqual(mlp.countries_near(-9.65, 120.26, 400), ["ID"])
+        self.assertEqual(mlp.countries_near(-9.65, 120.26, 600), ["ID", "TL"])
         near = mlp.countries_near(49.2489, 6.2332, 400)
         self.assertTrue({"FR", "DE", "LU", "BE", "NL", "CH"} <= set(near), near)
         self.assertNotIn("ES", near)
+        # 0.27.2, the reference Pi: the Czech and British files gave no place within 400 km (nearest places of 500:
+        # Deal and Dover at 408 km, Krásná at 440 km)
+        self.assertNotIn("CZ", near)
+        self.assertNotIn("GB", near)
 
     def test_make_writes_the_list_and_keeps_the_old_one_on_failure(self):
         d = tempfile.mkdtemp()
@@ -78,7 +83,7 @@ class ListTests(unittest.TestCase):
                 return Resp(b.getvalue())
             return Resp(buf.getvalue())
         out = os.path.join(d, "places-local.tsv.gz")
-        n = mlp.make(-9.65, 120.26, out, 200, opener, grid={"-10,120": ["ID", "TL"]}, log=lambda *a: None)
+        n = mlp.make(-9.65, 120.26, out, 200, opener, grid={"step": 0.1, "points": {"ID": [-97, 1203], "TL": [-94, 1215]}}, log=lambda *a: None)
         self.assertEqual(n, 3)
         self.assertEqual(asked, ["https://download.geonames.org/export/dump/ID.zip", "https://download.geonames.org/export/dump/TL.zip"])
         text = gzip.open(out, "rt", encoding="utf-8").read()
@@ -90,7 +95,7 @@ class ListTests(unittest.TestCase):
         def down(req, timeout=None):
             raise OSError("no internet")
         with self.assertRaises(OSError):
-            mlp.make(-9.65, 120.26, out, 200, down, grid={"-10,120": ["ID"]}, log=lambda *a: None)
+            mlp.make(-9.65, 120.26, out, 200, down, grid={"step": 0.1, "points": {"ID": [-97, 1203]}}, log=lambda *a: None)
         self.assertEqual(gzip.open(out, "rt", encoding="utf-8").read(), text, "a failed run leaves the list as it was")
 
     def test_a_receiver_without_position_is_refused(self):
