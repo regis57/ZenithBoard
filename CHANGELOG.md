@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.38.0
+- **Summaries of the last 24 hours, the week and the last 30 days**, each off by default, each at its own day and time on the Pi's clock, each with the posts picked among the four (the period; cargo and business jets; military; general aviation). `sudo zenithboard social summary [daily|weekly|monthly on|off|at TIME|parts LIST|test|post…]`, menu *Social sharing → 7 Summaries*. The weekly one keeps 0.33.0's Sunday 19:00 and all four posts by default; `social weekly …` still works. A day of the month is 1 to 28. Asked for by the owner.
+- The daily card shows the 24 hours as a row of lit dots; the thirty-day card a column of dots a day. Their texts say *The last 24 hours above Trémery* and *The last 30 days above Trémery, 22 September – 21 October*.
+- **One queue for all of them**: several due at once go the longer first, every post two minutes after the one before; a failure holds the queue ten minutes, a summary failing for four hours is dropped and the next goes on; a post with nothing to say gives its turn; scheduled is marked at once, so a restart posts nothing twice. The crossings carry on between them.
+- Statistics page: the countries column lines up with the cargo and business jet columns, with how many countries, and is called *most registered in* (on the card too).
+- The posts counted per day are kept thirty-one days (eight before), for the monthly summary.
+
 ## 0.37.0
 - **The statistics page in ZenithBoard's look**: the name in the wall's dots, numbers and bars in the wall's colour on black, grey for the rest; the sky by hour as lit dots. Asked for by the owner, with ZenithBoard's banners as the model.
 - **A period toggle, 24 h · 7 days · 30 days**, top right: the four numbers, the three charts (by hour for 24 hours, by day otherwise), the airlines, models and altitudes follow it. The sky by hour stays at thirty days (fourteen before). The choice stays in the address (`#7d`) and for the next visit. `/api/stats?range=`.

@@ -26,7 +26,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.37.0"
+VERSION = "0.38.0"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -602,6 +602,7 @@ def read_fleet(cfg, stats_dir=None, now=None, since=None, rng=None):
             "cargo_models": {n: max(v.items(), key=lambda kv: (kv[1], kv[0])) for n, v in cargo_models.items()},
             "bizjet_countries": _top({c: k for c, k in biz_countries.items() if c}),
             "country_names": {c: country_name(c) for c in list(biz_countries) + list(mil) if c},
+            "bizjet_country_total": len([c for c in biz_countries if c]),
             "military": sorted(({"cc": c, "country": country_name(c), "total": sum(v.values()), "models": _top(v)}
                                 for c, v in mil.items()), key=lambda e: (-e["total"], e["country"]))[:FLEET_TOP],
             "military_total": sum(sum(v.values()) for v in mil.values()),

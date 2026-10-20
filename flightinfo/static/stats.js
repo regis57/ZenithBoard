@@ -274,6 +274,7 @@
     } else { $("c-alt").innerHTML = ""; $("c-alt-sub").textContent = "· nothing in this period yet"; }
     $("n-cargo").textContent = fmt(fl.cargo_total || 0);
     $("n-biz").textContent = fmt(fl.bizjet_total || 0);
+    $("n-bizc").textContent = fmt(fl.bizjet_country_total || (fl.bizjet_countries || []).length);
     ranks($("c-cargo"), fl.cargo, "None heard in this period.", { top: 6, extra: function (k) { return cm[k] ? cm[k][0] + " (" + fmt(cm[k][1]) + ")" : ""; } });
     ranks($("c-biz"), fl.bizjets, "None heard in this period.", { top: 6 });
     ranks($("c-bizc"), fl.bizjet_countries, "None heard in this period.", { top: 6, flags: true, label: function (cc) { return names[cc] || cc; } });

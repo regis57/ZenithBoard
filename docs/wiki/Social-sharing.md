@@ -111,6 +111,38 @@ Several shapes, comma-separated (`story,spotter,lookup`), or `random`: one is dr
 
 ## The week's summary (0.33.0, optional)
 
+### The day, the week, the last 30 days (0.38.0)
+
+Three summaries, each **off by default**, each at its own day and time **on the Pi's clock**, each with the posts you pick among the four below (1 the period, 2 cargo and business jets, 3 military aircraft, 4 general aviation; the first always goes, the others follow it):
+
+```bash
+sudo zenithboard social summary                         # the three, on or off, when, which posts
+sudo zenithboard social summary daily on                # the last 24 hours, every day
+sudo zenithboard social summary daily at 21:00          # HH:MM
+sudo zenithboard social summary weekly at "sun 19:00"   # mon..sun HH:MM (0.33.0's Sunday 19:00 is the default)
+sudo zenithboard social summary monthly at "1 09:00"    # a day of the month, 1 to 28, and HH:MM: the last 30 days
+sudo zenithboard social summary weekly parts 1,3        # or all
+sudo zenithboard social summary monthly test            # its posts drawn and shown, nothing posted
+sudo zenithboard social summary daily post2             # that post of that summary, now
+```
+
+Or menu *3 Settings → 6 Social sharing → 7 Summaries*. `social weekly …` (0.33.0) still works and means `social summary weekly …`. Defaults: daily at 21:00 with post 1 only; weekly on Sunday at 19:00 and monthly on the 1st at 09:00, with all four. A day of the month stops at 28, which every month has.
+
+The daily card has the 24 hours as one row of lit dots, the busiest hour by aircraft with a position; the thirty-day card a column of dots a day, as tall as that day had aircraft; the weekly one is unchanged. The airlines, models and the other lists come in once their lists cover the whole period, as for the week.
+
+![The daily and thirty-day cards (a preview, made-up figures)](https://raw.githubusercontent.com/regis57/ZenithBoard/main/docs/images/social-summaries.png)
+
+**Two summaries at the same time** (the daily one at 19:00 on a Sunday, the weekly one at Sunday 19:00; or the first of the month falling on that Sunday) are not posted on top of each other. The service keeps one queue: when several are due, the longer period goes first (30 days, then the week, then the day), and every post, of whichever summary, comes two minutes after the one before. With everything on and all four posts each, that is up to twelve posts over 22 minutes. What that means in practice:
+
+* **Later, not lost.** The second summary starts two minutes after the first one's last post: a weekly summary of four posts pushes a daily one at the same time back by eight minutes.
+* **A failure holds the whole queue.** If Bluesky refuses a post (busy, down, the app password revoked), that post is tried again ten minutes later, and everything behind it waits; after four hours of failures that summary is dropped (it is not posted late, nor the next day), and the queue moves on to the next one.
+* **Nothing to say is no wait.** A post with nothing to say (no military aircraft this week) is skipped and the next takes its turn at once. A summary whose first post has nothing (no statistics) is skipped whole.
+* **The aircraft posts carry on.** The crossings overhead are posted as before, between the summary posts; the gap you set between posts applies to them, not to the summaries.
+* **Once per cycle, even after a restart.** A summary is marked as scheduled the moment it enters the queue, which is kept in the service's state: a restart in the middle of a queue goes on with what is left and posts nothing twice. A Pi that was off at that time posts the summary if it comes back the same day, never the next day.
+* To keep them apart, give them different times: the daily one at 21:00 and the weekly one at 19:00, say.
+
+### The week (0.33.0)
+
 `sudo zenithboard social weekly on` (menu *Social sharing → 7*, off by default): on Sundays from 19:00 the service posts the seven days ending that day, from the [statistics](Statistics) — so statistics must be on. The text:
 
 > The week above Trémery, 12–18 October: 3 587 aircraft, 58.7 million messages.
