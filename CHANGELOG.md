@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.27.3
+- **The empty parts of a map get a village.** After the towns, a map names the heaviest village wherever no name is within 120 pixels of it, up to the 26 names it holds at most. SWR3AG (Swiss, Zurich → Luxembourg) went out over the Moselle plateau with seven towns, all on the edges, and nothing in the 30 km between them; previewed with the real code, the region's list and EOX's tiles, the same map now names Boulay-Moselle, Bouzonville, Rémilly, Verny, Morhange, Château-Salins and Dieuze in that space. Raising the three-names threshold was tried first and changed nothing there (the map had seven). Both kinds of list, shipped and the region's own.
+
 ## 0.27.2
 - `social places on` downloads only the countries with a place of 500 or more within 400 km, measured place by place (GeoNames' cities500, rounded to a tenth of a degree, `flightinfo/data/country-cells.json.gz`, 300 KB). It went by one-degree cells with an 80 km margin, and the reference Pi downloaded the Czech and British files (5.2 MB) for no place within reach: the nearest British place of 500, Deal, is 408 km away. Around Metz: nine files, 24 MB.
 

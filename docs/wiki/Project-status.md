@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **20 October 2026**, version **0.27.2**.
+Last updated: **20 October 2026**, version **0.27.3**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -57,6 +57,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 20 October 2026, 18:50 | SWR3AG on the satellite map: seven towns named, all on the edges, nothing in the middle. A target of six names instead of three, tried first, changed nothing (seven already). 0.27.3 names a village wherever no name is within 120 pixels: Boulay-Moselle, Bouzonville, Rémilly, Verny, Morhange, Château-Salins, Dieuze on a preview of that track, with the region's list made in the browser from the same nine GeoNames files (55 164 places, as on the Pi) |
 | 20 October 2026, 18:43 | First post with the region's own list: CFE844 (BA CityFlyer, London → Milan) on the dark map names Hayange, Florange, Villerupt and Aubange, none of which the shipped list of 5 000 had on a map with this many towns. Now the dark-map example in Social sharing. 0.27.2 on the Pi made the list from nine files, 55 164 places, as expected |
 | 20 October 2026, 18:30 | 0.27.2, from the line above: the countries are chosen by their places of 500 or more within 400 km, not by one-degree cells with a margin. Around Trémery: AT BE CH DE FR IT LI LU NL, 24 MB; CZ and GB are no longer downloaded. Run `social places on` again to see it; the list kept is the same |
 | 20 October 2026, 18:20 | 0.27.1 on the reference Pi: `social places on` downloaded eleven country files (AT BE CH CZ DE FR GB IT LI LU NL, 29.4 MB in all) and kept 55 164 places in 676 KB, the same count as the test run in the browser. Two files gave no place within 400 km (CZ and GB: their cells reach within the margin, their places do not). The social service afterwards: 30 MB of memory, as before |

@@ -60,6 +60,9 @@ PLACES_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "
 # all: every town of 5 000 there is in the valley, a few kilometres beyond the map's edge.
 SMALL_PLACES_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "places1000.tsv.gz")
 MIN_NAMES = 3
+# 0.27.3: then the empty parts. SWR3AG over the Moselle plateau named seven towns, all on the edges, and nothing in
+# the 30 km between them: a village is added where no name is within GAP_PX of its dot, the heaviest first.
+GAP_PX = 120
 # 0.27.0: the region's own list, made on the Pi from GeoNames' country files (tools/make_local_places.py, `social
 # places on`): every populated place within 400 km, weighted by population or, where GeoNames knows none (almost every
 # village in Indonesia), by its rank. social.py sets the path when the owner switched it on; None: the shipped lists.
@@ -421,7 +424,8 @@ def _lat_of(py, z):
 def _draw_names(img, z, ox, oy, w, h, band, tone, plane_at=None):
     """The towns inside the map, the largest first, each with a dot and its name on a halo; never over another name,
     the north box or the legend and credit band. A map with fewer than MIN_NAMES of them takes villages too (0.26.2).
-    With the region's own list (0.27.0), the same, by weight: towns, then villages, then any populated place."""
+    With the region's own list (0.27.0), the same, by weight: towns, then villages, then any populated place. Then
+    the empty parts: a village where no name is within GAP_PX (0.27.3)."""
     d = ImageDraw.Draw(img)
     fnt = font(13)                                # 0.25.2, from the owner: smaller names, more of them (16 before)
     fill, halo = ((255, 255, 255), (0, 0, 0)) if tone == "light" else ((30, 30, 30), (255, 255, 255))
@@ -434,7 +438,9 @@ def _draw_names(img, z, ox, oy, w, h, band, tone, plane_at=None):
     shown = [0]
     done = set()                                  # a place named once, whatever tier offers it again
 
-    def name_all(found):
+    dots = []
+
+    def name_all(found, gap=0):
         for name, la, lo, pop in sorted(found, key=lambda p: -p[3]):
             if shown[0] >= MAX_NAMES:
                 return
@@ -443,6 +449,8 @@ def _draw_names(img, z, ox, oy, w, h, band, tone, plane_at=None):
             x, y = world_px(la, lo, z)
             x, y = x - ox, y - oy
             if not (6 <= x <= w - 6 and 6 <= y <= h - 6):
+                continue
+            if gap and any((x - a) ** 2 + (y - b) ** 2 < gap * gap for a, b in dots):
                 continue
             tw = d.textlength(name, font=fnt)
             # right of the dot, or left of it when the right is taken or off the map (0.27.0: Waingapu, under the
@@ -458,6 +466,7 @@ def _draw_names(img, z, ox, oy, w, h, band, tone, plane_at=None):
                 continue                          # the dot itself under the aircraft, north or the legend
             taken.append(box)
             done.add((name, la, lo))
+            dots.append((x, y))
             d.ellipse([x - 3, y - 3, x + 3, y + 3], fill=fill, outline=halo, width=1)
             d.text((tx, y), name, font=fnt, fill=fill, anchor="lm", stroke_width=2, stroke_fill=halo)
             shown[0] += 1
@@ -470,10 +479,13 @@ def _draw_names(img, z, ox, oy, w, h, band, tone, plane_at=None):
             name_all([p for p in local if p[3] >= tier])
             if shown[0] >= MIN_NAMES:
                 break
+        name_all(local, GAP_PX)
         return shown[0]
     name_all([p for p in places() if lon0 - 0.5 <= p[2] <= lon0 + deg])
+    small = _small_places(lat0, lat1, lon0, lon1)
     if shown[0] < MIN_NAMES:
-        name_all(_small_places(lat0, lat1, lon0, lon1))
+        name_all(small)
+    name_all(small, GAP_PX)
     return shown[0]
 
 

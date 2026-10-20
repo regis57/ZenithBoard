@@ -145,6 +145,18 @@ class MapTests(unittest.TestCase):
         self.assertEqual(got.count("Kawangu"), 1, "named once, though two tiers offer it")
         self.assertIn("Laau", got)
 
+    def test_the_empty_parts_get_a_village(self):
+        # 0.27.3, SWR3AG over the Moselle plateau: seven towns on the edges, nothing in the middle. A village goes
+        # where no name is within GAP_PX of it; one next to a named town does not.
+        rows = [("Bigtown A", 49.30, 6.20, 50000), ("Bigtown B", 49.30, 6.70, 40000), ("Bigtown C", 48.80, 6.20, 30000),
+                ("Bigtown D", 48.80, 6.70, 20000), ("Middle", 49.05, 6.45, 300), ("Nextdoor", 49.295, 6.215, 900)]
+        path = os.path.join(self.d, "plateau.tsv.gz")
+        mlp.write(rows, path, 49.0, 6.4, 200, ["FR"])
+        tr = [[48.85 + i * 0.018, 6.60 - i * 0.012, 2700, i * 12] for i in range(25)]
+        got = self.names(tr, path)
+        self.assertIn("Middle", got)
+        self.assertNotIn("Nextdoor", got)
+
     def test_outside_the_region_the_shipped_lists(self):
         metz = [[48.95 + i * 0.0125, 6.2, 30000, i * 5] for i in range(37)]
         self.assertIn("Metz", self.names(metz, self.local))
