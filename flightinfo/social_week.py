@@ -92,6 +92,9 @@ def week_data(c, stats_dir=None, now=None, posts=None):
             "heat": rows, "airlines": (fleet.get("airlines") or [])[:TOP], "models": (fleet.get("types") or [])[:TOP],
             "cargo": (fleet.get("cargo") or [])[:TOP], "cargo_total": fleet.get("cargo_total", 0),
             "bizjets": (fleet.get("bizjets") or [])[:TOP], "bizjet_total": fleet.get("bizjet_total", 0),
+            "cargo_models": fleet.get("cargo_models") or {}, "bizjet_countries": [(cc, k) for cc, k in fleet.get("bizjet_countries") or [] if cc][:TOP],
+            "military": fleet.get("military") or [], "military_total": fleet.get("military_total", 0),
+            "misc": fleet.get("misc") or {},
             "covered": covered, "posted": posted, "fleet_from": fleet_from, "fleet_week": first_full_week(fleet_from)}
 
 
@@ -196,27 +199,115 @@ def alt(w, area):
     return s
 
 
+PARTS = (1, 2, 3, 4)          # 0.36.0: the week; cargo and business jets; military; helicopters, light aircraft, gliders
+MISC_SHOWN = (("heli", "Helicopters", "HELICOPTERS"), ("light", "Light aircraft", "LIGHT AIRCRAFT"),
+              ("glider", "Gliders", "GLIDERS"), ("other", "Drones and balloons", "DRONES AND BALLOONS"))
+
+
+def misc_lists(w):
+    """{group: {"total", "models"}} with the drones and the balloons together, as the picture shows them."""
+    m = dict(w.get("misc") or {})
+    other = {}
+    for g in ("drone", "balloon"):
+        for name, k in (m.get(g) or {}).get("models") or []:
+            other[name] = other.get(name, 0) + k
+    m["other"] = {"total": sum(other.values()), "models": sorted(other.items(), key=lambda kv: (-kv[1], kv[0]))[:TOP]}
+    return m
+
+
+def has_part(w, part):
+    """Something to say in that post, over the whole week. The first always has (when there are statistics)."""
+    if part == 1:
+        return bool(w)
+    if not (w and w.get("covered")):
+        return False
+    if part == 2:
+        return bool(w.get("cargo") or w.get("bizjets"))
+    if part == 3:
+        return bool(w.get("military_total"))
+    return any(v.get("total") for v in misc_lists(w).values())
+
+
 def has_second(w):
-    """The second post (0.35.0): something to say about cargo airlines or business jets, over the whole week."""
-    return bool(w and w.get("covered") and (w.get("cargo") or w.get("bizjets")))
+    return has_part(w, 2)
+
+
+def _plural(n, one, many=None):
+    return "%s %s" % (number(n), one if n == 1 else (many or one + "s"))
 
 
 def text_second(w, area, tags, fit):
     """Cargo airlines and business jets: the head always, the lists while they fit."""
-    head = "Cargo and business jets%s, %s: %s cargo aircraft, %s business jet%s." % (
+    head = "Cargo and business jets%s, %s: %s cargo aircraft, %s." % (
         (" " + area) if area else "", span_words(w["dates"]), number(w.get("cargo_total", 0)),
-        number(w.get("bizjet_total", 0)), "" if w.get("bizjet_total") == 1 else "s")
+        _plural(w.get("bizjet_total", 0), "business jet"))
     return _fit_lines(head, [("Cargo", w.get("cargo") or []), ("Business jets", w.get("bizjets") or [])], tags, fit)
+
+
+def text_military(w, area, tags, fit):
+    """Military aircraft: by country, the most represented first, each with its models."""
+    mil = w.get("military") or []
+    head = "Military aircraft%s, %s: %s from %s." % ((" " + area) if area else "", span_words(w["dates"]),
+                                                    _plural(w.get("military_total", 0), "aircraft", "aircraft"),
+                                                    _plural(len(mil), "country", "countries"))
+    return _fit_lines(head, [(e["country"], e["models"]) for e in mil], tags, fit)
+
+
+def text_misc(w, area, tags, fit):
+    m = misc_lists(w)
+    counts = [_plural(m[g]["total"], one.lower().rstrip("s") if g != "other" else "drone or balloon",
+                      one.lower() if g != "other" else "drones and balloons")
+              for g, one, _ in MISC_SHOWN if (m.get(g) or {}).get("total")]
+    head = "General aviation%s, %s: %s." % ((" " + area) if area else "", span_words(w["dates"]),
+                                                                  ", ".join(counts))
+    return _fit_lines(head, [(one, m[g]["models"]) for g, one, _ in MISC_SHOWN if (m.get(g) or {}).get("total")], tags, fit)
 
 
 def alt_second(w, area):
     s = "Weekly card of the cargo airlines and business jets, %s%s: %s cargo aircraft and %s business jets." % (
         span_words(w["dates"]), (" " + area) if area else "", number(w.get("cargo_total", 0)), number(w.get("bizjet_total", 0)))
     if w.get("cargo"):
-        s += " Cargo airlines, as bars: " + ", ".join("%s %d" % (n, k) for n, k in w["cargo"]) + "."
+        cm = w.get("cargo_models") or {}
+        s += " Cargo airlines, as bars, each with the model it flew most: " + ", ".join(
+            "%s %d%s" % (n, k, (" (mostly %s, %d)" % tuple(cm[n])) if n in cm else "") for n, k in w["cargo"]) + "."
     if w.get("bizjets"):
         s += " Business jets by make and model, as bars: " + ", ".join("%s %d" % (n, k) for n, k in w["bizjets"]) + "."
+    if w.get("bizjet_countries"):
+        s += " The countries they are registered in, with their flags: " + ", ".join(
+            "%s %d" % (server.country_name(c), k) for c, k in w["bizjet_countries"]) + "."
     return s
+
+
+def alt_military(w, area):
+    return "Weekly card of the military aircraft, %s%s: %s. By country, with its flag, the most represented first: %s." % (
+        span_words(w["dates"]), (" " + area) if area else "", _plural(w.get("military_total", 0), "aircraft", "aircraft"),
+        "; ".join("%s %d (%s)" % (e["country"], e["total"], ", ".join("%s %d" % (n, k) for n, k in e["models"][:3]))
+                  for e in w.get("military") or []))
+
+
+def alt_misc(w, area):
+    m = misc_lists(w)
+    groups = ["%s: %d (%s)." % (one, m[g]["total"], ", ".join("%s %d" % (n, k) for n, k in m[g]["models"]))
+              for g, one, _ in MISC_SHOWN if (m.get(g) or {}).get("total")]
+    return "Weekly card of the helicopters, light aircraft, gliders, drones and balloons, %s%s. %s" % (
+        span_words(w["dates"]), (" " + area) if area else "", " ".join(groups))
+
+
+def flag_pixels(codes, node=None):
+    """{ISO code: [[x, y, rgb], ...]} from the wall's own flags (flags.js, through tools/flag-pixels.js); {} when
+    Node cannot be run. A country without a drawing has no entry."""
+    import json
+    import subprocess
+    codes = sorted({c for c in codes if c})
+    if not codes:
+        return {}
+    script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "tools", "flag-pixels.js")
+    try:
+        out = subprocess.run([node or os.environ.get("ZENITHBOARD_NODE", "node"), script] + codes,
+                             capture_output=True, timeout=20, check=True).stdout
+        return json.loads(out.decode("utf-8") or "{}")
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return {}
 
 
 # --------------------------------------------------------------------------- the pictures
@@ -316,18 +407,125 @@ def draw(w, theme, area, out):
     return {"path": out, "width": W, "height": H, "bytes": os.path.getsize(out), "mime": "image/png"}
 
 
-def draw_second(w, theme, area, out):
-    """The second card (0.35.0): the cargo airlines and the business jets of the week, two lists with their totals."""
+def _flag(d, px, x, y, pitch=4):
+    """A flag of the wall, dot by dot, its top left at x, y; 11 x 7 dots (13 x 9 with a dark flag's outline), 4 pixels a dot."""
+    for fx, fy, v in px or []:
+        if v:
+            cx, cy = x + (fx + 1) * pitch, y + (fy + 1) * pitch
+            d.rectangle([cx, cy, cx + pitch - 2, cy + pitch - 2], fill=((v >> 16) & 255, (v >> 8) & 255, v & 255))
+    return 13 * pitch
+
+
+def _flag_or_code(d, f, flags, cc, x, y):
+    """The flag when the wall has one, otherwise the two letters in a box: the row keeps its place either way."""
+    if cc in flags:
+        _flag(d, flags[cc], x, y)
+        return
+    d.rectangle([x + 4, y + 4, x + 48, y + 32], outline=FAINT, width=1)
+    d.text((x + 26, y + 18), cc or "?", font=f["small"], fill=GREY, anchor="mm")
+
+
+def _total(d, f, col, x, y, n, label):
+    d.text((x, y), number(n), font=f["big"], fill=col)
+    d.text((x + 2, y + 68), label, font=f["lbl"], fill=GREY)
+
+
+def draw_second(w, theme, area, out, flags=None):
+    """The second card (0.35.0; three columns in 0.36.0): the cargo airlines, each with the model it flew most; the
+    business jets by make and model; and the countries the business jets are registered in, with their flags."""
     img, d, col, dim, f = _canvas(theme)
+    flags = flags or {}
     _header(d, f, col, dim, ("CARGO AND BUSINESS JETS " + area) if area else "CARGO AND BUSINESS JETS", w["dates"])
-    for x, total, label, title, pairs in ((M, w.get("cargo_total", 0), "CARGO AIRCRAFT", "CARGO AIRLINES", w.get("cargo") or []),
-                                          (620, w.get("bizjet_total", 0), "BUSINESS JETS", "MAKE AND MODEL", w.get("bizjets") or [])):
-        d.text((x, 108), number(total), font=f["big"], fill=col)
-        d.text((x + 2, 176), label, font=f["lbl"], fill=GREY)
-        if pairs:
-            _ranks(d, f, col, x, 240, 532, title, pairs, step=64, fnt="row")
+    # cargo: the airline, then in grey the model it flew most and how many of them, the airline's count on the right
+    x, width = M, 420
+    _total(d, f, col, x, 108, w.get("cargo_total", 0), "CARGO AIRCRAFT")
+    d.text((x, 236), "CARGO AIRLINES \u00b7 MOST SEEN MODEL", font=f["lbl"], fill=GREY)
+    y, cargo, cm = 268, w.get("cargo") or [], w.get("cargo_models") or {}
+    best = cargo[0][1] if cargo else 0
+    for name, k in cargo[:TOP]:
+        num = number(k)
+        room = width - d.textlength(num, font=f["name"]) - 14
+        d.text((x, y), _fit(d, name, f["name"], room), font=f["name"], fill=INK)
+        used = d.textlength(_fit(d, name, f["name"], room), font=f["name"])
+        if name in cm and room - used > 60:
+            model, mk = cm[name]
+            d.text((x + used + 8, y + 2), _fit(d, "%s (%s)" % (model, number(mk)), f["small"], room - used - 8),
+                   font=f["small"], fill=GREY)
+        d.text((x + width, y), num, font=f["name"], fill=GREY, anchor="ra")
+        d.rounded_rectangle([x, y + 26, x + max(4, int(width * k / best)), y + 31], radius=2, fill=col)
+        y += 44
+    if not cargo:
+        d.text((x, 268), "None heard this week.", font=f["name"], fill=FAINT)
+    # business jets: make and model
+    x, width = 500, 300
+    _total(d, f, col, x, 108, w.get("bizjet_total", 0), "BUSINESS JETS")
+    if w.get("bizjets"):
+        _ranks(d, f, col, x, 236, width, "MAKE AND MODEL", w["bizjets"])
+    else:
+        d.text((x, 236), "MAKE AND MODEL", font=f["lbl"], fill=GREY)
+        d.text((x, 268), "None heard this week.", font=f["name"], fill=FAINT)
+    # where they are registered: the flag, the country, a bar and the count
+    x, width = 840, W - M - 840
+    d.text((x, 236), "REGISTERED IN", font=f["lbl"], fill=GREY)
+    y, ctry = 268, w.get("bizjet_countries") or []
+    best = ctry[0][1] if ctry else 0
+    for cc, k in ctry[:TOP]:
+        _flag_or_code(d, f, flags, cc, x - 4, y - 6)
+        num = number(k)
+        d.text((x + 58, y), _fit(d, server.country_name(cc), f["name"], width - 58 - d.textlength(num, font=f["name"]) - 10),
+               font=f["name"], fill=INK)
+        d.text((x + width, y), num, font=f["name"], fill=GREY, anchor="ra")
+        d.rounded_rectangle([x + 58, y + 26, x + 58 + max(4, int((width - 58) * k / best)), y + 31], radius=2, fill=col)
+        y += 44
+    img.save(out, "PNG", optimize=True)
+    return {"path": out, "width": W, "height": H, "bytes": os.path.getsize(out), "mime": "image/png"}
+
+
+def draw_military(w, theme, area, out, flags=None):
+    """The third card (0.36.0): the military aircraft, a row per country and model, the most represented country
+    first, each row with the country's flag, a bar and the count."""
+    img, d, col, dim, f = _canvas(theme)
+    flags = flags or {}
+    _header(d, f, col, dim, ("MILITARY AIRCRAFT " + area) if area else "MILITARY AIRCRAFT", w["dates"])
+    mil = w.get("military") or []
+    _total(d, f, col, M, 108, w.get("military_total", 0), "MILITARY AIRCRAFT")
+    _total(d, f, col, 420, 108, len(mil), "COUNTRIES" if len(mil) != 1 else "COUNTRY")
+    rows = [(e["cc"], e["country"], n, k) for e in mil for n, k in e["models"][:2]][:10]   # two models a country, ten rows
+    best = max((k for _, _, _, k in rows), default=0)
+    x, y, width = M, 236, W - 2 * M
+    d.text((x, y), "BY COUNTRY, THEN MAKE AND MODEL", font=f["lbl"], fill=GREY)
+    y += 32
+    last = None
+    for cc, country, model, k in rows:
+        if cc != last:                           # the flag and the country once, on the country's first row
+            _flag_or_code(d, f, flags, cc, x - 4, y - 6)
+            d.text((x + 62, y), _fit(d, country, f["name"], 290), font=f["name"], fill=INK)
+            last = cc
+        d.text((x + 370, y), _fit(d, model, f["name"], 400), font=f["name"], fill=INK)
+        bx0, bx1 = x + 790, x + width - 60
+        d.rounded_rectangle([bx0, y + 6, bx0 + max(4, int((bx1 - bx0) * k / best)), y + 20], radius=3, fill=col)
+        d.text((x + width, y), number(k), font=f["name"], fill=GREY, anchor="ra")
+        y += 34
+    img.save(out, "PNG", optimize=True)
+    return {"path": out, "width": W, "height": H, "bytes": os.path.getsize(out), "mime": "image/png"}
+
+
+def draw_misc(w, theme, area, out):
+    """The fourth card (0.36.0): helicopters, light aircraft, gliders, drones and balloons, a column each with its
+    total and its makes and models."""
+    img, d, col, dim, f = _canvas(theme)
+    _header(d, f, col, dim, ("GENERAL AVIATION " + area) if area else "GENERAL AVIATION", w["dates"])
+    m = misc_lists(w)
+    shown = [(g, big) for g, _, big in MISC_SHOWN if (m.get(g) or {}).get("total")] or [(g, big) for g, _, big in MISC_SHOWN[:3]]
+    gap = 24
+    width = int((W - 2 * M - gap * (len(shown) - 1)) / len(shown))
+    for i, (g, big) in enumerate(shown):
+        x = M + i * (width + gap)
+        e = m.get(g) or {"total": 0, "models": []}
+        _total(d, f, col, x, 108, e["total"], big)
+        if e["models"]:
+            _ranks(d, f, col, x, 236, width, "MAKE AND MODEL", e["models"])
         else:
-            d.text((x, 236), title, font=f["lbl"], fill=GREY)
-            d.text((x, 268), "None heard this week.", font=f["name"], fill=FAINT)
+            d.text((x, 236), "None heard this week.", font=f["name"], fill=FAINT)
     img.save(out, "PNG", optimize=True)
     return {"path": out, "width": W, "height": H, "bytes": os.path.getsize(out), "mime": "image/png"}
