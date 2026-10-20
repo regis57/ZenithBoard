@@ -38,6 +38,7 @@ jobs:
           bash tests/test_reliability.sh
           bash tests/test_menus.sh
           bash tests/test_legacy.sh
+          bash tests/test_graphs.sh
           bash tests/test_install.sh
       - name: JavaScript tests
         run: |

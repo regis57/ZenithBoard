@@ -34,6 +34,7 @@ ZenithBoard runs as root on a machine in your home, listens on your network, and
 | `/api/planes`, `/api/config` | Same | Aircraft in range, and display settings. **The antenna's exact position is never sent** |
 | tar1090, port 80 | Same | Installed by readsb, not by ZenithBoard |
 | Plane Finder, port 30053 | Same | Its own setup page |
+| graphs1090, port 8542 and `/graphs1090` on port 80 | Anyone who reaches the port: lighttpd has no address check | Only when `graphs on` (0.32.0). The decoder's counters, CPU and temperature; the range graph gives distances, never the antenna's position. Served by lighttpd, not by ZenithBoard. `zenithboard security` names it |
 | SkyAware, port 8504 (or 8978) | Same | Served by FlightAware's lighttpd, not by ZenithBoard. `zenithboard security` names it |
 | `/stats`, `/api/stats` | Same as the wall | Only when `STATS=1`. Counts and ranges per hour and per day; the antenna's position is not part of it. Since 0.22.0 also the farthest aircraft of the day and of the month, each with the large city nearest it and its distance from the antenna: two such lines narrow down where the antenna is, one more reason this page answers the home network only |
 | `/api/farthest` | Same as the wall | Only when `STATS=1`. What the statistics sample asks on the loopback: the farthest aircraft of today and yesterday, named, never with a position |

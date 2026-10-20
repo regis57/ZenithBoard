@@ -64,6 +64,7 @@ sec_ports() {
       80|443) known="$known $port(map)" ;;
       8504|8978) known="$known $port(skyaware)" ;;                   # FlightAware's map, also on these two ports (1090 and 978 MHz)
       22) known="$known $port(ssh)" ;;
+      8542) known="$known $port(graphs1090)" ;;                        # 0.32.0, optional: graphs1090's own port (lighttpd)
       3000) known="$known $port(grafana, older ZenithBoard)" ;;
       300[0-9][0-9]|301[0-9][0-9]|31[0-9][0-9][0-9]|8754|8089) known="$known $port(decoder/feeder)" ;;   # readsb's beast/raw/SBS ports, the feeders' MLAT returns, FR24's and Plane Finder's pages
       5353|68|546) ;;                                                 # mDNS, DHCP: the system's own

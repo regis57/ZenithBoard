@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.32.0
+- **graphs1090, as an option.** `sudo zenithboard graphs on` (menu *3 Settings → 2 Receiver → 6*, off by default) installs [graphs1090](https://github.com/wiedehopf/graphs1090) with its author's own installer: years of the decoder's graphs (messages, range, signal, aircraft, CPU, temperature) on port 8542 and at `/graphs1090` on the map's port. It needs the receiver map's lighttpd and 64 MB free in `/run`, where its graphs live; they are written to the card once a day at 23:42 and at shutdown.
+- **`graphs off` puts back what `on` found**: graphs1090's uninstaller, then what it leaves behind (two lighttpd files, its unit, its settings, its cron line), then the packages that were not there before, removed and never purged (Debian's purge of collectd-core deletes the history). apt is asked first; if something installed since needs one of them, they stay and `off` says so. The history stays on the card; `off` gives the command to delete it.
+- `zenithboard graphs status`, a line in `zenithboard status`, port 8542 named by `zenithboard security`, a `graphs1090` component for `update`, and *Uninstall everything* takes it.
+- The second half of the owner's choice when Grafana left (0.30.0). The installer was read in full, not run here: not yet tried on a Pi.
+- The statistics question in the menu said 6 KB a day; it is about 30 KB since 0.31.0.
+
 ## 0.31.0
 - **The statistics page shows what Grafana would have.** Four new charts on `/stats`: **the sky by hour** (fourteen days by twenty-four hours, darker where more aircraft were overhead), **the airlines** and **the aircraft types most seen** (the ten with the most distinct aircraft over thirty days), and **how high** they fly (bands of 1 km or 5 000 ft, following the wall's units). Ground vehicles and the airport's own transmitters are not counted.
 - For them each sample now writes the day's aircraft with their callsign, altitude and type to `fleet-YYYY-MM-DD` (no position): about 30 KB a day on the card instead of 6, kept thirty days, emptied by `stats clear`. The types come from the decoder when it has an aircraft database, otherwise from tar1090's with `sudo zenithboard data localdb on`, looked up by the sample once per aircraft and day, never by the page (thirty days of addresses at once would take a Pi 3B minutes). The lists start on the first quarter hour after the update.

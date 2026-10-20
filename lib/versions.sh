@@ -2,7 +2,7 @@
 # shellcheck disable=SC2034
 # shellcheck shell=bash
 # Third-party pins. Bump here when an upstream moves; everything else reads these.
-ZB_VERSION="0.31.0"
+ZB_VERSION="0.32.0"
 
 # FlightAware APT repository package (provides piaware and dump1090-fa). FlightAware renamed it from
 # piaware-repository (9.0.1) to flightaware-apt-repository; see https://www.flightaware.com/adsb/piaware/install
@@ -18,6 +18,9 @@ READSB_INSTALL_URL="https://github.com/wiedehopf/adsb-scripts/raw/master/readsb-
 # you the key the first time and records what you confirm (see zb_trust_setup in lib/update.sh). A fingerprint
 # copied from somewhere into a file you then trust proves nothing about the file it is in.
 GITHUB_SIGNING_KEY_URL="https://github.com/web-flow.gpg"
+
+# graphs1090 (wiedehopf), optional since 0.32.0: its author's installer, as for readsb; read in full on 20 October 2026
+GRAPHS1090_INSTALL_URL="https://github.com/wiedehopf/graphs1090/raw/master/install.sh"
 
 TAR1090_UNINSTALL_URL="https://github.com/wiedehopf/tar1090/raw/master/uninstall.sh"   # printed, never run by us
 
