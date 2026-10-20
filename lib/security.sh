@@ -29,12 +29,12 @@ sec_updates() {
   else sec_line WARN "Updates are NOT verified (UPDATE_VERIFY=0): a changed repository would be installed as is" "sudo zenithboard config-set UPDATE_VERIFY 1   (keep 0 only for your own fork)"; fi
 }
 
-sec_grafana() {
-  is_grafana || { sec_line OK "Grafana is not installed (ACARS is optional)"; return 0; }
-  if grafana_default_password_works; then sec_line WARN "Grafana still accepts admin / admin on port 3000" "sudo zenithboard acars password new"
-  elif [ -f "$GRAFANA_PASS_FILE" ]; then
-    [ "$(stat -c %a "$GRAFANA_PASS_FILE" 2>/dev/null)" = 600 ] && sec_line OK "Grafana has its own password, kept root-only" || sec_line WARN "Grafana's password file is readable by others" "sudo chmod 600 $GRAFANA_PASS_FILE"
-  else sec_line OK "Grafana's password was changed in Grafana itself"; fi
+sec_legacy() {      # 0.30.0: ACARS and Grafana are no longer part of ZenithBoard; one left behind is no longer updated
+  if [ -n "$(acars_leftovers)" ]; then
+    sec_line WARN "ACARS / Grafana from an older ZenithBoard are still installed and no longer updated by it" "sudo zenithboard acars remove"
+  else
+    sec_line OK "No ACARS or Grafana left from an older ZenithBoard"
+  fi
 }
 
 sec_patches() {
@@ -64,7 +64,7 @@ sec_ports() {
       80|443) known="$known $port(map)" ;;
       8504|8978) known="$known $port(skyaware)" ;;                   # FlightAware's map, also on these two ports (1090 and 978 MHz)
       22) known="$known $port(ssh)" ;;
-      3000) known="$known $port(grafana)" ;;
+      3000) known="$known $port(grafana, older ZenithBoard)" ;;
       300[0-9][0-9]|301[0-9][0-9]|31[0-9][0-9][0-9]|8754|8089) known="$known $port(decoder/feeder)" ;;   # readsb's beast/raw/SBS ports, the feeders' MLAT returns, FR24's and Plane Finder's pages
       5353|68|546) ;;                                                 # mDNS, DHCP: the system's own
       *) other="$other $port" ;;
@@ -109,7 +109,7 @@ security_check() {
   SEC_WARN=0
   echo "Security check, ZenithBoard $ZB_VERSION on $(hostname 2>/dev/null)"
   echo
-  sec_wall; sec_updates; sec_grafana; sec_patches; sec_ssh; sec_ports; sec_units; sec_secrets
+  sec_wall; sec_updates; sec_legacy; sec_patches; sec_ssh; sec_ports; sec_units; sec_secrets
   echo
   if [ "$SEC_WARN" = 0 ]; then echo "Nothing to fix."; else echo "$SEC_WARN thing(s) to look at. Each line above says how."; fi
   [ "$SEC_WARN" = 0 ]

@@ -250,7 +250,7 @@ adsb_menu() {
   dec_sel=$(wt_radio "ADS-B decoder.\n\nreadsb is recommended (what ADSB Exchange, tar1090 and most feeders expect).\ndump1090-fa also works; every feeder reads the same Beast port 30005." \
       readsb "readsb (recommended)" "$rs" dump1090-fa "dump1090-fa (FlightAware)" "$ds") || return 0
 
-  dev=$(wt_input "ADS-B dongle serial number (or index).\nLeave empty if you have a single dongle.\nNeeded when a 2nd dongle is used for ACARS." "$(cfg_get ADSB_SDR)") || return 0
+  dev=$(wt_input "ADS-B dongle serial number (or index).\nLeave empty if you have a single dongle.\nNeeded when a 2nd dongle is used for 978 MHz UAT." "$(cfg_get ADSB_SDR)") || return 0
   cfg_set ADSB_SDR "$dev"
 
   local st_fa=OFF st_fr=OFF st_pf=OFF

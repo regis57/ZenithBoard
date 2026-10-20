@@ -8,7 +8,7 @@ set -u
 cd "$(dirname "$0")/.." || exit 1
 t=$(mktemp -d); trap 'rm -rf "$t"' EXIT
 export ZENITHBOARD_ETC="$t/etc"; mkdir -p "$ZENITHBOARD_ETC" "$t/bin" "$t/apt" "$t/units"; touch "$ZENITHBOARD_ETC/config.env"
-export ZB_SKIP_SERVICES=1 ZB_APT_CONF_DIR="$t/apt" ZB_GRAFANA_URL="http://stub:3000" T="$t"
+export ZB_SKIP_SERVICES=1 ZB_APT_CONF_DIR="$t/apt" T="$t"
 cat > "$t/bin/ss" <<'S'
 #!/bin/bash
 cat "$T/ss.out"
@@ -34,8 +34,8 @@ chmod +x "$t"/bin/*; export PATH="$t/bin:$PATH"
 . lib/versions.sh
 # shellcheck source=lib/ddns.sh
 . lib/ddns.sh
-# shellcheck source=lib/acars.sh
-. lib/acars.sh
+# shellcheck source=lib/legacy.sh
+. lib/legacy.sh
 # shellcheck source=lib/patches.sh
 . lib/patches.sh
 # shellcheck source=lib/security.sh
@@ -62,10 +62,10 @@ check "open Pi: exit status 1"                          '[ $r -eq 1 ]'
 check "wall open to anyone: WARN, with the fix"          'line WARN "answers anyone" && printf "%s" "$out" | grep -q "config-set ALLOW_FROM private"'
 check "domain name: noted as INFO"                       'line INFO "a.duckdns.org"'
 check "updates unverified: WARN"                         'line WARN "NOT verified" && printf "%s" "$out" | grep -q "config-set UPDATE_VERIFY 1"'
-check "grafana admin/admin: WARN, fix is password new"   'line WARN "admin / admin" && printf "%s" "$out" | grep -q "acars password new"'
+check "ACARS/Grafana left by an older version: WARN, fix is acars remove (0.30.0)" 'line WARN "older ZenithBoard" && printf "%s" "$out" | grep -q "acars remove"'
 check "patches off: WARN"                                'line WARN "security patches are not" && printf "%s" "$out" | grep -q "patches on"'
 check "ssh passwords: WARN, says to get a key first"     'line WARN "SSH accepts passwords" && printf "%s" "$out" | grep -q "once you log in with a key"'
-check "ports: wall, ssh, grafana, decoder named"         'line OK "8080(wall)" && line OK "22(ssh)" && line OK "3000(grafana)" && line OK "30005(decoder/feeder)"'
+check "ports: wall, ssh, grafana, decoder named"         'line OK "8080(wall)" && line OK "22(ssh)" && line OK "3000(grafana, older ZenithBoard)" && line OK "30005(decoder/feeder)"'
 check "ports: 127.0.0.1 and ::1 ignored, 9000 noted as not ours" '! printf "%s" "$out" | grep -q "500[01]" && line INFO "9000"'
 check "ports: each port once, not once per address family" '[ "$(printf "%s" "$out" | grep -o "22(ssh)" | wc -l)" = 1 ] && [ "$(printf "%s" "$out" | grep -o "8080(wall)" | wc -l)" = 1 ]'
 check "ports: SkyAware's second port is FlightAware's map"  'line OK "8504(skyaware)" && ! line INFO "8504"'
@@ -76,7 +76,7 @@ check "count of things to look at"                       'printf "%s" "$out" | g
 
 # ================= the same Pi, every hole closed
 cfg_set ALLOW_FROM private; cfg_set UPDATE_VERIFY 1; cfg_set DDNS_PROVIDER none
-echo 401 > "$t/grafana-code"; echo "x" > "$GRAFANA_PASS_FILE"; chmod 600 "$GRAFANA_PASS_FILE"
+rm -f "$t/grafana-installed" "$GRAFANA_PASS_FILE"
 printf 'passwordauthentication no\n' > "$t/sshd.out"
 printf 'LISTEN 0 128 0.0.0.0:8080 0.0.0.0:*\nLISTEN 0 128 0.0.0.0:22 0.0.0.0:*\n' > "$t/ss.out"
 echo "zenithboard-ddns.service 1.7" > "$t/scores"; chmod 600 "$DDNS_CURL"
@@ -87,17 +87,17 @@ check "closed Pi: exit status 0"                         '[ $r -eq 0 ]'
 check "closed Pi: no WARN at all"                        '! printf "%s" "$out" | grep -q "^  WARN"'
 check "closed Pi: says nothing to fix"                   'printf "%s" "$out" | grep -q "Nothing to fix"'
 check "wall private: OK"                                 'line OK "home networks only"'
-check "grafana with its own password: OK"                'line OK "Grafana has its own password"'
+check "nothing left from ACARS: OK"                      'line OK "No ACARS or Grafana left"'
 check "ssh keys only: OK"                                'line OK "keys only"'
 check "patches on: OK"                                   'line OK "install themselves daily"'
 check "sandboxes: OK"                                    'line OK "inside a sandbox"'
-check "secrets root-only: OK twice"                      '[ "$(printf "%s" "$out" | grep -c "is root-only")" = 2 ]'
+check "secrets root-only: OK"                            '[ "$(printf "%s" "$out" | grep -c "is root-only")" = 1 ]'
 
 # ================= things that are simply absent
 # (the real sshd lives in /usr/sbin on a CI runner, so that directory is left out of PATH for this one call)
 rm -f "$t/grafana-installed" "$t/bin/sshd"
 out=$(PATH="$t/bin:/usr/bin:/bin" security_check)
-check "no grafana: OK, not installed"                    'line OK "Grafana is not installed"'
+check "no grafana: OK, nothing left"                     'line OK "No ACARS or Grafana left"'
 check "no sshd: INFO"                                    'line INFO "No SSH server"'
 
 [ "$fail" = 0 ] && echo "ALL OK" || { echo "SOME FAILED"; exit 1; }

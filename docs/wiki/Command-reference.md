@@ -112,7 +112,7 @@ All three are off until you turn them on. How they decide, and how to read a bad
 | Command | sudo | What it is for |
 |---|---|---|
 | `zenithboard logs` | | The wall's own service, last 100 lines |
-| `zenithboard logs decoder` · `acars` · `uat` · `social` | | The last 100 lines of that service |
+| `zenithboard logs decoder` · `uat` · `social` | | The last 100 lines of that service |
 | `zenithboard logs usage` | | How much space the system logs take |
 | `zenithboard logs review` | | Size, plus the recent warnings |
 | `zenithboard logs limit MB` · `default` | yes | Cap the system logs, 10–2000 MB |
@@ -123,10 +123,10 @@ All three are off until you turn them on. How they decide, and how to read a bad
 
 | Command | sudo | What it is for |
 |---|---|---|
-| `sudo zenithboard update` | yes | **The normal way to update.** ZenithBoard first — after checking the signature on the new code, see below — then the decoder, the feeders, ACARS and Grafana |
+| `sudo zenithboard update` | yes | **The normal way to update.** ZenithBoard first — after checking the signature on the new code, see below — then the decoder and the feeders |
 | `zenithboard update quick` | yes | ZenithBoard and the wall only, in seconds: the code is pulled, the wall restarted, the feeders left as they are (no `apt`). The menu's first Update entry since 0.21.0 |
 | `zenithboard update list` | | What is installed, and the names `update only` accepts |
-| `zenithboard update only NAME…` | yes | Just those, e.g. `readsb flightinfo`. Names: `zenithboard readsb dump1090 adsbx piaware fr24 planefinder flightinfo acars` |
+| `zenithboard update only NAME…` | yes | Just those, e.g. `readsb flightinfo`. Names: `zenithboard readsb dump1090 adsbx piaware fr24 planefinder flightinfo` |
 | `zenithboard data update` | yes | Refresh the aircraft-model list now |
 | `zenithboard data status` | | When it was last refreshed |
 | `zenithboard data auto on` · `off` | yes | The monthly refresh (on by default) |
@@ -138,9 +138,9 @@ The reasoning is on [Security](Security).
 
 | Command | sudo | What it does |
 |---|---|---|
-| `zenithboard security` | | One screen of what this Pi does right now: who may read the wall, whether updates are verified, Grafana's password, SSH, open ports, the service sandboxes, the secret files. Each WARN says how to fix it. Exit status 1 when there is one |
+| `zenithboard security` | | One screen of what this Pi does right now: who may read the wall, whether updates are verified, anything left from ACARS / Grafana, SSH, open ports, the service sandboxes, the secret files. Each WARN says how to fix it. Exit status 1 when there is one |
 | `zenithboard patches on` · `off` · `status` | yes | Debian's security fixes installed by themselves, once a day, from the Debian security channel only: the feeders are left to `zenithboard update` and the Pi is never rebooted. `off` puts things back as they were |
-| `zenithboard acars password` · `new` · `set` | yes | The Grafana admin password ZenithBoard set (ACARS only): show it, draw a new one, or type your own. Kept root-only in `/etc/zenithboard/grafana.pass` |
+| `zenithboard acars remove` | yes | ACARS and Grafana left ZenithBoard in 0.30.0. On a Pi where an older version installed them: stops and removes acarsdec, its ingester and database, Grafana (package, apt source, password file) and the `ACARS_*` settings, after you type the word `remove`. An update never does this by itself; `zenithboard status` and `zenithboard security` say when something is left |
 | `zenithboard config-set ALLOW_FROM private` · `any` · `10.8.0.0/24,…` | yes | Who may read the wall: home networks only (the default), anyone, or the networks listed. See [Security](Security) |
 
 And the things you may need to do by hand:

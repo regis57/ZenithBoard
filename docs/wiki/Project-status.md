@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **20 October 2026**, version **0.29.0**.
+Last updated: **20 October 2026**, version **0.30.0**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -41,7 +41,6 @@ Treat these as likely-working rather than known-working, and please report what 
 | The farthest aircraft named on `/stats` | Written in 0.22.0 and run against the real server with a made-up decoder; the real sky, the real route answers and the thread's cost on a Pi 3 are still to be seen |
 | A fresh install from the README | `install.sh` has been run end to end in a container against a scripted whiptail and stand-ins (0.21.1, `tests/test_install.sh`): flags, wizard, every menu, the deployed wall answering, the uninstall. A blank card on a real Pi has not been done |
 | Plane Finder | The installer runs; no feed has been watched |
-| ACARS and Grafana | Built and tested; no long run on real traffic |
 
 ## Known rough edges
 
@@ -49,7 +48,6 @@ Treat these as likely-working rather than known-working, and please report what 
 * FlightAware and Flightradar24 keep your antenna position on their own websites. `zenithboard location` cannot change that for you; it tells you where to go.
 * The airline name list covers about ninety airlines. Since 0.17.0 the rest are named from the route lookup once one of their flights has been looked up; with routes off they show the callsign.
 * Routes are looked up by callsign, not by flight. A callsign can be reused for the other direction. The filter drops the impossible answers; it cannot invent the right one.
-* ACARS legality differs by country. Check your local rules.
 
 ## Field log
 
@@ -57,6 +55,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 20 October 2026, 22:00 | The owner decided to take ACARS out, and Grafana with it once its use as a statistics board was weighed (100 to 200 MB on a Pi 3B, a third-party plugin, publishing only by opening the Pi to the internet or through a cloud account): 0.30.0. The reference Pi never had them installed |
 | 20 October 2026, 21:30 | The owner asked for other words than the factual post; five shapes proposed on RYR5ZK, all chosen, with the reason said first. 0.29.0 |
 | 20 October 2026, 21:00 | Four posts of the evening (RYR5ZK, RYR6JR, SKV615, EJU86EN): on RYR5ZK the north of the map was full of Belgian and Dutch towns unrelated to a track from Namur to Luxembourg. 0.28.0 names along the track first, with three large cities around for orientation (the owner chose that over the track alone). First try: the towns along a track through Belgium filled the 26 names before any city around; three places are now kept for them |
 | 20 October 2026, 19:05 | 0.27.3 on the Pi, first post: RYR5236 over Metz on the light map, 26 names (the most a map holds), spread over the whole strip, Pont-à-Mousson, Nomeny and Rémilly in the south where the towns alone left it empty. Now the dot-matrix example in the README and Social sharing |

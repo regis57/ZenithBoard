@@ -28,8 +28,8 @@ uat978_ask_dongle() {   # prints the serial; non-zero if cancelled / invalid
   wt_msg "978 MHz UAT (United States) needs its OWN dongle and, ideally, a 978 MHz antenna: the 1090 MHz dongle cannot listen at 978 MHz.\n\nRTL-SDR dongles detected: ${dongles:-0}\n\nGive each dongle a unique serial number first (see docs/HARDWARE.md), e.g.:\n  rtl_eeprom -d 1 -s 00000978\nThen enter the 978 MHz dongle's serial on the next screen." 18 || return 1
   dev=$(wt_input "978 MHz dongle serial number." "$(cfg_get UAT_SDR)") || return 1
   [ -n "$dev" ] || { wt_msg "A dongle serial is required." 8; return 1; }
-  if [ "$dev" = "$(cfg_get ADSB_SDR)" ] || [ "$dev" = "$(cfg_get ACARS_SDR)" ]; then
-    wt_msg "That serial is already used for 1090 MHz ADS-B or ACARS. Pick a different dongle." 9; return 1
+  if [ "$dev" = "$(cfg_get ADSB_SDR)" ]; then
+    wt_msg "That serial is already used for 1090 MHz ADS-B. Pick a different dongle." 9; return 1
   fi
   printf '%s' "$dev"
 }

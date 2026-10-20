@@ -6,8 +6,7 @@ Read this first. It holds what the owner (Régis, regis57) has settled over the 
 ## What this is
 
 A Raspberry Pi that listens to ADS-B and shows the aircraft overhead on a tablet as a dot-matrix wall or a
-split-flap board, feeds ADSB Exchange / FlightAware / Flightradar24 / Plane Finder, optionally collects ACARS,
-and posts the aircraft crossing a radius to Bluesky. GPL-3.0-or-later. One reference Pi: a 3B (1 GB), outdoors,
+split-flap board, feeds ADSB Exchange / FlightAware / Flightradar24 / Plane Finder, and posts the aircraft crossing a radius to Bluesky. GPL-3.0-or-later. One reference Pi: a 3B (1 GB), outdoors,
 on Wi-Fi, near Trémery (Moselle). The owner tests on it; a session never reaches it.
 
 ## Language
@@ -47,7 +46,7 @@ on Wi-Fi, near Trémery (Moselle). The owner tests on it; a session never reache
    for t in tests/*.sh; do bash $t; done
    python3 -m unittest discover -s tests
    for j in format shapes scene flap layout flags scroll statsjs; do node tests/test_$j.js; done
-   shellcheck -x -S warning install.sh bin/zenithboard bin/run-acarsdec bin/zenithboard-demo lib/*.sh tests/*.sh tools/*.sh
+   shellcheck -x -S warning install.sh bin/zenithboard bin/zenithboard-demo lib/*.sh tests/*.sh tools/*.sh
    ```
 5. Commit as the owner: `git -c user.name=regis57 -c user.email=regis.hennequin@gmail.com commit`.
    **No `Co-authored-by`, no "Generated with" lines** — the owner's standing rule.

@@ -14,7 +14,7 @@ score() { systemd-analyze security --offline=true --no-pager "systemd/zenithboar
 
 # ---- ceilings: what each unit may score, at most. The watchdog and the Wi-Fi unit talk to the network as root
 # and keep ping, netlink and D-Bus, so they sit higher than the rest on purpose.
-declare -A MAX=( [flightinfo]=1.5 [acars-ingest]=1.5 [data-refresh]=4.5 [acarsdec]=6.5
+declare -A MAX=( [flightinfo]=1.5 [data-refresh]=4.5
                  [ddns]=2.0 [logs-clean]=1.6 [gain-log]=1.2 [stats]=1.2 [netwatch]=4.5 [wifi]=4.5 [social]=1.5 )
 if command -v systemd-analyze >/dev/null 2>&1 && systemd-analyze security --offline=true --no-pager systemd/zenithboard-flightinfo.service >/dev/null 2>&1; then
   for u in "${!MAX[@]}"; do
@@ -26,7 +26,7 @@ else
 fi
 
 # ---- every unit has the basics, whatever its score
-for u in flightinfo acars-ingest acarsdec data-refresh ddns logs-clean gain-log stats netwatch wifi social; do
+for u in flightinfo data-refresh ddns logs-clean gain-log stats netwatch wifi social; do
   check "$u: ProtectSystem=strict"   'has $u "ProtectSystem=strict"'
   check "$u: ProtectHome"            'has $u "ProtectHome=true"'
   check "$u: PrivateTmp"             'has $u "PrivateTmp=true"'

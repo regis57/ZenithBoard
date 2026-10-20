@@ -23,7 +23,7 @@ eval "$(sed -n '/^hardware_notice() {/,/^}/p' install.sh)"
 said=""; wt_msg() { said="$1"; }; cfg_get() { echo ""; }; cfg_set() { :; }
 printf 'MemTotal:         437000 kB\nMemAvailable:     300000 kB\n' > "$t/mem05"
 ZB_PI_MODEL_FILE="$t/m3" ZB_MEMINFO="$t/mem1" hardware_notice
-case "$said" in *"measured on"*"650 MB free"*"ACARS + Grafana need about 900 MB more"*) ;; *) echo "Pi 3, 1 GB: wrong notice: $said"; exit 1 ;; esac
+case "$said" in *"measured on"*"650 MB free"*) ;; *) echo "Pi 3, 1 GB: wrong notice: $said"; exit 1 ;; esac
 case "$said" in *"no extra feeders"*|*"one or two extra feeders"*) echo "Pi 3, 1 GB: told to hold back feeders it was measured with"; exit 1 ;; esac
 said=""; ZB_PI_MODEL_FILE="$t/mz" ZB_MEMINFO="$t/mem05" hardware_notice
 case "$said" in *"older Raspberry Pi"*"no extra feeders"*) ;; *) echo "Zero 2 W, 512 MB: wrong notice: $said"; exit 1 ;; esac

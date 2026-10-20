@@ -90,7 +90,7 @@ check "gaps: the stats unit may reach the loopback only" 'grep -q "^RestrictAddr
 # ---- the destructive steps ask for a typed word, and the main menu keeps them out of the numbered flow
 check "menu: uninstall asks for the word"           'grep -q "\[ \"\$word\" = uninstall \]" install.sh'
 check "menu: removing the wall and all logs too"    'grep -q "= remove \]" lib/flightinfo.sh && grep -q "= delete \]" lib/logs.sh'
-check "menu: Maintenance holds save, restore, uninstall" 'grep -q "7 \"Maintenance" install.sh && grep -q "uninstall \"Uninstall everything" install.sh && ! grep -q "7 \"Uninstall everything\"" install.sh'
+check "menu: Maintenance holds save, restore, uninstall" 'grep -q "6 \"Maintenance" install.sh && grep -q "uninstall \"Uninstall everything" install.sh && ! grep -q "6 \"Uninstall everything\"" install.sh'
 check "menu: update offers quick first"             'grep -q "quick \"ZenithBoard and the wall only" lib/update.sh'
 
 [ "$fail" = 0 ] && echo "ALL OK"; exit "$fail"

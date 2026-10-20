@@ -168,7 +168,7 @@ _zb_sync_source() {
 }
 
 # Components that can be updated one by one (the name is what `zenithboard update only NAME...` and the menu use).
-ZB_COMPONENTS="zenithboard readsb dump1090 adsbx piaware fr24 planefinder flightinfo acars"
+ZB_COMPONENTS="zenithboard readsb dump1090 adsbx piaware fr24 planefinder flightinfo"
 zb_component_label() {
   case "$1" in
     zenithboard) echo "ZenithBoard itself (installer, menu, wall code)" ;;
@@ -179,14 +179,13 @@ zb_component_label() {
     fr24) echo "Flightradar24 (fr24feed)" ;;
     planefinder) echo "Plane Finder" ;;
     flightinfo) echo "FlightInfo wall + aircraft data" ;;
-    acars) echo "ACARS (acarsdec) + Grafana" ;;
   esac
 }
 zb_component_installed() {
   case "$1" in
     zenithboard) return 0 ;;
     readsb) is_readsb ;; dump1090) is_dump1090 ;; adsbx) is_adsbx ;; piaware) is_piaware ;;
-    fr24) is_fr24 ;; planefinder) is_planefinder ;; flightinfo) is_flightinfo ;; acars) is_acars ;;
+    fr24) is_fr24 ;; planefinder) is_planefinder ;; flightinfo) is_flightinfo ;;
     *) return 1 ;;
   esac
 }
@@ -271,13 +270,8 @@ zb_update_components() {
     data_refresh_apply
     [ "$(cfg_get AUTO_DATA_REFRESH 1)" != 1 ] || data_refresh_now || warn "aircraft data refresh failed (kept the previous data)"
   fi
-  if want_c acars && is_acars; then
-    log "ACARS (rebuilding acarsdec)"
-    rm -f /usr/local/bin/acarsdec; build_acarsdec || warn "acarsdec rebuild failed"
-    install -m 644 "$ZB_HOME"/systemd/zenithboard-acars-ingest.service "$ZB_HOME"/systemd/zenithboard-acarsdec.service /etc/systemd/system/
-    systemctl daemon-reload; systemctl restart zenithboard-acars-ingest zenithboard-acarsdec
-    is_grafana && { apt_install --only-upgrade grafana || warn "grafana update failed"; install -m 644 "$ZB_HOME/acars/grafana-dashboard.json" /var/lib/grafana/zenithboard-dashboards/acars.json; systemctl restart grafana-server; sleep 3; grafana_secure_password || true; }
-  fi
+  acars_notice      # 0.30.0: ACARS and Grafana left by an older version are said, never removed by an update
+
   zb_refresh_units
   if [ -f /etc/systemd/system/zenithboard-wifi.service ]; then wifi_install_unit; fi
   if [ "$(cfg_get DDNS_PROVIDER none)" != none ]; then ddns_install_units; fi

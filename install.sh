@@ -3,7 +3,6 @@
 # ZenithBoard installer / uninstaller menu.
 #   1 ADSB        decoder (readsb or dump1090-fa) + feeders, ADSB Exchange mandatory, single MLAT
 #   2 FlightInfo  dot-matrix wall for an old tablet
-#   3 ACARS       optional ACARS -> Grafana (needs a 2nd SDR dongle)
 # Re-run it any time: it detects what is installed and lets you add or remove components.
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -11,7 +10,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$ROOT/lib/common.sh"
 . "$ROOT/lib/adsb.sh"
 . "$ROOT/lib/flightinfo.sh"
-. "$ROOT/lib/acars.sh"
+. "$ROOT/lib/legacy.sh"
 . "$ROOT/lib/logs.sh"
 . "$ROOT/lib/gain.sh"
 . "$ROOT/lib/reliability.sh"
@@ -53,14 +52,14 @@ hardware_notice() {
   local msg=""
   # Since 0.20.1 from what was measured: the project's reference Pi is a 3B with 1 GB (wiki: Hardware)
   if is_old_pi && pi_model | grep -q 'Raspberry Pi 3'; then
-    msg+="A Raspberry Pi 3 ($(pi_model)): the board ZenithBoard is measured on.\nADS-B, the feeders, the wall and social sharing run comfortably on it. Ethernet or a strong Wi-Fi signal, and the official power supply.\nACARS + Grafana are NOT recommended on it.\n\n"
+    msg+="A Raspberry Pi 3 ($(pi_model)): the board ZenithBoard is measured on.\nADS-B, the feeders, the wall and social sharing run comfortably on it. Ethernet or a strong Wi-Fi signal, and the official power supply.\n\n"
   elif is_old_pi; then
-    msg+="This looks like an older Raspberry Pi ($(pi_model)).\nADS-B + the FlightInfo wall run on it. Use Ethernet if you can, and a good power supply.\nACARS + Grafana are NOT recommended on it.\n\n"
+    msg+="This looks like an older Raspberry Pi ($(pi_model)).\nADS-B + the FlightInfo wall run on it. Use Ethernet if you can, and a good power supply.\n\n"
   fi
   if is_low_mem && [ "$(mem_total_mb)" -lt 700 ]; then
-    msg+="Memory: only $(mem_total_mb) MB.\nRecommended here: ADS-B + the wall, no extra feeders.\nACARS + Grafana: no.\n"
+    msg+="Memory: only $(mem_total_mb) MB.\nRecommended here: ADS-B + the wall, no extra feeders.\n"
   elif is_low_mem; then
-    msg+="Memory: $(mem_total_mb) MB.\nMeasured on a 1 GB Pi 3B: ADS-B Exchange, FlightAware, Flightradar24, the wall and social sharing still leave about 650 MB free.\nACARS + Grafana need about 900 MB more: use a Pi with 2 GB or more.\n"
+    msg+="Memory: $(mem_total_mb) MB.\nMeasured on a 1 GB Pi 3B: ADS-B Exchange, FlightAware, Flightradar24, the wall and social sharing still leave about 650 MB free.\n"
   fi
   [ -n "$msg" ] && [ "$(cfg_get HW_NOTICE_SEEN)" != 1 ] && { wt_msg "$msg" 20; cfg_set HW_NOTICE_SEEN 1; }
   return 0
@@ -257,7 +256,7 @@ settings_menu() {
 # the menu review of 0.21.0) must not take a working receiver down. Your settings are offered as a file first.
 uninstall_all() {
   local word
-  wt_yesno "UNINSTALL EVERYTHING?\n\nThis removes FlightInfo, ACARS, all feeders and the decoder installed through this menu.\n\nFirst, keep your settings as a file? (Maintenance -> Save settings, or: zenithboard settings export)" 14 || return 0
+  wt_yesno "UNINSTALL EVERYTHING?\n\nThis removes FlightInfo, all feeders and the decoder installed through this menu (and ACARS / Grafana if an older ZenithBoard installed them).\n\nFirst, keep your settings as a file? (Maintenance -> Save settings, or: zenithboard settings export)" 14 || return 0
   word=$(wt_input "To go on, type the word  uninstall  (anything else cancels)." "") || return 0
   [ "$word" = uninstall ] || { wt_msg "Not uninstalled: nothing was changed." 7; return 0; }
   clear
@@ -267,7 +266,7 @@ uninstall_all() {
   netwatch_remove_units
   gain_log_remove_units
   stats_remove_units
-  is_acars && remove_acars
+  [ -z "$(acars_leftovers)" ] || acars_remove --yes
   is_flightinfo && remove_flightinfo
   is_planefinder && remove_planefinder
   is_fr24 && remove_fr24
@@ -308,7 +307,6 @@ maintenance_menu() {
   done
 }
 
-weak_hw_tag() { if is_low_mem || is_old_pi; then echo " [not for this Pi]"; fi; }
 
 main_menu() {
   local c
@@ -316,20 +314,18 @@ main_menu() {
     c=$(wt_menu "ZenithBoard $ZB_VERSION   (units: $(cfg_get UNITS), radius: $(cfg_get RADIUS))\n\nPick a step. You can come back any time to add or remove things." \
       1 "ADSB        - decoder + share to ADSB Exchange, FlightAware, FR24..." \
       2 "FlightInfo  - dot-matrix wall for an old tablet" \
-      3 "ACARS       - optional ACARS messages in Grafana (2nd dongle)$(weak_hw_tag)" \
-      4 "Settings    - network (Wi-Fi, IP, domain), receiver, wall, logs" \
-      5 "Status      - what is running" \
-      6 "Update      - ZenithBoard and the wall in seconds, or everything" \
-      7 "Maintenance - save or restore your settings, uninstall" \
+      3 "Settings    - network (Wi-Fi, IP, domain), receiver, wall, logs" \
+      4 "Status      - what is running" \
+      5 "Update      - ZenithBoard and the wall in seconds, or everything" \
+      6 "Maintenance - save or restore your settings, uninstall" \
       0 "Exit") || exit 0
     case "$c" in
       1) adsb_menu ;;
       2) flightinfo_menu ;;
-      3) acars_menu ;;
-      4) settings_menu ;;
-      5) clear; "$ROOT/bin/zenithboard" status; read -rp "Press Enter..." _ ;;
-      6) update_menu ;;
-      7) maintenance_menu ;;
+      3) settings_menu ;;
+      4) clear; "$ROOT/bin/zenithboard" status; read -rp "Press Enter..." _ ;;
+      5) update_menu ;;
+      6) maintenance_menu ;;
       *) exit 0 ;;
     esac
   done

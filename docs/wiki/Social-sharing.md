@@ -11,7 +11,7 @@ Off by default. Switched on, the Pi posts the aircraft worth a post — a milita
 The map can be a plain map, a dark one, satellite, terrain, or none (the track on black, nothing fetched). Until 0.24.0 a third look, `dots`, drew the track in dots in place of a map; it was taken out at the owner's word. A Pi still set to it posts `dotmap`, and the update says so with the command.
 
 ```bash
-sudo zenithboard social setup      # the Bluesky account, the words, the picture   (or: menu -> 4 Settings -> 6 Social sharing)
+sudo zenithboard social setup      # the Bluesky account, the words, the picture   (or: menu -> 3 Settings -> 6 Social sharing)
 sudo zenithboard social test       # draw the picture, print the text, post nothing
 sudo zenithboard social on         # from now on, under the rules you chose
 ```

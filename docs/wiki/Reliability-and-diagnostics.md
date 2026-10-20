@@ -2,7 +2,7 @@
 
 A wall on the garage wall is only as good as the Pi behind it, and a Pi outdoors on Wi-Fi fails in ways a desk machine does not: it freezes, it loses the network at 01:00, it browns out when the power supply is cold. These tools exist for that.
 
-**Everything here is off until you turn it on**, in menu *4 Settings → 5 Reliability* or with the commands below. Nothing was added to the Pi silently.
+**Everything here is off until you turn it on**, in menu *3 Settings → 5 Reliability* or with the commands below. Nothing was added to the Pi silently.
 
 ## The health screen
 

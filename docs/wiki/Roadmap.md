@@ -42,7 +42,6 @@ Two *Later* items are to be built from what the reference Pi measures, not from 
 |---|---|
 | Plane Finder never fed | A night of feed confirmed on Plane Finder's own site — or a "not verified" caveat in the menu |
 | A fixed IP address never applied for real | `zenithboard net static …` on the reference Pi, then back to DHCP, with a keyboard and screen at hand |
-| ACARS + Grafana never run for long | A second dongle, a 131 MHz antenna and a week of messages — on a 2 GB board ([Hardware](Hardware)) |
 | 978 MHz UAT (United States) | Run by a US user — or marked *experimental, outside 1.0*, so it stops being a caveat |
 
 And three proofs of stability that no caveat names yet:
@@ -57,7 +56,6 @@ And three proofs of stability that no caveat names yet:
 * **Enrich the statistics page**, later, once there are some weeks of real data to look at: coverage by direction (which side of the sky the antenna hears best) and the airlines seen most often. The page today shows messages per hour, the farthest aircraft and aircraft per day ([Statistics](Statistics)); nothing is added before the real figures show what is worth drawing.
 * **A decision on AirNav RadarBox.** A fifth feeder is only worth it if its MLAT does not fight the single-MLAT rule. Waiting on a few nights of data first.
 * ~~Wi-Fi hardening~~ — done in 0.21.0: `zenithboard wifi harden on`, off by default, reversible.
-* **Grafana's generated password on a real Grafana.** It is tested against stand-ins only; it gets its proof when ACARS is installed on a real Pi.
 
 ## Later — good ideas, no urgency
 

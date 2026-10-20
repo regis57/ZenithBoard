@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1   # v7.0.1
       - name: shellcheck
-        run: shellcheck -x -S warning install.sh bin/zenithboard bin/run-acarsdec bin/zenithboard-demo lib/*.sh tests/*.sh tools/*.sh
+        run: shellcheck -x -S warning install.sh bin/zenithboard bin/zenithboard-demo lib/*.sh tests/*.sh tools/*.sh
       - name: What the split-flap picture needs, as a Pi installs it (Pillow, the DejaVu fonts)
         run: sudo apt-get update -qq && sudo apt-get install -y -qq python3-pil fonts-dejavu-core
       - name: Python tests
@@ -24,7 +24,6 @@ jobs:
           bash tests/test_update_verify.sh
           bash tests/test_docs.sh
           bash tests/test_units.sh
-          bash tests/test_acars_password.sh
           bash tests/test_patches.sh
           bash tests/test_security.sh
           bash tests/test_stats.sh
@@ -38,6 +37,7 @@ jobs:
           bash tests/test_gain.sh
           bash tests/test_reliability.sh
           bash tests/test_menus.sh
+          bash tests/test_legacy.sh
           bash tests/test_install.sh
       - name: JavaScript tests
         run: |
