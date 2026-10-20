@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// The statistics page: reads /api/stats and draws three charts, one series each, with a hover tooltip.
+// The statistics page (0.37.0 in ZenithBoard's look): the name in the wall's dots, a period toggle (24 hours, 7 days,
+// 30 days) that every chart and list follows except the sky by hour, and the weekly posts' lists, cargo, business
+// jets, military and general aviation, with their flags. Reads /api/stats?range=...
 (function () {
   "use strict";
   var $ = function (id) { return document.getElementById(id); };
@@ -31,18 +33,44 @@
   }
   function shortDay(d) { var p = d.split("-"); return p[2] + "/" + p[1]; }
 
+
+  // ---- the brand: the name in the 5 x 7 dots of the wall, the unlit ones faint behind
+  var THEME_HEX = { amber: "#ffb000", green: "#39ff6a", red: "#ff3b30", white: "#e8e8e8", turquoise: "#00d6d7" };
+  function dots(mount, text, pitch) {
+    var F = window.Font5x7;
+    if (!mount || !F) { if (mount) mount.textContent = text; return; }
+    var cols = text.length * 6 + 1, rows = 9, r = pitch * 0.38;
+    var s = el("svg", { viewBox: "0 0 " + cols * pitch + " " + rows * pitch, "aria-hidden": "true" });
+    for (var i = 0; i < text.length; i++) {
+      var g = F.GLYPHS[text[i]] || F.GLYPHS[" "] || [];
+      for (var y = 0; y < 7; y++) for (var x = 0; x < 5; x++) {
+        var lit = g[y] && g[y][x] === "#";
+        s.appendChild(el("circle", { "class": lit ? "d-on" : "d-off", cx: (1 + i * 6 + x + 0.5) * pitch, cy: (1 + y + 0.5) * pitch, r: lit ? r : r * 0.7 }));
+      }
+    }
+    mount.innerHTML = ""; mount.appendChild(s);
+  }
+  function lighter(hex) {
+    var n = parseInt(hex.slice(1), 16), c = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map(function (v) { return Math.round(v + (255 - v) * 0.4); });
+    return "#" + c.map(function (v) { return ("0" + v.toString(16)).slice(-2); }).join("");
+  }
+  function theme(name) {
+    var hex = THEME_HEX[name] || THEME_HEX.amber, st = document.documentElement.style;
+    st.setProperty("--on", hex); st.setProperty("--on-hot", lighter(hex));
+  }
+
   function bars(mount, labels, values, unit, labelEvery, hot, W) {
     W = W || 720;
-    var H = 220, L = 50, R = 8, T = 16, B = 28, w = W - L - R, h = H - T - B;
-    var max = Math.max(1, Math.max.apply(null, values)) * 1.08, tk = ticks(max);
+    var H = 220, L = 50, R = 8, T = 18, B = 28, w = W - L - R, h = H - T - B;
+    var max = Math.max(4, Math.max.apply(null, values)) * 1.1, tk = ticks(max);   // small counts: whole lines
     var s = el("svg", { viewBox: "0 0 " + W + " " + H }), g = el("g", { "class": "grid" }), ax = el("g", { "class": "axis" });
     tk.forEach(function (v) { var y = T + h - v / max * h; g.appendChild(el("line", { x1: L, x2: W - R, y1: y, y2: y })); ax.appendChild(el("text", { x: L - 6, y: y + 4, "text-anchor": "end" }, axisFmt(v))); });
     s.appendChild(g); s.appendChild(ax);
-    var n = values.length, gap = 2, bw = Math.max(1, (w - gap * (n - 1)) / n);
+    var n = values.length, gap = n > 20 ? 2 : 4, bw = Math.max(1, (w - gap * (n - 1)) / n);
     values.forEach(function (v, i) {
       var x = L + i * (bw + gap), bh = v / max * h, y = T + h - bh;
-      s.appendChild(el("rect", { "class": "bar" + (i === hot ? " hot" : ""), x: x, y: y, width: bw, height: bh, rx: Math.min(3, bw / 2) }));
-      if (i === hot && v > 0) s.appendChild(el("text", { "class": "lbl", x: x + bw / 2, y: y - 5, "text-anchor": "middle" }, fmt(v) + unit));
+      s.appendChild(el("rect", { "class": "bar" + (i === hot ? " hot" : ""), x: x, y: y, width: bw, height: bh, rx: Math.min(2, bw / 2) }));
+      if (i === hot && v > 0) s.appendChild(el("text", { "class": "lbl", x: Math.min(Math.max(x + bw / 2, L + 30), W - 30), y: y - 6, "text-anchor": "middle" }, fmt(v) + unit));
       var hit = el("rect", { "class": "hit", x: x - gap / 2, y: T, width: bw + gap, height: h });
       hit.addEventListener("mousemove", function (e) { showTip(e, labels[i] + ": " + fmt(v) + unit); });
       hit.addEventListener("mouseleave", hideTip);
@@ -53,21 +81,29 @@
   }
   function line(mount, labels, values, unit, labelEvery, hot, W) {
     W = W || 720;
-    var H = 220, L = 50, R = 10, T = 16, B = 28, w = W - L - R, h = H - T - B;
-    var lo = Math.min.apply(null, values), hi = Math.max.apply(null, values), pad = (hi - lo) * 0.25 || 10;
+    var H = 220, L = 50, R = 12, T = 18, B = 28, w = W - L - R, h = H - T - B;
+    var known = values.filter(function (v) { return v !== null && v !== undefined; });
+    if (!known.length) known = [0];
+    var lo = Math.min.apply(null, known), hi = Math.max.apply(null, known), pad = (hi - lo) * 0.25 || 10;
     var min = Math.max(0, Math.floor((lo - pad) / 50) * 50), max = Math.ceil((hi + pad) / 50) * 50 || 50;
     var s = el("svg", { viewBox: "0 0 " + W + " " + H }), g = el("g", { "class": "grid" }), ax = el("g", { "class": "axis" });
     for (var v = min; v <= max; v += 50) { var y = T + h - (v - min) / (max - min) * h; g.appendChild(el("line", { x1: L, x2: W - R, y1: y, y2: y })); ax.appendChild(el("text", { x: L - 6, y: y + 4, "text-anchor": "end" }, fmt(v))); }
     s.appendChild(g); s.appendChild(ax);
     var step = values.length > 1 ? w / (values.length - 1) : 0;
-    var pts = values.map(function (v, i) { return [L + (values.length > 1 ? i * step : w / 2), T + h - (v - min) / (max - min) * h]; });
-    var d = pts.map(function (p, i) { return (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1); }).join(" ");
-    if (pts.length > 1) {
-      s.appendChild(el("path", { "class": "area", d: d + " L" + pts[pts.length - 1][0] + " " + (T + h) + " L" + pts[0][0] + " " + (T + h) + " Z" }));
+    // a slot with no sample is a gap: the line stops and starts again (0.37.0), never drops to zero
+    var pts = values.map(function (v, i) { return v === null || v === undefined ? null : [L + (values.length > 1 ? i * step : w / 2), T + h - (v - min) / (max - min) * h]; });
+    var runs = [], cur = [];
+    pts.forEach(function (p) { if (p) cur.push(p); else if (cur.length) { runs.push(cur); cur = []; } });
+    if (cur.length) runs.push(cur);
+    runs.forEach(function (r) {
+      if (r.length < 2) return;
+      var d = r.map(function (p, i) { return (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1); }).join(" ");
+      s.appendChild(el("path", { "class": "area", d: d + " L" + r[r.length - 1][0] + " " + (T + h) + " L" + r[0][0] + " " + (T + h) + " Z" }));
       s.appendChild(el("path", { "class": "line", d: d }));
-    }
+    });
     pts.forEach(function (p, i) {
-      if (i === hot || pts.length === 1) { s.appendChild(el("circle", { "class": "dot", cx: p[0], cy: p[1], r: 5 })); s.appendChild(el("text", { "class": "lbl", x: p[0], y: p[1] - 10, "text-anchor": "middle" }, fmt(values[i]) + unit)); }
+      if (!p) return;
+      if (i === hot || pts.length === 1) { s.appendChild(el("circle", { "class": "dot", cx: p[0], cy: p[1], r: 5 })); s.appendChild(el("text", { "class": "lbl", x: Math.min(Math.max(p[0], L + 30), W - 30), y: p[1] - 10, "text-anchor": "middle" }, fmt(values[i]) + unit)); }
       var hw = pts.length > 1 ? step : w;
       var hit = el("rect", { "class": "hit", x: p[0] - hw / 2, y: T, width: hw, height: h });
       hit.addEventListener("mousemove", function (e) { showTip(e, labels[i] + ": " + fmt(values[i]) + unit); });
@@ -77,39 +113,83 @@
     });
     mount.innerHTML = ""; mount.appendChild(s);
   }
-
-  // 0.31.0: the sky by hour, a row per day and a column per hour, darker where more aircraft were overhead
-  function heat(mount, rows) {
-    var W = 720, L = 50, T = 4, B = 22, R = 8, cw = (W - L - R) / 24, ch = 14, H = T + rows.length * ch + B;
+  // the sky by hour: a lit dot per hour, as on the weekly card, brighter where more aircraft had a position
+  function heat(mount, rows, W) {
+    W = W || 980;
+    var L = 52, T = 4, B = 22, R = 6, cw = (W - L - R) / 24, ch = W < 600 ? 12 : 15, H = T + rows.length * ch + B;
     var max = 0;
     rows.forEach(function (r) { r.hours.forEach(function (v) { if (v !== null && v > max) max = v; }); });
     var s = el("svg", { viewBox: "0 0 " + W + " " + H }), ax = el("g", { "class": "axis" });
+    var rad = Math.min(cw, ch) * 0.36;
     rows.forEach(function (r, i) {
       var y = T + i * ch;
-      if (i % 2 === 0 || rows.length <= 7) ax.appendChild(el("text", { x: L - 6, y: y + ch - 3, "text-anchor": "end" }, shortDay(r.day)));
+      if (i % 3 === 0 || i === rows.length - 1) ax.appendChild(el("text", { x: L - 8, y: y + ch / 2 + 4, "text-anchor": "end" }, shortDay(r.day)));
       r.hours.forEach(function (v, hh) {
-        var x = L + hh * cw, c = el("rect", { "class": "cell" + (v === null ? " none" : ""), x: x + 1, y: y + 1, width: cw - 2, height: ch - 2, rx: 2 });
-        if (v !== null) c.setAttribute("opacity", (0.08 + 0.92 * (max ? v / max : 0)).toFixed(2));
+        var c = el("circle", { "class": "cell" + (v === null ? " none" : ""), cx: L + hh * cw + cw / 2, cy: y + ch / 2, r: rad });
+        if (v !== null) c.setAttribute("opacity", (0.1 + 0.9 * (max ? v / max : 0)).toFixed(2));
         c.addEventListener("mousemove", function (e) { showTip(e, shortDay(r.day) + " " + (hh < 10 ? "0" : "") + hh + "h: " + (v === null ? "no sample" : fmt(v) + " aircraft")); });
         c.addEventListener("mouseleave", hideTip);
         s.appendChild(c);
       });
     });
-    for (var hh = 0; hh < 24; hh += 3) ax.appendChild(el("text", { x: L + hh * cw + cw / 2, y: H - 6, "text-anchor": "middle" }, (hh < 10 ? "0" : "") + hh + "h"));
+    for (var hh = 0; hh < 24; hh += W < 600 ? 6 : 3) ax.appendChild(el("text", { x: L + hh * cw + cw / 2, y: H - 6, "text-anchor": "middle" }, (hh < 10 ? "0" : "") + hh + "h"));
     s.appendChild(ax);
     mount.innerHTML = ""; mount.appendChild(s);
   }
-  function ranks(mount, pairs, empty) {
+  function node(tag, cls, text) { var n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n; }
+  function flag(cc) {
+    if (!/^[A-Z]{2}$/.test(cc || "")) return node("span", "noflag", "?");
+    var img = node("img", "flag"); img.src = "/flags/" + cc + ".png"; img.alt = cc;
+    img.onerror = function () { var n = node("span", "noflag", cc); if (img.parentNode) img.parentNode.replaceChild(n, img); };
+    return img;
+  }
+  // a ranked list: [lead (a flag)], the name (and, in grey, what goes with it), the count, a bar under it
+  function ranks(mount, pairs, empty, opts) {
+    opts = opts || {};
     mount.innerHTML = "";
-    if (!pairs || !pairs.length) { var p = document.createElement("p"); p.className = "empty"; p.textContent = empty; mount.appendChild(p); return; }
-    var max = pairs[0][1], ol = document.createElement("ol");
-    pairs.forEach(function (kv) {
-      var li = document.createElement("li"), f = document.createElement("span"), n = document.createElement("span"), nm = document.createElement("span");
-      f.className = "fill"; f.style.width = (100 * kv[1] / max).toFixed(1) + "%";
-      nm.className = "name"; nm.textContent = kv[0]; n.className = "n"; n.textContent = fmt(kv[1]);
-      li.appendChild(f); li.appendChild(nm); li.appendChild(n); ol.appendChild(li);
+    if (!pairs || !pairs.length) { mount.appendChild(node("p", "empty", empty)); return; }
+    var max = pairs[0][1], ol = node("ol");
+    pairs.slice(0, opts.top || 10).forEach(function (kv) {
+      var li = node("li", opts.flags ? "flag" : ""), name = node("span", "name", opts.label ? opts.label(kv[0]) : kv[0]);
+      li.appendChild(opts.flags ? flag(kv[0]) : node("span"));
+      if (opts.extra && opts.extra(kv[0])) name.appendChild(node("i", "", opts.extra(kv[0])));
+      li.appendChild(name); li.appendChild(node("span", "n", fmt(kv[1])));
+      var f = node("span", "fill"); f.style.width = (100 * kv[1] / max).toFixed(1) + "%"; li.appendChild(f);
+      ol.appendChild(li);
     });
     mount.appendChild(ol);
+  }
+  function military(mount, list) {
+    mount.innerHTML = "";
+    var rows = [];
+    (list || []).forEach(function (e) { e.models.slice(0, 3).forEach(function (m, i) { rows.push([e, m, i]); }); });
+    if (!rows.length) { mount.appendChild(node("p", "empty", "None heard in this period.")); return; }
+    var max = Math.max.apply(null, rows.map(function (r) { return r[1][1]; }));
+    rows.forEach(function (r) {
+      var e = r[0], m = r[1], first = r[2] === 0, row = node("div", "row" + (first && rows[0] !== r ? " next" : ""));
+      var fl = first ? flag(e.cc) : node("span"); fl.classList.add("f"); row.appendChild(fl);
+      row.appendChild(node("span", "c", first ? e.country + " · " + fmt(e.total) : ""));
+      row.appendChild(node("span", "m", m[0]));
+      var b = node("span", "b"); b.style.width = (100 * m[1] / max).toFixed(1) + "%"; var bw = node("span", "bw"); bw.appendChild(b); row.appendChild(bw);
+      row.appendChild(node("span", "n", fmt(m[1])));
+      mount.appendChild(row);
+    });
+  }
+  var GA = [["heli", "Helicopters"], ["light", "Light aircraft"], ["glider", "Gliders"], ["other", "Drones and balloons"]];
+  function general(mount, misc) {
+    mount.innerHTML = "";
+    misc = misc || {};
+    var other = {};
+    ["drone", "balloon"].forEach(function (g) { ((misc[g] || {}).models || []).forEach(function (kv) { other[kv[0]] = (other[kv[0]] || 0) + kv[1]; }); });
+    var o = Object.keys(other).map(function (k) { return [k, other[k]]; }).sort(function (a, b) { return b[1] - a[1]; });
+    misc.other = { total: o.reduce(function (t, kv) { return t + kv[1]; }, 0), models: o };
+    GA.forEach(function (g) {
+      var e = misc[g[0]] || { total: 0, models: [] }, fig = node("figure"), big = node("div", "big");
+      big.appendChild(node("b", "", fmt(e.total))); big.appendChild(node("span", "", g[1]));
+      fig.appendChild(big); fig.appendChild(node("figcaption", "", "Make and model"));
+      var r = node("div", "ranks"); fig.appendChild(r); mount.appendChild(fig);
+      ranks(r, e.models, "None heard in this period.", { top: 6 });
+    });
   }
 
   // The farthest aircraft, in words (0.22.0): "18/10 14:32 · Ryanair FR8526 (RYR8526) · Charleroi (CRL) → Reggio
@@ -153,13 +233,16 @@
     a.href = version ? RELEASES + "/tag/v" + version : RELEASES;
   }
 
+
   function render(d) {
-    $("sub").textContent = d.samples + " samples of 15 minutes since " + d.since + ", 30 days kept.";
-    var t = d.today || {};
+    var w = d.window || {}, t = w.totals || {}, per = w.label || "the last 30 days", days = w.range !== "24h";
+    $("sub").textContent = d.samples + " samples of 15 minutes since " + d.since + ", 30 days kept · " + per;
     $("t-aircraft").textContent = fmt(t.aircraft || 0);
+    $("t-aircraft-d").textContent = "distinct aircraft, " + per + ", a floor";
     $("t-messages").textContent = fmt(t.messages || 0);
-    $("t-busiest").textContent = t.busiest_hour === null || t.busiest_hour === undefined ? "nothing yet today" : "busiest hour " + (t.busiest_hour < 10 ? "0" : "") + t.busiest_hour + ":00, " + fmt(t.busiest_messages);
+    $("t-busiest").textContent = t.busiest_hour === null || t.busiest_hour === undefined ? "nothing yet" : "busiest hour " + (t.busiest_hour < 10 ? "0" : "") + t.busiest_hour + ":00, " + fmt(t.busiest_messages);
     $("t-far").textContent = (t.farthest_km || 0) + " km";
+    $("t-far-d").textContent = t.farthest_when ? "on " + shortDay(t.farthest_when.slice(0, 10)) + " at " + t.farthest_when.slice(11) : per;
     $("t-best").textContent = d.best ? d.best.farthest_km + " km" : "–";
     $("t-bestday").textContent = d.best ? "on " + shortDay(d.best.day) : "";
     var f = d.farthest || {};
@@ -169,34 +252,70 @@
       $("r-note").textContent = "The " + d.best.farthest_km + " km of " + shortDay(d.best.day) + " in the box above has no details: they are written down since ZenithBoard 0.22.0.";
       $("r-note").hidden = false;
     }
-    var hl = d.hours.map(function (h) { return (h.hour < 10 ? "0" : "") + h.hour + "h"; }), hv = d.hours.map(function (h) { return h.messages; });
-    var hot = hv.indexOf(Math.max.apply(null, hv));
-    bars($("c-msgs"), hl, hv, "", 3, hot);
-    var dl = d.days.map(function (x) { return shortDay(x.day); });
-    var fv = d.days.map(function (x) { return x.farthest_km; }), pv = d.days.map(function (x) { return x.aircraft; });
-    var every = d.days.length > 14 ? 7 : d.days.length > 7 ? 2 : 1;
-    // the two half-width charts get a narrower drawing, so their text is the same size as the wide one
-    var half = window.innerWidth >= 760 ? 360 : 720;
-    line($("c-far"), dl, fv, " km", every, fv.indexOf(Math.max.apply(null, fv)), half);
-    bars($("c-planes"), dl, pv, "", every, pv.indexOf(Math.max.apply(null, pv)), half);
-    if (d.heat && d.heat.length) heat($("c-heat"), d.heat);
-    var fl = d.fleet || {};
-    var since = fl.days ? " Counted since this page's fleet lists began (ZenithBoard 0.31.0): " + fl.days + " day" + (fl.days > 1 ? "s" : "") + "." : "";
-    ranks($("c-airlines"), fl.airlines, "Nothing yet: the lists start with ZenithBoard 0.31.0, on the next quarter hour.");
-    ranks($("c-types"), fl.types, fl.aircraft ? "No type known: the decoder has no aircraft database. Turn on tar1090's, offline: sudo zenithboard data localdb on" : "Nothing yet.");
+    var labels = w.labels || [], n = labels.length, every = n > 24 ? 5 : n > 12 ? 3 : 1;
+    // drawings sized to the screen, so their text stays the same size on a phone as on a desk (0.37.0)
+    var phone = window.innerWidth < 760, wide = phone ? 440 : 980, half = phone ? 440 : 480;
+    var mv = w.messages || [], fv = w.farthest || [], av = w.aircraft || [];
+    $("c-msgs-sub").textContent = "· " + (days ? "per day" : "per hour") + ", " + per;
+    $("c-far-sub").textContent = "· km, the farthest " + (days ? "each day" : "each hour");
+    $("c-planes-sub").textContent = "· " + (w.aircraft_note || "") ;
+    if (phone) every = n > 24 ? 7 : n > 12 ? 4 : 2;
+    bars($("c-msgs"), labels, mv, "", every, mv.indexOf(Math.max.apply(null, mv)), wide);
+    line($("c-far"), labels, fv, " km", every, fv.indexOf(Math.max.apply(null, fv.filter(function (v) { return v !== null; }).concat([0]))), half);
+    bars($("c-planes"), labels, av, "", every, av.indexOf(Math.max.apply(null, av)), half);
+    if (d.heat && d.heat.length) heat($("c-heat"), d.heat, phone ? 440 : 980);
+    var fl = d.fleet || {}, names = fl.country_names || {}, cm = fl.cargo_models || {};
+    Array.prototype.forEach.call(document.querySelectorAll(".per"), function (s) { s.textContent = "· distinct aircraft, " + per; });
+    ranks($("c-airlines"), fl.airlines, "Nothing in this period yet: the lists start with ZenithBoard 0.31.0.");
+    ranks($("c-types"), fl.types, fl.aircraft ? "No model known: the decoder has no aircraft database. Turn on tar1090's, offline: sudo zenithboard data localdb on" : "Nothing in this period yet.");
     if (fl.altitudes && fl.aircraft) {
-      bars($("c-alt"), fl.altitudes.labels, fl.altitudes.counts, "", 1, fl.altitudes.counts.indexOf(Math.max.apply(null, fl.altitudes.counts)));
-      $("c-alt-sub").textContent = "\u00b7 distinct aircraft by altitude in " + (fl.alt_unit || "km") + ", 30 days, the altitude last seen." + since;
-    }
-    var rows = "<tr><th>Day</th><th>Aircraft</th><th>Messages</th><th>Farthest km</th><th>Samples</th></tr>";
-    d.days.slice().reverse().forEach(function (x) { rows += "<tr><td>" + x.day + "</td><td>" + fmt(x.aircraft) + "</td><td>" + fmt(x.messages) + "</td><td>" + x.farthest_km + "</td><td>" + x.samples + "</td></tr>"; });
+      bars($("c-alt"), fl.altitudes.labels, fl.altitudes.counts, "", phone ? 2 : 1, fl.altitudes.counts.indexOf(Math.max.apply(null, fl.altitudes.counts)), wide);
+      $("c-alt-sub").textContent = "· distinct aircraft by the altitude last seen, in " + (fl.alt_unit || "km") + ", " + per;
+    } else { $("c-alt").innerHTML = ""; $("c-alt-sub").textContent = "· nothing in this period yet"; }
+    $("n-cargo").textContent = fmt(fl.cargo_total || 0);
+    $("n-biz").textContent = fmt(fl.bizjet_total || 0);
+    ranks($("c-cargo"), fl.cargo, "None heard in this period.", { top: 6, extra: function (k) { return cm[k] ? cm[k][0] + " (" + fmt(cm[k][1]) + ")" : ""; } });
+    ranks($("c-biz"), fl.bizjets, "None heard in this period.", { top: 6 });
+    ranks($("c-bizc"), fl.bizjet_countries, "None heard in this period.", { top: 6, flags: true, label: function (cc) { return names[cc] || cc; } });
+    $("n-mil").textContent = fmt(fl.military_total || 0);
+    $("n-milc").textContent = fmt((fl.military || []).length);
+    military($("c-mil"), fl.military);
+    general($("c-ga"), fl.misc);
+    var rows = "<tr><th>" + (days ? "Day" : "Hour") + "</th><th>" + (days ? "Aircraft" : "With a position") + "</th><th>Messages</th><th>Farthest km</th></tr>";
+    for (var i = n - 1; i >= 0; i--) rows += "<tr><td>" + labels[i] + "</td><td>" + fmt(av[i] || 0) + "</td><td>" + fmt(mv[i] || 0) + "</td><td>" + (fv[i] === null || fv[i] === undefined ? "\u2013" : fv[i]) + "</td></tr>";
     $("table").innerHTML = rows;
   }
 
-  fetch("/api/stats", { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (d) {
-    versionLine(d.version);
-    if (!d.enabled) { $("sub").textContent = "Off."; $("off").hidden = false; return; }
-    if (!d.samples) { $("sub").textContent = "On, waiting for the first sample."; $("empty").hidden = false; return; }
-    $("dash").hidden = false; render(d);
-  }).catch(function () { $("sub").textContent = "Could not read /api/stats."; });
+  // ---- the period: kept in the address (#7d) and, when the browser allows it, for the next visit
+  var RANGES = ["24h", "7d", "30d"];
+  function chosen() {
+    var h = (location.hash || "").slice(1);
+    if (RANGES.indexOf(h) >= 0) return h;
+    try { var s = localStorage.getItem("zb-stats-range"); if (RANGES.indexOf(s) >= 0) return s; } catch (e) { /* private mode */ }
+    return "30d";
+  }
+  function load(range) {
+    Array.prototype.forEach.call(document.querySelectorAll("#toggle button"), function (b) {
+      b.classList.toggle("on", b.getAttribute("data-range") === range);
+      b.setAttribute("aria-pressed", b.getAttribute("data-range") === range ? "true" : "false");
+    });
+    fetch("/api/stats?range=" + range, { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (d) {
+      versionLine(d.version);
+      theme(d.theme);
+      if (!d.enabled) { $("sub").textContent = "Off."; $("off").hidden = false; return; }
+      if (!d.samples) { $("sub").textContent = "On, waiting for the first sample."; $("empty").hidden = false; return; }
+      $("toggle").hidden = false; $("dash").hidden = false; render(d);
+    }).catch(function () { $("sub").textContent = "Could not read /api/stats."; });
+  }
+  Array.prototype.forEach.call(document.querySelectorAll("#toggle button"), function (b) {
+    b.addEventListener("click", function () {
+      var r = b.getAttribute("data-range");
+      try { localStorage.setItem("zb-stats-range", r); } catch (e) { /* private mode: the address keeps it */ }
+      if (history.replaceState) history.replaceState(null, "", "#" + r); else location.hash = r;
+      load(r);
+    });
+  });
+  dots($("logo"), "ZENITHBOARD", 10);
+  dots($("logo-sub"), "STATISTICS", 5);
+  load(chosen());
 })();

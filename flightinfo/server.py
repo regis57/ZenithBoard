@@ -26,7 +26,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.36.1"
+VERSION = "0.37.0"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -166,7 +166,7 @@ def _count_lines(path, default):
         return default
 
 
-def read_stats(stats_dir=None, now=None):
+def read_stats(stats_dir=None, now=None, rng="30d"):
     stats_dir = stats_dir or STATS_DIR
     now = now or datetime.datetime.now()
     path = os.path.join(stats_dir, "stats.csv")
@@ -234,10 +234,115 @@ def read_stats(stats_dir=None, now=None):
         "days": day_list,
         "farthest": far,
         "heat": heat,
+        "window": stats_window(rows, stats_dir, now, rng),
     }
 
 
-HEAT_DAYS = 14
+# 0.37.0: the page's toggle. Each range: its totals and one series for the three charts, by hour for 24 hours and by
+# day for 7 or 30. The sky by hour keeps its thirty days whatever the toggle says.
+RANGES = {"24h": (1, "the last 24 hours"), "7d": (7, "the last 7 days"), "30d": (30, "the last 30 days")}
+
+
+def range_of(value):
+    return value if value in RANGES else "30d"
+
+
+def stats_window(rows, stats_dir, now, rng):
+    rng = range_of(rng)
+    if rng == "24h":
+        start = (now - datetime.timedelta(hours=23)).replace(minute=0, second=0, microsecond=0)
+        keys = [(start + datetime.timedelta(hours=i)) for i in range(24)]
+        labels = ["%02dh" % k.hour for k in keys]
+        slot = lambda when: when.replace(minute=0, second=0, microsecond=0)
+        index = {k: i for i, k in enumerate(keys)}
+    else:
+        n = RANGES[rng][0]
+        keys = [(now - datetime.timedelta(days=i)).date() for i in range(n - 1, -1, -1)]
+        labels = ["%02d/%02d" % (k.day, k.month) for k in keys]
+        slot = lambda when: when.date()
+        index = {k: i for i, k in enumerate(keys)}
+    msgs, far, pos, cnt = [0] * len(keys), [0] * len(keys), [0] * len(keys), [0] * len(keys)
+    by_hour = [0] * 24
+    best_when = None
+    for when, m, fk, p, seen in rows:
+        i = index.get(slot(when))
+        if i is None or when > now:
+            continue
+        msgs[i] += m
+        cnt[i] += 1
+        pos[i] += p
+        by_hour[when.hour] += m
+        if fk > far[i]:
+            far[i] = fk
+            if fk >= max(far):
+                best_when = when
+    if rng == "24h":
+        aircraft = [round(pos[i] / float(cnt[i]), 1) if cnt[i] else 0 for i in range(len(keys))]
+        note = "aircraft with a position, on average"
+        total = len(_fleet_lines(stats_dir, now, "24h")) or _count_lines(os.path.join(stats_dir, "seen-" + now.strftime("%Y-%m-%d")), 0)
+    else:
+        seen_all = set()
+        aircraft = []
+        for k in keys:
+            day = k.isoformat()
+            try:
+                with open(os.path.join(stats_dir, "seen-" + day), encoding="utf-8") as fh:
+                    s_ = set(x.strip() for x in fh if x.strip())
+            except OSError:
+                s_ = set()
+            seen_all |= s_
+            aircraft.append(len(s_))
+        note = "distinct aircraft per day, a floor"
+        total = len(seen_all)
+    bh = max(range(24), key=lambda h: by_hour[h]) if any(by_hour) else None
+    # a slot with no sample (the hour not yet reached, the receiver off) has no farthest: a gap in the line, not a 0
+    far_series = [far[i] if cnt[i] else None for i in range(len(keys))]
+    return {"range": rng, "label": RANGES[rng][1], "labels": labels, "messages": msgs, "farthest": far_series,
+            "aircraft": aircraft, "aircraft_note": note,
+            "totals": {"aircraft": total, "messages": sum(msgs), "farthest_km": max(far) if far else 0,
+                       "farthest_when": best_when.strftime("%Y-%m-%d %H:%M") if best_when else None,
+                       "busiest_hour": bh, "busiest_messages": by_hour[bh] if bh is not None else 0,
+                       "samples": sum(cnt)}}
+
+
+def _fleet_lines(stats_dir, now, rng):
+    """The addresses of the fleet files inside the range: whole days for 7 and 30, and for 24 hours today's and
+    yesterday's from the same time on (the last-seen column, 0.37.0)."""
+    out = set()
+    for name, keep in _fleet_names(stats_dir, now, rng):
+        try:
+            with open(os.path.join(stats_dir, name), encoding="utf-8") as fh:
+                for line in fh:
+                    f = line.rstrip("\n").split("\t")
+                    if f and f[0] and keep(f):
+                        out.add(f[0])
+        except OSError:
+            continue
+    return out
+
+
+def _fleet_names(stats_dir, now, rng):
+    """[(file name, keep(fields))] of the fleet files a range reads."""
+    try:
+        names = sorted(n for n in os.listdir(stats_dir) if n.startswith("fleet-"))
+    except OSError:
+        return []
+    rng = range_of(rng)
+    if rng == "24h":
+        today, yday = now.strftime("%Y-%m-%d"), (now - datetime.timedelta(days=1)).strftime("%Y-%m-%d")
+        cut = now.strftime("%H%M")
+        out = []
+        for n in names:
+            if n[6:] == today:
+                out.append((n, lambda f: True))
+            elif n[6:] == yday:
+                out.append((n, lambda f, cut=cut: len(f) > 6 and f[6] >= cut))
+        return out
+    first = (now - datetime.timedelta(days=RANGES[rng][0] - 1)).strftime("%Y-%m-%d")
+    return [(n, lambda f: True) for n in names if n[6:] >= first]
+
+
+HEAT_DAYS = 30
 FLEET_TOP = 10
 NOT_AIRCRAFT = {"GND", "TWR", "GRND", "SERV", "EMER"}
 CALLSIGN_PREFIX = re.compile(r"^([A-Z]{3})\d")
@@ -331,6 +436,21 @@ def in_military_range(hex_code):
 _cargo = {}
 
 
+def nice_name(name):
+    """A model as the posts and the page write it (0.37.0, from social.nice_type): "AIRBUS A-320neo" is "Airbus
+    A320neo", "BOEING 737-800" is "Boeing 737-800"; makers in capitals become words, model codes keep their letters."""
+    name = re.sub(r"\bA-(\d)", r"A\1", str(name or ""))
+    out = []
+    for w in name.split():
+        if w == "DE":                             # "DE HAVILLAND" is De Havilland, not DE Havilland
+            out.append("De")
+        elif w.isupper() and w.isalpha() and len(w) > 3:
+            out.append(w.capitalize())
+        else:
+            out.append(w)
+    return " ".join(out)
+
+
 def load_cargo():
     """{ICAO prefix: name} of the dedicated cargo airlines (0.35.0, flightinfo/data/cargo_airlines.json, each code
     checked against a published source). Airlines that fly cargo under their passenger prefix (Turkish, Qatar,
@@ -342,7 +462,7 @@ def load_cargo():
         except (OSError, ValueError, KeyError, TypeError, AttributeError):
             pass
     return _cargo
-_fleet_cache = {"key": None, "data": None}
+_fleet_cache = {}                     # key -> answer of read_fleet (0.37.0: one per range)
 
 
 def local_types(hexes, d):
@@ -385,7 +505,7 @@ def local_info(hexes, d):
     return out
 
 
-def read_fleet(cfg, stats_dir=None, now=None, since=None):
+def read_fleet(cfg, stats_dir=None, now=None, since=None, rng=None):
     """0.31.0: who flew over in thirty days, from the fleet-DAY files the timer writes: the airlines and the types
     most seen (distinct aircraft each), and how high they were. An airline is named from its callsign's prefix, as the
     wall does; the type is the one the sample wrote: the decoder's, or tar1090's when `data localdb on` (looked up by
@@ -393,22 +513,28 @@ def read_fleet(cfg, stats_dir=None, now=None, since=None):
     file changes."""
     stats_dir = stats_dir or STATS_DIR
     now = now or datetime.datetime.now()
-    # since: the first day counted, YYYY-MM-DD (0.33.0, the weekly post); thirty days otherwise
-    cut = since or (now - datetime.timedelta(days=30)).strftime("%Y-%m-%d")
-    try:
-        names = sorted(n for n in os.listdir(stats_dir) if n.startswith("fleet-") and n[6:] >= cut)
-    except OSError:
-        names = []
-    key = (tuple((n, os.path.getmtime(os.path.join(stats_dir, n))) for n in names), cfg.get("UNITS"), stats_dir)
-    if _fleet_cache["key"] == key:
-        return _fleet_cache["data"]
+    if rng:                                       # 0.37.0: the page's toggle, 24 hours to the quarter hour
+        picked = _fleet_names(stats_dir, now, rng)
+    else:
+        # since: the first day counted, YYYY-MM-DD (0.33.0, the weekly post); thirty days otherwise
+        cut = since or (now - datetime.timedelta(days=30)).strftime("%Y-%m-%d")
+        try:
+            picked = [(n, None) for n in sorted(n for n in os.listdir(stats_dir) if n.startswith("fleet-") and n[6:] >= cut)]
+        except OSError:
+            picked = []
+    names = [n for n, _ in picked]
+    key = (tuple((n, os.path.getmtime(os.path.join(stats_dir, n))) for n in names), cfg.get("UNITS"), stats_dir,
+           range_of(rng) if rng else None, now.strftime("%Y-%m-%d %H") if rng == "24h" else None)
+    hit = _fleet_cache.get(key)
+    if hit is not None:
+        return hit
     fleet = {}
-    for n in names:                               # oldest first: a later day's values replace an earlier one's
+    for n, keep in picked:                        # oldest first: a later day's values replace an earlier one's
         try:
             with open(os.path.join(stats_dir, n), encoding="utf-8") as fh:
                 for line in fh:
                     f = line.rstrip("\n").split("\t")
-                    if len(f) < 4 or not HEX_RE.match(f[0].upper()):
+                    if len(f) < 4 or not HEX_RE.match(f[0].upper()) or (keep and not keep(f)):
                         continue
                     # flight, altitude, type; since 0.36.0 the category and the military mark (older lines: blank)
                     v = (f[1:] + [""] * 5)[:5]
@@ -429,7 +555,7 @@ def read_fleet(cfg, stats_dir=None, now=None, since=None):
         if code in NOT_AIRCRAFT:                  # tar1090's database lists airport vehicles and towers too: not counted
             continue
         d = describe_type({"t": code, "category": cat}, types) if (code or cat) else {}
-        label = (d.get("type_name") or code) if code else ""
+        label = nice_name(d.get("type_name") or code) if code else ""
         shape = d.get("shape")
         m = CALLSIGN_PREFIX.match(flight.upper())
         if m and m.group(1) in cargo:             # 0.35.0: the cargo airlines, by their own callsign prefix
@@ -474,13 +600,16 @@ def read_fleet(cfg, stats_dir=None, now=None, since=None):
             "cargo": sorted(by_cargo.items(), key=lambda kv: (-kv[1], kv[0]))[:FLEET_TOP], "cargo_total": sum(by_cargo.values()),
             "bizjets": sorted(by_biz.items(), key=lambda kv: (-kv[1], kv[0]))[:FLEET_TOP], "bizjet_total": sum(by_biz.values()),
             "cargo_models": {n: max(v.items(), key=lambda kv: (kv[1], kv[0])) for n, v in cargo_models.items()},
-            "bizjet_countries": _top(biz_countries),
+            "bizjet_countries": _top({c: k for c, k in biz_countries.items() if c}),
+            "country_names": {c: country_name(c) for c in list(biz_countries) + list(mil) if c},
             "military": sorted(({"cc": c, "country": country_name(c), "total": sum(v.values()), "models": _top(v)}
                                 for c, v in mil.items()), key=lambda e: (-e["total"], e["country"]))[:FLEET_TOP],
             "military_total": sum(sum(v.values()) for v in mil.values()),
             "misc": {g: {"total": sum(v.values()), "models": _top(v)} for g, v in misc.items()},
             "altitudes": {"labels": labels, "counts": bands}}
-    _fleet_cache.update(key=key, data=data)
+    if len(_fleet_cache) >= 6:                    # three ranges and the weekly posts: a few answers, never a pile
+        _fleet_cache.clear()
+    _fleet_cache[key] = data
     return data
 
 
@@ -1695,14 +1824,18 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/stats":
             if not cfg_bool(cfg, "STATS"):
                 return self._send(200, {"enabled": False, "version": VERSION})
-            got = read_stats() or {"enabled": True, "samples": 0, "hours": [], "days": [], "today": None, "best": None}
-            return self._send(200, dict(got, version=VERSION, units=public_config(cfg)["units"], fleet=read_fleet(cfg)))
+            rng = range_of((parse_qs(url.query).get("range") or ["30d"])[0])   # 0.37.0: 24h, 7d or 30d
+            got = read_stats(rng=rng) or {"enabled": True, "samples": 0, "hours": [], "days": [], "today": None, "best": None}
+            return self._send(200, dict(got, version=VERSION, units=public_config(cfg)["units"],
+                                        theme=public_config(cfg).get("theme"), fleet=read_fleet(cfg, rng=rng)))
         if path == "/api/farthest":                    # asked by the statistics timer every quarter hour (lib/stats.sh)
             return self._send(200, farthest_answer(cfg))
         if path == "/stats":
             return self._file(STATIC_DIR, "stats.html")
         if path == "/social/preview":                 # the picture `zenithboard social test` drew, to look at before posting anything
             return self._file(SOCIAL_DIR, social_preview_name())
+        if re.match(r"^/flags/[A-Z]{2}\.png$", path):   # 0.37.0: the statistics page's flags (country-flag-icons, MIT)
+            return self._file(os.path.join(DATA_DIR, "flags"), path[len("/flags/"):])
         if path in ("/social/preview2", "/social/preview3", "/social/preview4"):   # the weekly posts' pictures (0.35.0, 0.36.0)
             name = "preview%s.png" % path[-1]
             if not os.path.isfile(os.path.join(SOCIAL_DIR, name)):

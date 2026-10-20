@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.37.0
+- **The statistics page in ZenithBoard's look**: the name in the wall's dots, numbers and bars in the wall's colour on black, grey for the rest; the sky by hour as lit dots. Asked for by the owner, with ZenithBoard's banners as the model.
+- **A period toggle, 24 h · 7 days · 30 days**, top right: the four numbers, the three charts (by hour for 24 hours, by day otherwise), the airlines, models and altitudes follow it. The sky by hour stays at thirty days (fourteen before). The choice stays in the address (`#7d`) and for the next visit. `/api/stats?range=`.
+- **The weekly posts' lists on the page**, for the period: cargo airlines with their most seen model, business jets and the countries they are registered in, military aircraft by country, general aviation; real flags, served from the Pi at `/flags/XX.png`.
+- The fleet files gain the time last seen, so the last 24 hours count yesterday's aircraft from the same time on. Model names as the posts write them on the page too (*Boeing 737-800*). An hour or a day with no sample is a gap in the farthest line, never a zero.
+- What it costs: each period worked out on demand and kept until a statistics file changes; previewed at desk and phone width on made-up statistics.
+
 ## 0.36.1
 - **Real flags on the weekly cards**, at scale: 48 × 32 pictures made once from country-flag-icons (MIT), the set tar1090 ships, in `flightinfo/data/flags`. 0.36.0 drew the wall's dot flags, crude at that size (the owner). `tools/flag-pixels.js` is gone.
 - **Fix: the country of an address in a nested block.** The ICAO table nests (Bermuda and the Isle of Man inside the United Kingdom's blocks, listed before its catch-all); 0.36.0's faster search gave the UK's military block, among others, to no country. Flattened once into intervals that do not overlap; checked against the table's first-match reading on 200 000 addresses. Found redrawing the cards.
