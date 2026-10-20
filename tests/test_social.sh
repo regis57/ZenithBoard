@@ -86,6 +86,8 @@ check "colour: a wall colour, or the wall's"       'social_set_colour green >/de
 check "sentence: factual by default, several, random, refused (0.29.0)" '[ "$(cfg_get SOCIAL_SENTENCE factual)" = factual ] && social_set_sentence "Story, lookup" | grep -q "one drawn" && [ "$(cfg_get SOCIAL_SENTENCE)" = story,lookup ] && social_set_sentence random >/dev/null && ! social_set_sentence prose >/dev/null && [ "$(cfg_get SOCIAL_SENTENCE)" = random ] && social_set_sentence factual >/dev/null'
 check "status names the sentence"                  'python3 "$SOCIAL_PY" status | grep -q "Post sentence: factual"'
 check "photo link: off by default, on and off (0.25.0)" '[ "$(cfg_get SOCIAL_PHOTOLINK 0)" = 0 ] && social_set_photolink on | grep -q "ON" && [ "$(cfg_get SOCIAL_PHOTOLINK)" = 1 ] && ! social_set_photolink maybe >/dev/null && social_set_photolink off >/dev/null && [ "$(cfg_get SOCIAL_PHOTOLINK)" = 0 ]'
+check "weekly summary: off by default, on says what it needs, off (0.33.0)" '[ "$(cfg_get SOCIAL_WEEKLY 0)" = 0 ] && cfg_set STATS 0 && social_set_weekly on | grep -q "statistics, which are OFF" && [ "$(cfg_get SOCIAL_WEEKLY)" = 1 ] && ! social_set_weekly maybe >/dev/null && social_set_weekly off | grep -q OFF && [ "$(cfg_get SOCIAL_WEEKLY)" = 0 ]'
+check "weekly summary: command and menu"           'grep -q "week-\$3" bin/zenithboard && grep -q "weekly \"7  A summary of the week" lib/social.sh && grep -q "remove \"12 Remove" lib/social.sh'
 check "units: metric, imperial or the wall's, nothing else (0.24.3)" 'social_set_units imperial >/dev/null && [ "$(cfg_get SOCIAL_UNITS)" = imperial ] && ! social_set_units feet >/dev/null && [ "$(cfg_get SOCIAL_UNITS)" = imperial ] && social_set_units wall >/dev/null && [ -z "$(cfg_get SOCIAL_UNITS "")" ]'
 check "map: the five, nothing else"                'social_set_map satellite >/dev/null && [ "$(cfg_get SOCIAL_MAP)" = satellite ] && ! social_set_map google >/dev/null && [ "$(cfg_get SOCIAL_MAP)" = satellite ]'
 check "the shell knows the Python lists"           'py=$(python3 -c "import sys; sys.path.insert(0, \"flightinfo\"); import social, server; print(\" \".join(social.MAP_CHOICES)); print(\" \".join(server.THEMES))"); [ "$(echo "$py" | head -1)" = "$SOCIAL_MAPS" ] && [ "$(echo "$py" | tail -1)" = "$SOCIAL_THEMES" ]'
@@ -147,5 +149,7 @@ fi
 
 # ---- the Python command line answers without a Pi
 check "status runs without a service"              'python3 "$SOCIAL_PY" status | grep -q "Social sharing: off"'
+check "status says the weekly summary"             'python3 "$SOCIAL_PY" status | grep -q "Weekly summary: off"'
+check "week-test with no statistics says so"       'ZENITHBOARD_STATS_DIR="$t/nostats" python3 "$SOCIAL_PY" week-test | grep -q "Nothing to sum up"'
 check "check with no account says so"              'rm -f "$SOCIAL_SECRETS"; python3 "$SOCIAL_PY" check | grep -q "No account configured"'
 exit $fail

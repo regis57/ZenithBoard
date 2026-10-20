@@ -245,6 +245,24 @@ social_set_photolink() {
     echo "Photo link: OFF. Posts carry no link to a photo."
   fi
 }
+# 0.33.0: a summary of the week, posted by the service on Sundays from 19:00: aircraft, messages, the busiest day and
+# hour, the airlines and type most seen, the posts made. From the statistics' files: never a distance or a direction.
+social_set_weekly() {
+  case "${1:-}" in
+    on)  cfg_set SOCIAL_WEEKLY 1 ;;
+    off) cfg_set SOCIAL_WEEKLY 0 ;;
+    "")  ;;
+    *)   echo "Weekly summary: on, off, test or post"; return 1 ;;
+  esac
+  if [ "$(cfg_get SOCIAL_WEEKLY 0)" = 1 ]; then
+    echo "Weekly summary: ON. On Sundays from 19:00 the service posts the week: aircraft heard, messages, the busiest day and hour, the airlines and the type most seen, with a picture of the week by hour. No distance, no direction."
+    [ "$(cfg_get STATS 0)" = 1 ] || echo "It is made from the statistics, which are OFF: nothing will be posted until  sudo zenithboard stats on"
+    [ "$(social_state)" = on ] || echo "Social sharing itself is OFF: the service that posts it starts with  sudo zenithboard social on"
+    echo "See it first, nothing posted:  sudo zenithboard social weekly test"
+  else
+    echo "Weekly summary: OFF."
+  fi
+}
 # 0.29.0: the shape of the post's words: factual (as before), story, board, spotter, lookup; several, comma-separated,
 # or random: one is drawn at each post. Templates filled from the flight's data; never the distance or direction.
 SOCIAL_SENTENCES="factual story board spotter lookup"
@@ -380,11 +398,12 @@ social_menu() {
       photolink "4  Link to the Planespotters photo page: $( [ "$(cfg_get SOCIAL_PHOTOLINK 0)" = 1 ] && echo ON || echo OFF )" \
       places "5  Town names from the region's own list (GeoNames, downloaded once): $( [ "$(cfg_get SOCIAL_PLACES 0)" = 1 ] && echo ON || echo OFF )" \
       sentence "6  The words of a post: $(cfg_get SOCIAL_SENTENCE factual)" \
-      test "7  Try it: draw the picture and show the text, post nothing" \
-      toggle "8  Switch sharing $( [ "$(social_state)" = on ] && echo OFF || echo ON )" \
-      post "9  Post now, once" \
-      status "10 Status" \
-      remove "11 Remove: account, state and service" \
+      weekly "7  A summary of the week, Sundays at 19:00: $( [ "$(cfg_get SOCIAL_WEEKLY 0)" = 1 ] && echo ON || echo OFF )" \
+      test "8  Try it: draw the picture and show the text, post nothing" \
+      toggle "9  Switch sharing $( [ "$(social_state)" = on ] && echo OFF || echo ON )" \
+      post "10 Post now, once" \
+      status "11 Status" \
+      remove "12 Remove: account, state and service" \
       back "Return to the previous menu") || return 0
     case "$c" in
       setup) social_setup || true ;;
@@ -402,6 +421,20 @@ social_menu() {
         picks=$(printf '%s' "$picks" | tr -d '"' | tr ' ' ',')
         [ -n "$picks" ] || picks=factual
         wt_msg "$(social_set_sentence "$picks")" 8 ;;
+      weekly)
+        if [ "$(cfg_get SOCIAL_WEEKLY 0)" = 1 ]; then
+          wt_yesno "The summary of the week is ON (Sundays from 19:00).\n\nTurn it OFF?" 9 && social_set_weekly off >/dev/null
+        else
+          local wc
+          wc=$(wt_menu "A summary of the week, posted on Sundays from 19:00: aircraft heard, messages, the busiest day and hour, the airlines and the type most seen, and a picture of the week by hour. Made from the statistics (menu Receiver -> Statistics). Never a distance or a direction." \
+            test "See this week's now: draw it and show the text, post nothing" \
+            on "Turn it on" \
+            back "Return to the previous menu") || continue
+          case "$wc" in
+            test) clear; social_need_tools && social_prepare_dir && sudo -u "$ZB_USER" python3 "$SOCIAL_PY" week-test; read -rp "Press Enter to continue..." _ ;;
+            on) wt_msg "$(social_set_weekly on)" 14 ;;
+          esac
+        fi ;;
       places)
         if [ "$(cfg_get SOCIAL_PLACES 0)" = 1 ]; then
           wt_yesno "Town names come from the region's own list.\n\nGo back to the lists shipped with ZenithBoard (and delete the region's list)?" 10 && social_set_places off >/dev/null

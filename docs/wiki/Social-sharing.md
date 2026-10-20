@@ -109,6 +109,25 @@ zenithboard logs social
 
 Several shapes, comma-separated (`story,spotter,lookup`), or `random`: one is drawn at each post. The reason the post was made comes first when the words do not already say it: `Rare visitor:`, `Heavy overhead:`, `Military traffic:`, `Helicopter:`. A range record keeps the factual words, which say "range record for 30 days" and where it was seen from rather than "overhead". A shape that lacks what it needs (an aircraft with neither airline nor type) or would pass 220 characters gives the factual text, which can be cut cleanly at Bluesky's 300. No shape ever says the distance or the direction from the receiver: with the area, they would place it. The hashtags, the map's credit and the photo link follow as before.
 
+## The week's summary (0.33.0, optional)
+
+`sudo zenithboard social weekly on` (menu *Social sharing → 7*, off by default): on Sundays from 19:00 the service posts the seven days ending that day, from the [statistics](Statistics) — so statistics must be on. The text:
+
+> The week above Trémery, 12–18 October: 3 587 aircraft heard, 58.7 million messages decoded.
+> Busiest day: Monday, 612 aircraft. Busiest hour: 13:00.
+> Most seen: Ryanair (2 144), easyJet (1 171), Lufthansa (762).
+> Top type: Airbus A320.
+> Posted here: 41 crossings.
+> #ADSB #avgeek #ZenithBoard
+
+The lines after the first are dropped from the end when the hashtags would not fit in Bluesky's 300 characters; the first always stays. The picture is drawn by the Pi (Pillow, 1200 × 675) in the posts' colour: the counts, the week by hour (a dot per hour, brighter where more aircraft had a position, as on the statistics page) and the airlines most seen as bars, with their names in plain text — no logos.
+
+![The weekly summary card (a preview, made-up figures)](https://raw.githubusercontent.com/regis57/ZenithBoard/main/docs/images/social-weekly.png)
+
+**What it never says**: a distance, a direction, a range. The farthest aircraft of the week is left out on purpose: named with the city nearest it, two such posts would narrow down where the antenna is. Only your own words for the place (the area of the wizard) say where.
+
+Once a week (the ISO week): a Pi switched off on Sunday evening posts nothing on Monday, a summary a day late not being what the account promises. A post that fails waits ten minutes like any other; a week with no statistics is skipped, said once in the journal (`zenithboard logs social`). `sudo zenithboard social weekly test` draws this week's so far and prints the text, posting nothing (see it at `/social/preview`); `social weekly post` posts it now, and Sunday's still goes out. The airlines and the type come from the fleet lists of 0.31.0; the crossings posted are counted from 0.33.0.
+
 ## The picture
 
 ### Dot-matrix with a map

@@ -1466,5 +1466,141 @@ class PublishTest(unittest.TestCase):
         self.assertFalse(os.path.exists(keep + ".png"), "the preview is the last picture drawn, whatever the look")
 
 
+class WeeklyTest(unittest.TestCase):
+    """0.33.0: the week's summary. Sunday from 19:00, once a week, from the statistics' files; never a distance."""
+
+    def setUp(self):
+        import datetime
+        self.d = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.d, ignore_errors=True)
+        self.now = datetime.datetime(2026, 10, 18, 19, 5)            # a Sunday
+        rows = ["when,messages,farthest_km,aircraft_pos,aircraft_seen"]
+        for i in range(8):                                           # the Saturday before the week, then Monday to Sunday
+            day = (self.now - datetime.timedelta(days=7 - i)).strftime("%Y-%m-%d")
+            for h in range(24):
+                if day == "2026-10-18" and h > 19:
+                    break
+                pos = 30 if h == 15 else 10
+                rows.append("%s %02d:00,%d,250,%d,%d" % (day, h, 1000, pos + (5 if day == "2026-10-16" else 0), 50))
+            with open(os.path.join(self.d, "seen-" + day), "w") as fh:
+                n = 120 if day == "2026-10-16" else 80
+                fh.write("".join("%06x\n" % (0x400000 + i * 1000 + k) for k in range(n)))
+        with open(os.path.join(self.d, "stats.csv"), "w") as fh:
+            fh.write("\n".join(rows) + "\n")
+        with open(os.path.join(self.d, "fleet-2026-10-16"), "w") as fh:
+            fh.write("4ca001\tRYR5ZK\t35000\tB738\n4ca002\tRYR12\t3000\tB738\n3c6444\tDLH4YK\t36000\tA320\n")
+        with open(os.path.join(self.d, "fleet-2026-10-10"), "w") as fh:      # before the week: not counted
+            fh.write("3c6445\tDLH9\t36000\tA320\n3c6446\tDLH8\t36000\tA320\n")
+        self.c = dict(CFG, SOCIAL_AREA="Trémery", SOCIAL_WEEKLY="1")
+
+    def week(self, **kw):
+        import social_week
+        return social_week.week_data(self.c, self.d, self.now, **kw)
+
+    def test_when(self):
+        import datetime
+        import social_week
+        at = lambda *a: time.mktime(datetime.datetime(*a).timetuple())
+        sunday = at(2026, 10, 18, 19, 5)
+        self.assertTrue(social_week.due(self.c, {}, sunday))
+        self.assertFalse(social_week.due(dict(self.c, SOCIAL_WEEKLY="0"), {}, sunday), "off by default")
+        self.assertFalse(social_week.due(CFG, {}, sunday), "off by default")
+        self.assertFalse(social_week.due(self.c, {}, at(2026, 10, 18, 18, 59)))
+        self.assertFalse(social_week.due(self.c, {}, at(2026, 10, 19, 19, 5)), "Monday: last week is not posted late")
+        self.assertFalse(social_week.due(self.c, {"weekly": social_week.week_key(sunday)}, at(2026, 10, 18, 22, 0)))
+        self.assertTrue(social_week.due(self.c, {"weekly": social_week.week_key(sunday)}, at(2026, 10, 25, 19, 0)))
+
+    def test_the_week_counted(self):
+        w = self.week(posts={"2026-10-16": 3, "2026-10-18": 2, "2026-10-10": 9})
+        self.assertEqual(w["dates"][0], "2026-10-12")
+        self.assertEqual(w["dates"][-1], "2026-10-18")
+        self.assertEqual(w["aircraft"], 6 * 80 + 120, "distinct over the week, from the day files")
+        self.assertEqual(w["messages"], 6 * 24 * 1000 + 20 * 1000)
+        self.assertEqual(w["best_day"], ("2026-10-16", 120))
+        self.assertEqual(w["busiest_hour"], 15)
+        self.assertEqual([tuple(a) for a in w["airlines"]], [("Ryanair", 2), ("Lufthansa", 1)], "the week only")
+        self.assertEqual(w["posted"], 5, "the week's posts only")
+        self.assertEqual(len(w["heat"]), 7)
+        self.assertIsNone(__import__("social_week").week_data(self.c, self.d + "/none", self.now))
+
+    def test_the_words_never_give_a_distance(self):
+        import social_week
+        w = self.week(posts={"2026-10-16": 3})
+        t = social_week.text(w, self.c, social.area_words(self.c), "#ADSB #avgeek #ZenithBoard", social.fit_post)
+        self.assertTrue(t.startswith("The week above Trémery, 12–18 October: "), t)
+        self.assertIn("Busiest day: Friday, 120 aircraft. Busiest hour: 15:00.", t)
+        self.assertIn("Most seen: Ryanair (2), Lufthansa (1).", t)
+        self.assertIn("Posted here: 3 crossings.", t)
+        self.assertTrue(t.endswith("#ADSB #avgeek #ZenithBoard"))
+        self.assertNotRegex(t + social_week.alt(w, "above Trémery"), r"\d\s?(km|mi|nm)\b|farthest|range|north|south|east|west")
+        long_tags = " ".join("#tag%02d" % i for i in range(30))
+        t2 = social_week.text(w, self.c, "above Trémery", long_tags, social.fit_post)
+        self.assertLessEqual(len(t2), social.POST_MAX)
+        self.assertTrue(t2.startswith("The week above Trémery, 12–18 October: "), "the head always stays")
+        self.assertEqual(social_week.messages_words(58_671_951), "58.7 million")
+        self.assertEqual(social_week.messages_words(812_000), "812\u00a0000")
+        self.assertEqual(social_week.span_words(["2026-09-28", "2026-10-04"]), "28 September – 4 October")
+
+    def test_the_picture(self):
+        import social_week
+        from PIL import Image
+        out = os.path.join(self.d, "week.png")
+        info = social_week.draw(self.week(), "green", "above Trémery", out)
+        self.assertEqual((info["width"], info["height"], info["mime"]), (1200, 675, "image/png"))
+        self.assertLess(info["bytes"], 1000000)
+        with Image.open(out) as im:
+            self.assertEqual(im.size, (1200, 675))
+
+    def test_publish_dry_and_skipped(self):
+        self.addCleanup(setattr, social.server, "STATS_DIR", social.server.STATS_DIR)
+        social.server.STATS_DIR = self.d
+        now = time.mktime(self.now.timetuple())
+        r = social.publish_week(self.c, {}, now, {"post_days": {}}, dry=True)
+        self.assertTrue(r["text"].startswith("The week above Trémery"))
+        self.assertIn("Weekly summary card", r["alt"])
+        social.server.STATS_DIR = self.d + "/none"
+        self.assertIn("skipped", social.publish_week(self.c, {}, now, {}, dry=True))
+
+    def test_posts_counted_by_day_for_eight_days(self):
+        s = warm()
+        now = time.time()
+        social.remember(s, EZY, now - 9 * 86400)
+        social.remember(s, EZY, now)
+        social.remember(s, BELUGA, now)
+        social.prune_state(s, now)
+        self.assertEqual(s["post_days"], {social.day_of(now): 2})
+
+    def test_the_service_posts_it_once_on_sunday(self):
+        import contextlib
+        import datetime
+        start = time.mktime(datetime.datetime(2026, 10, 18, 18, 55).timetuple())
+        clock = [start]
+        sent, state = [], warm()
+
+        class Stop(Exception):
+            pass
+
+        def fake_sleep(sec):
+            clock[0] += sec
+            if clock[0] > start + 3 * 3600:
+                raise Stop()
+        results = [{"bluesky": "FAILED: 503 down"}, {"bluesky": "at://did/post/1"}]
+        for name, fake in (("read_aircraft", lambda c: []), ("account", lambda: {"BLUESKY_HANDLE": "h", "BLUESKY_APP_PASSWORD": "p"}),
+                           ("one_poll", lambda c, st, tr, ac, now: ([], None)), ("load_state", lambda: state),
+                           ("save_state", lambda st: None), ("cfg", lambda: dict(self.c)), ("merge_disk", lambda st: st),
+                           ("publish_week", lambda c, sec, now, st: sent.append(now) or results[min(len(sent), 2) - 1])):
+            self.addCleanup(setattr, social, name, getattr(social, name))
+            setattr(social, name, fake)
+        self.addCleanup(setattr, time, "time", time.time); time.time = lambda: clock[0]
+        self.addCleanup(setattr, time, "sleep", time.sleep); time.sleep = fake_sleep
+        with contextlib.redirect_stdout(io.StringIO()):
+            with self.assertRaises(Stop):
+                social.cmd_run()
+        self.assertEqual(len(sent), 2, "a failure, then one post ten minutes later, then nothing more that week")
+        self.assertGreaterEqual(sent[0], start + 5 * 60, "not before 19:00")
+        self.assertGreaterEqual(sent[1] - sent[0], social.RETRY_AFTER_FAIL_S)
+        self.assertEqual(state.get("weekly"), "2026-W42")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.33.0
+- **A summary of the week on Bluesky.** `sudo zenithboard social weekly on` (menu *Social sharing → 7*, off by default): on Sundays from 19:00 the service posts the seven days ending that day, from the statistics: aircraft heard, messages decoded, the busiest day and hour, the three airlines and the type most seen, and the crossings the account posted. The Pi draws its picture (Pillow, 1200 × 675, in the posts' colour): the counts, the week by hour as dots, the airlines as bars, their names in plain text.
+- Never a distance, a direction or a range: the farthest aircraft of the week is left out, since with the city nearest it two such posts would place the antenna.
+- Once a week: nothing is posted late on Monday. A failure waits ten minutes like a post; a week with no statistics is skipped and said once in the journal. `social weekly test` shows this week's so far, posting nothing; `social weekly post` posts it now. `social status` says whether it is on.
+- The last part of the owner's choice when Grafana left (0.30.0). Previewed with the real code on made-up statistics; not yet on a Pi.
+
 ## 0.32.0
 - **graphs1090, as an option.** `sudo zenithboard graphs on` (menu *3 Settings → 2 Receiver → 6*, off by default) installs [graphs1090](https://github.com/wiedehopf/graphs1090) with its author's own installer: years of the decoder's graphs (messages, range, signal, aircraft, CPU, temperature) on port 8542 and at `/graphs1090` on the map's port. It needs the receiver map's lighttpd and 64 MB free in `/run`, where its graphs live; they are written to the card once a day at 23:42 and at shutdown.
 - **`graphs off` puts back what `on` found**: graphs1090's uninstaller, then what it leaves behind (two lighttpd files, its unit, its settings, its cron line), then the packages that were not there before, removed and never purged (Debian's purge of collectd-core deletes the history). apt is asked first; if something installed since needs one of them, they stay and `off` says so. The history stays on the card; `off` gives the command to delete it.

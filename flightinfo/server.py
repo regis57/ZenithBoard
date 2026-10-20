@@ -26,7 +26,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.32.0"
+VERSION = "0.33.0"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -275,7 +275,7 @@ def local_types(hexes, d):
     return out
 
 
-def read_fleet(cfg, stats_dir=None, now=None):
+def read_fleet(cfg, stats_dir=None, now=None, since=None):
     """0.31.0: who flew over in thirty days, from the fleet-DAY files the timer writes: the airlines and the types
     most seen (distinct aircraft each), and how high they were. An airline is named from its callsign's prefix, as the
     wall does; the type is the one the sample wrote: the decoder's, or tar1090's when `data localdb on` (looked up by
@@ -283,12 +283,13 @@ def read_fleet(cfg, stats_dir=None, now=None):
     file changes."""
     stats_dir = stats_dir or STATS_DIR
     now = now or datetime.datetime.now()
-    cut = (now - datetime.timedelta(days=30)).strftime("%Y-%m-%d")
+    # since: the first day counted, YYYY-MM-DD (0.33.0, the weekly post); thirty days otherwise
+    cut = since or (now - datetime.timedelta(days=30)).strftime("%Y-%m-%d")
     try:
         names = sorted(n for n in os.listdir(stats_dir) if n.startswith("fleet-") and n[6:] >= cut)
     except OSError:
         names = []
-    key = (tuple((n, os.path.getmtime(os.path.join(stats_dir, n))) for n in names), cfg.get("UNITS"))
+    key = (tuple((n, os.path.getmtime(os.path.join(stats_dir, n))) for n in names), cfg.get("UNITS"), stats_dir)
     if _fleet_cache["key"] == key:
         return _fleet_cache["data"]
     fleet = {}
