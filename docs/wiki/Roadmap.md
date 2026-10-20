@@ -8,7 +8,10 @@ The code is complete enough. What it lacks is proof.
 
 | Item | Why it is here | How it ends |
 |---|---|---|
-| Try Plane Finder | The fourth feeder is installed by the menu and has never been fed. It is also the only feeder whose version is pinned ([Providers](Providers)) | It feeds, or the menu entry gets a caveat |
+| ~~Try Plane Finder~~ | Done 20 October 2026: the reference Pi feeds it beside ADSB Exchange, FlightAware and Flightradar24, 27 MB of memory ([Hardware](Hardware)) | Closed |
+| **Watch the first real summaries** | 0.33.0 to 0.38.0 added the summaries: the day, the week (Sunday 19:00 by default) and the last 30 days, four posts each (the period; cargo and business jets; military; general aviation), in one queue two minutes apart. `social weekly test` ran on the Pi on 20 October; no summary has been posted by the service yet. The airline and type lists began that evening (0.31.0), so the airlines, models and posts 2 to 4 join from the summary of 1 November | The first weekly post on Sunday 25 October read on a phone; the first one with all four posts on 1 November; a field-log row for each, a fix for anything odd |
+| **graphs1090 on the reference Pi** | Optional since 0.32.0; its installer was read in full, never run here | `sudo zenithboard graphs on`, then `zenithboard graphs status` (collectd's memory, the size in `/run`) pasted for the field log — or `graphs off` and a note |
+| **The statistics page on a Pi 3B** | 0.37.0's look and period toggle were approved on the real page; its cost was measured on a desk machine only (0.14 s for thirty days), the last 24 hours' lists fill from 0.37.0's last-seen column | A toggle through 24 h, 7 days and 30 days on the Pi with `sudo zenithboard memory` before and after; a field-log row |
 | Watch the Debian patches | Switched on 18 October 2026 from the menu | A few weeks without a feeder disturbed |
 | **Count what the wall cannot name or draw** | Two *Later* items — airline names for bare callsigns, more silhouettes — wait on real figures, not guesses. Since 0.21.0 the statistics sampler notes, every quarter hour, each aircraft shown with a callsign but no airline (by its three-letter prefix) and each one drawn with the generic silhouette (by type code). `zenithboard stats on` must be on | After two weeks, `zenithboard stats gaps` pasted into an issue decides which prefixes get a lookup and which shapes get drawn |
 | Watch the first weeks of the posts | Since 0.23.0 the Bluesky posts carry a real map with the track (`dotmap` and `flap`, alternating), town names on every map (satellite and terrain 0.24.4, smaller and more of them 0.25.2, over the track and on the OpenStreetMap maps 0.25.3), the photographer's name as a link to the aircraft's Planespotters page if `social photolink on` (0.25.0), and units of their own (0.24.3). Looked at so far on the real Pi: the normal and terrain maps, the satellite map once | A few posts on each map (normal, night, satellite, terrain) read on a phone: legible names, credits in place, nothing hidden by the legend. Anything else is a field-log row and a fix |
@@ -40,7 +43,9 @@ Two *Later* items are to be built from what the reference Pi measures, not from 
 
 | Caveat today | What lifts it |
 |---|---|
-| Plane Finder never fed | A night of feed confirmed on Plane Finder's own site — or a "not verified" caveat in the menu |
+| ~~Plane Finder never fed~~ | Lifted 20 October 2026: feeding from the reference Pi |
+| graphs1090 never run on a Pi (optional, 0.32.0) | Run on the reference Pi — or marked *optional, not verified*, so it stops being a caveat |
+| The summaries never posted by the service | The first scheduled weekly and monthly posts seen on Bluesky |
 | A fixed IP address never applied for real | `zenithboard net static …` on the reference Pi, then back to DHCP, with a keyboard and screen at hand |
 | 978 MHz UAT (United States) | Run by a US user — or marked *experimental, outside 1.0*, so it stops being a caveat |
 
@@ -53,7 +58,8 @@ And three proofs of stability that no caveat names yet:
 ## Next — once the above is proven
 
 * **Posts, small things that may come:** the town names are drawn from a list of places of 5 000 inhabitants or more, and villages of 1 000 or more fill in on a map with fewer than three (0.26.2); a region sparser still may want a lower threshold (`tools/make_places.py`). The farthest aircraft of the month is named only from 0.22.0 on; earlier days have a figure and no line.
-* **Enrich the statistics page**, later, once there are some weeks of real data to look at: coverage by direction (which side of the sky the antenna hears best) and the airlines seen most often. The page today shows messages per hour, the farthest aircraft and aircraft per day ([Statistics](Statistics)); nothing is added before the real figures show what is worth drawing.
+* ~~Enrich the statistics page~~ — done: the sky by hour, airlines, models and altitudes (0.31.0); cargo, business jets, military and general aviation with flags, ZenithBoard's own look and a 24 h / 7 days / 30 days toggle (0.37.0). What remains: **coverage by direction** (which side of the sky the antenna hears best), drawn only once there are weeks of real data, and kept on the page alone (the posts never give a direction).
+* **A web console, `/console`** (proposed 21 October 2026, not started). The menu over SSH works but is rough for settings that need a preview (posts, cards, summaries). The idea, in three steps, each its own release: (1) read-only dashboards (status, health, memory, logs) and the settings that only need the wall or the social service restarted, with the post previews; (2) system actions — update, features on and off — through a small root helper that accepts only a fixed list of `zenithboard` commands, journaled, behind a password the owner chooses, with the typed word kept for anything destructive; (3) a first-boot wizard. It calls the same `zenithboard` commands, so the command and the menu stay the reference. Never through it: Wi-Fi and fixed-IP changes (they can cut the page off), the uninstall, and the Bluesky app password (SSH only). Waiting on: a decision by the owner, after the 1.0 proofs.
 * **A decision on AirNav RadarBox.** A fifth feeder is only worth it if its MLAT does not fight the single-MLAT rule. Waiting on a few nights of data first.
 * ~~Wi-Fi hardening~~ — done in 0.21.0: `zenithboard wifi harden on`, off by default, reversible.
 
@@ -79,6 +85,7 @@ Saying no here saves answering the same question twice.
 | **Supporting hardware other than a Raspberry Pi** | It probably works on other Debian machines; it will not be tested there, so it will not be claimed. |
 | **A route source that does not need the internet** | There is no free, complete and current database of routes by callsign: the public ones are partial, stale, or under licences a GPL project cannot carry, and a stale route shown with confidence is worse than none. Callsign lookups stay online (adsbdb, hexdb as a second opinion), cached, and off when the Pi is |
 | **A photo in the Bluesky posts** | Planespotters' photo API terms forbid storing, re-hosting or passing on a picture, and a link card would upload its thumbnail. A link to the photo page with the photographer named is what is allowed (`social photolink on`, 0.25.0). JetPhotos has no API and grants personal, non-commercial use of the site only |
+| **ACARS and Grafana** | Removed in 0.30.0: never run on the reference Pi, about 900 MB more than a 1 GB board has, and what Grafana would have shown is on the wall's own statistics page, with graphs1090 as the long-term option (0.32.0). A Pi that had them keeps them until `sudo zenithboard acars remove` |
 | **A paid tier** | It is GPL and it stays free. There is a beer link in the README and that is the whole business model. |
 
 ## Suggesting something

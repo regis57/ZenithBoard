@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **20 October 2026**, version **0.38.0**.
+Last updated: **21 October 2026**, version **0.38.0**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -26,9 +26,13 @@ One Raspberry Pi 3B, outdoors, on Wi-Fi, with an R820T dongle.
 | Persistent logs | Working, after one `sudo journalctl --flush` the first time |
 | The systemd sandbox | The wall server runs inside it; `systemd-analyze security` gives 1.3 (OK) |
 | Signed updates | Checked against GitHub's current key, silent once confirmed |
-| `zenithboard health` | Reports power, temperature, memory, card and the previous boot correctly |
+| `zenithboard health` | Reports power, temperature, memory, card and the previous boot correctly; since 0.34.0 the card's size too (*3.5 GB used of 61.0 GB, the card: 62.5 GB*) |
+| `zenithboard memory` (0.34.0) | Service by service on the reference Pi: 155 to 212 MB for all the services with four feeds, social sharing and the wall; Plane Finder 19 to 27 MB. See [Hardware](Hardware) |
+| Feeding Plane Finder | Since 20 October 2026; its page on port 30053 shows the aircraft decoded (KLM31L, PH-HSE, Amsterdam → Geneva) |
+| The statistics page | Running since 0.16.0; the lists of 0.31.0 and 0.37.0's look, toggle, cargo, business jets and flags seen on the real page (*45 cargo aircraft, DHL 11, ASL Airlines Belgium 10…*) |
+| `social weekly test` | Run on the reference Pi (0.33.0, 0.35.0): the right totals (*6 437 aircraft, 354.6 million messages, busiest Friday*), the lists left out until they cover the week (0.34.1) |
 | Social sharing on Bluesky | Posting on its own since 17 October 2026 under *ALL*, both looks, the four maps, the colours in turn; every crossing of a 10 km radius once since 0.20.0. Memory measured by the service itself |
-| Room on a 1 GB board | With three feeders, the wall and social sharing: 656 MB of 1 GB still available, 36 °C, no throttling. See [Hardware](Hardware) |
+| Room on a 1 GB board | With four feeders, the wall, statistics and social sharing: 575 to 654 MB of 1 GB still available, 34–35 °C, no throttling (20 October 2026; 656 MB with three feeders on 17 October). See [Hardware](Hardware) |
 
 ## Written and unit-tested, not yet run for real
 
@@ -40,7 +44,10 @@ Treat these as likely-working rather than known-working, and please report what 
 | Fixed IP address | The `nmcli` calls are tested; a real address change was not run. Keep a keyboard and screen at hand |
 | The farthest aircraft named on `/stats` | Written in 0.22.0 and run against the real server with a made-up decoder; the real sky, the real route answers and the thread's cost on a Pi 3 are still to be seen |
 | A fresh install from the README | `install.sh` has been run end to end in a container against a scripted whiptail and stand-ins (0.21.1, `tests/test_install.sh`): flags, wizard, every menu, the deployed wall answering, the uninstall. A blank card on a real Pi has not been done |
-| Plane Finder | **Feeding on the reference Pi since 20 October 2026**: its page on port 30053 showed the aircraft decoded (KLM31L, PH-HSE, Amsterdam → Geneva), beside ADSB Exchange, FlightAware and Flightradar24 |
+| graphs1090 (0.32.0, optional) | Its author's installer was read in full and `on`/`off` tested against stand-ins; never run on a Pi |
+| The summaries posted by the service (0.33.0–0.38.0) | `weekly test` ran on the Pi; no scheduled post has gone out yet. The daily and thirty-day summaries and the queue shared by all of them (0.38.0) are tested with a simulated clock only. The first weekly post is due on Sunday 25 October 19:00 if switched on; the airline lists cover a whole week from 1 November |
+| Posts 2 to 4 and the page's lists with real data over weeks | Cargo by callsign prefix (40 operators checked against published sources), military by database mark and address block, countries by ICAO address block: checked on made-up and tar1090-db data; a month of the real sky is still to come |
+| The page's last 24 hours (0.37.0) | Their lists need the last-seen column written since 0.37.0: complete from a day after the update |
 
 ## Known rough edges
 
@@ -55,6 +62,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 21 October 2026, 00:56 | End of the evening: 0.31.0 to 0.38.0 shipped in one night (statistics, graphs1090, the summaries and their four posts, real flags, the page's new look and toggle, `health` and `memory`). The owner asked for the Roadmap and this page to say where things stand: Plane Finder moves to *proven*, the summaries and graphs1090 join *Now*, and a web console is written down as a proposal, not started |
 | 21 October 2026, 00:25 | The owner liked the page ("so zenithboard") and asked for the countries column aligned with the other two and named *most registered in*; and for summaries every 24 hours, 7 days and 30 days, each at a chosen day and time, with the posts picked, and what two at the same time would do. 0.38.0; previewed on made-up statistics |
 | 20 October 2026, 23:58 | `sudo zenithboard memory` again: 155 MB for all the services after the evening's restarts (social 22 MB, Plane Finder 19, the wall 19), 653 MB available; `/social/preview2`–`4` now say why they have no picture. The owner shared ZenithBoard's banners (the name in amber dots, the split-flap *OVERHEAD NOW*) and asked for the statistics page in that look, with a 24 h / 7 days / 30 days toggle that every chart follows except the sky by hour, and the weekly posts' lists on it, provided it does not overload the Pi: 0.37.0. Previewed at desk and phone width on made-up statistics |
 | 20 October 2026, 23:43 | From the owner's pastes. **0.34.0's new screens on the Pi**: `health` says *Card: 6% full: 3.5 GB used of 61.0 GB, 54.9 GB free (the card: 62.5 GB)*; `memory` gives 212 MB for all the services, Plane Finder 27 MB (in Hardware). **0.35.0's weekly test**: the first post without airlines and models (lists not covering the week), the second skipped, so `/social/preview2` answered a bare *not found*: 0.36.1 says why. The `/stats` lists were small (*Ryanair 27*): one day of lists, as the page says; TAY was shown bare, now *ASL Airlines Belgium* from the cargo list. The owner found the dot flags of 0.36.0's cards crude: real flags at scale in 0.36.1. Redrawing them showed that 0.36.0's search over the country table gave the United Kingdom's military block (43C000) to no country, the table's blocks being nested: fixed and checked against 200 000 addresses |
