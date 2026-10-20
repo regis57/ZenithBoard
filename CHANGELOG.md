@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.26.2
+- **Villages on a map short of towns.** A map that names fewer than three towns of 5 000 inhabitants or more names the villages of 1 000 to 4 999 too, the largest first, under the same rules. From a real post: DAH1217, two minutes after leaving Metz-Nancy, went out on a strip east of the Moselle with no name at all; every town of 5 000 there is in the valley, just beyond the map's edge. The new list (`flightinfo/data/places1000.tsv.gz`, GeoNames, CC BY 4.0, made by `tools/make_places.py --small`, 68 000 places, 950 KB) is read only for such a map, never kept in memory. Asked for by the owner.
+
 ## 0.26.1
 - **No town named twice on the posts' maps.** The light (`normal`) and dark (`night`) maps were EOX's OpenStreetMap layer, which writes its own town names: since 0.25.3 ZenithBoard's names went over them, a few pixels apart (EWG8QR over Nancy, on a real post). EOX has no OpenStreetMap layer without names, so these two maps are now built from two EOX layers that carry none: the light relief and the main roads (orange on the light map, white on the dark one), under ZenithBoard's names. The main roads only, not OpenStreetMap's small ones. Credits unchanged: OpenStreetMap, EOX, GeoNames. Approved by the owner on a preview.
 

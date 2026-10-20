@@ -53,7 +53,7 @@ And three proofs of stability that no caveat names yet:
 
 ## Next — once the above is proven
 
-* **Posts, small things that may come:** the town names are drawn from a list of places of 5 000 inhabitants or more; a sparse region may want a lower threshold (`flightinfo/data/places5000.tsv.gz`, `tools/make_places.py`). The farthest aircraft of the month is named only from 0.22.0 on; earlier days have a figure and no line.
+* **Posts, small things that may come:** the town names are drawn from a list of places of 5 000 inhabitants or more, and villages of 1 000 or more fill in on a map with fewer than three (0.26.2); a region sparser still may want a lower threshold (`tools/make_places.py`). The farthest aircraft of the month is named only from 0.22.0 on; earlier days have a figure and no line.
 * **Enrich the statistics page**, later, once there are some weeks of real data to look at: coverage by direction (which side of the sky the antenna hears best) and the airlines seen most often. The page today shows messages per hour, the farthest aircraft and aircraft per day ([Statistics](Statistics)); nothing is added before the real figures show what is worth drawing.
 * **A decision on AirNav RadarBox.** A fifth feeder is only worth it if its MLAT does not fight the single-MLAT rule. Waiting on a few nights of data first.
 * ~~Wi-Fi hardening~~ — done in 0.21.0: `zenithboard wifi harden on`, off by default, reversible.
