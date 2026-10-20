@@ -80,11 +80,35 @@ def week_data(c, stats_dir=None, now=None, posts=None):
         hours.append(sum(v) / len(v) if v else None)
     known = [(v, h) for h, v in enumerate(hours) if v is not None]
     busiest_hour = max(known)[1] if known else None
-    fleet = server.read_fleet(c, stats_dir, now_dt, since=dates[0])
+    # 0.34.1: the airlines and types only when their lists cover the whole week. On the reference Pi the first test,
+    # the evening the lists began (0.31.0), said "6 435 aircraft heard" and "Ryanair (14)": a week against two hours
+    fleet_from = fleet_start(stats_dir)
+    fleet = server.read_fleet(c, stats_dir, now_dt, since=dates[0]) if fleet_from and fleet_from < dates[0] \
+        else {"airlines": [], "types": []}
     posted = sum(int((posts or {}).get(d, 0)) for d in dates)
     return {"dates": dates, "aircraft": len(seen) or max(n for _, n in per_day), "messages": messages,
             "per_day": per_day, "best_day": best_day if best_day[1] else None, "busiest_hour": busiest_hour,
-            "heat": rows, "airlines": fleet["airlines"][:TOP], "types": fleet["types"][:1], "posted": posted}
+            "heat": rows, "airlines": fleet["airlines"][:TOP], "types": fleet["types"][:1], "posted": posted,
+            "fleet_from": fleet_from, "fleet_week": first_full_week(fleet_from)}
+
+
+def fleet_start(stats_dir):
+    """The first day of the airline and type lists (fleet-DAY files, 0.31.0), or None."""
+    try:
+        days = sorted(n[6:] for n in os.listdir(stats_dir) if n.startswith("fleet-"))
+    except OSError:
+        return None
+    return days[0] if days else None
+
+
+def first_full_week(fleet_from):
+    """The Sunday of the first week whose seven days the lists cover entirely: its first day after fleet_from."""
+    if not fleet_from:
+        return None
+    # the week's first day must come after fleet_from (that day is counted from the update on, not whole): a Sunday
+    # at least seven days after it
+    d = datetime.date.fromisoformat(fleet_from) + datetime.timedelta(days=7)
+    return (d + datetime.timedelta(days=(6 - d.weekday()) % 7)).isoformat()
 
 
 # --------------------------------------------------------------------------- words
@@ -104,6 +128,11 @@ def span_words(dates):
     if a.month == b.month:
         return "%d–%d %s" % (a.day, b.day, MONTHS[b.month - 1])
     return "%d %s – %d %s" % (a.day, MONTHS[a.month - 1], b.day, MONTHS[b.month - 1])
+
+
+def short_date(d):
+    d = datetime.date.fromisoformat(d)
+    return "%d %s" % (d.day, MONTHS[d.month - 1])
 
 
 def day_name(d):
@@ -206,7 +235,9 @@ def draw(w, theme, area, out):
         d.text((W - m, ay + 2), number(k), font=f_name, fill=grey, anchor="ra")
         ay += 34
     if not w.get("airlines"):
-        d.text((gx - 54, ay), "No airline counted yet (ZenithBoard 0.31.0 or later).", font=f_name, fill=faint)
+        why = ("Counted since %s: shown from the week ending %s." % (short_date(w["fleet_from"]), short_date(w["fleet_week"]))
+               if w.get("fleet_from") else "Not counted yet: statistics from ZenithBoard 0.31.0 on.")
+        d.text((gx - 54, ay), why, font=f_name, fill=faint)
     if w.get("types"):
         d.text((m, H - 34), "TOP TYPE  " + w["types"][0][0].upper(), font=f_lbl, fill=dim)
     d.text((W - m, H - 34), "ZENITHBOARD", font=f_lbl, fill=faint, anchor="ra")

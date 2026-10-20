@@ -1523,6 +1523,22 @@ class WeeklyTest(unittest.TestCase):
         self.assertEqual(len(w["heat"]), 7)
         self.assertIsNone(__import__("social_week").week_data(self.c, self.d + "/none", self.now))
 
+    def test_airlines_only_when_their_lists_cover_the_week(self):
+        # 0.34.1, seen on the reference Pi: "6 435 aircraft heard" beside "Ryanair (14)", the lists being two hours old
+        import social_week
+        os.unlink(os.path.join(self.d, "fleet-2026-10-10"))
+        w = self.week()
+        self.assertEqual((w["airlines"], w["types"]), ([], []))
+        self.assertEqual((w["fleet_from"], w["fleet_week"]), ("2026-10-16", "2026-10-25"))
+        t = social_week.text(w, self.c, "above Trémery", "#ADSB", social.fit_post)
+        self.assertNotIn("Most seen", t)
+        self.assertNotIn("Top type", t)
+        info = social_week.draw(w, "amber", "above Trémery", os.path.join(self.d, "w.png"))
+        self.assertEqual(info["width"], 1200)
+        self.assertEqual(social_week.first_full_week("2026-10-18"), "2026-10-25", "a Sunday start covers the next week")
+        self.assertEqual(social_week.first_full_week("2026-10-19"), "2026-11-01", "a Monday start is not counted whole")
+        self.assertIsNone(social_week.fleet_start(self.d + "/none"))
+
     def test_the_words_never_give_a_distance(self):
         import social_week
         w = self.week(posts={"2026-10-16": 3})
@@ -1558,6 +1574,8 @@ class WeeklyTest(unittest.TestCase):
         r = social.publish_week(self.c, {}, now, {"post_days": {}}, dry=True)
         self.assertTrue(r["text"].startswith("The week above Trémery"))
         self.assertIn("Weekly summary card", r["alt"])
+        self.assertTrue(r["fleet_shown"])
+        self.assertNotRegex(r["text"], r"Top type: [A-Z]{4,} ", "the maker as the posts write it (0.34.1)")
         social.server.STATS_DIR = self.d + "/none"
         self.assertIn("skipped", social.publish_week(self.c, {}, now, {}, dry=True))
 

@@ -1171,6 +1171,8 @@ def publish_week(c, sec, now, state=None, dry=False, keep=None):
     'FAILED ...'}, or {"skipped": why} when there is nothing to sum up (dry: the text instead)."""
     import social_week as week
     w = week.week_data(c, now=now, posts=(state or {}).get("post_days"))
+    if w:                                        # "BOEING 737-800" as the posts write it: "Boeing 737-800" (0.34.1)
+        w["types"] = [(nice_type({"type_name": n}), k) for n, k in w["types"]]
     if not w:
         return {"skipped": "no statistics for these seven days (turn them on: sudo zenithboard stats on)"}
     if flap_module() is None:
@@ -1189,7 +1191,8 @@ def publish_week(c, sec, now, state=None, dry=False, keep=None):
             except OSError as exc:
                 results["preview_error"] = "could not keep a copy: %s" % exc
         if dry:
-            results.update(text=text, alt=alt, bytes=info["bytes"])
+            results.update(text=text, alt=alt, bytes=info["bytes"], fleet_from=w.get("fleet_from"),
+                           fleet_week=w.get("fleet_week"), fleet_shown=bool(w.get("airlines")))
             return results
         try:
             results["bluesky"] = post_bluesky(sec, text, out, alt, info["width"], info["height"], info["mime"])
@@ -1423,6 +1426,11 @@ def cmd_week(post=False):
     print("Text:")
     print("  " + r["text"].replace("\n", "\n  "))
     print("Alt text: " + r["alt"])
+    if not r.get("fleet_shown"):
+        print("Airlines and types: %s" % (("counted since %s, they join the summary from the week ending %s, the first one "
+                                            "they cover whole." % (r["fleet_from"], r["fleet_week"])) if r.get("fleet_from")
+                                           else "not counted yet (the statistics' lists, ZenithBoard 0.31.0 on)."))
+    print("Nothing was posted: this was the test. To post it now:  sudo zenithboard social weekly post")
     print("The service posts it %s." % ("on Sundays from 19:00" if server.cfg_bool(c, "SOCIAL_WEEKLY", "0")
                                          else "only once it is on: sudo zenithboard social weekly on"))
     return 0
