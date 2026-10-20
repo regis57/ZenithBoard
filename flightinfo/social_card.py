@@ -59,7 +59,7 @@ PLACES_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "
 # above. DAH1217, two minutes after leaving Metz-Nancy, went out on a 20 km strip east of the Moselle with no name at
 # all: every town of 5 000 there is in the valley, a few kilometres beyond the map's edge.
 SMALL_PLACES_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "places1000.tsv.gz")
-MIN_NAMES = 3
+MIN_NAMES = 6                                # 0.27.3: 3 left the middle of a map bare (SWR3AG over the Moselle plateau, 20 October 2026)
 # 0.27.0: the region's own list, made on the Pi from GeoNames' country files (tools/make_local_places.py, `social
 # places on`): every populated place within 400 km, weighted by population or, where GeoNames knows none (almost every
 # village in Indonesia), by its rank. social.py sets the path when the owner switched it on; None: the shipped lists.
