@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **20 October 2026**, version **0.34.0**.
+Last updated: **20 October 2026**, version **0.34.1**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -55,6 +55,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 20 October 2026, 22:53 | First `social weekly test` on the reference Pi (0.33.0): *14–20 October: 6 435 aircraft heard, 353.3 million messages decoded. Busiest day: Friday, 2 745 aircraft. Busiest hour: 17:00. Most seen: Ryanair (14), British Airways (8), easyJet (8). Top type: BOEING 737-800.* The owner saw at once that 14 Ryanair cannot be right in a week of 6 435 aircraft: the airline lists had begun with 0.31.0 two hours earlier. 0.34.1 leaves the airlines and the type out until their lists cover the week, and writes the type as the posts do |
 | 20 October 2026, 22:42 | Plane Finder installed: the reference Pi now feeds four networks (ADSB Exchange, FlightAware, Flightradar24, Plane Finder), and Plane Finder's own page showed its feed. `zenithboard health` then: 575 MB free, no swap, 34 °C, power OK, card 6 % full, previous boot ended normally. The owner asked for the card's size on that screen and for a command showing threads and memory: 0.34.0 (`Card: ... GB used of ... GB`, `zenithboard memory`) |
 | 21 October 2026, 00:30 | The weekly summary post (0.33.0), the last part of the owner's choice when Grafana left. Previewed with the real code on thirty days of made-up statistics, amber and turquoise. Not yet on the reference Pi: `sudo zenithboard social weekly test` there is the first real one |
 | 20 October 2026, 23:30 | graphs1090 offered as an option (0.32.0), the second half of the owner's choice when Grafana left. Its installer and uninstaller were read in full (commit 2f96314); running it in the session's own machine was not allowed, so `on` and `off` are tested against stand-ins only. **Not yet run on the reference Pi**: what `zenithboard graphs status` says there (collectd's memory, the size in `/run`) goes here |

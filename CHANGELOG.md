@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.34.1
+- **The weekly summary names the airlines and the type only when their lists cover the whole week.** The first `social weekly test` on the reference Pi said *6 435 aircraft heard* and *Most seen: Ryanair (14), British Airways (8), easyJet (8)*: the week's aircraft came from the statistics' day files, the airlines from lists begun two hours earlier with 0.31.0. Seen by the owner. Until the lists cover the week, the text leaves both out, the picture says from which week they are shown (the week ending 1 November on the reference Pi), and `weekly test` says it as well.
+- The type is written as the posts write it: *Boeing 737-800*, not *BOEING 737-800*.
+- `social weekly test` says plainly that nothing was posted, and gives the command that posts it now.
+
 ## 0.34.0
 - **`zenithboard health` gives the card's size**: `Card: 6% full: 1.7 GB used of 31.2 GB, 28.1 GB free (the card: 31.9 GB)`, the system's partition from `df` and the card under it from `lsblk`. The memory line says free of how much. Asked for by the owner.
 - **`zenithboard memory`** (or `threads`; menu *3 Settings → 5 Reliability → Memory*): memory, peak, threads, open files and processes for each service, the largest first, then the whole Pi (memory, swap, threads, load), what runs outside the services, and the six largest processes. Read from `/proc` per service cgroup, since systemd has no memory figure on Raspberry Pi OS (the kernel's memory controller is off). With sudo, memory is PSS, which adds up, and open files are counted. Asked for by the owner once the Pi fed four networks.
