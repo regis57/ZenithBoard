@@ -23,6 +23,7 @@ NBSP = " "
 DAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
 MONTHS = ("January", "February", "March", "April", "May", "June", "July", "August", "September", "October",
           "November", "December")
+POST_MAX = 300                               # Bluesky's limit, as social.POST_MAX
 TOP = 5                                      # airlines on the picture; three in the words
 W, H = 1200, 675                             # 16:9, as Bluesky shows a single picture whole
 THEME_HEX = {"amber": "#ffb000", "green": "#39ff6a", "red": "#ff3b30", "white": "#e8e8e8", "turquoise": "#00d6d7"}
@@ -83,13 +84,15 @@ def week_data(c, stats_dir=None, now=None, posts=None):
     # 0.34.1: the airlines and types only when their lists cover the whole week. On the reference Pi the first test,
     # the evening the lists began (0.31.0), said "6 435 aircraft heard" and "Ryanair (14)": a week against two hours
     fleet_from = fleet_start(stats_dir)
-    fleet = server.read_fleet(c, stats_dir, now_dt, since=dates[0]) if fleet_from and fleet_from < dates[0] \
-        else {"airlines": [], "types": []}
+    covered = bool(fleet_from and fleet_from < dates[0])
+    fleet = server.read_fleet(c, stats_dir, now_dt, since=dates[0]) if covered else {}
     posted = sum(int((posts or {}).get(d, 0)) for d in dates)
     return {"dates": dates, "aircraft": len(seen) or max(n for _, n in per_day), "messages": messages,
             "per_day": per_day, "best_day": best_day if best_day[1] else None, "busiest_hour": busiest_hour,
-            "heat": rows, "airlines": fleet["airlines"][:TOP], "types": fleet["types"][:1], "posted": posted,
-            "fleet_from": fleet_from, "fleet_week": first_full_week(fleet_from)}
+            "heat": rows, "airlines": (fleet.get("airlines") or [])[:TOP], "models": (fleet.get("types") or [])[:TOP],
+            "cargo": (fleet.get("cargo") or [])[:TOP], "cargo_total": fleet.get("cargo_total", 0),
+            "bizjets": (fleet.get("bizjets") or [])[:TOP], "bizjet_total": fleet.get("bizjet_total", 0),
+            "covered": covered, "posted": posted, "fleet_from": fleet_from, "fleet_week": first_full_week(fleet_from)}
 
 
 def fleet_start(stats_dir):
@@ -139,31 +142,43 @@ def day_name(d):
     return DAYS[datetime.date.fromisoformat(d).weekday()]
 
 
+def _ranked(label, pairs, n):
+    return "%s: %s." % (label, ", ".join("%s (%s)" % (name, number(k)) for name, k in pairs[:n])) if pairs else None
+
+
+def _fit_lines(head, parts, tags, fit):
+    """head, then the parts: a part is a line, or (label, pairs) drawn as a ranked list. The lists go down from three
+    names to one before any line is dropped, and lines are dropped from the end, so the hashtags stay whole."""
+    def lines(n):
+        return [x for x in ((p if isinstance(p, str) else _ranked(p[0], p[1], n)) for p in parts) if x]
+
+    def size(ls):
+        return len("\n".join([head] + ls + ([tags] if tags else [])))
+    for n in (3, 2, 1):
+        if size(lines(n)) <= POST_MAX:
+            return fit("\n".join([head] + lines(n)), None, tags)
+    ls = lines(1)
+    while ls and size(ls) > POST_MAX:
+        ls.pop()
+    return fit("\n".join([head] + ls), None, tags)
+
+
 def text(w, c, area, tags, fit):
-    """The post: the head and the counts always; the busiest times, the airlines, the type and the posts while they
-    fit beside the hashtags, dropped from the end otherwise. No distance, ever."""
-    head = "The week%s, %s: %s aircraft heard, %s messages decoded." % (
+    """The post: the head always; the busiest times, the airlines, the models and the posts while they fit beside the
+    hashtags. No distance, ever."""
+    head = "The week%s, %s: %s aircraft, %s messages." % (
         (" " + area) if area else "", span_words(w["dates"]), number(w["aircraft"]), messages_words(w["messages"]))
-    more = []
-    busy = []
-    if w.get("best_day"):
-        busy.append("Busiest day: %s, %s aircraft." % (day_name(w["best_day"][0]), number(w["best_day"][1])))
-    if w.get("busiest_hour") is not None:
-        busy.append("Busiest hour: %02d:00." % w["busiest_hour"])
-    if busy:
-        more.append(" ".join(busy))
-    if w.get("airlines"):
-        more.append("Most seen: " + ", ".join("%s (%s)" % (n, number(k)) for n, k in w["airlines"][:3]) + ".")
-    if w.get("types"):
-        more.append("Top type: %s." % w["types"][0][0])
+    parts = []
+    bd, bh = w.get("best_day"), w.get("busiest_hour")
+    if bd and bh is not None:
+        parts.append("Busiest: %s (%s aircraft) and %02d:00." % (day_name(bd[0]), number(bd[1]), bh))
+    elif bd:
+        parts.append("Busiest: %s (%s aircraft)." % (day_name(bd[0]), number(bd[1])))
+    parts.append(("Airlines", w.get("airlines") or []))
+    parts.append(("Models", w.get("models") or []))          # 0.35.0
     if w.get("posted"):
-        more.append("Posted here: %s crossing%s." % (number(w["posted"]), "" if w["posted"] == 1 else "s"))
-    while True:
-        body = "\n".join([head] + more)
-        out = fit(body, None, tags)
-        if out.startswith(body) or not more:
-            return out
-        more.pop()
+        parts.append("Posted here: %s crossing%s." % (number(w["posted"]), "" if w["posted"] == 1 else "s"))
+    return _fit_lines(head, parts, tags, fit)
 
 
 def alt(w, area):
@@ -176,25 +191,95 @@ def alt(w, area):
     s = ", ".join(bits) + ". A grid of the seven days by hour, brighter where more aircraft were overhead."
     if w.get("airlines"):
         s += " The airlines most seen, as bars: " + ", ".join("%s %d" % (n, k) for n, k in w["airlines"]) + "."
+    if w.get("models"):
+        s += " Beside them, the models most seen: " + ", ".join("%s %d" % (n, k) for n, k in w["models"]) + "."
     return s
 
 
-# --------------------------------------------------------------------------- the picture
-def draw(w, theme, area, out):
-    """The card, as a PNG at `out`. Needs Pillow (social_card). Returns {path, width, height, bytes, mime}."""
+def has_second(w):
+    """The second post (0.35.0): something to say about cargo airlines or business jets, over the whole week."""
+    return bool(w and w.get("covered") and (w.get("cargo") or w.get("bizjets")))
+
+
+def text_second(w, area, tags, fit):
+    """Cargo airlines and business jets: the head always, the lists while they fit."""
+    head = "Cargo and business jets%s, %s: %s cargo aircraft, %s business jet%s." % (
+        (" " + area) if area else "", span_words(w["dates"]), number(w.get("cargo_total", 0)),
+        number(w.get("bizjet_total", 0)), "" if w.get("bizjet_total") == 1 else "s")
+    return _fit_lines(head, [("Cargo", w.get("cargo") or []), ("Business jets", w.get("bizjets") or [])], tags, fit)
+
+
+def alt_second(w, area):
+    s = "Weekly card of the cargo airlines and business jets, %s%s: %s cargo aircraft and %s business jets." % (
+        span_words(w["dates"]), (" " + area) if area else "", number(w.get("cargo_total", 0)), number(w.get("bizjet_total", 0)))
+    if w.get("cargo"):
+        s += " Cargo airlines, as bars: " + ", ".join("%s %d" % (n, k) for n, k in w["cargo"]) + "."
+    if w.get("bizjets"):
+        s += " Business jets by make and model, as bars: " + ", ".join("%s %d" % (n, k) for n, k in w["bizjets"]) + "."
+    return s
+
+
+# --------------------------------------------------------------------------- the pictures
+def _canvas(theme):
     from PIL import Image, ImageDraw
     import social_card as card
     col = card.rgb(THEME_HEX.get(theme, "#ffb000"))
-    dim = tuple(int(v * 0.55) for v in col)
-    grey, faint, off = (150, 150, 150), (90, 90, 90), (28, 28, 28)
     img = Image.new("RGB", (W, H), (0, 0, 0))
-    d = ImageDraw.Draw(img)
-    f_head, f_big, f_lbl, f_small, f_name = card.font(30), card.font(58), card.font(18), card.font(16, bold=False), card.font(20, bold=False)
-    m = 48
-    d.text((m, 34), ("THE WEEK " + area).upper() if area else "THE WEEK", font=f_head, fill=col)
-    d.text((W - m, 34), span_words(w["dates"]).upper(), font=f_head, fill=dim, anchor="ra")
-    d.line([(m, 86), (W - m, 86)], fill=off, width=2)
-    # the counts, on the left
+    fonts = {"head": card.font(30), "big": card.font(58), "lbl": card.font(18), "small": card.font(16, bold=False),
+             "name": card.font(19, bold=False), "row": card.font(24, bold=False)}
+    return img, ImageDraw.Draw(img), col, tuple(int(v * 0.55) for v in col), fonts
+
+
+GREY, FAINT, OFF, INK = (150, 150, 150), (90, 90, 90), (28, 28, 28), (225, 225, 225)
+M = 48
+
+
+def _header(d, f, col, dim, title, dates):
+    span = span_words(dates).upper()
+    room = W - 2 * M - d.textlength(span, font=f["head"]) - 30       # a long place name never runs into the dates
+    d.text((M, 34), _fit(d, title.upper(), f["head"], room), font=f["head"], fill=col)
+    d.text((W - M, 34), span, font=f["head"], fill=dim, anchor="ra")
+    d.line([(M, 86), (W - M, 86)], fill=OFF, width=2)
+    d.text((W - M, H - 34), "ZENITHBOARD", font=f["lbl"], fill=FAINT, anchor="ra")
+
+
+def _fit(d, text, fnt, width):
+    """The text, cut with an ellipsis to fit width pixels."""
+    if d.textlength(text, font=fnt) <= width:
+        return text
+    while text and d.textlength(text + "…", font=fnt) > width:
+        text = text[:-1]
+    return text.rstrip() + "…"
+
+
+def _ranks(d, f, col, x, y, width, title, pairs, rows=TOP, step=44, fnt="name"):
+    """A titled list: each name with its count on the right, a bar under it as long as its share of the first."""
+    d.text((x, y), title, font=f["lbl"], fill=GREY)
+    y += 32
+    best = pairs[0][1] if pairs else 0
+    for n, k in pairs[:rows]:
+        num = number(k)
+        nw = d.textlength(num, font=f[fnt])
+        d.text((x, y), _fit(d, n, f[fnt], width - nw - 14), font=f[fnt], fill=INK)
+        d.text((x + width, y), num, font=f[fnt], fill=GREY, anchor="ra")
+        bar = y + (26 if fnt == "name" else 34)
+        d.rounded_rectangle([x, bar, x + max(4, int(width * k / best)), bar + 5], radius=2, fill=col)
+        y += step
+    return y
+
+
+def _not_yet(d, f, x, y, w):
+    why = ("Counted since %s: shown from the week ending %s." % (short_date(w["fleet_from"]), short_date(w["fleet_week"]))
+           if w.get("fleet_from") else "Not counted yet: statistics from ZenithBoard 0.31.0 on.")
+    d.text((x, y), why, font=f["name"], fill=FAINT)
+
+
+def draw(w, theme, area, out):
+    """The week's card, as a PNG at `out`: the counts on the left; the week by hour, then the airlines and the
+    models most seen side by side, on the right (0.35.0: the grid smaller to make room for the models).
+    Needs Pillow (social_card). Returns {path, width, height, bytes, mime}."""
+    img, d, col, dim, f = _canvas(theme)
+    _header(d, f, col, dim, ("THE WEEK " + area) if area else "THE WEEK", w["dates"])
     rows = [(number(w["aircraft"]), "AIRCRAFT HEARD"),
             ((messages_words(w["messages"]).replace(" million", " M")), "MESSAGES DECODED")]
     if w.get("best_day"):
@@ -203,43 +288,46 @@ def draw(w, theme, area, out):
         rows.append(("%02d:00" % w["busiest_hour"], "BUSIEST HOUR"))
     y = 112
     for big, lbl in rows:
-        d.text((m, y), big, font=f_big, fill=col)
-        d.text((m + 2, y + 68), lbl, font=f_lbl, fill=grey)
+        d.text((M, y), big, font=f["big"], fill=col)
+        d.text((M + 2, y + 68), lbl, font=f["lbl"], fill=GREY)
         y += 128
-    # the week by hour, top right: a dot per hour, brighter where more aircraft had a position
-    gx, gy, cw, ch = 520, 118, 26, 34
+    # the week by hour: a dot per hour, brighter where more aircraft had a position
+    gx, gy, cw, ch = 520, 108, 26, 22
     vals = [v for r in w["heat"] for v in r if v is not None]
     top = max(vals) if vals else 0
     for i, r in enumerate(w["heat"]):
-        d.text((gx - 14, gy + i * ch + ch / 2), day_name(w["dates"][i])[:3].upper(), font=f_small, fill=grey, anchor="rm")
+        d.text((gx - 14, gy + i * ch + ch / 2), day_name(w["dates"][i])[:3].upper(), font=f["small"], fill=GREY, anchor="rm")
         for h, v in enumerate(r):
             cx, cy = gx + h * cw + cw / 2, gy + i * ch + ch / 2
-            if v is None or not top:
-                fill = off
-            else:
-                k = 0.12 + 0.88 * (v / top)
-                fill = tuple(int(off[j] + (col[j] - off[j]) * k) for j in range(3))
-            rr = 10
-            d.ellipse([cx - rr, cy - rr, cx + rr, cy + rr], fill=fill)
+            k = None if v is None or not top else 0.12 + 0.88 * (v / top)
+            fill = OFF if k is None else tuple(int(OFF[j] + (col[j] - OFF[j]) * k) for j in range(3))
+            d.ellipse([cx - 8, cy - 8, cx + 8, cy + 8], fill=fill)
     for h in (0, 6, 12, 18):
-        d.text((gx + h * cw + cw / 2, gy + 7 * ch + 8), "%02dh" % h, font=f_small, fill=faint, anchor="ma")
-    # the airlines, bottom right
-    ay = 410
-    d.text((gx - 54, ay), "MOST SEEN", font=f_lbl, fill=grey)
-    ay += 34
-    best = w["airlines"][0][1] if w.get("airlines") else 0
-    bx0, bx1 = 760, W - m - 70
-    for n, k in w.get("airlines") or []:
-        d.text((gx - 54, ay + 2), n if len(n) <= 22 else n[:21] + "…", font=f_name, fill=(225, 225, 225))
-        d.rounded_rectangle([bx0, ay + 4, bx0 + max(6, int((bx1 - bx0) * k / best)), ay + 24], radius=4, fill=col)
-        d.text((W - m, ay + 2), number(k), font=f_name, fill=grey, anchor="ra")
-        ay += 34
-    if not w.get("airlines"):
-        why = ("Counted since %s: shown from the week ending %s." % (short_date(w["fleet_from"]), short_date(w["fleet_week"]))
-               if w.get("fleet_from") else "Not counted yet: statistics from ZenithBoard 0.31.0 on.")
-        d.text((gx - 54, ay), why, font=f_name, fill=faint)
-    if w.get("types"):
-        d.text((m, H - 34), "TOP TYPE  " + w["types"][0][0].upper(), font=f_lbl, fill=dim)
-    d.text((W - m, H - 34), "ZENITHBOARD", font=f_lbl, fill=faint, anchor="ra")
+        d.text((gx + h * cw + cw / 2, gy + 7 * ch + 6), "%02dh" % h, font=f["small"], fill=FAINT, anchor="ma")
+    # the airlines and the models, side by side
+    x0, x1, colw, ly = 466, 820, 332, 300
+    if w.get("airlines") or w.get("models"):
+        _ranks(d, f, col, x0, ly, colw, "AIRLINES MOST SEEN", w.get("airlines") or [])
+        _ranks(d, f, col, x1, ly, colw, "MODELS MOST SEEN", w.get("models") or [])
+    else:
+        d.text((x0, ly), "AIRLINES AND MODELS MOST SEEN", font=f["lbl"], fill=GREY)
+        _not_yet(d, f, x0, ly + 32, w)
+    img.save(out, "PNG", optimize=True)
+    return {"path": out, "width": W, "height": H, "bytes": os.path.getsize(out), "mime": "image/png"}
+
+
+def draw_second(w, theme, area, out):
+    """The second card (0.35.0): the cargo airlines and the business jets of the week, two lists with their totals."""
+    img, d, col, dim, f = _canvas(theme)
+    _header(d, f, col, dim, ("CARGO AND BUSINESS JETS " + area) if area else "CARGO AND BUSINESS JETS", w["dates"])
+    for x, total, label, title, pairs in ((M, w.get("cargo_total", 0), "CARGO AIRCRAFT", "CARGO AIRLINES", w.get("cargo") or []),
+                                          (620, w.get("bizjet_total", 0), "BUSINESS JETS", "MAKE AND MODEL", w.get("bizjets") or [])):
+        d.text((x, 108), number(total), font=f["big"], fill=col)
+        d.text((x + 2, 176), label, font=f["lbl"], fill=GREY)
+        if pairs:
+            _ranks(d, f, col, x, 240, 532, title, pairs, step=64, fnt="row")
+        else:
+            d.text((x, 236), title, font=f["lbl"], fill=GREY)
+            d.text((x, 268), "None heard this week.", font=f["name"], fill=FAINT)
     img.save(out, "PNG", optimize=True)
     return {"path": out, "width": W, "height": H, "bytes": os.path.getsize(out), "mime": "image/png"}

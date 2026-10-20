@@ -240,6 +240,21 @@ def read_stats(stats_dir=None, now=None):
 HEAT_DAYS = 14
 FLEET_TOP = 10
 NOT_AIRCRAFT = {"GND", "TWR", "GRND", "SERV", "EMER"}
+CALLSIGN_PREFIX = re.compile(r"^([A-Z]{3})\d")
+_cargo = {}
+
+
+def load_cargo():
+    """{ICAO prefix: name} of the dedicated cargo airlines (0.35.0, flightinfo/data/cargo_airlines.json, each code
+    checked against a published source). Airlines that fly cargo under their passenger prefix (Turkish, Qatar,
+    Emirates) cannot be told apart by callsign and are not in it."""
+    if not _cargo:
+        try:
+            with open(os.path.join(DATA_DIR, "cargo_airlines.json"), encoding="utf-8") as fh:
+                _cargo.update({k: v["name"] for k, v in json.load(fh).items() if not k.startswith("_")})
+        except (OSError, ValueError, KeyError, TypeError, AttributeError):
+            pass
+    return _cargo
 _fleet_cache = {"key": None, "data": None}
 
 
@@ -304,20 +319,26 @@ def read_fleet(cfg, stats_dir=None, now=None, since=None):
                     fleet[f[0]] = [f[1] or old[0], f[2] or old[1], f[3] or old[2]]
         except OSError:
             continue
-    airlines, types = load_airlines(cfg), load_types(cfg)
-    by_airline, by_type, alts, typed = {}, {}, [], 0
+    airlines, types, cargo = load_airlines(cfg), load_types(cfg), load_cargo()
+    by_airline, by_type, by_cargo, by_biz, alts, typed = {}, {}, {}, {}, [], 0
     for h in sorted(fleet):
         flight, alt, code = fleet[h]
         icao, info = airline_for(flight, airlines)
         if icao:
             name = (info or {}).get("name") or icao
             by_airline[name] = by_airline.get(name, 0) + 1
+        m = CALLSIGN_PREFIX.match(flight.upper())
+        if m and m.group(1) in cargo:             # 0.35.0: the cargo airlines, by their own callsign prefix
+            by_cargo[cargo[m.group(1)]] = by_cargo.get(cargo[m.group(1)], 0) + 1
         if code in NOT_AIRCRAFT:                  # tar1090's database lists airport vehicles and towers too: not counted
             continue
         if code:
             typed += 1
-            label = describe_type({"t": code}, types)["type_name"] or code
+            d = describe_type({"t": code}, types)
+            label = d["type_name"] or code
             by_type[label] = by_type.get(label, 0) + 1
+            if d.get("shape") == "bizjet":        # 0.35.0: the business jets, by make and model (the wall's own classes)
+                by_biz[label] = by_biz.get(label, 0) + 1
         try:
             if int(alt) > 0:
                 alts.append(int(alt))
@@ -334,6 +355,8 @@ def read_fleet(cfg, stats_dir=None, now=None, since=None):
     data = {"alt_unit": "thousand ft" if imperial else "km", "aircraft": len(fleet), "days": len(names), "typed": typed,
             "airlines": sorted(by_airline.items(), key=lambda kv: (-kv[1], kv[0]))[:FLEET_TOP],
             "types": sorted(by_type.items(), key=lambda kv: (-kv[1], kv[0]))[:FLEET_TOP],
+            "cargo": sorted(by_cargo.items(), key=lambda kv: (-kv[1], kv[0]))[:FLEET_TOP], "cargo_total": sum(by_cargo.values()),
+            "bizjets": sorted(by_biz.items(), key=lambda kv: (-kv[1], kv[0]))[:FLEET_TOP], "bizjet_total": sum(by_biz.values()),
             "altitudes": {"labels": labels, "counts": bands}}
     _fleet_cache.update(key=key, data=data)
     return data
@@ -1558,6 +1581,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._file(STATIC_DIR, "stats.html")
         if path == "/social/preview":                 # the picture `zenithboard social test` drew, to look at before posting anything
             return self._file(SOCIAL_DIR, social_preview_name())
+        if path == "/social/preview2":                # the weekly second post's picture (0.35.0, social weekly test)
+            return self._file(SOCIAL_DIR, "preview2.png")
         if path.startswith("/demo/") and cfg_bool(cfg, "DEMO"):
             return self._file(DEMO_DIR, path[len("/demo/"):])
         return self._static(path)

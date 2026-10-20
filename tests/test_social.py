@@ -1528,24 +1528,79 @@ class WeeklyTest(unittest.TestCase):
         import social_week
         os.unlink(os.path.join(self.d, "fleet-2026-10-10"))
         w = self.week()
-        self.assertEqual((w["airlines"], w["types"]), ([], []))
+        self.assertEqual((w["airlines"], w["models"], w["cargo"], w["bizjets"]), ([], [], [], []))
         self.assertEqual((w["fleet_from"], w["fleet_week"]), ("2026-10-16", "2026-10-25"))
         t = social_week.text(w, self.c, "above Trémery", "#ADSB", social.fit_post)
-        self.assertNotIn("Most seen", t)
-        self.assertNotIn("Top type", t)
+        self.assertNotIn("Airlines:", t)
+        self.assertNotIn("Models:", t)
+        self.assertFalse(social_week.has_second(w), "no second post before the lists cover the week")
         info = social_week.draw(w, "amber", "above Trémery", os.path.join(self.d, "w.png"))
         self.assertEqual(info["width"], 1200)
         self.assertEqual(social_week.first_full_week("2026-10-18"), "2026-10-25", "a Sunday start covers the next week")
         self.assertEqual(social_week.first_full_week("2026-10-19"), "2026-11-01", "a Monday start is not counted whole")
         self.assertIsNone(social_week.fleet_start(self.d + "/none"))
 
+    def add_cargo_and_bizjets(self):
+        with open(os.path.join(self.d, "fleet-2026-10-17"), "w") as fh:
+            fh.write("".join("a%05x\tFDX%d\t31000\tB77L\n" % (i, i) for i in range(3)))      # FedEx three times
+            fh.write("b00001\tBCS12A\t29000\tB763\nb00002\tTHY6000\t33000\tB77L\n")       # DHL; Turkish: not cargo
+            fh.write("c00001\t\t41000\tC56X\nc00002\tHBJFA\t43000\tC56X\nc00003\t\t39000\tFA7X\n")
+            fh.write("c00004\t\t1500\tC172\n")                                            # a Cessna 172: no jet
+
+    def test_cargo_and_business_jets(self):
+        # 0.35.0: the second post. Cargo by the airline's own prefix (FedEx, DHL's EAT Leipzig), never by a
+        # passenger airline's (Turkish flies cargo as THY too); business jets by the wall's own classes
+        import social_week
+        self.add_cargo_and_bizjets()
+        w = self.week()
+        self.assertEqual(w["cargo"][:2], [("FedEx", 3), ("DHL", 1)])
+        self.assertEqual(w["cargo_total"], 4)
+        self.assertEqual(w["bizjet_total"], 3)
+        self.assertEqual(dict(w["bizjets"]).get("Cessna Citation Excel"), 2)
+        self.assertNotIn("Cessna 172", str(w["bizjets"]))
+        self.assertTrue(social_week.has_second(w))
+        t = social_week.text_second(w, "above Trémery", "#ADSB #avgeek #ZenithBoard", social.fit_post)
+        self.assertTrue(t.startswith("Cargo and business jets above Trémery, 12–18 October: 4 cargo aircraft, 3 business jets."), t)
+        self.assertIn("Cargo: FedEx (3), DHL (1).", t)
+        self.assertIn("Business jets: Cessna Citation Excel (2), Dassault Falcon 7X (1).", t)
+        self.assertTrue(t.endswith("#ADSB #avgeek #ZenithBoard"))
+        self.assertNotRegex(t + social_week.alt_second(w, "above Trémery"), r"\d\s?(km|mi|nm)\b|[A-Z]-[A-Z]{4}|HBJFA",
+                            "no distance, and no registration of a private aircraft")
+        info = social_week.draw_second(w, "white", "above Trémery", os.path.join(self.d, "w2.png"))
+        self.assertEqual((info["width"], info["height"]), (1200, 675))
+        info = social_week.draw(w, "white", "above a very long place name that would never fit beside the dates", os.path.join(self.d, "w1.png"))
+        self.assertLess(info["bytes"], 1000000)
+
+    def test_the_lists_shrink_before_a_line_goes(self):
+        import social_week
+        w = self.week()
+        w["airlines"] = [("Air %s" % x, 9) for x in "ABCDE"]
+        w["models"] = [("Model with a long name %d" % i, 5) for i in range(5)]
+        tags = "#ADSB #avgeek #ZenithBoard #planespotting #aviation"
+        t = social_week.text(w, self.c, "above Trémery", tags, social.fit_post)
+        self.assertLessEqual(len(t), social.POST_MAX)
+        self.assertTrue(t.endswith(tags), "the hashtags whole")
+        self.assertIn("Models: ", t, "the models stay, with fewer names, before any line is dropped")
+
+    def test_publish_the_second_dry_and_skipped(self):
+        self.addCleanup(setattr, social.server, "STATS_DIR", social.server.STATS_DIR)
+        social.server.STATS_DIR = self.d
+        now = time.mktime(self.now.timetuple())
+        self.assertIn("no cargo airline nor business jet", social.publish_week(self.c, {}, now, {}, dry=True, second=True)["skipped"])
+        self.add_cargo_and_bizjets()
+        r = social.publish_week(self.c, {}, now, {}, dry=True, second=True)
+        self.assertTrue(r["text"].startswith("Cargo and business jets above Trémery"))
+        os.unlink(os.path.join(self.d, "fleet-2026-10-10"))
+        self.assertIn("do not cover the week", social.publish_week(self.c, {}, now, {}, dry=True, second=True)["skipped"])
+
     def test_the_words_never_give_a_distance(self):
         import social_week
         w = self.week(posts={"2026-10-16": 3})
         t = social_week.text(w, self.c, social.area_words(self.c), "#ADSB #avgeek #ZenithBoard", social.fit_post)
         self.assertTrue(t.startswith("The week above Trémery, 12–18 October: "), t)
-        self.assertIn("Busiest day: Friday, 120 aircraft. Busiest hour: 15:00.", t)
-        self.assertIn("Most seen: Ryanair (2), Lufthansa (1).", t)
+        self.assertIn("Busiest: Friday (120 aircraft) and 15:00.", t)
+        self.assertIn("Airlines: Ryanair (2), Lufthansa (1).", t)
+        self.assertIn("Models: ", t)
         self.assertIn("Posted here: 3 crossings.", t)
         self.assertTrue(t.endswith("#ADSB #avgeek #ZenithBoard"))
         self.assertNotRegex(t + social_week.alt(w, "above Trémery"), r"\d\s?(km|mi|nm)\b|farthest|range|north|south|east|west")
@@ -1575,7 +1630,7 @@ class WeeklyTest(unittest.TestCase):
         self.assertTrue(r["text"].startswith("The week above Trémery"))
         self.assertIn("Weekly summary card", r["alt"])
         self.assertTrue(r["fleet_shown"])
-        self.assertNotRegex(r["text"], r"Top type: [A-Z]{4,} ", "the maker as the posts write it (0.34.1)")
+        self.assertNotRegex(r["text"], r"Models: [A-Z]{4,} ", "the maker as the posts write it (0.34.1)")
         social.server.STATS_DIR = self.d + "/none"
         self.assertIn("skipped", social.publish_week(self.c, {}, now, {}, dry=True))
 
@@ -1606,7 +1661,7 @@ class WeeklyTest(unittest.TestCase):
         for name, fake in (("read_aircraft", lambda c: []), ("account", lambda: {"BLUESKY_HANDLE": "h", "BLUESKY_APP_PASSWORD": "p"}),
                            ("one_poll", lambda c, st, tr, ac, now: ([], None)), ("load_state", lambda: state),
                            ("save_state", lambda st: None), ("cfg", lambda: dict(self.c)), ("merge_disk", lambda st: st),
-                           ("publish_week", lambda c, sec, now, st: sent.append(now) or results[min(len(sent), 2) - 1])):
+                           ("publish_week", lambda c, sec, now, st, second=False: (sent.append(now) or results[min(len(sent), 2) - 1]) if not second else {"skipped": "-"})):
             self.addCleanup(setattr, social, name, getattr(social, name))
             setattr(social, name, fake)
         self.addCleanup(setattr, time, "time", time.time); time.time = lambda: clock[0]
@@ -1618,6 +1673,64 @@ class WeeklyTest(unittest.TestCase):
         self.assertGreaterEqual(sent[0], start + 5 * 60, "not before 19:00")
         self.assertGreaterEqual(sent[1] - sent[0], social.RETRY_AFTER_FAIL_S)
         self.assertEqual(state.get("weekly"), "2026-W42")
+
+    def run_loop(self, start, hours, results1, results2):
+        import contextlib
+        clock = [start]
+        sent, state = [], warm()
+
+        class Stop(Exception):
+            pass
+
+        def fake_sleep(sec):
+            clock[0] += sec
+            if clock[0] > start + hours * 3600:
+                raise Stop()
+
+        def fake_publish(c, sec, now, st, second=False):
+            sent.append((now, second))
+            n = len([x for x in sent if x[1] == second])
+            seq = results2 if second else results1
+            return seq[min(n, len(seq)) - 1]
+        for name, fake in (("read_aircraft", lambda c: []), ("account", lambda: {"BLUESKY_HANDLE": "h", "BLUESKY_APP_PASSWORD": "p"}),
+                           ("one_poll", lambda c, st, tr, ac, now: ([], None)), ("load_state", lambda: state),
+                           ("save_state", lambda st: None), ("cfg", lambda: dict(self.c)), ("merge_disk", lambda st: st),
+                           ("publish_week", fake_publish)):
+            self.addCleanup(setattr, social, name, getattr(social, name))
+            setattr(social, name, fake)
+        self.addCleanup(setattr, time, "time", time.time); time.time = lambda: clock[0]
+        self.addCleanup(setattr, time, "sleep", time.sleep); time.sleep = fake_sleep
+        with contextlib.redirect_stdout(io.StringIO()):
+            with self.assertRaises(Stop):
+                social.cmd_run()
+        return sent, state
+
+    def test_the_second_post_two_minutes_later(self):
+        import datetime
+        start = time.mktime(datetime.datetime(2026, 10, 18, 18, 58).timetuple())
+        ok = {"bluesky": "at://did/post/1"}
+        sent, state = self.run_loop(start, 2, [ok], [ok])
+        firsts = [t for t, sec in sent if not sec]
+        seconds = [t for t, sec in sent if sec]
+        self.assertEqual((len(firsts), len(seconds)), (1, 1), "each once")
+        self.assertGreaterEqual(seconds[0] - firsts[0], social.SECOND_AFTER_S)
+        self.assertLess(seconds[0] - firsts[0], social.SECOND_AFTER_S + 30)
+        self.assertNotIn("weekly2", state)
+
+    def test_the_second_waits_after_a_failure_and_never_without_the_first(self):
+        import datetime
+        start = time.mktime(datetime.datetime(2026, 10, 18, 18, 58).timetuple())
+        ok, bad = {"bluesky": "at://did/post/1"}, {"bluesky": "FAILED: 503"}
+        sent, state = self.run_loop(start, 2, [ok], [bad, ok])
+        seconds = [t for t, sec in sent if sec]
+        self.assertEqual(len(seconds), 2)
+        self.assertGreaterEqual(seconds[1] - seconds[0], social.RETRY_AFTER_FAIL_S)
+        sent, state = self.run_loop(start, 2, [{"skipped": "no statistics"}], [ok])
+        self.assertEqual([sec for _, sec in sent], [False], "the first skipped: no second")
+        sent, state = self.run_loop(start, 6, [ok], [bad])
+        seconds = [t for t, sec in sent if sec]
+        self.assertLessEqual(seconds[-1] - seconds[0], social.SECOND_LATE_S, "dropped when hours late")
+        self.assertNotIn("weekly2", state)
 
 
 if __name__ == "__main__":

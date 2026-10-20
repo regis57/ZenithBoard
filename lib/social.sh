@@ -255,7 +255,7 @@ social_set_weekly() {
     *)   echo "Weekly summary: on, off, test or post"; return 1 ;;
   esac
   if [ "$(cfg_get SOCIAL_WEEKLY 0)" = 1 ]; then
-    echo "Weekly summary: ON. On Sundays from 19:00 the service posts the week: aircraft heard, messages, the busiest day and hour, the airlines and the type most seen, with a picture of the week by hour. No distance, no direction."
+    echo "Weekly summary: ON. On Sundays from 19:00 the service posts the week: aircraft heard, messages, the busiest day and hour, the airlines and the models most seen, with a picture of the week by hour; two minutes later a second post, the cargo airlines and the business jets. No distance, no direction."
     [ "$(cfg_get STATS 0)" = 1 ] || echo "It is made from the statistics, which are OFF: nothing will be posted until  sudo zenithboard stats on"
     [ "$(social_state)" = on ] || echo "Social sharing itself is OFF: the service that posts it starts with  sudo zenithboard social on"
     echo "See it first, nothing posted:  sudo zenithboard social weekly test"
@@ -426,8 +426,8 @@ social_menu() {
           wt_yesno "The summary of the week is ON (Sundays from 19:00).\n\nTurn it OFF?" 9 && social_set_weekly off >/dev/null
         else
           local wc
-          wc=$(wt_menu "A summary of the week, posted on Sundays from 19:00: aircraft heard, messages, the busiest day and hour, the airlines and the type most seen, and a picture of the week by hour. Made from the statistics (menu Receiver -> Statistics). Never a distance or a direction." \
-            test "See this week's now: draw it and show the text, post nothing" \
+          wc=$(wt_menu "A summary of the week, posted on Sundays from 19:00: aircraft heard, messages, the busiest day and hour, the airlines and the models most seen, and a picture of the week by hour. Two minutes later, a second post: the cargo airlines and the business jets. Made from the statistics (menu Receiver -> Statistics). Never a distance or a direction." \
+            test "See this week's two posts now: draw them and show the texts, post nothing" \
             on "Turn it on" \
             back "Return to the previous menu") || continue
           case "$wc" in
