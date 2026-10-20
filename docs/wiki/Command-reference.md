@@ -11,7 +11,8 @@ Every `zenithboard` command, grouped by what you are trying to do. `zenithboard`
 | Command | sudo | What it is for |
 |---|---|---|
 | `zenithboard status` | | **The first thing to run when something looks wrong.** What is installed and running, the addresses that apply to your Pi, and the MLAT count (must be exactly 1) |
-| `zenithboard health` | | One screen: power, temperature, memory, SD card, how the previous boot ended, problems in the logs |
+| `zenithboard health` | | One screen: power, temperature, memory (free of the total), SD card (how full, its size, what is free), how the previous boot ended, problems in the logs |
+| `zenithboard memory` (or `threads`) | for exact figures | Memory, threads and open files, service by service, then the largest processes. Read from `/proc`; nothing changed. With sudo, memory is PSS (adds up) and open files are counted; without, RSS for other users' processes. 0.34.0 |
 | `zenithboard config` | | Every setting, as stored in `/etc/zenithboard/config.env`. Safe to paste into an issue: no secret is in it |
 | `zenithboard version` | | The installed version |
 | `sudo zenithboard menu` | yes | The installer menu: add or remove components, every setting |

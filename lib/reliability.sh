@@ -168,6 +168,26 @@ health_power() {
   return 0
 }
 
+# 0.34.0, asked for by the owner: the card's size, not only how full it is. df gives the system's partition (what
+# fills up); lsblk the whole card under it, a little larger (the boot partition, and what the maker counts in decimal).
+gb() { awk -v b="$1" 'BEGIN { printf "%.1f GB", b / 1e9 }'; }
+health_card() {
+  local size used avail pct dev disk bytes card=""
+  read -r size used avail pct < <(df -P -B1 / 2>/dev/null | awk 'NR == 2 { print $2, $3, $4, $5 }')
+  [ -n "${size:-}" ] || return 0
+  pct=${pct%\%}
+  dev=$(findmnt -n -o SOURCE / 2>/dev/null)
+  disk=$(lsblk -n -d -o PKNAME "$dev" 2>/dev/null | head -1)
+  [ -n "$disk" ] || { [ -b /dev/mmcblk0 ] && disk=mmcblk0; }
+  [ -n "$disk" ] && bytes=$(lsblk -n -d -b -o SIZE "/dev/$disk" 2>/dev/null | head -1)
+  [[ "${bytes:-}" =~ ^[0-9]+$ ]] && card=" (the card: $(gb "$bytes"))"
+  if [ "$pct" -ge 90 ]; then
+    echo "Card:         ${pct}% full: $(gb "$used") used of $(gb "$size"), $(gb "$avail") free$card: free some space"
+  else
+    echo "Card:         ${pct}% full: $(gb "$used") used of $(gb "$size"), $(gb "$avail") free$card"
+  fi
+}
+
 health_check() {
   local t mem swap used boots prev lines
   echo "Model:        $(pi_model 2>/dev/null)"
@@ -180,12 +200,9 @@ health_check() {
   mem=$(awk '/^MemAvailable:/{printf "%d", $2/1024}' /proc/meminfo 2>/dev/null)
   swap=$(awk '/^SwapTotal:/{t=$2} /^SwapFree:/{f=$2} END{printf "%d", (t-f)/1024}' /proc/meminfo 2>/dev/null)
   if [ -n "$mem" ]; then
-    if [ "$mem" -lt 100 ]; then echo "Memory:       only ${mem} MB free: very low (swap used ${swap:-0} MB)"; else echo "Memory:       ${mem} MB free (swap used ${swap:-0} MB)"; fi
+    if [ "$mem" -lt 100 ]; then echo "Memory:       only ${mem} MB free of $(mem_total_mb) MB: very low (swap used ${swap:-0} MB; who uses it: zenithboard memory)"; else echo "Memory:       ${mem} MB free of $(mem_total_mb) MB (swap used ${swap:-0} MB; service by service: zenithboard memory)"; fi
   fi
-  used=$(df --output=pcent / 2>/dev/null | tail -1 | tr -dc '0-9')
-  if [ -n "$used" ]; then
-    if [ "$used" -ge 90 ]; then echo "Card:         ${used}% full: free some space"; else echo "Card:         ${used}% full"; fi
-  fi
+  health_card
   echo "Watchdogs:    hardware $(watchdog_state), network $(netwatch_state)"
   if [ "$(netwatch_state)" = on ]; then
     lines=$(journalctl -t zenithboard-netwatch -n 6 --no-pager -o short 2>/dev/null | grep -v '^-- ' || true)
@@ -217,6 +234,7 @@ reliability_menu() {
   while true; do
     c=$(wt_menu "Reliability: what to do when the Pi freezes or loses its network\n\nHardware watchdog: $(watchdog_state)    Network watchdog: $(netwatch_state)    Saved logs: $(keeplogs_state)\n\nAll off until you turn them on; each can be turned off again." \
       health "Health check: power, temperature, memory, last boot" \
+      memory "Memory, threads and open files, service by service" \
       keeplogs "Saved logs (read the cause after a freeze): $(keeplogs_state)" \
       watchdog "Hardware watchdog (restarts a frozen Pi): $(watchdog_state)" \
       netwatch "Network watchdog (restarts a Pi that lost its network): $(netwatch_state)" \
@@ -224,6 +242,7 @@ reliability_menu() {
       back "Return to the previous menu") || return 0
     case "$c" in
       health) clear; health_check; echo; read -rp "Press Enter to continue..." _ ;;
+      memory) clear; python3 "$ZB_HOME/tools/memory_report.py"; echo; read -rp "Press Enter to continue..." _ ;;
       keeplogs)
         if [ "$(keeplogs_state)" = on ]; then wt_yesno "Saved logs are ON.\n\nTurn them OFF? (after a restart the logs would be lost again)" 10 && { clear; keeplogs_off; read -rp "Press Enter to continue..." _; }
         else wt_yesno "Keep the system logs after a restart?\n\nUp to 50 MB on the card. After a freeze you can read what happened just before it." 11 && { clear; keeplogs_on; read -rp "Press Enter to continue..." _; }; fi ;;

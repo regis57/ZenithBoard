@@ -128,6 +128,19 @@ check "temperature shown"              'grep -q "Temperature:  41 C: OK" <<<"$ou
 check "previous boot without shutdown messages = abrupt" 'grep -q "ended ABRUPTLY" <<<"$out" && grep -q "piaware" <<<"$out"'
 check "nothing alarming"               'grep -q "nothing alarming" <<<"$out"'
 check "saved logs off is explained"    'grep -q "logs are lost at every restart" <<<"$out"'
+# 0.34.0: the card's size. The reference Pi's figures: a 32 GB card, 6% of its system partition used
+mk df 'printf "Filesystem 1-blocks Used Available Capacity Mounted on\n/dev/mmcblk0p2 31167209472 1736929280 28108087296 6%% /\n"'
+mk findmnt 'echo /dev/mmcblk0p2'
+mk lsblk 'case "$*" in *PKNAME*) echo mmcblk0 ;; *"-b -o SIZE /dev/mmcblk0"*) echo 31914983424 ;; esac'
+out=$(health_check 2>&1)
+check "card: how full, how large, how much free, the card itself" 'grep -q "Card:         6% full: 1.7 GB used of 31.2 GB, 28.1 GB free (the card: 31.9 GB)" <<<"$out"'
+check "memory: free of the total, and where to look"              'grep -q "MB free of [0-9]* MB" <<<"$out" && grep -q "zenithboard memory" <<<"$out"'
+mk lsblk 'exit 1'
+check "card: no lsblk, the partition alone"                       'health_check 2>&1 | grep -q "^Card: .*28.1 GB free$"'
+mk df 'printf "Filesystem 1-blocks Used Available Capacity Mounted on\n/dev/root 31167209472 29000000000 500000000 95%% /\n"'
+check "card: nearly full says so"                                 'health_check 2>&1 | grep -q "95% full.*free some space"'
+rm -f "$t/bin/df" "$t/bin/findmnt" "$t/bin/lsblk"
+check "memory command and menu entry"                             'grep -q "memory|threads) python3" bin/zenithboard && grep -q "memory) clear; python3" lib/reliability.sh'
 printf 'Oct 08 03:09:58 rp3 systemd[1]: Reached target Shutdown.\nOct 08 03:10:00 rp3 systemd-journald[200]: Journal stopped\n' > "$t/prevtail"
 check "previous boot with a clean shutdown" 'health_check 2>&1 | grep -q "ended normally"'
 echo 0x50005 > "$t/throttled"; echo 83.0 > "$t/temp"

@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **20 October 2026**, version **0.33.0**.
+Last updated: **20 October 2026**, version **0.34.0**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -40,7 +40,7 @@ Treat these as likely-working rather than known-working, and please report what 
 | Fixed IP address | The `nmcli` calls are tested; a real address change was not run. Keep a keyboard and screen at hand |
 | The farthest aircraft named on `/stats` | Written in 0.22.0 and run against the real server with a made-up decoder; the real sky, the real route answers and the thread's cost on a Pi 3 are still to be seen |
 | A fresh install from the README | `install.sh` has been run end to end in a container against a scripted whiptail and stand-ins (0.21.1, `tests/test_install.sh`): flags, wizard, every menu, the deployed wall answering, the uninstall. A blank card on a real Pi has not been done |
-| Plane Finder | The installer runs; no feed has been watched |
+| Plane Finder | **Feeding on the reference Pi since 20 October 2026**: its page on port 30053 showed the aircraft decoded (KLM31L, PH-HSE, Amsterdam → Geneva), beside ADSB Exchange, FlightAware and Flightradar24 |
 
 ## Known rough edges
 
@@ -55,6 +55,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 20 October 2026, 22:42 | Plane Finder installed: the reference Pi now feeds four networks (ADSB Exchange, FlightAware, Flightradar24, Plane Finder), and Plane Finder's own page showed its feed. `zenithboard health` then: 575 MB free, no swap, 34 °C, power OK, card 6 % full, previous boot ended normally. The owner asked for the card's size on that screen and for a command showing threads and memory: 0.34.0 (`Card: ... GB used of ... GB`, `zenithboard memory`) |
 | 21 October 2026, 00:30 | The weekly summary post (0.33.0), the last part of the owner's choice when Grafana left. Previewed with the real code on thirty days of made-up statistics, amber and turquoise. Not yet on the reference Pi: `sudo zenithboard social weekly test` there is the first real one |
 | 20 October 2026, 23:30 | graphs1090 offered as an option (0.32.0), the second half of the owner's choice when Grafana left. Its installer and uninstaller were read in full (commit 2f96314); running it in the session's own machine was not allowed, so `on` and `off` are tested against stand-ins only. **Not yet run on the reference Pi**: what `zenithboard graphs status` says there (collectd's memory, the size in `/run`) goes here |
 | 20 October 2026, 23:00 | With ACARS and Grafana gone, what Grafana would have shown went onto the wall's own statistics page (0.31.0): the sky by hour over fourteen days, the airlines and types most seen, how high they fly. Checked against the real server with thirty days of made-up samples, light, dark and phone width. Not yet on the reference Pi: the lists start filling on its first quarter hour after the update |

@@ -10,9 +10,22 @@ A wall on the garage wall is only as good as the Pi behind it, and a Pi outdoors
 zenithboard health
 ```
 
-One screen, no digging: power (has the Pi been under-volted or throttled?), temperature, memory, SD card, which watchdogs are on, the network watchdog's last lines, whether the previous boot ended normally or abruptly, and any kernel problems in the logs.
+One screen, no digging: power (has the Pi been under-volted or throttled?), temperature, memory (free, of the total), SD card (how full, used and free in GB, and the card's own size since 0.34.0: `Card: 6% full: 1.7 GB used of 31.2 GB, 28.1 GB free (the card: 31.9 GB)`; the partition is a little smaller than the card, which also holds the boot partition), which watchdogs are on, the network watchdog's last lines, whether the previous boot ended normally or abruptly, and any kernel problems in the logs.
 
 Run it first whenever something odd happened. **"Previous boot ended abruptly"** is the single most useful line on it: it separates a crash or a power cut from a clean restart, and that decides where to look next.
+
+## Memory and threads, service by service
+
+```bash
+sudo zenithboard memory           # or: zenithboard threads; menu 3 Settings -> 5 Reliability -> Memory
+```
+
+What each service uses right now: memory, its peak, threads, open files and processes, the largest first, then what runs outside the services and the largest processes one by one (0.34.0). `systemctl status` cannot say it on a Pi: Raspberry Pi OS boots with the kernel's memory controller off, so systemd has no memory figure. The command reads `/proc` instead, for each service's processes (its cgroup lists them), and changes nothing.
+
+* **Memory** is PSS with sudo: a shared library is split between the processes that use it, so the services add up to what is really in use. Without sudo, other users' processes give only RSS, which counts shared libraries in each; the output says so.
+* **Peak** is the largest the service's running processes have been since they started. A process that has ended — Node drawing a post's picture — is not in it; `sudo zenithboard social status` keeps that one.
+* **Threads** add up the processes' own. The first lines give the whole Pi: memory in all, in use and available, swap, all threads and the load.
+* **Files**, the open file descriptors, need sudo. A number that only grows over days is a leak worth an issue.
 
 ## The hardware watchdog
 

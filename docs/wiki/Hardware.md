@@ -15,13 +15,15 @@ The project's reference Pi is a Raspberry Pi 3 Model B (1 GB), outdoors, on Wi-F
 | Power | no under-voltage and no throttling since the start |
 | SD card | 6 % of it used |
 
+**With Plane Finder as a fourth feed** (20 October 2026, 22:40, about four hours up): ADS-B Exchange, FlightAware, Flightradar24 and Plane Finder, the wall, statistics and social sharing — **575 MB of 1 GB still available**, no swap used, 34 °C, no under-voltage, card 6 % full. What each part takes is for `sudo zenithboard memory` (0.34.0) to say.
+
 `zenithboard health` gives the same lines on any Pi; [Reliability and diagnostics](Reliability-and-diagnostics) says how to read them.
 
 ## Which board for what
 
 | Board | ADS-B + feeders + wall + social sharing |
 |---|---|
-| **Pi 3B / 3B+ (1 GB)** | **Measured: comfortable**, with ADS-B Exchange and two more feeders. A third extra feeder (Plane Finder) has not been measured. Ethernet or a strong Wi-Fi signal, and the official power supply |
+| **Pi 3B / 3B+ (1 GB)** | **Measured: comfortable**, with ADS-B Exchange and three more feeders (FlightAware, Flightradar24, Plane Finder): 575 MB still available. Ethernet or a strong Wi-Fi signal, and the official power supply |
 | **Pi 4, 1 GB** | Comfortable (estimate: the same software, a faster processor) |
 | **Pi 4, 2 GB or more / Pi 5** | Comfortable, and nothing more to gain over a Pi 3B (estimate) |
 | Pi Zero 2 W (512 MB) / Pi 2 | ADS-B and the wall only, no extra feeders (estimate) |
