@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.29.0
+- **The words of a post, in five shapes.** `sudo zenithboard social sentence factual|story|board|spotter|lookup` (menu *Social sharing → 6*, a checklist with an example of each): `factual` is the post as before; `story` ("A Ryanair Boeing 737-800 bound for Pisa from Brussels has just crossed the sky above Trémery, 10 570 m up."), `board` (four short lines: callsign and registration, route, type, altitude and speed, place and time), `spotter` (the registration first) and `lookup` ("Look up, Trémery! Ryanair #RYR5ZK is passing 10.6 km overhead…"). Several, comma-separated, or `random`: one is drawn at each post. Templates filled from the flight's own data, as the account's description says; none gives the distance or the direction from the receiver. A shape that lacks what it needs (no airline nor type), or would be too long, gives the factual text.
+- **The reason first**: `Rare visitor:`, `Heavy overhead:`, `Military traffic:`, `Helicopter:` before the words (the factual text already says military, helicopter and a range record). A range record always keeps the factual words: it is nowhere near overhead.
+- Asked for by the owner, who chose all five and the openings.
+
 ## 0.28.0
 - **The town names follow the track.** A map names the places within 70 pixels of the aircraft's track first (towns, then villages in the gaps), and three of the largest cities elsewhere on it (50 000 or more, spread apart) so the reader knows where the map is; the rest of the map only when the track's surroundings give fewer than three names. RYR5ZK (Brussels → Pisa) named Lier, Geel, Hasselt, Maastricht and a dozen more in the north of its map, far from a track running from Namur to Luxembourg; the same map now names Namur, Ciney, Rochefort, Bastogne, Arlon, Luxembourg, Esch, Hayange and Metz along the line, and Leuven, Aachen and Trier around it. Previewed on four real posts (RYR5ZK, RYR6JR, SKV615, EJU86EN) with the real code, the region's list and EOX's tiles. Asked for by the owner.
 

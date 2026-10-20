@@ -40,6 +40,63 @@ def trace(n=20, start=None):
     return [[49.60 + i * 0.001, 6.13 + i * 0.0015, 37000 - i * 50, t0 + i * 5] for i in range(n)]
 
 
+class SentenceTest(unittest.TestCase):
+    """0.29.0, asked for by the owner: the post in five shapes, from templates, chosen one or several or at random."""
+    RYR = {"hex": "4ca7b1", "flight": "RYR5ZK", "registration": "EI-ENK", "type": "B738", "type_name": "BOEING 737-800",
+           "shape": "narrow", "airline": "Ryanair", "alt_ft": 34680, "gs_kt": 389, "distance_km": 6.2, "bearing": 300,
+           "route": {"from": {"city": "Brussels"}, "to": {"city": "Pisa"}}}
+    C = dict(CFG, SOCIAL_AREA="Trémery")
+
+    def text(self, shape, why=None, p=None, **cfg):
+        return social.post_text(p or self.RYR, dict(self.C, **cfg), why, shape=shape)
+
+    def test_the_five_shapes(self):
+        nb = "\u00a0"
+        self.assertTrue(self.text("factual").startswith("Flight Ryanair #RYR5ZK · Boeing 737-800 · Brussels → Pisa"))
+        self.assertTrue(self.text("story").startswith("A Ryanair Boeing 737-800 bound for Pisa from Brussels has just crossed the sky above Trémery, 10" + nb + "570" + nb + "m up. #RYR5ZK"), self.text("story"))
+        board = self.text("board").split("\n")
+        self.assertEqual(board[:3], ["\u2708 #RYR5ZK · EI-ENK", "Brussels \u2192 Pisa", "Boeing 737-800 · 10" + nb + "570" + nb + "m · 720" + nb + "km/h"])
+        self.assertTrue(board[3].startswith("Above Trémery at "))
+        self.assertTrue(self.text("spotter").startswith("EI-ENK, a Ryanair Boeing 737-800, flying Brussels \u2192 Pisa as #RYR5ZK: 10" + nb + "570" + nb + "m above Trémery at 720" + nb + "km/h."), self.text("spotter"))
+        self.assertTrue(self.text("lookup").startswith("Look up, Trémery! Ryanair #RYR5ZK is passing 10.6" + nb + "km overhead on its way from Brussels to Pisa."), self.text("lookup"))
+
+    def test_never_the_distance_nor_the_direction(self):
+        for shape in social.SENTENCES:
+            t = self.text(shape)
+            self.assertNotIn("6.2", t, shape)
+            self.assertNotRegex(t, r"\b(NNW|WNW|north|west)\b", shape)
+            self.assertLessEqual(len(t), social.POST_MAX, shape)
+            self.assertTrue(t.rstrip().endswith("#ZenithBoard"), shape)
+
+    def test_the_reason_said_first(self):
+        self.assertTrue(self.text("story", "rare").startswith("Rare visitor: A Ryanair"))
+        self.assertTrue(self.text("factual", "heavy").startswith("Heavy overhead: Flight Ryanair"))
+        mil = dict(self.RYR, airline="MILITARY", military=True, flight="RCH123", type_name="BOEING C-17A Globemaster III")
+        self.assertTrue(self.text("lookup", "military", mil).startswith("Military traffic: Look up, Trémery! military #RCH123"), self.text("lookup", "military", mil))
+        self.assertTrue(self.text("factual", "military", mil).startswith("Military flight #RCH123"), "factual already says it")
+        rec = dict(self.RYR, distance_km=342)
+        self.assertIn("range record for 30 days", self.text("story", "farthest", rec), "a record keeps the factual words")
+
+    def test_what_a_shape_cannot_say_falls_back(self):
+        bare = {"hex": "abc123", "flight": "", "registration": "D-EABC", "alt_ft": 3000}
+        self.assertTrue(self.text("story", p=bare).startswith("Aircraft D-EABC"), "no airline, no type: factual")
+        self.assertTrue(self.text("lookup", **{"SOCIAL_AREA": "near Metz"}).startswith("Look up! Ryanair #RYR5ZK"))
+
+    def test_a_or_an(self):
+        self.assertEqual([social._a(w) for w in ("Airbus", "easyJet A320", "Eurowings A320", "United 787", "Boeing")],
+                         ["an Airbus", "an easyJet A320", "a Eurowings A320", "a United 787", "a Boeing"])
+
+    def test_choosing(self):
+        import random
+        self.assertEqual(social.sentences_of({}), ["factual"])
+        self.assertEqual(social.sentences_of({"SOCIAL_SENTENCE": "story, lookup,nonsense"}), ["story", "lookup"])
+        self.assertEqual(social.sentences_of({"SOCIAL_SENTENCE": "random"}), list(social.SENTENCES))
+        self.assertEqual(social.sentences_of({"SOCIAL_SENTENCE": "nonsense"}), ["factual"])
+        rng = random.Random(1)
+        got = {social.sentence_for({"SOCIAL_SENTENCE": "story,spotter"}, rng) for _ in range(40)}
+        self.assertEqual(got, {"story", "spotter"})
+
+
 class WordsTest(unittest.TestCase):
     # 0.18.3: the post starts with the flight ("Flight Etihad #ETD11K") and ends with the place ("above Trémery");
     # no icon in front, the callsign a hashtag so the flight can be followed. 0.19.0: "altitude 11\u00a0280\u00a0m" on its own,

@@ -92,6 +92,7 @@ ZenithBoard $ZB_VERSION - ADSB Flight Info
   zenithboard social units metric|imperial|wall   the posts' units, or the wall's own
   zenithboard social photolink on|off   end each post with a link to the aircraft's Planespotters photo page
   zenithboard social places on|off      name the towns on the maps from the region's own list (GeoNames, made on the Pi)
+  zenithboard social sentence LIST      the words of a post: factual story board spotter lookup (several: a,b) or random
   zenithboard social map NAME|rotate    the map of the dotmap and flap looks: normal, night, satellite, terrain, none, or in turn
   zenithboard social test [HEX]         draw the picture and print the text, post nothing (see it at /social/preview)
   zenithboard social on|off|status      post the aircraft overhead as a picture of the wall (off by default)
@@ -295,6 +296,7 @@ case "${1:-}" in
       units) root_or_die; social_set_units "${3:-}" ;;
       photolink) [ -z "${3:-}" ] || root_or_die; social_set_photolink "${3:-}" ;;
       places) [ -z "${3:-}" ] || root_or_die; social_set_places "${3:-}" ;;
+      sentence|sentences) [ -z "${3:-}" ] || root_or_die; social_set_sentence "${3:-}" ;;
       map)    root_or_die; social_set_map "${3:-}" ;;
       on)     root_or_die; social_on ;;
       off)    root_or_die; social_off ;;
@@ -303,7 +305,7 @@ case "${1:-}" in
       check)  root_or_die; python3 "$SOCIAL_PY" check ;;
       status) social_status ;;
       remove) root_or_die; social_remove ;;
-      *) die "Usage: zenithboard social setup|words|hashtags [WORD...]|gap [MINUTES]|picture|look dotmap|flap|alternate|colour NAME|units metric|imperial|wall|photolink on|off|places on|off|map NAME|on|off|test [HEX]|post [HEX]|check|status|remove" ;;
+      *) die "Usage: zenithboard social setup|words|hashtags [WORD...]|gap [MINUTES]|picture|look dotmap|flap|alternate|colour NAME|units metric|imperial|wall|photolink on|off|places on|off|sentence LIST|map NAME|on|off|test [HEX]|post [HEX]|check|status|remove" ;;
     esac ;;
   patches)
     case "${2:-status}" in

@@ -95,6 +95,20 @@ zenithboard logs social
 
 ---
 
+## The words (0.29.0)
+
+`sudo zenithboard social sentence ...` (menu *Social sharing → 6*) chooses the shape of a post's text. Templates, filled from the flight's own data — the account says "Texts from templates, not AI" and that stays true. On RYR5ZK, Brussels → Pisa, above Trémery:
+
+| Shape | The post |
+|---|---|
+| `factual` (default) | Flight Ryanair #RYR5ZK · Boeing 737-800 · Brussels → Pisa · altitude 10 570 m · above Trémery |
+| `story` | A Ryanair Boeing 737-800 bound for Pisa from Brussels has just crossed the sky above Trémery, 10 570 m up. #RYR5ZK |
+| `board` | ✈ #RYR5ZK · EI-ENK / Brussels → Pisa / Boeing 737-800 · 10 570 m · 720 km/h / Above Trémery at 20:37 (four lines) |
+| `spotter` | EI-ENK, a Ryanair Boeing 737-800, flying Brussels → Pisa as #RYR5ZK: 10 570 m above Trémery at 720 km/h. |
+| `lookup` | Look up, Trémery! Ryanair #RYR5ZK is passing 10.6 km overhead on its way from Brussels to Pisa. |
+
+Several shapes, comma-separated (`story,spotter,lookup`), or `random`: one is drawn at each post. The reason the post was made comes first when the words do not already say it: `Rare visitor:`, `Heavy overhead:`, `Military traffic:`, `Helicopter:`. A range record keeps the factual words, which say "range record for 30 days" and where it was seen from rather than "overhead". A shape that lacks what it needs (an aircraft with neither airline nor type) or would pass 220 characters gives the factual text, which can be cut cleanly at Bluesky's 300. No shape ever says the distance or the direction from the receiver: with the area, they would place it. The hashtags, the map's credit and the photo link follow as before.
+
 ## The picture
 
 ### Dot-matrix with a map

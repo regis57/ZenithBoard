@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **20 October 2026**, version **0.28.0**.
+Last updated: **20 October 2026**, version **0.29.0**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -57,6 +57,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 20 October 2026, 21:30 | The owner asked for other words than the factual post; five shapes proposed on RYR5ZK, all chosen, with the reason said first. 0.29.0 |
 | 20 October 2026, 21:00 | Four posts of the evening (RYR5ZK, RYR6JR, SKV615, EJU86EN): on RYR5ZK the north of the map was full of Belgian and Dutch towns unrelated to a track from Namur to Luxembourg. 0.28.0 names along the track first, with three large cities around for orientation (the owner chose that over the track alone). First try: the towns along a track through Belgium filled the 26 names before any city around; three places are now kept for them |
 | 20 October 2026, 19:05 | 0.27.3 on the Pi, first post: RYR5236 over Metz on the light map, 26 names (the most a map holds), spread over the whole strip, Pont-à-Mousson, Nomeny and Rémilly in the south where the towns alone left it empty. Now the dot-matrix example in the README and Social sharing |
 | 20 October 2026, 18:50 | SWR3AG on the satellite map: seven towns named, all on the edges, nothing in the middle. A target of six names instead of three, tried first, changed nothing (seven already). 0.27.3 names a village wherever no name is within 120 pixels: Boulay-Moselle, Bouzonville, Rémilly, Verny, Morhange, Château-Salins, Dieuze on a preview of that track, with the region's list made in the browser from the same nine GeoNames files (55 164 places, as on the Pi) |
