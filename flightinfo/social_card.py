@@ -11,8 +11,10 @@ the tablet; this file only paints them. The map comes from EOX's tile service (m
 
     normal     OpenStreetMap, rendered by EOX
     night      the same, darkened here (inverted, hue turned back, dimmed)
-    satellite  Sentinel-2 cloudless (EOX, CC BY-NC-SA 4.0: non-commercial), with EOX's bright labels on top
-    terrain    EOX's terrain rendering (OpenStreetMap and elevation data), with EOX's labels on top
+    satellite  Sentinel-2 cloudless (EOX, CC BY-NC-SA 4.0: non-commercial)
+    terrain    EOX's terrain rendering (OpenStreetMap and elevation data)
+
+All four name the towns themselves, from GeoNames (0.24.4; the OpenStreetMap two since 0.25.3), over the track.
     none       no map: the track on black
 
 OpenStreetMap's own tile servers are not used: their policy rules out automated fetching that no one is looking
@@ -54,12 +56,14 @@ GEONAMES_LINK = ("GeoNames", "https://www.geonames.org/")
 PLACES_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "places5000.tsv.gz")
 MAX_NAMES = 26                               # the towns named on a map, the largest first, none over another (0.25.2: 16 before)
 MAP_STYLES = {
-    "normal": {"layers": [("osm_3857", "jpg")], "words": "an OpenStreetMap map",
-               "credit": "Map \u00a9 OpenStreetMap, EOX", "links": [OSM_LINK, EOX_LINK],
-               "credit_full": "\u00a9 OpenStreetMap contributors, rendering \u00a9 EOX (maps.eox.at)"},
-    "night": {"layers": [("osm_3857", "jpg")], "night": True, "words": "a darkened OpenStreetMap map",
-              "credit": "Map \u00a9 OpenStreetMap, EOX", "links": [OSM_LINK, EOX_LINK],
-              "credit_full": "\u00a9 OpenStreetMap contributors, rendering \u00a9 EOX (maps.eox.at)"},
+    # 0.25.3: the two OpenStreetMap maps name the towns as the terrain and satellite ones do: OSM's own labels, drawn
+    # for a screen, shrink to an unreadable grey once the map is reduced to the post's size (seen on the real posts)
+    "normal": {"layers": [("osm_3857", "jpg")], "names": "dark", "words": "an OpenStreetMap map",
+               "credit": "Map \u00a9 OpenStreetMap, EOX, GeoNames", "links": [OSM_LINK, EOX_LINK, GEONAMES_LINK],
+               "credit_full": "\u00a9 OpenStreetMap contributors, rendering \u00a9 EOX (maps.eox.at); place names: GeoNames (CC BY 4.0)"},
+    "night": {"layers": [("osm_3857", "jpg")], "night": True, "names": "light", "words": "a darkened OpenStreetMap map",
+              "credit": "Map \u00a9 OpenStreetMap, EOX, GeoNames", "links": [OSM_LINK, EOX_LINK, GEONAMES_LINK],
+              "credit_full": "\u00a9 OpenStreetMap contributors, rendering \u00a9 EOX (maps.eox.at); place names: GeoNames (CC BY 4.0)"},
     # 0.24.4: the terrain and satellite maps name the towns themselves (from GeoNames, "names"), in place of EOX's label
     # layer, which named one village in forty kilometres on a real post over Metz
     "terrain": {"layers": [("terrain_3857", "jpg")], "names": "dark", "words": "a terrain map",
@@ -419,9 +423,6 @@ def draw_map(trace, plane, color, units="metric", mode="normal", cache_dir=None,
     shown = mode if got_base else "none"            # any of the map shown is credited; none of it, a plain black
     if not got_base:
         img = Image.new("RGB", (w, h), (16, 16, 16))
-    elif style.get("names"):
-        at = world_px(trace[-1][0], trace[-1][1], z) if trace else None
-        _draw_names(img, z, ox, oy, w, h, band, style["names"], (at[0] - ox, at[1] - oy) if at else None)
 
     S = 3                                             # drawn three times larger, then reduced: smooth lines
     ov = Image.new("RGBA", (w * S, h * S), (0, 0, 0, 0))
@@ -444,6 +445,11 @@ def draw_map(trace, plane, color, units="metric", mode="normal", cache_dir=None,
         _icon(d, pts[-1][0], pts[-1][1], plane.get("track"), 22 * S, color, heli=plane.get("shape") == "heli")
     ov = ov.resize((w, h), LANCZOS)
     img = Image.alpha_composite(img.convert("RGBA"), ov).convert("RGB")
+    # 0.25.3: the names over the track, not under it: the track cut letters out of the towns it crossed ("N ncy" on
+    # the real posts). Each town's dot stays where the town is; the aircraft keeps its clear square.
+    if shown != "none" and style.get("names"):
+        at = world_px(trace[-1][0], trace[-1][1], z) if trace else None
+        _draw_names(img, z, ox, oy, w, h, band, style["names"], (at[0] - ox, at[1] - oy) if at else None)
 
     # legend, north, credit: drawn at their size, on see-through dark boxes so they read on any map
     d = ImageDraw.Draw(img, "RGBA")

@@ -653,9 +653,32 @@ class FlapPictureTest(unittest.TestCase):
                                           fetch=lambda *a: fake_tile("terrain_3857", "jpg", 1, 1, 1))
         self.assertEqual(shown, "terrain")
         self.assertTrue({"Metz", "Thionville", "Hayange", "Woippy"} <= set(names), names)
+        # 0.25.3: the two OpenStreetMap maps too, whose own labels were unreadable once reduced on the real posts
+        for mode in ("normal", "night"):
+            del names[:]
+            img, shown = social_card.draw_map(metz, EZY, "#ff0000", mode=mode, fetch=lambda *a: fake_tile("osm_3857", "jpg", 1, 1, 1))
+            self.assertEqual(shown, mode)
+            self.assertIn("Metz", names, mode)
         del names[:]
-        social_card.draw_map(metz, EZY, "#ff0000", mode="normal", fetch=lambda *a: fake_tile("osm_3857", "jpg", 1, 1, 1))
-        self.assertNotIn("Metz", names, "the OpenStreetMap map names its towns itself")
+        social_card.draw_map(metz, EZY, "#ff0000", mode="none", fetch=lambda *a: None)
+        self.assertNotIn("Metz", names, "no map, no names")
+
+    def test_the_names_are_drawn_over_the_track(self):
+        # 0.25.3, from the real posts: the track cut letters out of the towns it crossed ("N ncy"). The names now come
+        # after the track; each town's dot stays where the town is.
+        order = []
+        real_text, real_line = social_card.ImageDraw.ImageDraw.text, social_card.ImageDraw.ImageDraw.line
+        def text(d, xy, t, *a, **k):
+            order.append(("name", t)); return real_text(d, xy, t, *a, **k)
+        def line(d, xy, *a, **k):
+            order.append(("line", None)); return real_line(d, xy, *a, **k)
+        self.addCleanup(setattr, social_card.ImageDraw.ImageDraw, "text", real_text)
+        self.addCleanup(setattr, social_card.ImageDraw.ImageDraw, "line", real_line)
+        social_card.ImageDraw.ImageDraw.text, social_card.ImageDraw.ImageDraw.line = text, line
+        metz = [[48.95 + i * 0.0125, 6.2, 30000, i * 5] for i in range(37)]
+        social_card.draw_map(metz, EZY, "#ff0000", mode="terrain", fetch=lambda *a: fake_tile("terrain_3857", "jpg", 1, 1, 1))
+        first_name = order.index(("name", "Metz"))
+        self.assertIn(("line", None), order[:first_name], "the track is drawn before the names")
 
     def _dots(self, **kw):
         if shutil.which(social.NODE) is None:
@@ -676,7 +699,7 @@ class FlapPictureTest(unittest.TestCase):
             self.assertEqual(fh.read(3), b"\xff\xd8\xff")
         self.assertEqual((info["width"], info["height"]), (1310, 830))
         self.assertLess(info["bytes"], 1000000)
-        self.assertEqual(info["map"], "night"); self.assertEqual(info["credit"], "Map \u00a9 OpenStreetMap, EOX")
+        self.assertEqual(info["map"], "night"); self.assertEqual(info["credit"], "Map \u00a9 OpenStreetMap, EOX, GeoNames")
         self.assertEqual({a[0] for a in asked}, {"osm_3857"})
         im = Image.open(out).convert("RGB")
         x, y, w, h = got["map_box"]
