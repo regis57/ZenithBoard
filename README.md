@@ -653,3 +653,5 @@ ZenithBoard is free and stays free. If it gives you pleasure and you would like 
 ## License
 
 ZenithBoard is free software under the **GNU General Public License v3.0 or later** — see [LICENSE](LICENSE).
+
+Data it ships from others: place names from [GeoNames](https://www.geonames.org/) (CC BY 4.0); the ICAO address blocks by country from [tar1090](https://github.com/wiedehopf/tar1090) (GPL-2.0-or-later) and the military address blocks from [tar1090-db](https://github.com/wiedehopf/tar1090-db); the flags of the weekly posts from [country-flag-icons](https://gitlab.com/catamphetamine/country-flag-icons) (MIT, `flightinfo/data/flags/LICENSE`).

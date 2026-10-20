@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.36.1
+- **Real flags on the weekly cards**, at scale: 48 × 32 pictures made once from country-flag-icons (MIT), the set tar1090 ships, in `flightinfo/data/flags`. 0.36.0 drew the wall's dot flags, crude at that size (the owner). `tools/flag-pixels.js` is gone.
+- **Fix: the country of an address in a nested block.** The ICAO table nests (Bermuda and the Isle of Man inside the United Kingdom's blocks, listed before its catch-all); 0.36.0's faster search gave the UK's military block, among others, to no country. Flattened once into intervals that do not overlap; checked against the table's first-match reading on 200 000 addresses. Found redrawing the cards.
+- `/social/preview2` (3, 4) says why there is no picture (the post had nothing to say at the last test, or no test was run) instead of a bare *not found*, seen on the reference Pi; `weekly test` removes an older picture of a post that has none this time.
+- A cargo airline the airline list does not name gets its cargo list name on `/stats` (TAY was shown bare: *ASL Airlines Belgium*).
+
 ## 0.36.0
 - **Four weekly posts**, two minutes apart on Sunday evening. The second card has three columns: each cargo airline with the model it flew most (*DHL · Boeing 767-300 (18) … 39*), the business jets by make and model, and the countries the business jets are registered in, with the wall's own flags, a bar and the count. **Third: the military aircraft**, by country with its flag, the most represented first, then makes and models with bars. **Fourth: general aviation**, helicopters, light aircraft, gliders, drones and balloons, makes and models with their counts. Sketched and asked for by the owner.
 - The country is the state an aircraft's ICAO address is allocated to (Annex 10, tar1090's table, `flightinfo/data/icao_countries.json`). Military: the decoder's or tar1090's database mark, an address in tar1090-db's military blocks (`flightinfo/data/military_ranges.json`), or a combat class. General aviation by the wall's class or the category the aircraft sends (A7, A1, B1, B2, B4, B6).

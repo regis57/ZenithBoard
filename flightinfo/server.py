@@ -26,7 +26,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.36.0"
+VERSION = "0.36.1"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -274,8 +274,21 @@ def _load_blocks():
         try:
             with open(os.path.join(DATA_DIR, "icao_countries.json"), encoding="utf-8") as fh:
                 rows = json.load(fh)["blocks"]
-            _icao_blocks.extend(sorted((int(a, 16), int(b, 16), cc, name) for a, b, cc, name in rows))
-            _icao_starts.extend(b[0] for b in _icao_blocks)
+            # the table nests: Bermuda's blocks lie inside the United Kingdom's, which is listed after them as a
+            # catch-all. The first block listed that holds an address is its country, as in tar1090. Flattened once
+            # into intervals that do not overlap, then searched (0.36.1: a search over the nested blocks as they came
+            # gave the UK's military block to nobody)
+            listed = [(int(a, 16), int(b, 16), cc, name) for a, b, cc, name in rows]
+            cuts = sorted({a for a, _, _, _ in listed} | {b + 1 for _, b, _, _ in listed})
+            for lo, hi in zip(cuts, cuts[1:]):
+                hit = next((blk for blk in listed if blk[0] <= lo and hi - 1 <= blk[1]), None)
+                if not hit:
+                    continue
+                if _icao_blocks and _icao_blocks[-1][2:] == hit[2:] and _icao_blocks[-1][1] == lo - 1:
+                    _icao_blocks[-1] = (_icao_blocks[-1][0], hi - 1) + hit[2:]
+                else:
+                    _icao_blocks.append((lo, hi - 1) + hit[2:])
+            _icao_starts.extend(blk[0] for blk in _icao_blocks)
         except (OSError, ValueError, KeyError, TypeError):
             pass
         try:
@@ -410,7 +423,8 @@ def read_fleet(cfg, stats_dir=None, now=None, since=None):
         flight, alt, code, cat, milmark = fleet[h]
         icao, info = airline_for(flight, airlines)
         if icao:
-            name = (info or {}).get("name") or icao
+            # 0.36.1: a cargo airline the airline list does not name gets its cargo list name (TAY was shown bare)
+            name = (info or {}).get("name") or cargo.get(icao) or icao
             by_airline[name] = by_airline.get(name, 0) + 1
         if code in NOT_AIRCRAFT:                  # tar1090's database lists airport vehicles and towers too: not counted
             continue
@@ -1690,7 +1704,14 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/social/preview":                 # the picture `zenithboard social test` drew, to look at before posting anything
             return self._file(SOCIAL_DIR, social_preview_name())
         if path in ("/social/preview2", "/social/preview3", "/social/preview4"):   # the weekly posts' pictures (0.35.0, 0.36.0)
-            return self._file(SOCIAL_DIR, "preview%s.png" % path[-1])
+            name = "preview%s.png" % path[-1]
+            if not os.path.isfile(os.path.join(SOCIAL_DIR, name)):
+                # 0.36.1: "not found" alone, seen on the reference Pi, did not say why: that post had nothing to say
+                # at the last test (its lists did not cover the week), or no test was run since 0.35.0
+                msg = ("No picture for weekly post %s: at the last 'sudo zenithboard social weekly test' it had nothing "
+                       "to say (see what the test printed), or the test has not been run since this post exists.\n" % path[-1])
+                return self._send(404, msg.encode("utf-8"), "text/plain; charset=utf-8")
+            return self._file(SOCIAL_DIR, name)
         if path.startswith("/demo/") and cfg_bool(cfg, "DEMO"):
             return self._file(DEMO_DIR, path[len("/demo/"):])
         return self._static(path)

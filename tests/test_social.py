@@ -1624,13 +1624,17 @@ class WeeklyTest(unittest.TestCase):
         self.assertTrue(t.startswith("General aviation above Trémery, 12–18 October: 2 helicopters, 1 light aircraft, 1 glider, 1 drone or balloon."), t)
         for txt in (t, social_week.alt_military(w, "above Trémery"), social_week.alt_misc(w, "above Trémery")):
             self.assertNotRegex(txt, r"\d\s?(km|mi|nm)\b|RCH123|CTM1234|ae1001", "no distance, no callsign, no address")
-        flags = social_week.flag_pixels(["US", "FR", "DE", "ZZ"])
-        self.assertEqual(sorted(flags), ["DE", "FR", "US"], "the wall's flags; none for an unknown code")
-        self.assertEqual(social_week.flag_pixels(["FR"], node="/nonexistent/node"), {}, "no Node: no flags, no error")
+        flags = social_week.load_flags(["US", "FR", "DE", "ZZ", "", "../x"])
+        self.assertEqual(sorted(flags), ["DE", "FR", "US"], "the real flags (0.36.1); none for an unknown code")
+        self.assertEqual(flags["FR"].size, (48, 32))
+        self.assertEqual(flags["FR"].getpixel((4, 16))[2] > 100, True, "France starts blue")
         for draw, args in ((social_week.draw_military, (flags,)), (social_week.draw_misc, ()), (social_week.draw_second, (flags,))):
             info = draw(w, "red", "above Trémery", os.path.join(self.d, "c.png"), *args)
             self.assertEqual((info["width"], info["height"]), (1200, 675))
         self.assertEqual((server.icao_country("3c6444"), server.icao_country("ae1234"), server.icao_country("4b1a01")), ("DE", "US", "CH"))
+        # nested blocks (0.36.1): Bermuda and the Isle of Man inside the United Kingdom's, listed before its catch-all;
+        # the UK's military block (43c000) once fell to no country
+        self.assertEqual([server.icao_country(h) for h in ("43c123", "4001a0", "43e800", "400a00", "zz")], ["GB", "BM", "IM", "GB", ""])
         self.assertTrue(server.in_military_range("ae1234"))
         self.assertFalse(server.in_military_range("3c6444"))
         self.assertEqual([server.misc_group(*a) for a in (("heli", ""), (None, "A7"), (None, "B6"), ("light", ""), ("narrow", "A3"))],
