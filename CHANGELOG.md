@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.25.4
+- An airport's name that opens on the town next to it now gives that town alone: *Amsterdam Airport Schiphol* → *Amsterdam* (a real post read *Amsterdam Schiphol → Cape Town*). A name whose other words belong to the town's own name stays whole (*Palma de Mallorca*, *Paris Charles de Gaulle*), as does one whose first word is a city far from the airport (*London Stansted*, *Milan-Malpensa*).
+
 ## 0.25.3
 From a recording of the posts made since 0.25.2.
 - **The town names are drawn over the track**, not under it: the track cut letters out of the towns it crossed (*N ncy*). Each town's dot stays where the town is; nothing moves.

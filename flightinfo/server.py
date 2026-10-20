@@ -26,7 +26,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.25.3"
+VERSION = "0.25.4"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -982,7 +982,8 @@ def _towns_near(lat, lon, km=AIRPORT_TOWN_KM):
 
 def city_of_airport(name, lat=None, lon=None):
     """The town an airport's name stands for: 'Turin Airport (Caselle Airport)' -> 'Turin',
-    'Brussels South Charleroi Airport' -> 'Charleroi' (with its position), 'Frankfurt-Hahn Airport' -> 'Frankfurt-Hahn'."""
+    'Brussels South Charleroi Airport' -> 'Charleroi' (with its position), 'Amsterdam Airport Schiphol' -> 'Amsterdam',
+    'Frankfurt-Hahn Airport' -> 'Frankfurt-Hahn'."""
     n = re.sub(r"\s*\([^)]*\)", "", str(name or ""))
     n = re.sub(r"\s{2,}", " ", AIRPORT_WORDS_RE.sub("", n)).strip(" -,")
     if not n:
@@ -994,6 +995,10 @@ def city_of_airport(name, lat=None, lon=None):
             for w in words[1:]:
                 if w in near:
                     return w
+        # 0.25.4: "Amsterdam Airport Schiphol" gave "Amsterdam Schiphol" on a real post. A name that opens on the town
+        # by the airport is that town, unless the rest is part of the town's own name ("Palma de Mallorca")
+        if near and words[0] in near and not any(w.lower() in PLACE_PARTICLES for w in words[1:]):
+            return words[0]
     return tidy_place(n)
 
 
