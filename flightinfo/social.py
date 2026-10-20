@@ -26,6 +26,7 @@ Standard library only for the service and the network, like the rest of the wall
 map (dotmap, flap), imported when one of them is chosen.
 """
 import datetime
+import gzip
 import json
 import os
 import re
@@ -64,6 +65,7 @@ DEFAULTS = {
     "SOCIAL_THEME": "",              # its colour: amber | green | red | white | turquoise; empty = the wall's THEME
     "SOCIAL_UNITS": "",              # metric | imperial; empty = the wall's UNITS (0.24.3)
     "SOCIAL_MAP": "normal",
+    "SOCIAL_PLACES": "0",            # 1: the town names from the region's own list (0.27.0, social places on)
     "SOCIAL_PHOTOLINK": "0",         # 1: a last line linking to the aircraft's Planespotters photo page (0.25.0)          # the map of the dotmap and flap looks: normal | night | satellite | terrain | none
 }
 STYLES = ("dotmap", "flap")
@@ -781,6 +783,24 @@ def _node(spec, out, *extra):
             pass                                 # already gone: nothing to clean
 
 
+PLACES_LOCAL = "places-local.tsv.gz"         # in STATE_DIR, made by tools/make_local_places.py (0.27.0)
+
+
+def places_words(c):
+    """The status line on the town names of the maps."""
+    path = os.path.join(STATE_DIR, PLACES_LOCAL)
+    if not server.cfg_bool(c, "SOCIAL_PLACES", "0"):
+        return "the lists shipped with ZenithBoard (towns of 5 000+, villages when short)   (region's own list: sudo zenithboard social places on)"
+    try:
+        with gzip.open(path, "rt", encoding="utf-8") as fh:
+            head = [next(fh) for _ in range(3)]
+        n = sum(1 for _ in gzip.open(path, "rt", encoding="utf-8")) - 4
+        made = head[1].rstrip().split("the country files ", 1)[1].rstrip(".")
+        return "the region's own list, %d places within %s km (GeoNames: %s)" % (n, head[2].split()[4], made)
+    except (OSError, IndexError, StopIteration, ValueError):
+        return "ON, but the region's list is missing or unreadable (make it again: sudo zenithboard social places on)"
+
+
 def flap_module():
     """social_card (Pillow), or None when Pillow is not installed. Only the looks with a map (dotmap, flap) need it."""
     try:
@@ -798,6 +818,9 @@ def render(p, trace, c, out_base):
     spec = {"plane": p, "trace": trace, "units": units_of(c), "theme": theme_of(c),
             "clock": clock_label(), "flags": server.cfg_bool(c, "FLAGS", "1"), "pitch": 10}
     card = flap_module()
+    if card is not None:                         # 0.27.0: the region's list, when made and switched on
+        local = os.path.join(STATE_DIR, PLACES_LOCAL)
+        card.LOCAL_PLACES_FILE = local if server.cfg_bool(c, "SOCIAL_PLACES", "0") and os.path.isfile(local) else None
     if card is None:                             # Pillow not installed (an offline `social look flap`): the dots, and a word
         # `social test` installs what the chosen look needs and keeps the setting; `social look` would replace an
         # `alternate` with the one look named here
@@ -1253,6 +1276,7 @@ def cmd_status():
     print("Radius: %s km   Area: %s   Gap: %s   Rules: %s" % (c.get("SOCIAL_RADIUS_KM"), c.get("SOCIAL_AREA") or "(none)",
                                                                gap_words(c), ", ".join(sorted(rules_of(c))) or "none"))
     print("Hashtags: %s   (change: sudo zenithboard social hashtags ...)" % c.get("SOCIAL_HASHTAGS"))
+    print("Town names on the maps: %s" % places_words(c))
     if unreadable(STATE_DIR) or unreadable(os.path.join(STATE_DIR, "state.json")):
         blind.append(STATE_DIR)
         print("History: %s cannot read the service's state folder" % who)
