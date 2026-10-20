@@ -167,7 +167,10 @@ class MapTests(unittest.TestCase):
         tr = [[48.85 + i * 0.022, 6.48 - i * 0.003, 10000, i * 30] for i in range(25)]
         got = self.names(tr, path)
         self.assertTrue({"Alongone", "Alongtwo", "Alongthree"} <= set(got), got)
-        self.assertNotIn("Northcity", got)
+        self.assertIn("Northcity", got, "a city of 500 000 off the track: one of the few named around it")
+        small_city = os.path.join(self.d, "smallcity.tsv.gz")
+        mlp.write([r if r[0] != "Northcity" else ("Northcity", r[1], r[2], 9000) for r in rows], small_city, 49.2, 6.4, 200, ["FR"])
+        self.assertNotIn("Northcity", self.names(tr, small_city), "a town of 9 000 off the track is not")
         few = os.path.join(self.d, "few.tsv.gz")
         mlp.write([r for r in rows if not r[0].startswith("Along")], few, 49.2, 6.4, 200, ["FR"])
         self.assertIn("Northcity", self.names(tr, few), "nothing along the track: the whole map, as before")

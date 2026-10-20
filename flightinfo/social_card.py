@@ -68,6 +68,11 @@ GAP_PX = 120
 # CORRIDOR_PX of the track (towns, then villages in the gaps); the rest of the map only when that gives fewer than
 # MIN_NAMES, as it did before.
 CORRIDOR_PX = 70
+# ...and, for the reader to know where the map is, the largest cities elsewhere on it: at most CONTEXT_MAX, of
+# CONTEXT_MIN inhabitants or more, CONTEXT_GAP_PX apart from any other name (asked for by the owner on the preview)
+CONTEXT_MAX = 3
+CONTEXT_MIN = 50000
+CONTEXT_GAP_PX = 150
 # 0.27.0: the region's own list, made on the Pi from GeoNames' country files (tools/make_local_places.py, `social
 # places on`): every populated place within 400 km, weighted by population or, where GeoNames knows none (almost every
 # village in Indonesia), by its rank. social.py sets the path when the owner switched it on; None: the shipped lists.
@@ -462,9 +467,10 @@ def _draw_names(img, z, ox, oy, w, h, band, tone, plane_at=None, track=None):
     if len(track) > 60:                           # a long trace: every few points is enough for a distance
         track = track[::len(track) // 60 + 1] + [track[-1]]
 
-    def name_all(found, gap=0, along=True):
+    def name_all(found, gap=0, along=True, most=MAX_NAMES):
+        start = shown[0]
         for name, la, lo, pop in sorted(found, key=lambda p: -p[3]):
-            if shown[0] >= MAX_NAMES:
+            if shown[0] >= MAX_NAMES or shown[0] - start >= most:
                 return
             if (name, la, lo) in done:
                 continue
@@ -512,6 +518,8 @@ def _draw_names(img, z, ox, oy, w, h, band, tone, plane_at=None, track=None):
                 break
         name_all(spare, GAP_PX, along)
         if shown[0] >= MIN_NAMES:
+            if along:                             # the names along the track were enough: a few cities around
+                name_all([p for p in tiers[0] if p[3] >= CONTEXT_MIN], CONTEXT_GAP_PX, False, CONTEXT_MAX)
             break
     return shown[0]
 
