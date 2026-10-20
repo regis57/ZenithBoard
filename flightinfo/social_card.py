@@ -519,10 +519,10 @@ def _draw_names(img, z, ox, oy, w, h, band, tone, plane_at=None, track=None):
             name_all(found, 0, along)
             if shown[0] >= MIN_NAMES:
                 break
+        if along and shown[0] >= MIN_NAMES:       # enough along the track: a few cities around, before the gaps
+            name_all([p for p in tiers[0] if p[3] >= CONTEXT_MIN], CONTEXT_GAP_PX, False, CONTEXT_MAX, [])
         name_all(spare, GAP_PX, along)
         if shown[0] >= MIN_NAMES:
-            if along:                             # the names along the track were enough: a few cities around
-                name_all([p for p in tiers[0] if p[3] >= CONTEXT_MIN], CONTEXT_GAP_PX, False, CONTEXT_MAX, [])
             break
     return shown[0]
 
