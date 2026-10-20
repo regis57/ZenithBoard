@@ -26,7 +26,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.30.1"
+VERSION = "0.31.0"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -208,6 +208,17 @@ def read_stats(stats_dir=None, now=None):
     t = days.get(today) or {"day": today, "messages": 0, "farthest_km": 0, "aircraft": 0, "samples": 0}
     busiest = max(hours, key=lambda h: h["messages"]) if rows else None
     best = max(day_list, key=lambda d: d["farthest_km"]) if day_list else None
+    # 0.31.0: the sky by hour, the last HEAT_DAYS days: the aircraft with a position, on average over the hour's samples
+    heat_days = [(now - datetime.timedelta(days=i)).strftime("%Y-%m-%d") for i in range(HEAT_DAYS - 1, -1, -1)]
+    cells = {}
+    for when, msgs, far_, pos, seen in rows:
+        d = when.strftime("%Y-%m-%d")
+        if d in heat_days:
+            c = cells.setdefault((d, when.hour), [0, 0])
+            c[0] += pos
+            c[1] += 1
+    heat = [{"day": d, "hours": [round(cells[(d, h)][0] / float(cells[(d, h)][1]), 1) if (d, h) in cells else None
+                                 for h in range(24)]} for d in heat_days]
     far = read_farthest(stats_dir, now)
     if best:                              # the box's best day: were its details written down? (not before 0.22.0)
         far["best_box_detailed"] = os.path.exists(os.path.join(stats_dir, "farthest-" + best["day"]))
@@ -222,7 +233,109 @@ def read_stats(stats_dir=None, now=None):
         "hours": hours,
         "days": day_list,
         "farthest": far,
+        "heat": heat,
     }
+
+
+HEAT_DAYS = 14
+FLEET_TOP = 10
+NOT_AIRCRAFT = {"GND", "TWR", "GRND", "SERV", "EMER"}
+_fleet_cache = {"key": None, "data": None}
+
+
+def local_types(hexes, d):
+    """0.31.0: {hex: type code} for many addresses at once, from tar1090's database in folder d, for the statistics'
+    fleet files (lib/stats.sh). The addresses are walked in order and only the files on the current path are kept,
+    so each file is read once, and the wall's own caches (local_aircraft) are neither used nor emptied."""
+    out, path = {}, {}
+    if not d:
+        return out
+    for h in sorted({str(x or "").strip().upper() for x in hexes}):
+        if not HEX_RE.match(h):
+            continue
+        n = 1
+        while n <= len(h):
+            p = h[:n]
+            if p not in path:
+                for k in [k for k in path if not p.startswith(k)]:
+                    del path[k]
+                path[p] = _read_shard(d, p)
+            shard = path[p]
+            if not shard:
+                break
+            entry = shard.get(h[n:])
+            if isinstance(entry, list) and entry:
+                code = str(entry[1] or "").strip().upper() if len(entry) > 1 else ""
+                if code:
+                    out[h.lower()] = code
+                break
+            if h[:n + 1] not in (shard.get("children") or []):
+                break
+            n += 1
+    return out
+
+
+def read_fleet(cfg, stats_dir=None, now=None):
+    """0.31.0: who flew over in thirty days, from the fleet-DAY files the timer writes: the airlines and the types
+    most seen (distinct aircraft each), and how high they were. An airline is named from its callsign's prefix, as the
+    wall does; the type is the one the sample wrote: the decoder's, or tar1090's when `data localdb on` (looked up by
+    the sample, never here: thirty days of addresses would take the wall's Pi 3B minutes). Cached until a fleet
+    file changes."""
+    stats_dir = stats_dir or STATS_DIR
+    now = now or datetime.datetime.now()
+    cut = (now - datetime.timedelta(days=30)).strftime("%Y-%m-%d")
+    try:
+        names = sorted(n for n in os.listdir(stats_dir) if n.startswith("fleet-") and n[6:] >= cut)
+    except OSError:
+        names = []
+    key = (tuple((n, os.path.getmtime(os.path.join(stats_dir, n))) for n in names), cfg.get("UNITS"))
+    if _fleet_cache["key"] == key:
+        return _fleet_cache["data"]
+    fleet = {}
+    for n in names:                               # oldest first: a later day's values replace an earlier one's
+        try:
+            with open(os.path.join(stats_dir, n), encoding="utf-8") as fh:
+                for line in fh:
+                    f = line.rstrip("\n").split("\t")
+                    if len(f) != 4 or not HEX_RE.match(f[0].upper()):
+                        continue
+                    old = fleet.get(f[0], ["", "", ""])
+                    fleet[f[0]] = [f[1] or old[0], f[2] or old[1], f[3] or old[2]]
+        except OSError:
+            continue
+    airlines, types = load_airlines(cfg), load_types(cfg)
+    by_airline, by_type, alts, typed = {}, {}, [], 0
+    for h in sorted(fleet):
+        flight, alt, code = fleet[h]
+        icao, info = airline_for(flight, airlines)
+        if icao:
+            name = (info or {}).get("name") or icao
+            by_airline[name] = by_airline.get(name, 0) + 1
+        if code in NOT_AIRCRAFT:                  # tar1090's database lists airport vehicles and towers too: not counted
+            continue
+        if code:
+            typed += 1
+            label = describe_type({"t": code}, types)["type_name"] or code
+            by_type[label] = by_type.get(label, 0) + 1
+        try:
+            if int(alt) > 0:
+                alts.append(int(alt))
+        except ValueError:
+            pass
+    imperial = public_config(cfg)["units"] == "imperial"
+    step = 5000 if imperial else 1000 / 0.3048                   # bands of 5 000 ft, or of 1 km
+    top_band = 9 if imperial else 13
+    bands = [0] * (top_band + 1)
+    for a in alts:
+        bands[min(int(a // step), top_band)] += 1
+    labels = [("%d–%d" % (i * 5, i * 5 + 5)) if imperial else ("%d–%d" % (i, i + 1)) for i in range(top_band)]
+    labels.append("%d+" % (top_band * 5 if imperial else top_band))
+    data = {"alt_unit": "thousand ft" if imperial else "km", "aircraft": len(fleet), "days": len(names), "typed": typed,
+            "airlines": sorted(by_airline.items(), key=lambda kv: (-kv[1], kv[0]))[:FLEET_TOP],
+            "types": sorted(by_type.items(), key=lambda kv: (-kv[1], kv[0]))[:FLEET_TOP],
+            "altitudes": {"labels": labels, "counts": bands}}
+    _fleet_cache.update(key=key, data=data)
+    return data
 
 
 FARTHEST_SHOWN = ("day", "time", "hex", "flight", "flight_iata", "airline", "registration", "type", "type_name",
@@ -1130,11 +1243,8 @@ _localdb_hexes = {}                 # (dir, hex) -> answer or None
 _localdb_lock = threading.Lock()
 
 
-def _localdb_shard(d, prefix):
-    key = (d, prefix)
-    with _localdb_lock:
-        if key in _localdb_shards:
-            return _localdb_shards[key]
+def _read_shard(d, prefix):
+    """One file of tar1090's database, parsed: a dict, or None when it is missing or unreadable."""
     try:
         import gzip
         with open(os.path.join(d, prefix + ".js"), "rb") as fh:
@@ -1144,9 +1254,17 @@ def _localdb_shard(d, prefix):
         except OSError:
             pass                                 # a plain JSON file is read as it is
         data = json.loads(raw.decode("utf-8"))
-        data = data if isinstance(data, dict) else {}
+        return data if isinstance(data, dict) else {}
     except (OSError, ValueError):
-        data = None
+        return None
+
+
+def _localdb_shard(d, prefix):
+    key = (d, prefix)
+    with _localdb_lock:
+        if key in _localdb_shards:
+            return _localdb_shards[key]
+    data = _read_shard(d, prefix)
     with _localdb_lock:
         while len(_localdb_shards) >= LOCAL_DB_SHARDS:
             _localdb_shards.pop(next(iter(_localdb_shards)))
@@ -1432,7 +1550,7 @@ class Handler(BaseHTTPRequestHandler):
             if not cfg_bool(cfg, "STATS"):
                 return self._send(200, {"enabled": False, "version": VERSION})
             got = read_stats() or {"enabled": True, "samples": 0, "hours": [], "days": [], "today": None, "best": None}
-            return self._send(200, dict(got, version=VERSION, units=public_config(cfg)["units"]))
+            return self._send(200, dict(got, version=VERSION, units=public_config(cfg)["units"], fleet=read_fleet(cfg)))
         if path == "/api/farthest":                    # asked by the statistics timer every quarter hour (lib/stats.sh)
             return self._send(200, farthest_answer(cfg))
         if path == "/stats":

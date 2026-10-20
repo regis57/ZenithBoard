@@ -493,6 +493,18 @@ class LocalDatabaseTests(unittest.TestCase):
         self.assertIsNone(server.local_aircraft("zzz", self.d))
         self.assertIsNone(server.local_aircraft("4D2087", None))
 
+    def test_many_at_once_for_the_statistics(self):
+        # 0.31.0: the fleet files' types, each file read once and the wall's caches left alone
+        reads = []
+        real = server._read_shard
+        self.addCleanup(setattr, server, "_read_shard", real)
+        server._read_shard = lambda d, p: reads.append(p) or real(d, p)
+        got = server.local_types(["4d2087", "406a8e", "406A8E", "4d9999", "a12345", "zzz", ""], self.d)
+        self.assertEqual(got, {"4d2087": "A320", "406a8e": "A319"})
+        self.assertEqual(sorted(reads), ["4", "40", "A"], "4.js once though three addresses start with 4")
+        self.assertEqual((server._localdb_shards, server._localdb_hexes), ({}, {}))
+        self.assertEqual(server.local_types(["4d2087"], None), {})
+
     def test_off_by_default_and_only_with_the_folder(self):
         self.assertIsNone(server.local_db_dir({}))
         self.assertEqual(server.local_db_dir({"LOCAL_DB": "1", "LOCAL_DB_DIR": self.d}), self.d)
@@ -722,6 +734,45 @@ class WhoMayReadTest(unittest.TestCase):
 
 class StatsTest(unittest.TestCase):
     """What the stats timer wrote, turned into what the page shows. Written against a folder made here."""
+
+    def test_the_sky_by_hour(self):
+        # 0.31.0: fourteen rows of 24 hours, the average of the aircraft with a position over the hour's samples
+        import datetime
+        d = self._dir()
+        now = datetime.datetime(2026, 10, 20, 22, 0)
+        with open(os.path.join(d, "stats.csv"), "w") as fh:
+            fh.write("when,messages,farthest_km,aircraft_pos,aircraft_seen\n2026-10-20 13:00,1,1,30,1\n"
+                     "2026-10-20 13:15,1,1,40,1\n2026-10-19 09:30,1,1,12,1\n2026-09-01 09:30,1,1,99,1\n")
+        h = server.read_stats(d, now)["heat"]
+        self.assertEqual(len(h), 14)
+        self.assertEqual((h[-1]["day"], h[-1]["hours"][13], h[-1]["hours"][12]), ("2026-10-20", 35.0, None))
+        self.assertEqual(h[-2]["hours"][9], 12.0)
+        self.assertNotIn("2026-09-01", [r["day"] for r in h])
+
+    def test_the_fleet_of_thirty_days(self):
+        # 0.31.0: airlines by callsign prefix, types from the file (the sample looked them up), altitudes in bands;
+        # an aircraft counted once over the days; airport vehicles are not a type; older than thirty days left out
+        import datetime
+        d = self._dir()
+        now = datetime.datetime(2026, 10, 20, 22, 0)
+        rows = {"fleet-2026-10-19": ["3c6444\tDLH4YK\t36000\tA320", "4ca123\tRYR5ZK\t35000\tB738", "4ca124\tRYR12\t3000\tB738",
+                                     "4d2087\tEWG8QR\t\t", "3c0001\t\t50\tGND"],
+                "fleet-2026-10-20": ["3c6444\tDLH4YK\t12000\t"],
+                "fleet-2026-08-01": ["aaaaaa\tAFR1\t30000\tA320"]}
+        for name, lines in rows.items():
+            with open(os.path.join(d, name), "w") as fh:
+                fh.write("\n".join(lines) + "\n")
+        f = server.read_fleet({"UNITS": "metric"}, d, now)
+        self.assertEqual((f["aircraft"], f["days"]), (5, 2))
+        self.assertEqual(tuple(f["airlines"][0]), ("Ryanair", 2))
+        self.assertNotIn("Air France", str(f["airlines"]), "older than thirty days")
+        names = dict(f["types"])
+        self.assertEqual(sum(names.values()), 3, "A320 once (two days), B738 twice, no GND")
+        self.assertNotIn("GND", str(f["types"]))
+        self.assertEqual(f["typed"], 3)
+        c = dict(zip(f["altitudes"]["labels"], f["altitudes"]["counts"]))
+        self.assertEqual((c["3–4"], c["10–11"], c["0–1"]), (1, 1, 1))     # 12 000 ft (the latest) 3.7 km; 35 000 ft; 3 000 ft
+        self.assertEqual(server.read_fleet({"UNITS": "imperial"}, d, now)["altitudes"]["labels"][0], "0–5")
 
     def _dir(self):
         import tempfile
