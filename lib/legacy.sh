@@ -39,7 +39,8 @@ acars_remove() {      # acars_remove [--yes]: everything acars_leftovers lists, 
   local u
   for u in $LEGACY_UNITS; do systemctl disable --now "$u" 2>/dev/null || true; rm -f "/etc/systemd/system/$u.service"; done
   systemctl daemon-reload 2>/dev/null || true
-  rm -f /usr/local/bin/acarsdec "$ZB_DATA"/acars.db* "$GRAFANA_PASS_FILE"
+  rm -f /usr/local/bin/acarsdec "$ZB_DATA"/acars.db* "$GRAFANA_PASS_FILE" "$ZB_HOME/bin/run-acarsdec"
+  rm -rf "${ZB_HOME:?}/acars"
   if pkg_installed grafana; then
     systemctl disable --now grafana-server 2>/dev/null || true
     apt_remove grafana || warn "Grafana could not be removed: sudo apt-get purge grafana"

@@ -38,4 +38,19 @@ check "no ACARS install code left"                   '[ ! -e lib/acars.sh ] && [
 check "command: acars remove only"                   'grep -q "remove) root_or_die; acars_remove" bin/zenithboard && ! grep -q "grafana_password_cmd" bin/zenithboard'
 check "update list: no acars component"              '! grep -q "ZB_COMPONENTS=.*acars" lib/update.sh'
 check "uninstall everything takes the leftovers too" 'grep -q "acars_remove --yes" install.sh'
+
+# 0.30.1: an update on a Pi still running ACARS keeps the files its services start; a clean Pi loses the old ones
+src=$(pwd); export ZB_HOME="$t/opt"; mkdir -p "$ZB_HOME/acars" "$ZB_HOME/bin"
+echo ingest > "$ZB_HOME/acars/acars_ingest.py"; echo run > "$ZB_HOME/bin/run-acarsdec"
+# shellcheck source=lib/flightinfo.sh
+. lib/flightinfo.sh
+ZB_BIN_DIR="$t/usrbin"; mkdir -p "$ZB_BIN_DIR"
+deploy_on() { ( cd "$src" && deploy_files ) >/dev/null 2>&1; }
+units_dir_has() { [ -f /etc/systemd/system/zenithboard-acars-ingest.service ]; }
+if units_dir_has; then echo "skip keep-files: this machine has an ACARS unit"; else
+  deploy_on
+  check "a clean Pi: the old ACARS files go with an update" '[ ! -e "$ZB_HOME/acars" ] && [ ! -e "$ZB_HOME/bin/run-acarsdec" ] && [ -x "$ZB_HOME/bin/zenithboard" ]'
+fi
+check "deploy keeps them while a unit is installed"  'grep -q "zenithboard-acars-ingest.service" lib/flightinfo.sh && grep -q "cp -a \"\$keep/run-acarsdec\"" lib/flightinfo.sh'
+check "acars remove takes the kept files"            'grep -q "rm -rf \"\${ZB_HOME:?}/acars\"" lib/legacy.sh && grep -q "bin/run-acarsdec" lib/legacy.sh'
 [ "$fail" = 0 ] && echo "ALL OK"; exit "$fail"

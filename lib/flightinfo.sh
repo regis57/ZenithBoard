@@ -31,9 +31,22 @@ deploy_files() {
   local src; src="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
   if [ "$src" != "$ZB_HOME" ]; then
     install -d -m 755 "$ZB_HOME"
-    # acars/ is removed and no longer copied: ACARS left ZenithBoard in 0.30.0
+    # ACARS left ZenithBoard in 0.30.0 and its files are no longer shipped. A Pi still running it keeps the
+    # ingester (acars/) and acarsdec's launcher (bin/run-acarsdec) its services start, until `acars remove`:
+    # an update never stops a service its owner kept (0.30.1)
+    local keep=""
+    if [ -f /etc/systemd/system/zenithboard-acars-ingest.service ] || [ -f /etc/systemd/system/zenithboard-acarsdec.service ]; then
+      keep=$(mktemp -d)
+      [ -d "$ZB_HOME/acars" ] && cp -a "$ZB_HOME/acars" "$keep/"
+      [ -f "$ZB_HOME/bin/run-acarsdec" ] && cp -a "$ZB_HOME/bin/run-acarsdec" "$keep/"
+    fi
     rm -rf "${ZB_HOME:?}/flightinfo" "${ZB_HOME:?}/acars" "${ZB_HOME:?}/lib" "${ZB_HOME:?}/bin" "${ZB_HOME:?}/systemd" "${ZB_HOME:?}/tools"
     cp -r "$src/flightinfo" "$src/lib" "$src/bin" "$src/systemd" "$src/tools" "$src/install.sh" "$src/LICENSE" "$ZB_HOME/"
+    if [ -n "$keep" ]; then
+      [ -d "$keep/acars" ] && cp -a "$keep/acars" "$ZB_HOME/"
+      [ -f "$keep/run-acarsdec" ] && cp -a "$keep/run-acarsdec" "$ZB_HOME/bin/"
+      rm -rf "$keep"
+    fi
     printf '%s\n' "$src" > "$ZB_HOME/.source"      # where to `git pull` from when updating
   fi
   chmod +x "$ZB_HOME/install.sh" "$ZB_HOME"/bin/*
