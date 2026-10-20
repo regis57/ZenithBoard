@@ -274,7 +274,7 @@ class RunnerTest(TempDirs):
         with open(self.stub, "w") as fh:
             fh.write("#!/bin/sh\nif [ \"$1 $2\" = \"console state\" ]; then echo version=0.39.0; echo temp_c=51; echo 'bad key=x'; exit 0; fi\n"
                      "echo \"ran: $*\"; echo \"input: $(cat 2>&1 | head -c 20)\"; [ \"$1\" = radius ] || exit 3\n")
-        os.chmod(self.stub, 0o755)
+        os.chmod(self.stub, stat.S_IRWXU)        # its owner only: the test runs it as that user
 
     def run_helper(self):
         env = dict(os.environ, ZB_CONSOLE_DIR=self.dir, ZENITHBOARD_BIN=self.stub, ZB_USER=__import__("pwd").getpwuid(os.getuid()).pw_name)

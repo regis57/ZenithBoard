@@ -43,14 +43,24 @@ def wall_uid():
         return None
 
 
-def write_out(name, data, mode=0o640):
-    """A file in out/, replaced in one step. out/ is root's, so nothing in it can be a planted link."""
+def _create(path):
+    """A new file for the wall to read: owner read-write, its group read, others nothing (the umask makes the mode;
+    out/ is root's, so nothing in it can be a planted link, and it is never followed anyway)."""
+    old = os.umask(0o137)
+    try:
+        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW)
+    finally:
+        os.umask(old)
+    _group(path)
+    return fd
+
+
+def write_out(name, data):
+    """A file in out/, replaced in one step."""
     path = os.path.join(OUT, name)
     tmp = path + ".tmp"
-    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW, mode)
-    with os.fdopen(fd, "wb") as fh:
+    with os.fdopen(_create(tmp), "wb") as fh:
         fh.write(data if isinstance(data, bytes) else data.encode("utf-8"))
-    _group(tmp)
     os.replace(tmp, path)
 
 
@@ -134,9 +144,7 @@ def run_job(job_id, job):
         flags = actions.flags(name)
         timeout = TIMEOUT_S["long"] if "long" in flags else TIMEOUT_S[""]
         log_path = os.path.join(OUT, job_id + ".log")
-        fd = os.open(log_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW, 0o640)
-        _group(log_path)
-        with os.fdopen(fd, "wb", buffering=0) as log:
+        with os.fdopen(_create(log_path), "wb", buffering=0) as log:
             log.write(("$ zenithboard %s\n" % " ".join(argv)).encode("utf-8"))
             try:
                 p = subprocess.Popen([ZB_BIN] + argv, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
@@ -171,7 +179,7 @@ def prune():
             try:
                 os.unlink(os.path.join(OUT, jid + ext))
             except OSError:
-                pass
+                pass                          # already gone: nothing to prune
 
 
 def _mtime(path):
@@ -196,7 +204,7 @@ def main():
             try:
                 os.unlink(path)                   # taken: never run twice
             except OSError:
-                pass
+                pass                          # taken by another start: it will not run twice
             job_id = n[:-4]
             if job is None or not actions.JOB_ID_RE.match(job_id):
                 continue

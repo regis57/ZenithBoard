@@ -356,7 +356,7 @@ class Pairs(object):
                 if h in fh.read().split():
                     return False
         except OSError:
-            pass
+            pass                                 # no code used yet
         try:
             with open(used, "a", encoding="utf-8") as fh:
                 fh.write(h + "\n")
@@ -371,7 +371,7 @@ def submit(name, params, by):
     job_id = secrets.token_hex(8)
     body = json.dumps({"action": name, "params": params or {}, "by": by, "at": int(now())})
     tmp = os.path.join(SPOOL_DIR, "." + job_id + ".tmp")
-    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o640)
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)   # root reads it; nobody else need
     with os.fdopen(fd, "w", encoding="utf-8") as fh:
         fh.write(body)
     os.replace(tmp, os.path.join(SPOOL_DIR, job_id + ".job"))   # the .path unit sees it only once it is whole
@@ -386,8 +386,16 @@ def _read_json(path):
         return None
 
 
-def job_status(job_id, offset=0):
+def safe_job_id(job_id):
+    """16 hexadecimal digits, rebuilt from the number they spell: nothing else from a request reaches a path."""
     if not actions.JOB_ID_RE.match(str(job_id or "")):
+        return None
+    return "%016x" % int(job_id, 16)
+
+
+def job_status(job_id, offset=0):
+    job_id = safe_job_id(job_id)
+    if job_id is None:
         return None
     meta = _read_json(os.path.join(OUT_DIR, job_id + ".json"))
     if meta is None:
@@ -404,7 +412,7 @@ def job_status(job_id, offset=0):
             nxt = max(0, int(offset)) + len(chunk)
             text = chunk.decode("utf-8", "replace")
     except (OSError, ValueError):
-        pass
+        pass                                     # no output yet: the helper has not started it
     meta = dict(meta, log=text, next=nxt)
     return meta
 
@@ -442,7 +450,7 @@ def audit(line):
             fh.write("\n".join(lines) + "\n")
         os.replace(tmp, path)
     except OSError:
-        pass
+        pass                                     # the journal line above is the record that matters
 
 
 def wizard_done():
@@ -634,6 +642,6 @@ class Console(object):
             try:
                 open(os.path.join(STATE_DIR, "wizard-done"), "a").close()
             except OSError:
-                pass
+                pass                             # the wizard comes back next time: harmless
             return Reply(200, {"ok": True})
         return Reply(404, {"error": "not found"})

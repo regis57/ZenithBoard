@@ -201,7 +201,7 @@
   window.addEventListener("hashchange", route);
   function route() {
     var want = (location.hash || "#overview").slice(1);
-    if (!SECTIONS[want]) want = "overview";
+    if (SECTION_IDS.indexOf(want) < 0) want = "overview";      // only a section's own name: never a property of the object
     if (want === "system") S.sessions = null;            // who is signed in, read again each time
     S.section = want;
     draw(true);
@@ -230,7 +230,7 @@
     document.title = title + " · ZenithBoard console";
     var y = window.scrollY;
     view.innerHTML = "";
-    add(view, SECTIONS[S.section]());
+    add(view, sectionView(S.section));
     if (scrollTop) { window.scrollTo(0, 0); view.focus({ preventScroll: true }); } else window.scrollTo(0, y);
     $("busy-badge").hidden = !Object.keys(S.jobs).some(function (k) { var j = S.jobs[k]; return j.state === "queued" || j.state === "running"; });
   }
@@ -521,6 +521,17 @@
     }
   };
 
+  var SECTION_IDS = ["overview", "wall", "receiver", "sharing", "reliability", "system"];
+  function sectionView(id) {
+    switch (id) {
+      case "wall": return SECTIONS.wall();
+      case "receiver": return SECTIONS.receiver();
+      case "sharing": return SECTIONS.sharing();
+      case "reliability": return SECTIONS.reliability();
+      case "system": return SECTIONS.system();
+      default: return SECTIONS.overview();
+    }
+  }
   function tile(k, v, d) {
     return h("div", { "class": "tile" }, h("div", { "class": "k", text: k }), h("div", { "class": "v", text: v }), h("div", { "class": "d", text: d || "\u00a0" }));
   }

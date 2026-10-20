@@ -1823,7 +1823,8 @@ class Handler(BaseHTTPRequestHandler):
             except ValueError:
                 n = -1
             if not 0 <= n <= console.MAX_BODY:
-                return self._send(413, b"too large", "text/plain")
+                self._send(413, b"too large", "text/plain")
+                return True
             body = self.rfile.read(n) if n else b""
         req = console.Request(self.command, url.path, parse_qs(url.query), dict(self.headers.items()),
                               self.client_address[0], body, dict(cfg, _VERSION=VERSION))
@@ -1831,18 +1832,20 @@ class Handler(BaseHTTPRequestHandler):
         if reply is None:
             return None
         if reply.file:
-            return self._file(STATIC_DIR, reply.file, reply.headers)
+            self._file(STATIC_DIR, reply.file, reply.headers)
+            return True
         out = reply.body if reply.body is not None else b""
         if isinstance(out, str):
             out = out.encode("utf-8")
-        return self._send(reply.code, out, reply.ctype, headers=reply.headers) or True
+        self._send(reply.code, out, reply.ctype, headers=reply.headers)
+        return True
 
     def do_POST(self):
         url = urlparse(self.path)
         cfg = load_config()
         if not client_allowed(self.client_address[0], cfg.get("ALLOW_FROM", "private")):
-            return self._send(403, b"This wall answers its own network only (ALLOW_FROM).", "text/plain")
-        if self._console(cfg, url) is None:
+            self._send(403, b"This wall answers its own network only (ALLOW_FROM).", "text/plain")
+        elif self._console(cfg, url) is None:
             self._send(405, b"method not allowed", "text/plain")
 
     def do_GET(self):
