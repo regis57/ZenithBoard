@@ -534,7 +534,7 @@ Off by default. Switched on, the Pi posts the aircraft worth a post — a milita
 | `dotmap` (the default) | `flap` |
 |---|---|
 | ![Dot-matrix picture with a map](docs/images/social-dotmap.jpg) | ![Split-flap picture with a map](docs/images/social-flap.jpg) |
-| The dot-matrix wall beside a map with the aircraft's track: OpenStreetMap, a darkened one, satellite or terrain. *A real post from the reference Pi (terrain map), 18 October 2026; the track is drawn thinner since 0.24.1* | The split-flap board beside the same map |
+| The dot-matrix wall beside a map with the aircraft's track: a light or dark relief map with the main roads, satellite or terrain, every town named once. *A real post from the reference Pi (terrain map), 18 October 2026; the track is drawn thinner since 0.24.1* | The split-flap board beside the same map |
 
 `alternate` takes `dotmap` and `flap` in turn, and the map and the colour can turn too. The map can also be `none`: the track on black, nothing fetched. The posts follow the wall's units, or their own: `sudo zenithboard social units imperial` (ft, knots, mi) or `metric`, also in the picture wizard (0.24.3). Each post can end with a link to the aircraft's Planespotters photo page, the photographer named: `sudo zenithboard social photolink on` (0.25.0; the link only, never the picture).
 

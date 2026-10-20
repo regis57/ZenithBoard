@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.26.1
+- **No town named twice on the posts' maps.** The light (`normal`) and dark (`night`) maps were EOX's OpenStreetMap layer, which writes its own town names: since 0.25.3 ZenithBoard's names went over them, a few pixels apart (EWG8QR over Nancy, on a real post). EOX has no OpenStreetMap layer without names, so these two maps are now built from two EOX layers that carry none: the light relief and the main roads (orange on the light map, white on the dark one), under ZenithBoard's names. The main roads only, not OpenStreetMap's small ones. Credits unchanged: OpenStreetMap, EOX, GeoNames. Approved by the owner on a preview.
+
 ## 0.26.0
 - **Registrations and models from the receiver map's database, offline.** `sudo zenithboard data localdb on` (menu *Settings → Wall → 9*): the wall reads tar1090's aircraft database, which tar1090's installer keeps on the card and updates itself, before asking adsbdb and hexdb. From a real post: EWG8QR, 9H-EWG (4D2087), went out with no registration and no model; adsbdb and hexdb did not know it, tar1090's database did. Nothing is downloaded, nothing leaves the Pi; at most four of its files in memory (about 25 MB). Off by default; `zenithboard data status` and `zenithboard status` say whether it is on and which version tar1090 has.
 
