@@ -293,21 +293,23 @@ def alt_misc(w, area):
         span_words(w["dates"]), (" " + area) if area else "", " ".join(groups))
 
 
-def flag_pixels(codes, node=None):
-    """{ISO code: [[x, y, rgb], ...]} from the wall's own flags (flags.js, through tools/flag-pixels.js); {} when
-    Node cannot be run. A country without a drawing has no entry."""
-    import json
-    import subprocess
-    codes = sorted({c for c in codes if c})
-    if not codes:
-        return {}
-    script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "tools", "flag-pixels.js")
-    try:
-        out = subprocess.run([node or os.environ.get("ZENITHBOARD_NODE", "node"), script] + codes,
-                             capture_output=True, timeout=20, check=True).stdout
-        return json.loads(out.decode("utf-8") or "{}")
-    except (OSError, ValueError, subprocess.SubprocessError):
-        return {}
+FLAG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "flags")
+
+
+def load_flags(codes):
+    """{ISO code: picture} of the real flags, 48 x 32 (0.36.1: flightinfo/data/flags, country-flag-icons, MIT). A
+    country without one has no entry. The wall's dot flags looked crude at this size (the owner, 0.36.0)."""
+    from PIL import Image
+    out = {}
+    for cc in sorted({c for c in codes if c}):
+        p = os.path.join(FLAG_DIR, "%s.png" % cc)
+        if len(cc) == 2 and cc.isalpha() and os.path.isfile(p):
+            try:
+                with Image.open(p) as im:
+                    out[cc] = im.convert("RGB")
+            except OSError:
+                pass                             # an unreadable file: the two letters instead
+    return out
 
 
 # --------------------------------------------------------------------------- the pictures
@@ -407,22 +409,15 @@ def draw(w, theme, area, out):
     return {"path": out, "width": W, "height": H, "bytes": os.path.getsize(out), "mime": "image/png"}
 
 
-def _flag(d, px, x, y, pitch=4):
-    """A flag of the wall, dot by dot, its top left at x, y; 11 x 7 dots (13 x 9 with a dark flag's outline), 4 pixels a dot."""
-    for fx, fy, v in px or []:
-        if v:
-            cx, cy = x + (fx + 1) * pitch, y + (fy + 1) * pitch
-            d.rectangle([cx, cy, cx + pitch - 2, cy + pitch - 2], fill=((v >> 16) & 255, (v >> 8) & 255, v & 255))
-    return 13 * pitch
-
-
-def _flag_or_code(d, f, flags, cc, x, y):
-    """The flag when the wall has one, otherwise the two letters in a box: the row keeps its place either way."""
+def _flag_or_code(img, d, f, flags, cc, x, y):
+    """The country's flag, 48 x 32 with a thin grey edge (a white flag shows on black), or its two letters in a box:
+    the row keeps its place either way."""
     if cc in flags:
-        _flag(d, flags[cc], x, y)
+        img.paste(flags[cc], (int(x) + 1, int(y) + 1))
+        d.rectangle([x, y, x + 49, y + 33], outline=(70, 70, 70), width=1)
         return
-    d.rectangle([x + 4, y + 4, x + 48, y + 32], outline=FAINT, width=1)
-    d.text((x + 26, y + 18), cc or "?", font=f["small"], fill=GREY, anchor="mm")
+    d.rectangle([x, y, x + 49, y + 33], outline=FAINT, width=1)
+    d.text((x + 25, y + 17), cc or "?", font=f["small"], fill=GREY, anchor="mm")
 
 
 def _total(d, f, col, x, y, n, label):
@@ -470,7 +465,7 @@ def draw_second(w, theme, area, out, flags=None):
     y, ctry = 268, w.get("bizjet_countries") or []
     best = ctry[0][1] if ctry else 0
     for cc, k in ctry[:TOP]:
-        _flag_or_code(d, f, flags, cc, x - 4, y - 6)
+        _flag_or_code(img, d, f, flags, cc, x, y - 6)
         num = number(k)
         d.text((x + 58, y), _fit(d, server.country_name(cc), f["name"], width - 58 - d.textlength(num, font=f["name"]) - 10),
                font=f["name"], fill=INK)
@@ -498,7 +493,7 @@ def draw_military(w, theme, area, out, flags=None):
     last = None
     for cc, country, model, k in rows:
         if cc != last:                           # the flag and the country once, on the country's first row
-            _flag_or_code(d, f, flags, cc, x - 4, y - 6)
+            _flag_or_code(img, d, f, flags, cc, x, y - 6)
             d.text((x + 62, y), _fit(d, country, f["name"], 290), font=f["name"], fill=INK)
             last = cc
         d.text((x + 370, y), _fit(d, model, f["name"], 400), font=f["name"], fill=INK)

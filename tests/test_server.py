@@ -828,6 +828,37 @@ class StatsTest(unittest.TestCase):
         self.assertIsNone(r["best"])
         self.assertEqual(r["today"]["aircraft"], 0)
 
+    def test_a_weekly_preview_that_is_not_there_says_why(self):
+        # 0.36.1: /social/preview2 answered a bare "not found" on the reference Pi after a test where that post had
+        # nothing to say
+        import http.client, threading
+        d = self._dir()
+        self.addCleanup(setattr, server, "SOCIAL_DIR", server.SOCIAL_DIR)
+        server.SOCIAL_DIR = d
+        httpd = server.WallServer(("127.0.0.1", 0), server.Handler); port = httpd.server_address[1]
+        threading.Thread(target=httpd.serve_forever, daemon=True).start()
+        self.addCleanup(httpd.server_close)
+        self.addCleanup(httpd.shutdown)
+
+        def get(path):
+            c = http.client.HTTPConnection("127.0.0.1", port, timeout=5); c.request("GET", path); r = c.getresponse(); b = r.read(); c.close(); return r.status, b
+        st, body = get("/social/preview3")
+        self.assertEqual(st, 404)
+        self.assertIn(b"nothing to say", body)
+        with open(os.path.join(d, "preview3.png"), "wb") as fh:
+            fh.write(b"\x89PNG fake")
+        self.assertEqual(get("/social/preview3")[0], 200)
+        self.assertEqual(get("/social/preview5")[0], 404)
+
+    def test_a_cargo_airline_is_named_on_the_page(self):
+        # 0.36.1: TAY (ASL Airlines Belgium) was listed bare among the airlines most seen
+        import datetime
+        d = self._dir()
+        with open(os.path.join(d, "fleet-2026-10-20"), "w") as fh:
+            fh.write("44a001\tTAY7GX\t30000\tB734\n")
+        f = server.read_fleet({"UNITS": "metric"}, d, datetime.datetime(2026, 10, 20, 23, 0))
+        self.assertEqual(f["airlines"], [("ASL Airlines Belgium", 1)])
+
     def test_the_api_says_off_when_the_setting_is_off(self):
         import http.client, tempfile, threading
         with tempfile.NamedTemporaryFile("w", suffix=".env", delete=False) as fh:

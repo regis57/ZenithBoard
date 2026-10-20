@@ -1201,11 +1201,11 @@ def publish_week(c, sec, now, state=None, dry=False, keep=None, second=False, pa
     results = {}
     try:
         if part == 2:
-            flags = week.flag_pixels([cc for cc, _ in w.get("bizjet_countries") or []], NODE)
+            flags = week.load_flags([cc for cc, _ in w.get("bizjet_countries") or []])
             info = week.draw_second(w, theme_of(c), area, out, flags)
             text, alt = week.text_second(w, area, tags, fit_post), week.alt_second(w, area)
         elif part == 3:
-            flags = week.flag_pixels([e["cc"] for e in w.get("military") or []], NODE)
+            flags = week.load_flags([e["cc"] for e in w.get("military") or []])
             info = week.draw_military(w, theme_of(c), area, out, flags)
             text, alt = week.text_military(w, area, tags, fit_post), week.alt_military(w, area)
         elif part == 4:
@@ -1494,6 +1494,10 @@ def cmd_week(post=False, second=False, part=None):
                                  WEEK_TITLES[n]))
         if "skipped" in r:
             print("  Not posted this week: %s." % r["skipped"])
+            try:                                 # no picture of an older test shown for a post that has none (0.36.1)
+                os.unlink(os.path.join(STATE_DIR, "preview%d.png" % n))
+            except OSError:
+                pass
         else:
             print("  Picture: %s (%s bytes)   See it:  http://%s:%d/social/preview%s" % (
                 r.get("preview") or r.get("preview_error"), r.get("bytes"), local_ip(), port, "" if n == 1 else n))
