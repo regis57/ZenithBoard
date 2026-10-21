@@ -82,7 +82,9 @@ graphs lived on the card only):
     antenna's position (latitude, longitude, altitude in metres; a typo is asked again), the wall's radius.
 
     **A backup from the old card?** Restore it now, before menu 1: leave the menu (*0 Exit*), copy the file over from
-    your computer (`scp zenithboard-backup-*.tar.gz YOUR_USER@zenithboard.local:`), then
+    your computer into your home folder on the Pi (`scp zenithboard-backup-*.tar.gz YOUR_USER@zenithboard.local:`
+    in PowerShell; PuTTY's `pscp` or WinSCP work too:
+    [how](Backup-and-restore#copying-the-file-between-your-computer-and-the-pi)), then
     `sudo zenithboard backup restore zenithboard-backup-….tar.gz` and type `RESTORE`. The settings, what was on, the
     statistics, the posting history and the kept logs come back, and each network finds its identity when menu 1
     installs it. Then `sudo zenithboard menu` and on to step 13; skip step 15.
