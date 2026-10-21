@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.40.2
+- **Console: what a button shows appears in its own card**, under the button, as it prints: Health, Memory, the logs, Status, a try of a post or a summary (with the links to its pictures). 0.39.0 put it in the *Activity* drawer, and the owner, clicking *Health*, did not know where to look. ⤢ opens it in *Activity*, × closes it; a change that takes minutes still opens *Activity*.
+
 ## 0.40.1
 - **The console's sign-in page shows the version running on the Pi**, at the bottom, linked to that version's release notes on GitHub (the releases page when it is unknown); the side bar's version is a link too. Asked for by the owner.
 - **CodeQL's ten open notes dealt with**: the eight *Empty except*, and two more found alongside, (the statistics, the flags, the cargo list, the memory report, the console's host check, the social service) now say why nothing is to be done; the wall's `do_GET` no longer mixes a bare `return` with returned values. The vendored QR code generator, kept unchanged, is no longer analysed (`paths-ignore`, reason in the workflow): its note was its own missing semicolon. Seen on the *Security* tab by the owner.

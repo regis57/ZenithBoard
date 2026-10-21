@@ -256,3 +256,10 @@ input.day { width: 4.5em; }
 }
 @media (max-width: 380px) { .seg button { padding: 8px 8px; } }
 .gate-card .fine + .fine { margin-top: -12px; }
+
+/* 0.40.2: a button's output under it, in its own card */
+.term.inline { margin-top: 14px; }
+.term.inline pre { max-height: 46vh; }
+.term.inline .th .ghost { padding: 0 6px; font-size: 18px; line-height: 1; color: var(--muted); }
+.term.inline .th .ghost:hover { color: var(--on); }
+.term.inline + .actions { margin-top: 10px; }
