@@ -175,7 +175,7 @@ tailscale_menu() {
         if [ "$(cfg_get CONSOLE_TAILSCALE 0)" = 1 ]; then wt_yesno "The web console answers over Tailscale.\n\nBack to your home network only?" 9 && { clear; tailscale_console off; menu_pause; }
         else wt_yesno "Let the web console answer over Tailscale too?\n\nOnly devices signed in to your Tailscale account can reach it, Tailscale encrypts the way, and the console's password still applies. Off by default." 11 && { clear; tailscale_console on; menu_pause; }; fi ;;
       off) clear; tailscale_off; menu_pause ;;
-      remove) clear; tailscale_remove; menu_pause ;;
+      remove) clear; tailscale_remove ""; menu_pause ;;
       status) clear; tailscale_status; menu_pause ;;
       *) return 0 ;;
     esac
