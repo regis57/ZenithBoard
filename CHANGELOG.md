@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.39.2
+- **Fix: the console refused every pairing code**, *used or out of date*, on the reference Pi; failed codes also count as failed sign-in tries, which can hold the password back for a while. The wall had been started (by the update) before `console on` made the console's folder, and its sandbox opens for writing only folders that exist when it starts (`ReadWritePaths=-…`): it could not note the code as used, and refused it rather than let it work twice. Now a used code is known in memory first, the card's note only carries it over a restart; `console on` restarts the wall; and the page says, with the command, when the wall cannot write its folder.
+- **The terminal is for setting up, not for every visit**: a browser signed in with the password stays signed in for a week (a day unused; 12 hours before), a paired phone as long as it opens the console once a month, a year at most (30 days before). The QR code needs no password; the wiki says plainly which way needs what.
+- *Activity*'s and the sign-in page's messages have their own place: a message before signing in no longer shows the password form on a Pi without a password.
+
 ## 0.39.1
 - `zenithboard memory`: the WHAT column cut *name on the network (mDNS)* to *name on the network (mDN*, seen on the reference Pi; now *network name (mDNS)*, and a test keeps every name within the column. Named too: Debian security fixes (`unattended-upgrades`), devices, logins, clock (NTP), Bluetooth, the web console's helper.
 

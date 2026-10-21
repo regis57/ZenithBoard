@@ -40,8 +40,10 @@ SPOOL_DIR = os.path.join(STATE_DIR, "spool")
 OUT_DIR = os.path.join(CONSOLE_DIR, "out")
 
 COOKIE = "zbc"
-PASSWORD_LIFE_S, PASSWORD_IDLE_S = 12 * 3600, 2 * 3600
-PAIRED_LIFE_S, PAIRED_IDLE_S = 30 * 86400, 7 * 86400
+# 0.39.2: kept while used, so the terminal is for setting up, not for every visit: a browser signed in with the
+# password stays a week (a day unused), a paired phone a year as long as it opens the console once a month
+PASSWORD_LIFE_S, PASSWORD_IDLE_S = 7 * 86400, 86400
+PAIRED_LIFE_S, PAIRED_IDLE_S = 365 * 86400, 30 * 86400
 PAIR_S = 300
 MAX_BODY = 8192
 FAIL_FREE = 5                       # failed sign-ins from one address before it waits
@@ -312,6 +314,7 @@ class Pairs(object):
     def __init__(self):
         self.lock = threading.Lock()
         self.links = {}             # sha -> {"pid", "until", "by", "used_by"}
+        self.used = set()           # the terminal's codes used since the wall started
 
     def make(self, by):
         token, t = secrets.token_urlsafe(24), now()
@@ -340,15 +343,19 @@ class Pairs(object):
                     return False
                 v["used_by"] = label
                 return True
-        return self._redeem_from_terminal(h, t)
+            return self._redeem_from_terminal(h, t)
 
     def _redeem_from_terminal(self, h, t):
+        # 0.39.2: the code is refused only when it is unknown, out of date or already used. 0.39.0 also refused it when
+        # it could not note it as used on the card, which is what happened on the reference Pi: the wall had been
+        # started before `console on` made its folder, so its sandbox kept the folder read-only. Used is now known in
+        # memory first; the card's note only carries it over a restart.
         try:
             with open(os.path.join(OUT_DIR, "pair"), encoding="utf-8") as fh:
                 want, until = fh.read().split()[:2]
         except (OSError, ValueError):
             return False
-        if not hmac.compare_digest(want, h) or float(until) < t:
+        if not hmac.compare_digest(want, h) or float(until) < t or h in self.used:
             return False
         used = os.path.join(STATE_DIR, "pair-used")
         try:
@@ -357,11 +364,12 @@ class Pairs(object):
                     return False
         except OSError:
             pass                                 # no code used yet
+        self.used.add(h)
         try:
             with open(used, "a", encoding="utf-8") as fh:
                 fh.write(h + "\n")
         except OSError:
-            return False                         # cannot note it as used: refuse rather than let it work twice
+            log("cannot write %s: restart the wall (sudo systemctl restart zenithboard-flightinfo)" % STATE_DIR)
         return True
 
 
@@ -453,6 +461,13 @@ def audit(line):
         pass                                     # the journal line above is the record that matters
 
 
+def state_writable():
+    """Whether the wall's sandbox lets it write its console folder. systemd opens ReadWritePaths only for a folder that
+    exists when the service starts (the \"-\" makes a missing one skipped, not an error): a wall started before
+    `console on` cannot write it until restarted (seen on the reference Pi, 0.39.0)."""
+    return os.access(SPOOL_DIR, os.W_OK) and os.access(STATE_DIR, os.W_OK)
+
+
 def wizard_done():
     return os.path.exists(os.path.join(STATE_DIR, "wizard-done"))
 
@@ -538,7 +553,8 @@ class Console(object):
         if api == "session" and req.method == "GET":
             return Reply(200, {"enabled": on, "signed_in": bool(sess), "has_password": has_password(),
                                "kind": sess and sess["kind"], "label": sess and sess["label"], "id": sess and sess["id"],
-                               "csrf": sess and sess["csrf"], "wizard_done": wizard_done(), "version": req.cfg.get("_VERSION")})
+                               "csrf": sess and sess["csrf"], "wizard_done": wizard_done(), "version": req.cfg.get("_VERSION"),
+                               "writable": state_writable() if on else None})
         if not on:
             return Reply(404, {"error": "off"})
         if req.method == "POST":
@@ -589,7 +605,8 @@ class Console(object):
         if not self.pairs.redeem(body.get("token"), label):
             self.limiter.miss(ip)
             audit("pairing link refused from %s" % ip)
-            return Reply(401, {"error": "This pairing code is used or out of date. Make a new one."})
+            return Reply(401, {"error": "This pairing code is used or out of date: make a new one (sudo zenithboard console pair). "
+                                        "It is valid five minutes, once."})
         token, rec = self.sessions.create("paired", label)
         audit("paired: %s %s from %s" % (label, rec["id"], ip))
         return Reply(200, {"ok": True}, cookie=_cookie(token, PAIRED_LIFE_S))

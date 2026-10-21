@@ -167,6 +167,17 @@ class PairsTest(TempDirs):
         self.assertTrue(p.redeem(tok, "iPhone"))
         self.assertFalse(console.Pairs().redeem(tok, "iPhone"), "noted as used, even after a restart")
 
+    def test_the_terminals_code_works_when_the_folder_is_read_only(self):
+        # the reference Pi, 0.39.0: the wall started before `console on` could not write its folder, and every
+        # pairing code was refused as "used or out of date"
+        tok = "terminal-made-token-0987654321"
+        with open(os.path.join(self.dir, "out", "pair"), "w") as fh:
+            fh.write("%s %d\n" % (console._sha(tok), time.time() + 300))
+        console.STATE_DIR = os.path.join(self.root, "not-writable")
+        p = console.Pairs()
+        self.assertTrue(p.redeem(tok, "iPhone"))
+        self.assertFalse(p.redeem(tok, "iPhone"), "still once: known in memory")
+
 
 class HandleTest(TempDirs):
     CFG = {"CONSOLE": "1", "_VERSION": "0.39.0"}
@@ -206,6 +217,11 @@ class HandleTest(TempDirs):
         r = self.req("GET", "/console")
         self.assertEqual((r.code, r.file), (200, "console.html"))
         self.assertIn("frame-ancestors 'none'", r.headers["Content-Security-Policy"])
+
+    def test_the_page_is_told_when_the_folder_cannot_be_written(self):
+        self.assertTrue(self.req("GET", "/console/api/session").body["writable"])
+        console.SPOOL_DIR = os.path.join(self.root, "missing")
+        self.assertFalse(self.req("GET", "/console/api/session").body["writable"])
 
     def test_off_says_so_and_does_nothing(self):
         off = {"CONSOLE": "0"}

@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **21 October 2026**, version **0.39.1**.
+Last updated: **21 October 2026**, version **0.39.2**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -63,6 +63,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 21 October 2026, 08:05 | First try of the console on the Pi: neither the password nor the QR code worked, *this pairing code is used or out of date*. The wall had been restarted by the update before `console on` made its folder, so its sandbox kept the folder read-only and every code was refused (failed codes then count against sign-in tries too). 0.39.2: the code no longer depends on that write, `console on` restarts the wall, the page says when the folder is read-only. The owner also asked whether the terminal is needed at every visit: no, and sessions now last while used (a week with the password, a month between uses for a phone) |
 | 21 October 2026, 07:56 | `sudo zenithboard memory` after 0.39.0: 180 MB for all the services, 619 MB available, load 1.1. Plane Finder at 43 MB (27 the evening before), the one service the update did not restart: to watch. Two labels were cut or missing in the WHAT column (*name on the network (mDN*, `unattended-upgrades` unnamed): 0.39.1 |
 | 21 October 2026, 07:34 | The owner asked for a break-glass procedure for the console, step by step, and a way to start again. The terminal is the way in, by design; the [Web console](Web-console#break-glass-when-the-console-is-in-the-way) page now lists each case (password forgotten, locked out, phone lost, a job queued or stuck, a setting to undo, the page not loading) with its commands, and how to start again from zero or take the console out. Documentation only |
 | 21 October 2026, 01:06 | The owner asked for a web console to try, removable if it does not satisfy, "right the first time": a wizard, ZenithBoard's look, a password or Face ID / a QR code on his iPhone ("careful with the black background"), a phone layout, a menu with no endless scrolling, links to the pages that exist or will. 0.39.0, built while he slept. Face ID / passkeys are not possible over plain HTTP at a home address (WebAuthn needs HTTPS under a domain); a one-time QR code, dark on white, signs the phone in instead |
