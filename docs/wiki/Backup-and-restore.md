@@ -12,7 +12,7 @@ zenithboard backup list                      # the backups, newest first
 zenithboard backup clean --keep 3            # delete the older ones; asks you to type delete
 ```
 
-Or the menu: *6 Maintenance → Back up everything*. The web console makes one too (*System → Backup*), without the
+Or the menu: *6 Backup → 1 Make a backup now*. The web console makes one too (*System → Backup*), without the
 networks' identities: see [below](#from-the-web-console).
 
 ## What a backup holds
@@ -100,22 +100,18 @@ Then, in PuTTY (or `ssh`) on the Pi: `ls ~/zenithboard-backup-*` shows it, and
 
 ## Moving to a new card, step by step
 
-1. **On the old card:** `sudo zenithboard backup make`, then copy the file to your computer:
-   `scp USER@OLDPI.local:zenithboard-backup-*.tar.gz .` (the command prints the exact line).
-2. **Switch the old card off** (`sudo shutdown now`). Two receivers with the same identities is one too many:
-   FlightAware and Flightradar24 see one station feeding twice, and Plane Finder blocks a share code used on two
-   receivers ([Plane Finder's forum](https://forum.planefinder.net/threads/pfclient-automatic-setup.1074/)).
-3. **On the new card,** [Fresh install](Fresh-install) to step 12 (the installer and its first questions), then leave
-   the menu and copy the file over: `scp zenithboard-backup-*.tar.gz USER@zenithboard.local:`
-4. `sudo zenithboard backup restore zenithboard-backup-….tar.gz`, type `RESTORE`. It prints what it put back, part
-   by part, and what is left to do.
-5. **Menu 1 ADSB**, ticking the same networks: each installer finds its identity. ADSB Exchange's keeps the UUID it
-   finds; FlightAware gets its feeder ID and needs no claim; Flightradar24's sign-up still runs (it is FR24's own): the
-   terminal shows your key to paste at its *sharing key* question, and the key is set again afterwards whatever was
-   answered; Plane Finder gets its share code and needs nothing on its page.
-6. **Menu 2 FlightInfo**, then `sudo zenithboard graphs on` if graphs1090 was on (it needs the receiver map that
-   menu 2 brings): its history comes back by itself.
-7. Then Fresh install's steps 16 to 21. In the console, the first steps are then only a check.
+**The whole way, for someone who has never done it, with WinSCP from Windows: [Moving to a new card](Moving-to-a-new-card).**
+In short: `sudo zenithboard backup make` on the old card, the file copied to your computer, the old card switched off
+(two receivers with the same identities is one too many: Plane Finder blocks a share code used on two receivers,
+[its forum](https://forum.planefinder.net/threads/pfclient-automatic-setup.1074/)); on the new card the installer, its
+four questions, then **Start here**: *Yes* to the backup, `RESTORE`, and the rest of *Start here* (ADS-B with the same
+networks, the wall, the list, the console). Each network's installer finds its identity: ADSB Exchange's keeps the UUID
+it finds; FlightAware gets its feeder ID, no claim; Flightradar24's sign-up still runs (it is FR24's own), the terminal
+shows the key to paste and it is set again afterwards whatever was answered; Plane Finder gets its share code.
+
+**What a restore applies, not only imports** (0.44.0, the owner: the position, the altitude and the units had not
+followed): the antenna's position goes everywhere it is stored (the decoder, the networks that take it, the wall), the
+wall and the Bluesky service restart with the settings, and graphs1090 takes the look and colour of the backup.
 
 The restore works at any other time too (everything installed already, or half of it): what can be applied is
 applied at once, the rest waits in `/var/lib/zenithboard/restore-pending/` for its installer.

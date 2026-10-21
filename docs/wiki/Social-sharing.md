@@ -11,7 +11,7 @@ Off by default. Switched on, the Pi posts the aircraft worth a post — a milita
 The map can be a plain map, a dark one, satellite, terrain, or none (the track on black, nothing fetched). Until 0.24.0 a third look, `dots`, drew the track in dots in place of a map; it was taken out at the owner's word. A Pi still set to it posts `dotmap`, and the update says so with the command.
 
 ```bash
-sudo zenithboard social setup      # the Bluesky account, the words, the picture   (or: menu -> 3 Settings -> 6 Social sharing)
+sudo zenithboard social setup      # the Bluesky account, the words, the picture   (or: menu -> 7 Options -> 3 Bluesky)
 sudo zenithboard social test       # draw the picture, print the text, post nothing
 sudo zenithboard social on         # from now on, under the rules you chose
 ```
@@ -126,7 +126,7 @@ sudo zenithboard social summary monthly test            # its posts drawn and sh
 sudo zenithboard social summary daily post2             # that post of that summary, now
 ```
 
-Or menu *3 Settings → 6 Social sharing → 7 Summaries*. `social weekly …` (0.33.0) still works and means `social summary weekly …`. Defaults: daily at 21:00 with post 1 only; weekly on Sunday at 19:00 and monthly on the 1st at 09:00, with all four. A day of the month stops at 28, which every month has.
+Or menu *7 Options → 3 Bluesky → 7 Summaries*. `social weekly …` (0.33.0) still works and means `social summary weekly …`. Defaults: daily at 21:00 with post 1 only; weekly on Sunday at 19:00 and monthly on the 1st at 09:00, with all four. A day of the month stops at 28, which every month has.
 
 Since 0.40.5 every card says its period in words at the top right, *LAST 24 HOURS*, *LAST 7 DAYS* or *LAST 30 DAYS* (a date there read as that day, the owner found), and its exact span at the foot, *20 October, 09:20 – 21 October, 09:20*, raised clear of Bluesky's *ALT* badge; the first card is titled *Aircraft above Trémery* like the others. Since 0.43.0 the airlines on the first card and the cargo airlines on the second start with their flag too: the country the airline is based in (see [Statistics](Statistics#the-page)). On the general aviation card each row starts with the flag of the country the aircraft are registered in (by their address), a row per model and country, every column aligned. A military aircraft whose type neither the decoder nor tar1090's database knows is asked of adsbdb, then hexdb, by its address when the summary is made (routes on, a dozen at most, two seconds apart); what they do not know either stays *Unknown type*.
 

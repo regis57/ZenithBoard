@@ -345,20 +345,26 @@ update_menu_reload() {
   return 0
 }
 
-# Menu 6: update everything, or pick components from a list (space = tick).
+# Menu 5 Updates: ZenithBoard alone, everything, or picked components; and Debian's daily security fixes (0.44.0:
+# moved here from Reliability, an update being what they are).
 update_menu() {
   local c items=() sel x names=()
   while true; do
-    c=$(wt_menu "Update\n\nZenithBoard $ZB_VERSION. Your settings are never touched." \
-      quick "ZenithBoard and the wall only: the new version in seconds (the feeders are left as they are)" \
-      all "Update everything (ZenithBoard + every installed component: the feeders ask apt, a minute or two)" \
-      pick "Choose what to update (tick the ones you want)" \
-      list "What is installed" \
+    c=$(wt_menu "Updates\n\nZenithBoard $ZB_VERSION. Your settings are never touched: an update says so when one of them should change." \
+      quick "1  ZenithBoard and the wall only, in seconds" \
+      all "2  Everything: ZenithBoard, decoder, feeders (minutes)" \
+      pick "3  Choose what to update (tick them)" \
+      list "4  What is installed, and its version" \
+      patches "5  Debian's security fixes, daily by themselves: $(patches_state)" \
       back "Return to the previous menu") || return 0
     case "$c" in
       quick) clear; "$ZB_HOME/bin/zenithboard" update quick; update_menu_reload ;;
       all) clear; "$ZB_HOME/bin/zenithboard" update; update_menu_reload ;;
       list) clear; zb_update_list; echo; read -rp "Press Enter..." _ ;;
+      patches)
+        if [ "$(patches_state)" = on ]; then wt_yesno "Debian security patches are ON.\n\nTurn them OFF?" 8 && { clear; patches_off; read -rp "Press Enter to continue..." _; }
+        else wt_yesno "Install Debian's security fixes by themselves, once a day?\n\nOnly the Debian security channel: openssl, the kernel, curl, python and the like. The ADS-B feeders come from other repositories and are never touched, and the Pi is never rebooted by it. ZenithBoard and the feeders still move only with 'zenithboard update'." 14 && { clear; patches_on; read -rp "Press Enter to continue..." _; }; fi ;;
+
       pick)
         items=(); for x in $ZB_COMPONENTS; do
           zb_component_installed "$x" || continue

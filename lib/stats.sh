@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Statistics (menu 3 Settings -> Receiver -> Statistics, and `zenithboard stats ...`).
+# Statistics (menu 7 Options -> 1 Statistics, and `zenithboard stats ...`).
 #
 # Nothing on the Pi keeps history by itself: the decoder's stats.json holds the last fifteen minutes and the total
 # since it started, and aircraft.json is the present moment. So, when switched on, a timer runs this every fifteen

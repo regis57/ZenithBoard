@@ -560,7 +560,7 @@
         card("Measure", "chart", null, [
           row("Statistics", "A sample every 15 minutes, 30 days kept, about 30 KB a day", [sw("stats", on(c.STATS)), on(c.STATS) ? h("a", { href: "/stats", target: "_blank", rel: "noopener", text: "Open ↗" }) : null]),
           row("graphs1090", "Years of the decoder's graphs on port 8542; installed by its author's script", [sw("graphs", f.graphs === "on"), f.graphs === "on" ? h("a", { href: "http://" + host() + ":8542/", target: "_blank", rel: "noopener", text: "Open ↗" }) : null]),
-          f.graphs === "on" ? row("graphs1090 in ZenithBoard's look", "A black page in the wall's colour, its graphs drawn to match; off: graphs1090's own", sw("graphs-look", S.cfg.GRAPHS_LOOK === "zenithboard")) : null,
+          f.graphs === "on" ? row("graphs1090 in ZenithBoard's look", "A black page in the wall's colour, its graphs drawn to match; off: graphs1090's own", sw("graphs-look", S.cfg.GRAPHS_LOOK !== "original")) : null,
           row("Gain", "Check it first; then one step at a time", [btn("Check", "gain-check"), btn("− Down", "gain-step", { value: "down" }, "btn", { key: "gain-step" }), btn("Up +", "gain-step", { value: "up" }, "btn", { key: "gain-step" })]),
           row("Gain log, 24 hours", "One measurement every 15 minutes, as a table", sw("gain-log", on(c.GAINLOG)))
         ], "w6"),
@@ -633,7 +633,7 @@
             " (" + ago(S.backup.at) + "), " + (S.backup.bytes / 1048576).toFixed(1) + " MB on the card. One copy is kept here, replaced by the next; its name says the Pi and the date, so downloads sort in time order." }) : null,
           h("p", { "class": "sub", text: "Putting a backup back (the import)" }),
           h("ul", { "class": "ticks" },
-            h("li", { text: "In the terminal of the Pi that receives it: sudo zenithboard backup restore FILE (or the menu: 6 Maintenance → Back up everything → Restore). It shows what the file holds, asks you to type RESTORE, and keeps what it replaces." }),
+            h("li", { text: "In the terminal of the Pi that receives it: sudo zenithboard backup restore FILE (or the menu: 6 Backup → 2 Put a backup back). It shows what the file holds, asks you to type RESTORE, and keeps what it replaces." }),
             h("li", { text: "Not from this page, on purpose: a restore replaces data and runs installers as root, like the other steps that ask for a typed word." }),
             h("li", { text: "This copy leaves the networks' identities out (keys never travel through this page). To move to a new card, make the full one in the terminal: sudo zenithboard backup make." })),
           h("p", { "class": "note" }, "Step by step, and why the MAC address does not get in the way: ", h("a", { href: "https://github.com/regis57/ZenithBoard/wiki/Backup-and-restore", target: "_blank", rel: "noopener noreferrer", text: "Backup and restore ↗" }))
@@ -641,7 +641,7 @@
         card("Network", "link", f.ip ? "This Pi: " + f.ip + (f.ddns ? " · " + f.ddns : "") : null, [
           h("div", { "class": "actions" }, btn("Network", "net-status"), btn("Wi-Fi", "wifi-status"), btn("Domain name", "ddns-status"),
             S.cfg.DDNS_PROVIDER && S.cfg.DDNS_PROVIDER !== "none" ? btn("Refresh the domain name", "ddns-update") : null),
-          h("p", { "class": "note", text: "Wi-Fi networks, fixed addresses and the domain name's key stay in the terminal (sudo zenithboard menu → Settings → Network): one mistake there cuts the Pi off the network this page comes through." })
+          h("p", { "class": "note", text: "Wi-Fi networks, fixed addresses and the domain name's key stay in the terminal (sudo zenithboard menu → 3 Connectivity): one mistake there cuts the Pi off the network this page comes through." })
         ], "w6"),
         card("Signed in", "phone", "Browsers and phones signed in to this console. Signed in with the password: a week (a day unused). A paired phone: as long as it opens the console once a month.", [
           sessionsList(),

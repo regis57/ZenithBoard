@@ -75,7 +75,7 @@ console_on() {
   # 0.43.0: the console is a page of the wall's server: without the wall there is nothing to answer it
   if ! is_flightinfo; then
     echo "The web console is a page of the wall, which is not installed yet: install it first (sudo zenithboard menu, then"
-    echo "2 FlightInfo), then switch the console on. Its password can be set already: sudo zenithboard console password"
+    echo "2 The wall, or Start here), then switch the console on. Its password can be set already: sudo zenithboard console password"
     return 1
   fi
   console_prepare_dirs || { echo "Could not make $CONSOLE_DIR"; return 1; }

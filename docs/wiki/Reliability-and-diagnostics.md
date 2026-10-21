@@ -2,7 +2,7 @@
 
 A wall on the garage wall is only as good as the Pi behind it, and a Pi outdoors on Wi-Fi fails in ways a desk machine does not: it freezes, it loses the network at 01:00, it browns out when the power supply is cold. These tools exist for that.
 
-**Everything here is off until you turn it on**, in menu *3 Settings → 5 Reliability* or with the commands below. Nothing was added to the Pi silently.
+**Everything here is off until you turn it on**, in menu *4 Troubleshoot → 6 Watchdogs* or with the commands below. Nothing was added to the Pi silently.
 
 ## The health screen
 
@@ -17,7 +17,7 @@ Run it first whenever something odd happened. **"Previous boot ended abruptly"**
 ## Memory and threads, service by service
 
 ```bash
-sudo zenithboard memory           # or: zenithboard threads; menu 3 Settings -> 5 Reliability -> Memory
+sudo zenithboard memory           # or: zenithboard threads; menu 4 Troubleshoot -> 3 Memory
 ```
 
 What each service uses right now: memory, its peak, threads, open files and processes, the largest first, then what runs outside the services and the largest processes one by one (0.34.0). `systemctl status` cannot say it on a Pi: Raspberry Pi OS boots with the kernel's memory controller off, so systemd has no memory figure. The command reads `/proc` instead, for each service's processes (its cgroup lists them), and changes nothing.

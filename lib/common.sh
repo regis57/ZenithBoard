@@ -69,6 +69,7 @@ AUTO_DATA_REFRESH=1
 GAINLOG=0
 PATCHES=0
 STATS=0
+GRAPHS_LOOK=zenithboard
 CONSOLE=0
 CONSOLE_PHONE_SIGNIN=0
 UPDATE_VERIFY=1
@@ -179,7 +180,15 @@ wt_menu() {
   for ((i = 1; i <= $#; i += 2)); do
     case "${!i}" in back|0) cancel=(--nocancel) ;; esac
   done
-  whiptail --title "$WT_TITLE" "${cancel[@]}" --menu "$t" 22 76 12 "$@" 3>&1 1>&2 2>&3
+  # 0.44.0: the box fits its text and its list (a fixed 22 x 12 hid the lines above a long list); the terminal's height
+  # is the limit, 24 rows on PuTTY by default
+  local n=$(( $# / 2 )) lines=0 seg rows max
+  while IFS= read -r seg; do lines=$(( lines + 1 + ${#seg} / 72 )); done < <(printf '%b\n' "$t")
+  max=$(tput lines 2>/dev/null); [[ $max =~ ^[0-9]+$ ]] && [ "$max" -ge 20 ] || max=24
+  [ "$n" -le 14 ] || n=14
+  rows=$(( lines + n + 7 )); [ "$rows" -le "$max" ] || rows=$max
+  # --notags: the entries are read by their words (each with its number); the tag is only what comes back
+  whiptail --title "$WT_TITLE" "${cancel[@]}" --notags --menu "$t" "$rows" 76 "$n" "$@" 3>&1 1>&2 2>&3
 }
 # wt_radio "text" tag item ON|OFF ...
 wt_radio() { local t="$1"; shift; whiptail --title "$WT_TITLE" --radiolist "$t" 20 76 8 "$@" 3>&1 1>&2 2>&3; }

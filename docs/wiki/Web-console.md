@@ -16,11 +16,11 @@ sudo zenithboard console password     # choose its password (asked twice, never 
 sudo zenithboard console on           # prints the address: http://192.168.x.x:8080/console
 ```
 
-The console is a page of the wall's server: on a new card, install the wall first (menu 2 FlightInfo). Before it,
+The console is a page of the wall's server: on a new card, install the wall first (menu *Start here*, or *2 The wall*). Before it,
 `console on` says so and changes nothing (0.43.0: it used to stop on *chown: invalid user: zenithboard*, the wall's own
 user not existing yet); `console password` works already.
 
-Or the menu: *3 Settings → 7 Web console*. On a new card, the whole way from the SD card to here: [Fresh install](Fresh-install).
+Or the menu: *7 Options → 4 Web console*, or the end of *Start here*. On a new card, the whole way from the SD card to here: [Fresh install](Fresh-install).
 
 **The first steps** open the first time you sign in, nine short screens (0.41.0): what this Pi is and feeds, where
 the antenna is (checked as you type), the wall, the networks (read only, each with its page), what to collect, what
@@ -92,6 +92,9 @@ Click one of the last jobs to read what it printed: it opens at the top of the d
 
 ### How it behaves, by design
 
+* **It takes the wall's colour.** Its accents, buttons and the logo are in the colour the wall is set to (*Wall →
+  Colour*, `zenithboard color`): amber by default, and black and white when the wall is white — not a night mode
+  (the owner asked, 21 October 2026). graphs1090's page, in ZenithBoard's look, takes the same colour.
 * **One change at a time.** The Pi runs the console's commands one after the other, like typing them one by one in a
   terminal. A change made while a long one runs (installing graphs1090, an update: minutes) waits its turn: its control
   shows a dashed, waiting state, and the page says *Queued: graphs1090 runs first*. Nothing is lost, and the order is
@@ -146,7 +149,7 @@ when you do not need it. `zenithboard security` says it is on and checks the pas
 
 ## Break-glass: when the console is in the way
 
-**The way in is always the terminal.** The console replaces nothing: SSH, the menu (`sudo zenithboard menu`, *Settings → 7 Web console*) and every `zenithboard` command work whether the console is on, off, stuck or broken, and the console cannot touch SSH, Wi-Fi or the network addresses. So the break-glass procedure is: open SSH, then follow the line that matches.
+**The way in is always the terminal.** The console replaces nothing: SSH, the menu (`sudo zenithboard menu`, *7 Options → 4 Web console*) and every `zenithboard` command work whether the console is on, off, stuck or broken, and the console cannot touch SSH, Wi-Fi or the network addresses. So the break-glass procedure is: open SSH, then follow the line that matches.
 
 | What you see | Step by step, over SSH |
 |---|---|

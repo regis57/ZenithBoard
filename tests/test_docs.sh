@@ -41,4 +41,9 @@ check "release workflow reads ZB_VERSION and tags v<version>" 'grep -q "ZB_VERSI
 check "Fresh-install: the page exists, with its checklist"   'grep -q "^## The 1.0 checklist" docs/wiki/Fresh-install.md'
 check "Fresh-install: linked from README, sidebar and home" 'grep -q "wiki/Fresh-install" README.md && grep -q "(Fresh-install)" docs/wiki/_Sidebar.md && grep -q "(Fresh-install)" docs/wiki/Home.md'
 
+# ---- 0.44.0: the menu page and the move for non-specialists, linked, their pictures in the repository
+check "The-menu and Moving-to-a-new-card linked from the sidebar" 'grep -q "(The-menu)" docs/wiki/_Sidebar.md && grep -q "(Moving-to-a-new-card)" docs/wiki/_Sidebar.md'
+check "every menu picture the docs show is in docs/images" 'for f in $(grep -ho "docs/images/menu-[a-z]*\.png" README.md docs/wiki/*.md | sort -u); do [ -f "$f" ] || exit 1; done'
+check "the move names WinSCP and the typed word" 'grep -q "WinSCP" docs/wiki/Moving-to-a-new-card.md && grep -q "RESTORE" docs/wiki/Moving-to-a-new-card.md'
+
 [ "$fail" = 0 ] && echo "ALL OK" || { echo "SOME FAILED"; exit 1; }

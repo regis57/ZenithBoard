@@ -31,7 +31,7 @@ members() { tar -tzf "$1" | sed 's|^zb/||; s|/$||' | sort; }
 
 # ---- the old card
 echo 0123456789abcdef0123456789abcdef > "$t/machine-id"
-cfg_set UNITS metric; cfg_set RADIUS 15; cfg_set STATS 1; cfg_set NETWATCH 1; cfg_set FR24_KEY never-exported
+cfg_set UNITS metric; cfg_set RADIUS 15; cfg_set LAT 49.1193; cfg_set LON 6.1757; cfg_set ALT_M 180; cfg_set STATS 1; cfg_set NETWATCH 1; cfg_set FR24_KEY never-exported
 mkdir -p "$t/sysconf" "$t/journald" "$t/journal/0123456789abcdef0123456789abcdef" "$t/data/stats" "$t/data/social" "$t/adsbx"
 printf '[Manager]\nRuntimeWatchdogSec=10\n' > "$t/sysconf/watchdog.conf"
 printf '[Journal]\nStorage=persistent\n' > "$t/journald/50-persistent.conf"
@@ -80,7 +80,9 @@ echo fedcba9876543210fedcba9876543210 > "$t/machine-id"
 mkdir -p "$t/data/stats"; printf '%s\n1761100000,12,120,7,8\n' "$STATS_HEADER" > "$t/data/stats/stats.csv"
 
 check "restore: anything but RESTORE changes nothing" 'echo no | backup_restore "$t/full.tar.gz" >/dev/null 2>&1; [ "$(cfg_get RADIUS)" = 5 ] && [ ! -e "$t/data/stats/seen-2026-10-20" ]'
+zb_apply_location() { echo "$*" > "$t/location.applied"; }      # 0.44.0: the position goes everywhere it is stored
 out=$(echo RESTORE | backup_restore "$t/full.tar.gz" 2>&1)
+check "restore: the position applied everywhere, not only imported" '[ "$(cat "$t/location.applied" 2>/dev/null)" = "49.1193 6.1757 180" ]'
 check "restore: the settings"                        '[ "$(cfg_get RADIUS)" = 15 ] && [ "$(cfg_get UNITS)" = metric ]'
 check "restore: statistics back, both cards' samples" '[ -f "$t/data/stats/seen-2026-10-20" ] && [ "$(grep -c "^17" "$t/data/stats/stats.csv")" = 3 ] && [ "$(head -1 "$t/data/stats/stats.csv")" = "$STATS_HEADER" ]'
 check "restore: what was posted (no double post)"    'grep -q 3c6444 "$t/data/social/state.json"'
