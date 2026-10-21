@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.40.4
+- **Fix: the summaries left their lists out until the lists covered the whole period.** The reference Pi's first daily summary (21 October, 09:20) went out with no airline, no model and none of posts 2 to 4, *Counted since 20 October: shown from the summary of 22 October*, though the statistics page showed cargo, business jets, military and general aviation for those 24 hours: the lists had begun the day before. Now lists that cover **half the period at least** are shown, posts 2 to 4 with them, and every card says since when, bottom left (*Lists counted since 20 October, 19:15*, from the earliest time in the first list, or the day alone for a list older than 0.37.0). Under half, they stay out, as 0.34.1 decided (a week against two hours says something false). `summary test` prints the date too.
+
 ## 0.40.3
 - **Console: every control shows what it did in its own card**, as 0.40.2 did for the buttons: switches, choices, colours, fields applied, the summaries' settings, and the long ones (an update, graphs1090), which opened the *Activity* drawer. The command, its answer, *done* or *exit N*; the last one per section, the earlier ones in *Activity*. Asked for by the owner. The card is noted at the click, before a confirmation box.
 

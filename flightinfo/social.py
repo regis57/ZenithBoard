@@ -1185,7 +1185,7 @@ def publish_week(c, sec, now, state=None, dry=False, keep=None, second=False, pa
     if part > 1 and not week.has_part(w, part):
         return {"skipped": ({2: "no cargo airline nor business jet in the lists", 3: "no military aircraft in the lists",
                              4: "no helicopter, light aircraft, glider, drone or balloon in the lists"}[part] + " for " + span
-                            if w.get("covered") else
+                            if (w.get("covered") or w.get("shown")) else
                             "the airline and type lists do not cover %s yet (counted since %s, shown from the summary of %s)"
                             % (span, w.get("fleet_from") or "-", w.get("fleet_week") or "-"))}
     if flap_module() is None:
@@ -1221,7 +1221,8 @@ def publish_week(c, sec, now, state=None, dry=False, keep=None, second=False, pa
                 results["preview_error"] = "could not keep a copy: %s" % exc
         if dry:
             results.update(text=text, alt=alt, bytes=info["bytes"], fleet_from=w.get("fleet_from"),
-                           fleet_week=w.get("fleet_week"), fleet_shown=bool(w.get("covered")))
+                           fleet_week=w.get("fleet_week"), fleet_shown=bool(w.get("covered") or w.get("shown")),
+                           fleet_since=w.get("since"))
             return results
         try:
             results["bluesky"] = post_bluesky(sec, text, out, alt, info["width"], info["height"], info["mime"])
@@ -1515,6 +1516,8 @@ def cmd_week(post=False, second=False, part=None, period="weekly"):
                 r.get("preview") or r.get("preview_error"), r.get("bytes"), local_ip(), port, "" if n == 1 else n))
             print("  " + r["text"].replace("\n", "\n  "))
             print("  Alt text: " + r["alt"])
+        if n == 1 and r.get("fleet_since"):
+            print("  Airlines and models: counted since %s (the lists began inside this period; said on the cards)." % r["fleet_since"])
         if n == 1 and not r.get("fleet_shown"):
             print("  Airlines and models: %s" % (("counted since %s, they join the summary from the one of %s, the first "
                                                    "they cover whole." % (r["fleet_from"], r["fleet_week"])) if r.get("fleet_from")

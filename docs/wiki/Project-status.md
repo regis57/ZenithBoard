@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **21 October 2026**, version **0.40.3**.
+Last updated: **21 October 2026**, version **0.40.4**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -45,7 +45,7 @@ Treat these as likely-working rather than known-working, and please report what 
 | The farthest aircraft named on `/stats` | Written in 0.22.0 and run against the real server with a made-up decoder; the real sky, the real route answers and the thread's cost on a Pi 3 are still to be seen |
 | A fresh install from the README | `install.sh` has been run end to end in a container against a scripted whiptail and stand-ins (0.21.1, `tests/test_install.sh`): flags, wizard, every menu, the deployed wall answering, the uninstall. A blank card on a real Pi has not been done |
 | graphs1090 (0.32.0, optional) | Its author's installer was read in full and `on`/`off` tested against stand-ins; never run on a Pi |
-| The summaries posted by the service (0.33.0–0.38.0) | `weekly test` ran on the Pi; no scheduled post has gone out yet. The daily and thirty-day summaries and the queue shared by all of them (0.38.0) are tested with a simulated clock only. The first weekly post is due on Sunday 25 October 19:00 if switched on; the airline lists cover a whole week from 1 November |
+| The summaries posted by the service (0.33.0–0.38.0) | `weekly test` ran on the Pi; the first scheduled one went out on 21 October 2026 (daily, 09:20), post 1 only, its lists left out by the rule fixed in 0.40.4. The daily and thirty-day summaries and the queue shared by all of them (0.38.0) are tested with a simulated clock only. The first weekly post is due on Sunday 25 October 19:00 if switched on; the airline lists cover a whole week from 1 November |
 | Posts 2 to 4 and the page's lists with real data over weeks | Cargo by callsign prefix (40 operators checked against published sources), military by database mark and address block, countries by ICAO address block: checked on made-up and tar1090-db data; a month of the real sky is still to come |
 | The web console (0.39.0, a test) | Previewed at desktop and phone width against a stand-in `zenithboard`; requests, sessions, pairing and the root helper unit-tested. The `.path` unit, the helper as root, an update run from the page and pairing a real iPhone are still to be done on the Pi |
 | The page's last 24 hours (0.37.0) | Their lists need the last-seen column written since 0.37.0: complete from a day after the update |
@@ -63,6 +63,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 21 October 2026, 10:06 | **The first scheduled summary went out** (daily, 09:20, on Bluesky): *933 aircraft, 59.5 million messages, busiest hour 17:00, 42 crossings posted* — but with no airline, no model and none of posts 2 to 4, the lists having begun the day before (the rule of 0.34.1 wanted them to cover the whole period). 0.40.4: shown from half the period, saying since when |
 | 21 October 2026, 09:40 | The owner: what 0.40.2 did for the buttons holds for the whole interface. 0.40.3: every control's output in its own card |
 | 21 October 2026, 09:29 | The owner clicked *Health* in the console and did not know where its answer was (the *Activity* drawer). 0.40.2: a button's output appears under it, in its card |
 | 21 October 2026, 09:10 | The owner showed the *Security* tab: ten CodeQL notes open (eight *Empty except*, one *mixed returns*, one in the vendored QR code library). Fixed in 0.40.1, the library left out of the analysis with the reason; and the running version shown on the console's sign-in page, linked to its release notes |
