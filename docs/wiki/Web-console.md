@@ -95,6 +95,38 @@ console does not give it that right:
 so someone able to read your Wi-Fi traffic could read a session cookie. Use it on a network you trust; turn it off
 when you do not need it. `zenithboard security` says it is on and checks the password file's mode.
 
+## Break-glass: when the console is in the way
+
+**The way in is always the terminal.** The console replaces nothing: SSH, the menu (`sudo zenithboard menu`, *Settings → 7 Web console*) and every `zenithboard` command work whether the console is on, off, stuck or broken, and the console cannot touch SSH, Wi-Fi or the network addresses. So the break-glass procedure is: open SSH, then follow the line that matches.
+
+| What you see | Step by step, over SSH |
+|---|---|
+| **Password forgotten** | 1. `sudo zenithboard console password` (choose a new one; everyone is signed out). 2. Sign in again |
+| **"Too many tries. Wait N seconds."** | 1. Wait, or 2. `sudo systemctl restart zenithboard-flightinfo` (the count lives in the wall's memory; signed-in sessions survive the restart) |
+| **Phone lost, or a browser you do not know in *Signed in*** | 1. `sudo zenithboard console signout` (every browser and phone out at once). 2. `sudo zenithboard console password` if the password may be known. 3. Pair your phone again: `sudo zenithboard console pair` |
+| **The page says the console is off** | `sudo zenithboard console on` |
+| **403 "home network only" or "open it by the Pi's address"** | 1. Open it as `http://192.168.x.x:8080/console` (the Pi's address: `hostname -I`), from a device on the home network. 2. By a name of your own (not `*.local`): `sudo zenithboard config-set CONSOLE_HOSTS your.name`. 3. A VPN whose addresses are not private (Tailscale's 100.64/10) is refused by design: use SSH through it instead. A narrower `ALLOW_FROM` applies too (`zenithboard config`) |
+| **A change stays *queued*** (the page also warns after 20 s) | The helper is not running. 1. `sudo zenithboard console status` (Helper: active?). 2. `sudo zenithboard console on` (reinstalls it). 3. Still queued: `journalctl -u zenithboard-console -n 50` and `systemctl status zenithboard-console.path` |
+| **A change stays *running*** | 1. Look at what it prints: *Activity*, or `sudo ls -t /var/lib/zenithboard/console/out/ \| head`, then `sudo cat` the newest `.log`. An update or graphs1090 can take minutes. 2. To stop it: `sudo systemctl stop zenithboard-console.service` |
+| **Jobs piling up, or you want none to run** | 1. `sudo zenithboard console off` (the helper stops; nothing more runs). 2. Drop what waits: `sudo rm -f /var/lib/zenithboard/console/state/spool/*.job`. 3. `sudo zenithboard console on` when you want it back |
+| **A setting made from the console broke something** | 1. *Activity → Changes*, or `sudo zenithboard console status` (the last five), or `sudo cat /var/lib/zenithboard/console/out/journal.log`: each line is the command run, with its value. 2. Run the opposite yourself (`sudo zenithboard radius 10`, `sudo zenithboard watchdog off`…) or use the menu. Nothing the console does is beyond what those commands undo |
+| **The page does not load at all** | 1. `systemctl status zenithboard-flightinfo` and `zenithboard logs flightinfo` (the console lives in the wall's server). 2. `sudo systemctl restart zenithboard-flightinfo`. 3. The wall itself (`/`) loads but not `/console`: `sudo zenithboard console status` |
+| **The wizard should come back** | `sudo rm /var/lib/zenithboard/console/state/wizard-done`, then reload the page |
+| **No SSH either** (Pi not on the network) | Not caused by the console, which cannot change the network. Keyboard and screen on the Pi, or the card in another computer: [Reliability and diagnostics](Reliability-and-diagnostics) |
+
+### Start again from zero
+
+```
+sudo zenithboard console forget      # off; deletes the password, the sessions, the record of jobs, the wizard's mark
+sudo zenithboard console password    # a new password
+sudo zenithboard console on          # the helper again; the wizard comes back at the first sign-in
+sudo zenithboard console pair        # the phone again (QR code)
+```
+
+### Take it out completely
+
+`sudo zenithboard console forget`. The Pi is then as before 0.39.0: no helper, no password, no console folder in use, `/console` answers "off". The code stays in the release, unused; nothing else depends on it.
+
 ## Files
 
 | File | What |

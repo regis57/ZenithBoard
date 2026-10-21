@@ -584,6 +584,7 @@ sudo zenithboard console pair         # a QR code that signs a phone in, once, w
 * **Off by default**, and it answers home networks only. A first-run wizard sets the wall, the statistics and the watchdogs in five short steps.
 * **A phone signs in by QR code** (dark on its own white square, so it scans on a black screen) and stays signed in for 30 days. Face ID and passkeys need HTTPS under a domain name, which a Pi at a home address does not have.
 * **The wall's server still changes nothing itself**: it hands one action from a fixed list to a small root helper, which checks it again and runs that one command. Uninstalling, Wi-Fi, fixed addresses, passwords and posting stay in the terminal.
+* **Blocked?** SSH and the menu are always the way in; the console cannot touch SSH, Wi-Fi or the addresses. Password forgotten: `sudo zenithboard console password`; a change stuck: `sudo zenithboard console off`, then `on`; start again from zero: `console forget`, `password`, `on`. Every case, step by step: [Break-glass](https://github.com/regis57/ZenithBoard/wiki/Web-console#break-glass-when-the-console-is-in-the-way).
 * The page travels unencrypted on your home network, like the wall. Details, and everything that protects it: [Web console](https://github.com/regis57/ZenithBoard/wiki/Web-console).
 
 ## Security
