@@ -40,6 +40,8 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$ROOT/lib/update.sh"
 # shellcheck source=lib/backup.sh
 . "$ROOT/lib/backup.sh"
+# shellcheck source=lib/tailscale.sh
+. "$ROOT/lib/tailscale.sh"
 # shellcheck source=lib/menus.sh
 . "$ROOT/lib/menus.sh"
 

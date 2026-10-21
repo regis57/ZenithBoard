@@ -101,6 +101,7 @@ ACTIONS = {
     "update-quick": ("system", "Update ZenithBoard and the wall", ["update", "quick"], [], "ask long wall"),
     "update":       ("system", "Update everything", ["update"], [], "ask long wall"),
     "net-status":   ("system", "Network", ["net", "status"], [], "read"),
+    "tailscale-status": ("system", "Tailscale", ["tailscale", "status"], [], "read"),
     "wifi-status":  ("system", "Wi-Fi", ["wifi", "status"], [], "read"),
     "ddns-status":  ("system", "Domain name", ["ddns", "status"], [], "read"),
     "ddns-update":  ("system", "Refresh the domain name", ["ddns", "update"], [], ""),

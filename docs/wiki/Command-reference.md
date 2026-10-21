@@ -103,6 +103,11 @@ How to read a day of the gain log, and why a quiet hour cannot judge the gain: [
 | `zenithboard wifi install-nm` | yes | Install NetworkManager on a Pi that lacks it. Run with the cable plugged in |
 | `zenithboard wifi harden on` · `off` · `status` | yes to change | Two settings of the saved Wi-Fi profile: `connection.autoconnect-retries 0` (keep trying to rejoin after a loss; NetworkManager stops after four tries by itself) and `802-11-wireless.powersave 2` (the radio's power saving off, a known cause of short losses on a Pi). Off by default; `on` notes the values it found, `off` puts them back. Taken at the next connection |
 | `zenithboard ddns set duckdns` · `noip` · `freedns NAME` | yes | A name for your wall. Asks for the token; it never goes on the command line |
+| `zenithboard tailscale on` | yes | 0.45.0, off by default: installs Tailscale from its own repository (pkgs.tailscale.com, checked by apt) if needed, prints a sign-in link and its QR code (your own Tailscale account; ZenithBoard never makes one), then lets the wall answer Tailscale's addresses (`ALLOW_FROM` gets `100.64.0.0/10` added) and prints the addresses to use from anywhere. No port opened. See [The menu](The-menu#tailscale) |
+| `zenithboard tailscale off` | yes | Disconnects (`tailscale down`); the wall answers what it answered before. Stays installed and signed in: `on` again needs no new sign-in |
+| `zenithboard tailscale status` | | Installed or not, connected or not, the Pi's Tailscale address and name, what the wall and the console answer |
+| `zenithboard tailscale remove` | yes | Asks you to type `remove`: signs the Pi out (its key expires), stops Tailscale, uninstalls the package, its repository, its key and its state, when ZenithBoard installed them (one installed by hand is only signed out and stopped). Then remove the Pi from your account's machine list |
+| `zenithboard tailscale console on` · `off` | yes | The web console answers Tailscale's addresses and its `*.ts.net` name too (off by default: home networks only) |
 | `zenithboard ddns status` | | Provider, name, last result |
 | `zenithboard ddns update` · `test` | yes | Refresh now / show exactly what the provider answers |
 | `zenithboard ddns off` | yes | Stop updating the name |

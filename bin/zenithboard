@@ -43,6 +43,8 @@ HERE="$(dirname "$(readlink -f "$0")")"
 . "$HERE/../lib/console.sh"
 # shellcheck source=lib/backup.sh
 . "$HERE/../lib/backup.sh"
+# shellcheck source=lib/tailscale.sh
+. "$HERE/../lib/tailscale.sh"
 
 zb_tmp_init   # the private folder for downloads, made here in the main shell (see zb_tmp in lib/common.sh)
 
@@ -86,6 +88,9 @@ ZenithBoard $ZB_VERSION - ADSB Flight Info
   zenithboard stats gaps                callsigns shown without an airline, types drawn with the generic silhouette (30 days)
   zenithboard graphs on|off|status      graphs1090: years of the decoder's graphs on port 8542 (off by default)
   zenithboard graphs look zenithboard|original   graphs1090's page and graphs in ZenithBoard's look, or its own (default)
+  zenithboard tailscale on|off|status   reach the wall from anywhere through your own Tailscale network, no port opened (off by default)
+  zenithboard tailscale remove          sign out, stop and uninstall Tailscale (asks you to type remove)
+  zenithboard tailscale console on|off  the web console over Tailscale too (off by default: home networks only)
   zenithboard backup make [FILE]        everything to move to a new card: settings, features on, statistics, graphs,
                                         kept logs, the networks' identities (keep the file private)
   zenithboard backup show FILE          what a backup holds and the span of each part, read back as a restore would
@@ -268,6 +273,15 @@ case "${1:-}" in
         esac ;;
       status) data_refresh_status; localdb_status ;;
       *) die "Usage: zenithboard data update | auto on|off | localdb on|off | status" ;;
+    esac ;;
+  tailscale)
+    case "${2:-status}" in
+      on) root_or_die; tailscale_on ;;
+      off) root_or_die; tailscale_off ;;
+      remove) root_or_die; tailscale_remove "${3:-}" ;;
+      console) root_or_die; tailscale_console "${3:-}" ;;
+      status) tailscale_status ;;
+      *) die "Usage: zenithboard tailscale on|off|status|remove|console on|off" ;;
     esac ;;
   backup)
     case "${2:-}" in
