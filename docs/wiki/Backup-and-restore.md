@@ -69,6 +69,35 @@ asks for `RESTORE`. Each new backup is also read back once written (a full card 
 A backup takes about the size of the logs kept (50 MB at most) plus graphs1090's history (30 MB on the reference Pi,
 compressed): copy it off the Pi and keep a few, not dozens, on the card.
 
+## Copying the file between your computer and the Pi
+
+The file goes in **your home folder on the Pi** (`/home/YOUR_USER/`, written `~`): the restore takes it from there,
+and the menu's *Restore* offers the newest one it finds there. PuTTY's own window is a terminal only and cannot carry
+a file; three ways that can, on Windows:
+
+* **The `scp` built into Windows 10 and 11** (its OpenSSH client), in PowerShell, from the folder holding the file
+  (a console download is in *Downloads*):
+  ```
+  cd $env:USERPROFILE\Downloads
+  scp .\zenithboard-backup-rp3-20261021-1252-console.tar.gz YOUR_USER@zenithboard.local:
+  ```
+  The `:` at the end, with nothing after it, means your home folder on the Pi. It asks for your Pi password. If
+  `zenithboard.local` is not found, use the Pi's address (`YOUR_USER@192.168.1.x:`).
+* **PuTTY's `pscp.exe`**, installed with PuTTY (its folder, usually `C:\Program Files\PuTTY`, is on the path), the
+  same way ([PuTTY's manual, chapter 5](https://putty.cs.utah.edu/0.83/htmldoc/Chapter5.html)):
+  ```
+  pscp zenithboard-backup-rp3-20261021-1252-console.tar.gz YOUR_USER@192.168.1.x:/home/YOUR_USER/
+  ```
+* **WinSCP**, if you prefer windows to commands: connect with SFTP to the Pi, your user and password, and drag the
+  file into the home folder it opens on.
+
+From the Pi to your computer (a backup made in the terminal), the other way round, in PowerShell:
+`scp YOUR_USER@zenithboard.local:zenithboard-backup-*.tar.gz .` (or `pscp YOUR_USER@192.168.1.x:/home/YOUR_USER/zenithboard-backup-rp3-….tar.gz .`).
+On macOS and Linux, `scp` is there already, same lines.
+
+Then, in PuTTY (or `ssh`) on the Pi: `ls ~/zenithboard-backup-*` shows it, and
+`sudo zenithboard backup restore ~/zenithboard-backup-….tar.gz` puts it back (*Tab* completes the name).
+
 ## Moving to a new card, step by step
 
 1. **On the old card:** `sudo zenithboard backup make`, then copy the file to your computer:
