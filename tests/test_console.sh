@@ -42,6 +42,7 @@ check "the wall's side accepts it"                    'python3 -c "import sys; s
 
 out=$(console_on)
 check "on: the setting, the address"                  '[ "$(cfg_get CONSOLE)" = 1 ] && printf "%s" "$out" | grep -q "http://192.168.1.50:8080/console"'
+check "on: the wall restarted, so its sandbox opens the new folder" 'grep -q "try-restart zenithboard-flightinfo" "$t/systemctl.log"'
 check "on: the folders, the spool private"            '[ -d "$t/console/out" ] && [ "$(stat -c %a "$t/console/state/spool")" = 700 ]'
 check "on: the helper's two units, the path enabled"  '[ -f "$t/sysd/zenithboard-console.path" ] && [ -f "$t/sysd/zenithboard-console.service" ] && grep -q "enable --now zenithboard-console.path" "$t/systemctl.log"'
 check "the path unit watches the spool"               'grep -q "^PathExistsGlob=/var/lib/zenithboard/console/state/spool/\*.job" systemd/zenithboard-console.path'

@@ -24,12 +24,21 @@ Off again: `sudo zenithboard console off` (the password is kept). Gone for good:
 
 ## Signing in
 
+**The two ways are independent: the QR code needs no password, and the password needs no QR code.** The terminal is
+for setting up, not for every visit: once a browser or a phone is signed in, it stays signed in while it is used.
+
+| | Needs the terminal | Then |
+|---|---|---|
+| Password only | Once: `console password`, `console on` | Any browser on the home network signs in with it; it stays signed in a week (a day unused). Phones can then be paired from that browser, no terminal |
+| QR code only, no password | Once per phone: `console on`, `console pair` | The phone stays signed in as long as it opens the console once a month (a year at most). Another phone, or this one after that: `console pair` again, or from a browser already signed in |
+| Both (recommended) | Once | The password for computers, the QR code for phones; the terminal only when a phone was away more than a month and no browser is signed in |
+
 * **A password**, chosen over SSH. Kept as a scrypt hash in `/etc/zenithboard/console.env` (root:zenithboard, 0640),
   never in `config.env`, never in a log. The password field is a normal one, so the phone's or the browser's password
-  manager can keep it. A password session lasts 12 hours (2 hours unused).
+  manager can keep it. A browser signed in with it stays signed in for a week (a day unused).
 * **A phone, by QR code.** On a computer already signed in: *System → Signed in → Pair a phone*; or over SSH:
   `sudo zenithboard console pair`. Scan the code with the phone's camera within five minutes: the link works once and
-  keeps the phone signed in for 30 days (7 days unused). The code is drawn dark on its own white square with its
+  keeps the phone signed in as long as it opens the console once a month (a year at most). No password is needed. The code is drawn dark on its own white square with its
   margin, on the page and in the terminal (`qrencode`, when installed, is told both colours), so it scans on a black
   background. Add the page to the home screen from Safari's *Share* menu to open it in one tap.
 * **Signing out**: *Sign out* on the page; *System → Signed in* lists every browser and phone and signs any of them
@@ -102,7 +111,8 @@ when you do not need it. `zenithboard security` says it is on and checks the pas
 | What you see | Step by step, over SSH |
 |---|---|
 | **Password forgotten** | 1. `sudo zenithboard console password` (choose a new one; everyone is signed out). 2. Sign in again |
-| **"Too many tries. Wait N seconds."** | 1. Wait, or 2. `sudo systemctl restart zenithboard-flightinfo` (the count lives in the wall's memory; signed-in sessions survive the restart) |
+| **"This pairing code is used or out of date"**, with a fresh code | The wall could not write its console folder: it was started before `console on` made it, and its sandbox opens only folders present at its start (0.39.0, fixed in 0.39.2: `console on` restarts it, the code no longer depends on that write). 1. `sudo systemctl restart zenithboard-flightinfo`. 2. `sudo zenithboard console pair` again (a code works once, five minutes). The page also says it when the folder cannot be written |
+| **"Too many tries. Wait N seconds."** (failed QR codes count too) | 1. Wait, or 2. `sudo systemctl restart zenithboard-flightinfo` (the count lives in the wall's memory; signed-in sessions survive the restart) |
 | **Phone lost, or a browser you do not know in *Signed in*** | 1. `sudo zenithboard console signout` (every browser and phone out at once). 2. `sudo zenithboard console password` if the password may be known. 3. Pair your phone again: `sudo zenithboard console pair` |
 | **The page says the console is off** | `sudo zenithboard console on` |
 | **403 "home network only" or "open it by the Pi's address"** | 1. Open it as `http://192.168.x.x:8080/console` (the Pi's address: `hostname -I`), from a device on the home network. 2. By a name of your own (not `*.local`): `sudo zenithboard config-set CONSOLE_HOSTS your.name`. 3. A VPN whose addresses are not private (Tailscale's 100.64/10) is refused by design: use SSH through it instead. A narrower `ALLOW_FROM` applies too (`zenithboard config`) |

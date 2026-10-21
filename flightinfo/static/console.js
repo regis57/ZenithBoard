@@ -136,8 +136,9 @@
     if (which === "pairing") $("gate-pairing").hidden = false;
     if (which === "nopw") { $("gate-nopw").hidden = false; $("gate-help").hidden = false; }
     if (which === "login") { $("login").hidden = false; $("gate-help").hidden = false; setTimeout(function () { $("pw").focus(); }, 50); }
-    var err = $("login-err");
-    if (msg) { err.textContent = msg; err.hidden = false; if (which !== "login") { $("login").hidden = false; } } else err.hidden = true;
+    var err = $("gate-err");
+    $("login-err").hidden = true;
+    if (msg) { err.textContent = msg; err.hidden = false; } else err.hidden = true;
   }
   $("pw-eye").addEventListener("click", function () {
     var p = $("pw"); p.type = p.type === "password" ? "text" : "password";
@@ -154,6 +155,7 @@
     }).catch(function () { b.disabled = false; $("login-err").textContent = "The Pi does not answer."; $("login-err").hidden = false; });
   });
 
+  var WRITE_MSG = "The wall cannot write its console folder yet: pairing and changes will fail. Over SSH: sudo systemctl restart zenithboard-flightinfo";
   function boot() {
     dots($("gate-logo"), "ZENITHBOARD", 10); dots($("gate-sub"), "CONSOLE", 10);
     var m = /[#&]pair=([A-Za-z0-9_-]{16,64})/.exec(location.hash), pairTok = m && m[1];
@@ -161,6 +163,7 @@
     return api("session").then(function (r) {
       var s = r.data;
       if (s.enabled === false) return gate("off");
+      S.unwritable = s.writable === false;
       if (pairTok) {
         gate("pairing");
         return api("pair/redeem", { body: { token: pairTok } }).then(function (p) {
@@ -168,7 +171,7 @@
           gate(s.has_password ? "login" : "nopw", p.data.error || "This pairing code did not work.");
         });
       }
-      if (!s.signed_in) return gate(s.has_password ? "login" : "nopw");
+      if (!s.signed_in) return gate(s.has_password ? "login" : "nopw", S.unwritable ? WRITE_MSG : null);
       S.session = s;
       startApp();
     }).catch(function () { gate("login", "The Pi does not answer. Is the wall running?"); });
@@ -182,6 +185,7 @@
     $("side-version").textContent = "ZenithBoard " + (S.session.version || "");
     loadState().then(function () {
       route();
+      if (S.unwritable) toast(WRITE_MSG, true);
       if (!S.session.wizard_done) wizard();
     });
   }
@@ -499,7 +503,7 @@
             S.cfg.DDNS_PROVIDER && S.cfg.DDNS_PROVIDER !== "none" ? btn("Refresh the domain name", "ddns-update") : null),
           h("p", { "class": "note", text: "Wi-Fi networks, fixed addresses and the domain name's key stay in the terminal (sudo zenithboard menu → Settings → Network): one mistake there cuts the Pi off the network this page comes through." })
         ], "w6"),
-        card("Signed in", "phone", "Browsers and phones signed in to this console. A password session lasts 12 hours, a paired phone 30 days.", [
+        card("Signed in", "phone", "Browsers and phones signed in to this console. Signed in with the password: a week (a day unused). A paired phone: as long as it opens the console once a month.", [
           sessionsList(),
           h("div", { "class": "actions" }, h("button", { type: "button", "class": "primary", text: "Pair a phone", onclick: function () { pairPhone(); } }),
             h("button", { type: "button", "class": "btn", text: "Sign out the others", onclick: function () {
@@ -660,7 +664,7 @@
         h("header", null, h("h2", { text: "Pair a phone" }), h("button", { type: "button", "class": "ghost", "aria-label": "Close", text: "×", onclick: stop })),
         h("div", { "class": "modal-body" }, local ? h("p", { "class": "err", text: "This page was opened as " + location.hostname + ": a phone cannot reach that. Open the console at the Pi's address to pair one." }) : null,
           box, count, status,
-          h("p", { "class": "qr-note", text: "It works once, within five minutes, and keeps the phone signed in for 30 days. Add it to the home screen from Safari's Share menu to open it in one tap." }))));
+          h("p", { "class": "qr-note", text: "It works once, within five minutes. The phone then stays signed in as long as it opens the console once a month. Add it to the home screen from Safari's Share menu to open it in one tap." }))));
       var timer = setInterval(tickPair, 1000), poll = setInterval(checkPair, 2000);
       function tickPair() {
         var left = Math.max(0, Math.round((until - Date.now()) / 1000));
@@ -783,7 +787,7 @@
       },
       function () {
         return [h("h3", { text: "Your phone" }),
-          h("p", { "class": "lead", text: "Scan a QR code once and the phone is signed in for 30 days, no password typed. Face ID and passkeys need HTTPS under a domain name, which a Pi at a home address does not have: the QR code is how a phone signs in here." }),
+          h("p", { "class": "lead", text: "Scan a QR code once and the phone stays signed in, no password typed, as long as it opens the console once a month. Face ID and passkeys need HTTPS under a domain name, which a Pi at a home address does not have: the QR code is how a phone signs in here." }),
           h("div", { "class": "actions" }, h("button", { type: "button", "class": "btn", text: "Pair a phone now", onclick: function () { S.wizardOpen = false; pairPhone(reopen); } })),
           h("p", { "class": "note", text: "Or later: System → Signed in → Pair a phone; or over SSH: sudo zenithboard console pair." })];
       },

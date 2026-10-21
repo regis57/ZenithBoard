@@ -73,6 +73,9 @@ console_remove_units() {
 console_on() {
   console_prepare_dirs || { echo "Could not make $CONSOLE_DIR"; return 1; }
   cfg_set CONSOLE 1; console_install_units
+  # 0.39.2: the wall may write its console folder only if the folder existed when it started (its sandbox's
+  # ReadWritePaths); a wall running from before `on` could not, and refused every pairing code (the reference Pi)
+  systemctl try-restart zenithboard-flightinfo >/dev/null 2>&1 || true
   echo "The web console is ON: $(console_url)"
   echo "  It answers your home network only. Every change it makes runs the same zenithboard command as here."
   if console_has_password; then
@@ -133,7 +136,7 @@ console_pair() {
     echo "  (to see a QR code here: sudo apt install qrencode)"
   fi
   echo "  $url"
-  echo "The phone stays signed in for 30 days. See or sign out phones: in the console, System -> Signed in."
+  echo "The phone stays signed in as long as it opens the console once a month (a year at most). See or sign out phones: in the console, System -> Signed in."
 }
 
 console_status() {

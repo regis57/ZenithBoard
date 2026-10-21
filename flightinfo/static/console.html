@@ -16,6 +16,7 @@
     <div class="gate-card">
       <div id="gate-logo" class="logo" role="img" aria-label="ZenithBoard"></div>
       <div id="gate-sub" class="logo-sub" role="img" aria-label="Console"></div>
+      <p class="err" id="gate-err" role="alert" hidden></p>
       <div id="gate-off" hidden>
         <p>The web console is off. To turn it on, over SSH on the Pi:</p>
         <pre>sudo zenithboard console on</pre>
@@ -40,7 +41,7 @@
         <summary>Sign in a phone without typing</summary>
         <p>On a computer already signed in: <b>System &rarr; Signed in &rarr; Pair a phone</b>, or over SSH:</p>
         <pre>sudo zenithboard console pair</pre>
-        <p>Then scan the QR code with the phone's camera. It works once, within five minutes, and keeps the phone signed in for 30 days.</p>
+        <p>Then scan the QR code with the phone's camera. It works once, within five minutes; the phone then stays signed in as long as it opens the console once a month. No password is needed for it.</p>
       </details>
       <p class="fine">Your home network only. <a href="/">Wall</a> &middot; <a href="/stats">Statistics</a></p>
     </div>
