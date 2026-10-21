@@ -1844,9 +1844,11 @@ I18N_DIR = os.path.join(STATIC_DIR, "i18n")
 
 def web_langs():
     """0.47.0: the languages the web pages can be shown in: English, and those this copy carries a catalogue for."""
-    # in the order of the one list (console_actions.LANGS, the same as lib/common.sh and i18n.js)
+    # in the order of the one list (console_actions.LANGS, the same as lib/common.sh and i18n.js). 0.48.0: a language
+    # whose folder holds a file named "draft" is complete but waits for a native speaker's review: not offered
     return ["en"] + [c for c in console.actions.LANGS
-                     if c != "en" and os.path.isfile(os.path.join(I18N_DIR, c, "console.json"))]
+                     if c != "en" and os.path.isfile(os.path.join(I18N_DIR, c, "console.json"))
+                     and not os.path.exists(os.path.join(I18N_DIR, c, "draft"))]
 
 
 def public_config(cfg):

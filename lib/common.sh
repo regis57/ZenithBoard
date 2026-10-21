@@ -133,7 +133,7 @@ ZB_LANG_CODES="en fr de nl it es pt-BR pl fi et lv lt id sw ru uk ar ja ko zh-Ha
 zb_langs() {
   local c out=en
   for c in $ZB_LANG_CODES; do
-    [ "$c" != en ] && [ -f "$ZB_HOME/flightinfo/static/i18n/$c/console.json" ] && out="$out $c"
+    [ "$c" != en ] && [ -f "$ZB_HOME/flightinfo/static/i18n/$c/console.json" ] && [ ! -e "$ZB_HOME/flightinfo/static/i18n/$c/draft" ] && out="$out $c"
   done
   echo "$out"
 }

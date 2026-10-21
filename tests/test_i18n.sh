@@ -66,6 +66,7 @@ for l in common graphs console; do
   . "lib/$l.sh"
 done
 check "languages offered: English and those with a catalogue, as the wall's server says" '[ "$(zb_langs)" = "$(python3 -c "import sys; sys.path.insert(0, \"flightinfo\"); import server; print(\" \".join(server.web_langs()))")" ] && zb_langs | grep -qw fr'
+check "a language marked draft is complete but not offered (Swahili, waiting for a native reviewer)" '[ -e flightinfo/static/i18n/sw/draft ] && ! zb_langs | grep -qw sw && python3 tools/i18n.py check sw | grep -q "0 problem" && ! console_lang sw >/dev/null 2>&1'
 check "not chosen by default: the console asks at its first visit" '[ -z "$(cfg_get CONSOLE_LANG)" ] && console_lang | grep -q "not chosen yet"'
 check "console lang: a language with no catalogue is refused" '! console_lang xx >/dev/null 2>&1 && [ -z "$(cfg_get CONSOLE_LANG)" ]'
 check "console lang fr: written, said"                    'console_lang fr | grep -q "Language of the web pages: fr" && [ "$(cfg_get CONSOLE_LANG)" = fr ]'
