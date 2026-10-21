@@ -33,7 +33,7 @@ check "the services stopped"                         'grep -q "disable --now zen
 # an update never removes it: it only says so
 check "update says, never removes"                   'grep -q "acars_notice" lib/update.sh && ! grep -q "acars_remove" lib/update.sh'
 # nothing offers ACARS any more
-check "main menu: no ACARS, Settings is 3, Maintenance is 6" '! grep -q "ACARS       -" install.sh && grep -q "3 \"Settings" install.sh && grep -q "6 \"Maintenance" install.sh'
+check "main menu: no ACARS; 3 Connectivity, 6 Backup" '! grep -q "ACARS" lib/menus.sh && grep -q "3 \"3  Connectivity" lib/menus.sh && grep -q "6 \"6  Backup" lib/menus.sh'
 check "no ACARS install code left"                   '[ ! -e lib/acars.sh ] && [ ! -e acars ] && [ ! -e bin/run-acarsdec ] && ! ls systemd | grep -q acars'
 check "command: acars remove only"                   'grep -q "remove) root_or_die; acars_remove" bin/zenithboard && ! grep -q "grafana_password_cmd" bin/zenithboard'
 check "update list: no acars component"              '! grep -q "ZB_COMPONENTS=.*acars" lib/update.sh'

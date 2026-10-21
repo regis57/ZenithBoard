@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Wi-Fi settings (menu 4 Settings -> Wi-Fi, and `zenithboard wifi ...`): on/off, country, scan with signal strength,
+# Wi-Fi settings (menu 3 Connectivity -> 1 Wi-Fi, and `zenithboard wifi ...`): on/off, country, scan with signal strength,
 # connect with a password, saved networks. Built on NetworkManager (the default on Raspberry Pi OS Bookworm and newer).
 #
 # Persistence: every network is a NetworkManager profile file under /etc/NetworkManager/system-connections (root only,

@@ -6,6 +6,8 @@
 
 *Getting started*
 * [Fresh install, step by step](Fresh-install)
+* [Moving to a new card](Moving-to-a-new-card)
+* [The menu](The-menu)
 * [Backup and restore](Backup-and-restore)
 
 *How it works*

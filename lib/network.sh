@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Network settings (menu 4 Settings -> Network -> Fixed IP, and `zenithboard net ...`).
+# Network settings (menu 3 Connectivity -> 2 Fixed address, and `zenithboard net ...`).
 #
 # A fixed address is written into the NetworkManager profile of ONE connection (the Ethernet or the Wi-Fi profile you pick).
 # Nothing else about that profile is touched: it keeps its auto-connect setting and its route metric, so the cable stays

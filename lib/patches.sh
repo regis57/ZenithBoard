@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Debian security patches, installed by themselves (menu 4 Settings -> Reliability, and `zenithboard patches`).
+# Debian security patches, installed by themselves (menu 5 Updates, and `zenithboard patches`).
 #
 # Debian publishes security fixes for the packages the Pi runs on — openssl, the kernel, curl, python — and nothing
 # installs them unless something does. unattended-upgrades does, once a day. It is told to take ONLY the Debian

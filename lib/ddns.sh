@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Domain name for your wall (menu 4 Settings -> Network -> Domain name, and `zenithboard ddns ...`).
+# Domain name for your wall (menu 3 Connectivity -> 4 Domain name, and `zenithboard ddns ...`).
 #
 # Most home internet connections change their public address from time to time. A dynamic-DNS service gives you a free
 # name (for example myplanes.duckdns.org) and this Pi tells the service its current address every 5 minutes, so the name

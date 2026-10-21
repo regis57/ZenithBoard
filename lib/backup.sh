@@ -335,6 +335,14 @@ backup_restore() {
 
   echo "1. Settings"
   [ ! -f "$b/settings.env" ] || settings_import "$b/settings.env" | sed 's/^/  /'
+  # 0.44.0: imported is not applied (the owner: the position, the altitude and the units "did not follow"): the
+  # position goes everywhere it is stored (the decoder, the feeders that take it), the wall and the posts restart
+  local lat lon; lat=$(cfg_get LAT ""); lon=$(cfg_get LON "")
+  if valid_lat "$lat" && valid_lon "$lon" && [ "$lat$lon" != 00 ] && declare -F zb_apply_location >/dev/null; then
+    echo "  The antenna position, applied everywhere it is stored:"
+    zb_apply_location "$lat" "$lon" "$(cfg_get ALT_M 0)" 2>&1 | sed 's/^/  /'
+  fi
+  ! declare -F settings_apply >/dev/null || settings_apply
   echo "2. Statistics and posting history"
   if [ -d "$b/stats" ]; then
     install -d -m 755 "$STATS_DIR"
@@ -383,6 +391,7 @@ backup_restore() {
     if "$BK_CMD" $(bk_feature_cmd "$feat") > "$st/out" 2>&1; then echo "  $(bk_feature_label "$feat"): on"
     else failed="$failed\n  sudo zenithboard $(bk_feature_cmd "$feat")      # $(tail -1 "$st/out")"; fi
   done
+  ! declare -F graphs_look_keep >/dev/null || graphs_look_keep         # the look and the wall's colour of the backup
   if [ -f "$BK_PENDING/graphs-xml.tar.gz" ]; then
     if is_graphs; then bk_pending_apply graphs | sed 's/^ *//; s/^/  /'
     else later="$later\n  graphs1090's history waits for graphs1090: it comes back by itself with  sudo zenithboard graphs on  (after menu 2)"; fi

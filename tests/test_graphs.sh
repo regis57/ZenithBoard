@@ -93,7 +93,7 @@ check "a package now needed elsewhere: all kept, said" '! grep -q "^apt-get remo
 
 # the rest of ZenithBoard knows it
 check "command: graphs on|off|status"                  'grep -q "on)     root_or_die; graphs_on" bin/zenithboard && grep -q "zenithboard graphs on|off|status" bin/zenithboard'
-check "menu: Settings, Receiver, 6"                    'grep -q "graphs \"6  graphs1090" install.sh'
+check "menu: Options, 2 graphs1090, on/off and its look" 'grep -q "graphs \"2  graphs1090" lib/menus.sh && grep -q "look \"2  Its look" lib/menus.sh'
 check "update: a component when on"                    'grep -q "graphs1090) is_graphs" lib/update.sh && grep -q "graphs_update" lib/update.sh'
 check "security: port 8542 is known"                   'grep -q "8542) known=" lib/security.sh'
 check "uninstall everything takes it"                  'grep -q "then graphs_off; fi" install.sh'

@@ -64,26 +64,6 @@ remove_flightinfo() {
   systemctl daemon-reload
 }
 
-flightinfo_menu() {
-  local choice units radius
-  while true; do
-    units=$(cfg_get UNITS metric); radius=$(cfg_get RADIUS 10)
-    if is_flightinfo; then
-      choice=$(wt_menu "FlightInfo is INSTALLED.\nWall address:  http://$(local_ip):$(cfg_get PORT 8080)/\nRadius: $radius ($units)" \
-        radius "Change the detection radius" update "Update / reinstall files" remove "Remove FlightInfo" back "Return to the previous menu") || return 0
-    else
-      choice=$(wt_menu "FlightInfo is not installed.\nIt turns an old tablet into a dot-matrix wall showing the aircraft above you." \
-        install "Install FlightInfo" back "Return to the previous menu") || return 0
-    fi
-    case "$choice" in
-      install|update) clear; install_flightinfo; read -rp "Press Enter to continue..." _ ;;
-      radius) change_radius ;;
-      remove) wt_yesno "Remove FlightInfo (the wall)?\n\nThe feeders keep running; your settings stay in $ZB_CONFIG and the wall comes back with menu 2." 10 && [ "$(wt_input "To remove the wall, type the word  remove  (anything else cancels)." "")" = remove ] && { clear; remove_flightinfo; } ;;
-      *) return 0 ;;
-    esac
-  done
-}
-
 change_radius() {
   local r; r=$(pick_radius) || return 0
   [ -n "$r" ] && cfg_set RADIUS "$r" && restart_flightinfo

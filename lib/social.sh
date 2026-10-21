@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Social sharing (menu 4 Settings -> 6 Social sharing, and `zenithboard social ...`).
+# Social sharing (menu 7 Options -> 3 Bluesky, and `zenithboard social ...`).
 #
 # Posts the aircraft overhead to Bluesky as a picture of the wall, with a short text. Off by default. The work is
 # done by flightinfo/social.py, running as a service under the wall's user; this file is the setup wizard, the

@@ -3,7 +3,7 @@
 Off by default. Switched on, the Pi takes one sample every fifteen minutes and keeps thirty days of them, so that three questions have an answer: how many messages per hour, how far the antenna reaches, how many aircraft a day.
 
 ```bash
-sudo zenithboard stats on      # or: sudo zenithboard menu -> 3 Settings -> Receiver -> 5 Statistics
+sudo zenithboard stats on      # or: sudo zenithboard menu -> 7 Options -> 1 Statistics
 zenithboard stats              # in the terminal
 ```
 
@@ -42,7 +42,7 @@ At the edge of range the decoder often has an aircraft's positions before its ca
 The `/stats` page keeps thirty days of what ZenithBoard measures. For the long view of the decoder itself — messages, range, signal and noise, aircraft, CPU, temperature, over days, months and years — there is [graphs1090](https://github.com/wiedehopf/graphs1090), by the author of readsb and tar1090. Off by default (0.32.0):
 
 ```
-sudo zenithboard graphs on        # menu 3 Settings -> 2 Receiver -> 6
+sudo zenithboard graphs on        # menu 7 Options -> 2 graphs1090
 zenithboard graphs status
 sudo zenithboard graphs off
 ```
@@ -80,16 +80,19 @@ The line leaves out what is not known rather than guess it: no airline, no route
 
 With statistics off, the page says so and how to turn them on. `/api/stats?range=24h|7d|30d` answers the same numbers as JSON (30 days when the range is left out), `{"enabled": false}` when off. `/api/farthest` is what the sample asks: the records the wall holds in memory for today and yesterday.
 
-## graphs1090 in ZenithBoard's look (0.43.0, optional)
+## graphs1090 in ZenithBoard's look (0.43.0; the default since 0.44.0)
 
 ```
-sudo zenithboard graphs look zenithboard     # or menu 3 → 2 Receiver → 7, or the console's Receiver section
-sudo zenithboard graphs look original        # graphs1090's own look again
+sudo zenithboard graphs look original        # graphs1090's own look (menu 7 Options → 2 graphs1090 → 2, or the console's Receiver section)
+sudo zenithboard graphs look zenithboard     # ZenithBoard's look again
 ```
+
+Since 0.44.0, when graphs1090 is on it is in ZenithBoard's look unless you chose `original` (the owner: "as default,
+just a command to disable it"); an update puts it on a Pi that had never chosen.
 
 graphs1090's page on port 8542 in the statistics page's look: black, the wall's colour, the name in the wall's dots with links to the wall and `/stats`, the period buttons and panels styled like the statistics page; on a phone, one graph a row, the width of the screen. **The graphs themselves are drawn in the same colours**: graphs1090 draws them with rrdtool and reads its colours from `/etc/default/graphs1090` after its own colour schemes, so ZenithBoard writes a marked block at the end of that file — a black canvas, light grey text and grid, the wall's colour for the main series (messages received, aircraft with a position), its shades and the wall's turquoise, green and red where a graph needs more series told apart. Checked against every graph of the reference Pi's own history (its backup of 21 October 2026): each line and its legend still read.
 
-What it changes, and `original` takes away: the block in `/etc/default/graphs1090`; two lines in graphs1090's `index.html` (a stylesheet and a script); three files beside it (`zenithboard.css`, `zenithboard.js`, `font5x7.js`). graphs1090's own files are otherwise left alone, its credit and version at the foot included. Its updates write its page again: `zenithboard update` puts the look back after them, and so does a new wall colour. Off by default; graphs1090 must be on first.
+What it changes, and `original` takes away: the block in `/etc/default/graphs1090`; two lines in graphs1090's `index.html` (a stylesheet and a script); three files beside it (`zenithboard.css`, `zenithboard.js`, `font5x7.js`). graphs1090's own files are otherwise left alone, its credit and version at the foot included. Its updates write its page again: `zenithboard update` puts the look back after them, and so does a new wall colour. graphs1090 must be on first.
 
 ![graphs1090 in ZenithBoard's look (the reference Pi's own graphs, 21 October 2026)](https://raw.githubusercontent.com/regis57/ZenithBoard/main/docs/images/graphs1090-look.png)
 

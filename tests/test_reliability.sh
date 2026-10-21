@@ -140,7 +140,7 @@ check "card: no lsblk, the partition alone"                       'health_check 
 mk df 'printf "Filesystem 1-blocks Used Available Capacity Mounted on\n/dev/root 31167209472 29000000000 500000000 95%% /\n"'
 check "card: nearly full says so"                                 'health_check 2>&1 | grep -q "95% full.*free some space"'
 rm -f "$t/bin/df" "$t/bin/findmnt" "$t/bin/lsblk"
-check "memory command and menu entry"                             'grep -q "memory|threads) python3" bin/zenithboard && grep -q "memory) clear; python3" lib/reliability.sh'
+check "memory command and menu entry"                             'grep -q "memory|threads) python3" bin/zenithboard && grep -q "memory) clear; python3" lib/menus.sh'
 printf 'Oct 08 03:09:58 rp3 systemd[1]: Reached target Shutdown.\nOct 08 03:10:00 rp3 systemd-journald[200]: Journal stopped\n' > "$t/prevtail"
 check "previous boot with a clean shutdown" 'health_check 2>&1 | grep -q "ended normally"'
 echo 0x50005 > "$t/throttled"; echo 83.0 > "$t/temp"

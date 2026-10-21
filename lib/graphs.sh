@@ -140,7 +140,8 @@ graphs_update() {
   graphs_look_keep                                 # 0.43.0: its installer writes its page again: the look goes back on
 }
 
-# ---- 0.43.0: graphs1090 in ZenithBoard's look (the owner, 21 October 2026), off by default.
+# ---- 0.43.0: graphs1090 in ZenithBoard's look (the owner, 21 October 2026); since 0.44.0 the default whenever
+# graphs1090 is on (the owner again: "as default, just a command to disable it"), `graphs look original` to opt out.
 # Two things, both graphs1090's own ways: the graphs' colours are rrdtool's, set by variables graphs1090 reads from
 # /etc/default/graphs1090 after its own colour schemes (graphs1090.sh sources that file again after them, commit
 # 2f96314), so a block at its end wins; and the page gets a stylesheet and a script beside its own, linked from its
@@ -223,14 +224,14 @@ graphs_look() {   # graphs_look zenithboard|original|status
 }
 # after graphs1090's installer, or a new wall colour: the look again, if it was chosen
 graphs_look_keep() {
-  [ "$(cfg_get GRAPHS_LOOK original)" = zenithboard ] && is_graphs || return 0
+  [ "$(cfg_get GRAPHS_LOOK zenithboard)" != original ] && is_graphs || return 0
   graphs_look_apply >/dev/null 2>&1 || return 0
   [ "${ZB_SKIP_SERVICES:-}" = 1 ] || systemctl restart graphs1090 >/dev/null 2>&1 || true
 }
 
 graphs_status() {
   echo "graphs1090: $(graphs_state)$(is_graphs && printf ' (version %s), look: %s' "$(graphs_version)" "$(graphs_look_state)")"
-  is_graphs || { echo "    Turn it on: sudo zenithboard graphs on   (menu 3 Settings -> 2 Receiver -> 6)"; return 0; }
+  is_graphs || { echo "    Turn it on: sudo zenithboard graphs on   (menu 7 Options -> 2 graphs1090)"; return 0; }
   graphs_urls
   echo "    collectd: $(systemctl is-active collectd 2>/dev/null)   graph drawing: $(systemctl is-active graphs1090 2>/dev/null)"
   echo "    In memory (/run/collectd): $(graphs_du "$GRAPHS_ROOT/run/collectd" || echo '?')   on the card (/var/lib/collectd): $(graphs_du "$GRAPHS_ROOT/var/lib/collectd" || echo '?')   /run free: $(graphs_run_free_mb) MB"

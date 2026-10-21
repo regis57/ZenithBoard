@@ -80,7 +80,7 @@ fi
 run fresh ok ok world metric abc ok 49.1193 6.1757 xyz ok 180 10 0
 check "fresh: ends normally at the main menu"       '[ "$rc" = 0 ] && grep -q "^menu	ZenithBoard" "$t/fresh.screens"'
 check "fresh: the Pi 3 notice comes first, once"    'head -1 "$t/fresh.screens" | grep -q "Raspberry Pi 3" && [ "$(cfg=$t/etc/config.env; grep -c "^HW_NOTICE_SEEN=1$" "$cfg")" = 1 ]'
-check "fresh: the welcome points at the menu, not at the read-only config command" 'grep "^msgbox	Welcome" "$t/fresh.screens" | grep -q "menu 4 Settings" && ! grep "^msgbox	Welcome" "$t/fresh.screens" | grep -q "sudo zenithboard config "'
+check "fresh: the welcome points at the menu, not at the read-only config command" 'grep "^msgbox	Welcome" "$t/fresh.screens" | grep -q "Start here" && ! grep "^msgbox	Welcome" "$t/fresh.screens" | grep -q "sudo zenithboard config "'
 check "fresh: a bad latitude is asked again"        '[ "$(grep -c "^inputbox	Antenna LATITUDE" "$t/fresh.screens")" = 2 ] && grep -q "Not a valid latitude" "$t/fresh.screens"'
 check "fresh: a bad altitude is asked again, not written as 0" '[ "$(grep -c "^inputbox	Antenna altitude" "$t/fresh.screens")" = 2 ] && grep -q "^msgbox	Not a number" "$t/fresh.screens"'
 check "fresh: the answers are in config.env"        'grep -q "^REGION=world$" "$t/etc/config.env" && grep -q "^UNITS=metric$" "$t/etc/config.env" && grep -q "^LAT=49.1193$" "$t/etc/config.env" && grep -q "^LON=6.1757$" "$t/etc/config.env" && grep -q "^ALT_M=180$" "$t/etc/config.env" && grep -q "^RADIUS=10$" "$t/etc/config.env"'
@@ -100,13 +100,22 @@ run resumed ok world metric 49.1 6.1 0 10 0
 check "the wizard runs again after a cancel"        '[ "$rc" = 0 ] && grep -q "^LAT=49.1$" "$t/etc/config.env" && grep -q "^menu	ZenithBoard" "$t/resumed.screens"'
 
 # ---- the menu texts the README promises
-run colours 3 wall color CANCEL back back 0
+run colours 2 look dots CANCEL back 0
 check "wall colour offers the five colours of the wall" 'grep "^radiolist	Dot colour" "$t/colours.screens" | grep -q "\[amber green red white turquoise \]"'
-check "the wall menu names them"                     'grep -q "Colour: amber, green, red, white, turquoise\" " install.sh'
+check "the wall menu says look and colour together"  'grep "^menu	The wall" "$t/colours.screens" | grep -q "\[install show look data presets remove back \]"'
+# 0.44.0: the menu by what you want to do (the owner's review): Start here, then seven subjects, seven entries at most
 run settings 3 back 0
-check "settings: seven groups, as the README says"   'grep "^menu	Settings" "$t/settings.screens" | grep -q "\[network receiver wall logs reliability social console back \]" && grep -q "in seven groups" README.md'
-check "settings: Wi-Fi on with no network reads \"not connected\", not \"ON, \"" 'grep "^menu	Settings" "$t/settings.screens" | grep -q "Wi-Fi ON, not connected"'
-check "README: the wall address comes from menu 2"   'grep -q "menu \*2 FlightInfo\* printed" README.md && ! grep -q "address from step 2" README.md'
+check "main menu: Start here, then seven subjects"   'grep "^menu	ZenithBoard" "$t/settings.screens" | head -1 | grep -q "\[start 1 2 3 4 5 6 7 0 \]" && grep -q "Start here" README.md'
+check "connectivity: Wi-Fi on with no network reads \"not connected\", not \"ON, \"" 'grep "^menu	Connectivity" "$t/settings.screens" | grep -q "Wi-Fi: ON, not connected"'
+check "no menu has more than seven entries and its way out" '! grep -h "^menu" "$t"/*.screens | grep -o "\[[^]]*\]" | awk "{ if (NF > 9) exit 1 }" && [ "$(grep -c "^      [a-z0-9]* \"[0-9]  " lib/menus.sh)" -gt 20 ]'
+# ---- 0.44.0: Start here, in its order: a backup first if any (WinSCP said), then ADS-B; nothing goes on without a decoder
+run startbackup start ok yes ok CANCEL 0
+check "start: a backup first, WinSCP named, cancel changes nothing" '[ "$rc" = 0 ] && grep -q "^yesno	Are you moving from another card" "$t/startbackup.screens" && grep -q "WinSCP" "$t/startbackup.screens" && [ "$(grep -c "^menu	ZenithBoard" "$t/startbackup.screens")" = 2 ]'
+run startadsb start ok no ok CANCEL 0
+check "start: ADS-B next, and without a decoder the rest waits" '[ "$rc" = 0 ] && grep -q "^msgbox	ADS-B first" "$t/startadsb.screens" && grep -q "^radiolist	ADS-B decoder" "$t/startadsb.screens" && grep -q "the rest waits" "$t/startadsb.screens" && ! grep -q "web console, the same settings" "$t/startadsb.screens"'
+check "start: the console comes after the wall, the list before it" 'awk "/^start_here\(\)/,/^}/" lib/menus.sh | grep -n "is_flightinfo\|start_recommended\|start_console" | tr "\n" " " | grep -q "is_flightinfo.*start_recommended.*start_console"'
+check "outside: the safe way first, the dangers named, port 22 never" 'grep -q "Only the first is safe" lib/menus.sh && grep -q "NEVER forward port 22" lib/menus.sh && grep -q "100.64.0.0/10" lib/menus.sh'
+check "README: the wall address comes from menu 2"   'grep -q "menu \*2 The wall\* printed" README.md && ! grep -q "address from step 2" README.md'
 
 # ---- a machine that is not a Pi: a warning, no error from a missing model file
 ZB_PI_MODEL_FILE="$t/no-such-model" run notapi 0
