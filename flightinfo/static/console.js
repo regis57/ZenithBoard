@@ -338,6 +338,7 @@
     "update-quick": ["Update ZenithBoard and the wall?", "Seconds. The wall restarts, so this page reconnects by itself. The feeders are left as they are."],
     update: ["Update everything?", "ZenithBoard, the decoder and every feeder, one after the other: several minutes. The wall restarts during it; this page follows. A new GitHub signing key is never accepted from here: the update says so, and it is answered over SSH."],
     "phone-signin": ["Sign computers in with a phone", "When on, a computer's sign-in page shows a QR code. A phone already signed in scans it, sees the computer, its address and a four-digit code, and says yes: the computer is signed in, no password. Off again: computers use the password."],
+    "backup-delete": ["Delete the console's backup?", "Only the copy kept here for download: the files you already downloaded, and the Pi itself, are not touched."],
     "console-off": ["Turn the console off?", "Its pages stop answering at once, this one included. Turn it on again over SSH: sudo zenithboard console on"]
   };
   function run(action, params, opts) {
@@ -625,8 +626,16 @@
         ], "w6"),
         card("Backup", "out", "One file with the settings, the features that are on, the statistics, what was posted, graphs1090's history and the kept logs: to keep, or to start a new card where this one stopped.", [
           h("div", { "class": "actions" }, btn("Make a backup", "backup", {}, "primary"),
-            S.backup ? h("a", { "class": "btn", href: "/console/api/backup", download: "", text: "Download it (" + (S.backup.bytes / 1048576).toFixed(1) + " MB, " + ago(S.backup.at) + ")" }) : null),
-          h("p", { "class": "note", text: "The networks' identities (ADSB Exchange's UUID, FlightAware's feeder ID, Flightradar24's sharing key, Plane Finder's share code) are left out here: keys never travel through this page. To move to a new card, make the full backup in the terminal: sudo zenithboard backup make (or the menu: 6 Maintenance → Back up everything). A backup is put back in the terminal too: sudo zenithboard backup restore FILE, which asks you to type RESTORE and keeps what it replaces." })
+            S.backup ? h("a", { "class": "btn", href: "/console/api/backup", download: "", text: "Download it" }) : null,
+            S.backup ? btn("Delete it", "backup-delete", {}, "danger") : null),
+          S.backup ? h("p", { "class": "note", text: "Made " + new Date(S.backup.at * 1000).toLocaleString([], { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) +
+            " (" + ago(S.backup.at) + "), " + (S.backup.bytes / 1048576).toFixed(1) + " MB on the card. One copy is kept here, replaced by the next; its name says the Pi and the date, so downloads sort in time order." }) : null,
+          h("p", { "class": "sub", text: "Putting a backup back (the import)" }),
+          h("ul", { "class": "ticks" },
+            h("li", { text: "In the terminal of the Pi that receives it: sudo zenithboard backup restore FILE (or the menu: 6 Maintenance → Back up everything → Restore). It shows what the file holds, asks you to type RESTORE, and keeps what it replaces." }),
+            h("li", { text: "Not from this page, on purpose: a restore replaces data and runs installers as root, like the other steps that ask for a typed word." }),
+            h("li", { text: "This copy leaves the networks' identities out (keys never travel through this page). To move to a new card, make the full one in the terminal: sudo zenithboard backup make." })),
+          h("p", { "class": "note" }, "Step by step, and why the MAC address does not get in the way: ", h("a", { href: "https://github.com/regis57/ZenithBoard/wiki/Backup-and-restore", target: "_blank", rel: "noopener noreferrer", text: "Backup and restore ↗" }))
         ], "w6"),
         card("Network", "link", f.ip ? "This Pi: " + f.ip + (f.ddns ? " · " + f.ddns : "") : null, [
           h("div", { "class": "actions" }, btn("Network", "net-status"), btn("Wi-Fi", "wifi-status"), btn("Domain name", "ddns-status"),

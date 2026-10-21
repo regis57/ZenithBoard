@@ -42,7 +42,7 @@ echo '{"posted": ["3c6444"], "summary_daily": "2026-10-21"}' > "$t/data/social/s
 echo "c0ffee00-1234-4abc-8def-0123456789ab" > "$t/adsbx/adsbx-uuid"
 printf 'receiver="beast-tcp"\nfr24key="ABCDEF123456"\n' > "$t/fr24feed.ini"
 printf '{\n  "sharecode": "5X2X2X2X9XaX3",\n  "latitude": "49.2"\n}\n' > "$t/pfclient-config.json"
-mkdir -p "$t/g/usr/share/graphs1090/html" "$t/g/var/lib/collectd/rrd/localhost"; touch "$t/g/usr/share/graphs1090/html/index.html"; echo rrd > "$t/g/var/lib/collectd/rrd/localhost/a.rrd"
+mkdir -p "$t/g/usr/share/graphs1090/html" "$t/g/var/lib/collectd/rrd/localhost"; touch "$t/g/usr/share/graphs1090/html/index.html"; echo "<rrd><lastupdate>1761000600</lastupdate></rrd>" > "$t/g/var/lib/collectd/rrd/localhost/a.xml"
 printf '#!/bin/bash\ntar -C "$1" -czf "$2" .\n' > "$t/g/usr/share/graphs1090/rrd-dump.sh"
 printf '#!/bin/bash\nmkdir -p "$2"; tar -C "$2" -xzf "$1"; echo restored >> "%s/rrd.log"\n' "$t" > "$t/g/usr/share/graphs1090/rrd-restore.sh"
 chmod +x "$t"/g/usr/share/graphs1090/*.sh
@@ -102,7 +102,7 @@ bk_pending_apply planefinder >/dev/null
 check "installer: Plane Finder gets its share code"  'grep -q 5X2X2X2X9XaX3 "$t/pfclient-config.json"'
 mkdir -p "$t/g/usr/share/graphs1090/html"; touch "$t/g/usr/share/graphs1090/html/index.html"        # graphs1090 installed now
 bk_pending_apply graphs >/dev/null
-check "installer: graphs1090 gets its history"       'grep -q restored "$t/rrd.log" && [ -f "$t/g/var/lib/collectd/rrd/localhost/a.rrd" ] && [ ! -e "$t/data/restore-pending" ]'
+check "installer: graphs1090 gets its history"       'grep -q restored "$t/rrd.log" && [ -f "$t/g/var/lib/collectd/rrd/localhost/a.xml" ] && [ ! -e "$t/data/restore-pending" ]'
 check "installer hooks are in place"                 'grep -q "bk_pending_apply piaware" lib/adsb.sh && grep -q "bk_pending_apply fr24" lib/adsb.sh && grep -q "bk_pending_apply planefinder" lib/adsb.sh && grep -q "bk_pending_apply graphs" lib/graphs.sh'
 
 # ---- the console: makes and serves it, never restores
@@ -113,6 +113,26 @@ assert not any(\"restore\" in (s[2] or []) for s in a.ACTIONS.values())"'
 check "console: the download is the file made"       'ZB_CONSOLE_DIR="$t/console" python3 -c "
 import sys; sys.path.insert(0, \"flightinfo\"); import console
 i = console.backup_info(); assert i and i[\"bytes\"] > 0, i"'
+
+# ---- 0.42.1: read back, listed newest first, the older ones deleted, the console's copy deleted
+show=$(backup_show "$t/full.tar.gz")
+check "check: each part read back, with its span"    'echo "$show" | grep -q "statistics: 2 samples, 1761000000 to 1761000600" && echo "$show" | grep -q "aircraft lists: 2026-10-20 to 2026-10-20" && echo "$show" | grep -q "posting history: readable" && echo "$show" | grep -q "graphs1090: 1 databases, last point 2025-10-2" && echo "$show" | grep -q "Everything in it reads back"'
+mkdir -p "$t/bad/zb" && tar -C "$t/bad" -xzf "$t/full.tar.gz" && echo garbage > "$t/bad/zb/graphs-xml.tar.gz" && echo "{" > "$t/bad/zb/social/state.json" && tar -C "$t/bad" -czf "$t/bad.tar.gz" zb
+check "check: a damaged part is named, rc 1"         'o=$(backup_show "$t/bad.tar.gz"); [ $? = 1 ] && echo "$o" | grep -q "NOT COMPLETE: posting-history graphs1090"'
+mkdir -p "$t/home"
+for d in 202610190900 202610200900 202610210900 202610211200; do f="$t/home/zenithboard-backup-rp3-${d:0:8}-${d:8:4}.tar.gz"; cp "$t/full.tar.gz" "$f"; touch -t "$d" "$f"; done
+l=$(backup_list "$t/home")
+check "list: newest first"                           '[ "$(echo "$l" | grep -o "rp3-[0-9-]*" | tr "\n" " ")" = "rp3-20261021-1200 rp3-20261021-0900 rp3-20261020-0900 rp3-20261019-0900 " ]'
+check "clean: anything but delete deletes nothing"   'echo no | backup_clean --keep 2 "$t/home" >/dev/null 2>&1; [ "$(ls "$t/home" | wc -l)" = 4 ]'
+echo delete | backup_clean --keep 2 "$t/home" >/dev/null
+check "clean: the two newest kept"                   '[ "$(ls "$t/home" | tr "\n" " ")" = "zenithboard-backup-rp3-20261021-0900.tar.gz zenithboard-backup-rp3-20261021-1200.tar.gz " ]'
+check "clean: --keep must be a number"               '! backup_clean --keep x "$t/home" >/dev/null 2>&1 && ! backup_clean --keep 0 "$t/home" >/dev/null 2>&1'
+backup_delete_console >/dev/null
+check "delete: the console's copy only"              '[ ! -e "$t/console/out/backup.tar.gz" ] && [ "$(ls "$t/home" | wc -l)" = 2 ]'
+check "console: its delete is listed, asks first"    'python3 -c "
+import sys; sys.path.insert(0, \"flightinfo\"); import console_actions as a
+assert a.build(\"backup-delete\", {}) == [\"backup\", \"delete\", \"--console\"] and \"ask\" in a.flags(\"backup-delete\")"'
+check "console: the download says host and date"     'grep -q "zenithboard-backup-%s-%s-console.tar.gz" flightinfo/console.py'
 
 [ "$fail" = 0 ] && echo "ALL OK"
 exit "$fail"

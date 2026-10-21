@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **21 October 2026**, version **0.42.0**.
+Last updated: **21 October 2026**, version **0.42.1**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -63,6 +63,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 21 October 2026, 12:57 | **The first backup on the reference Pi**, made from the console in 0.42.0: 24 MB, downloaded. Read back part by part: 572 statistics samples (15 October 14:00 to 21 October 12:45), seven days of aircraft lists, the posting history, 68 graphs1090 databases whose last point is 12:50, the kept logs from 8 October to 12:51 (13 boots), the settings and the ten features on; no network identity, as a console backup should be. The owner asked whether such files pile up on the Pi, how they sort, and where the import is. 0.42.1: `backup show` checks and says each part's span; `backup list`, `backup clean --keep N`; the console's copy (one, replaced) can be deleted and is downloaded under a name with the host and the date; the card says where the import is and why. 0.42.1 |
 | 21 October 2026, 12:17 | Before writing the new card, the owner asked whether moving FlightAware and the others would be held back by the MAC address, and for the logs to follow with a way to switch them on again, from the menu or the console. Measured in the code: `settings export` left the statistics, graphs1090's history, the kept logs, the posting history and the identities behind, and an import brought `STATS=1` or `NETWATCH=1` back with no timer behind them (the watchdog and the kept logs are not in `config.env` at all). 0.42.0: `backup make / show / restore`. Built and tested against stand-ins; not yet run on the Pi. 0.42.0 |
 | 21 October 2026, 11:00 | The owner is writing a new card from Raspberry Pi's own image and asked for every step, from the card to a setup finished in the web console, and made it a 1.0 proof. Written as [Fresh install](Fresh-install) (21 steps, the feeders' identities to keep, a checklist); the console's first steps grew from five to nine and can be opened again. Not yet followed on a real blank card. 0.41.0 |
 | 21 October 2026, 10:40 | With 0.40.4 the four posts of the 24 hours went out (`summary daily post` to `post4`): 1 138 aircraft, 90 cargo, 45 business jets (Germany, Portugal, United States…), 6 military (United States: C-17 ×3, Learjet 35; Germany: *Unknown type* ×2), 1 helicopter, 6 light aircraft. The owner asked for flags on general aviation, the German unknowns named, and the period said plainly on each card (*21 OCTOBER* read as that day). Seen too: Bluesky's *ALT* badge covering *ZENITHBOARD*. 0.40.5 |

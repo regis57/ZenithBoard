@@ -87,7 +87,10 @@ ZenithBoard $ZB_VERSION - ADSB Flight Info
   zenithboard graphs on|off|status      graphs1090: years of the decoder's graphs on port 8542 (off by default)
   zenithboard backup make [FILE]        everything to move to a new card: settings, features on, statistics, graphs,
                                         kept logs, the networks' identities (keep the file private)
-  zenithboard backup show FILE          what a backup holds, changing nothing
+  zenithboard backup show FILE          what a backup holds and the span of each part, read back as a restore would
+  zenithboard backup list [DIR]         the backups, newest first (home folder and current folder by default)
+  zenithboard backup clean [--keep N] [DIR]  delete the older backups, keep the N newest (3); asks you to type delete
+  zenithboard backup delete --console   delete the copy the web console keeps for download
   zenithboard backup restore FILE       put it back on this Pi (asks you to type RESTORE; what was here is kept)
   zenithboard settings export [FILE]    your settings as one file (no secrets), to keep or to move to another Pi
   zenithboard settings import FILE      put them on this Pi (the ones from before are kept in a .bak file)
@@ -268,8 +271,11 @@ case "${1:-}" in
     case "${2:-}" in
       make) root_or_die; shift 2; backup_make "$@" ;;
       show) [ -n "${3:-}" ] || die "Usage: zenithboard backup show FILE"; backup_show "$3" ;;
+      list) backup_list "${3:-}" ;;
+      clean) shift 2; backup_clean "$@" ;;
+      delete) root_or_die; [ "${3:-}" = --console ] || die "Usage: sudo zenithboard backup delete --console   (your own backups: rm, or backup clean)"; backup_delete_console ;;
       restore) root_or_die; [ -n "${3:-}" ] || die "Usage: sudo zenithboard backup restore FILE"; shift 2; backup_restore "$@" ;;
-      *) die "Usage: sudo zenithboard backup make [FILE]   |   zenithboard backup show FILE   |   sudo zenithboard backup restore FILE" ;;
+      *) die "Usage: sudo zenithboard backup make [FILE] | show FILE | list [DIR] | clean [--keep N] [DIR] | restore FILE | delete --console" ;;
     esac ;;
   settings)
     case "${2:-}" in

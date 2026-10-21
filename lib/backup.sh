@@ -115,6 +115,7 @@ backup_make() {
   install -d "$(dirname "$out")" 2>/dev/null
   ( umask 077; tar -C "$st" -czf "$out.tmp" zb ) || { rm -rf "$st" "$out.tmp"; err "Could not write $out"; return 1; }
   mv -f "$out.tmp" "$out"
+  gzip -t "$out" 2>/dev/null || { err "The backup just written does not read back: $out (a full card?)"; rm -rf "$st"; return 1; }
   if [ "$console" = 1 ]; then
     chgrp "$ZB_USER" "$out" 2>/dev/null; chmod 640 "$out"
   else
@@ -182,6 +183,49 @@ bk_describe() {   # bk_describe DIR(zb)
   else
     echo "  Network identities: none (a backup made from the console never holds them)"
   fi
+  bk_check "$b"
+}
+
+# bk_check DIR(zb): each part read back, as a restore would read it (0.42.1, the owner's "check the dump"). Prints the
+# span each part covers and a verdict; returns 1 when a part would not come back.
+bk_check() {
+  local b="$1" bad="" first last n x lu made
+  echo "Checked:"
+  made=$(bk_get MADE "$b/MANIFEST")
+  [ -f "$b/settings.env" ] && grep -q -E '^[A-Z][A-Z0-9_]*=' "$b/settings.env" || bad="$bad settings"
+  [ -f "$b/features.env" ] || bad="$bad features"
+  if [ -f "$b/stats/stats.csv" ]; then
+    if [ "$(head -1 "$b/stats/stats.csv")" = "$STATS_HEADER" ]; then
+      n=$(tail -n +2 "$b/stats/stats.csv" | grep -c .); first=$(sed -n 2p "$b/stats/stats.csv" | cut -d, -f1); last=$(tail -1 "$b/stats/stats.csv" | cut -d, -f1)
+      echo "  statistics: $n samples, $first to $last"
+      first=$(find "$b/stats" -name 'seen-*' -printf '%f\n' | sort | head -1); last=$(find "$b/stats" -name 'seen-*' -printf '%f\n' | sort | tail -1)
+      [ -z "$first" ] || echo "  aircraft lists: ${first#seen-} to ${last#seen-}"
+    else bad="$bad statistics"; echo "  statistics: the file does not start with the expected header"; fi
+  fi
+  if [ -f "$b/social/state.json" ]; then
+    if x=$(python3 -c 'import json, sys; d = json.load(open(sys.argv[1])); print(len(d.get("posted") or {}))' "$b/social/state.json" 2>/dev/null)
+    then echo "  posting history: readable, $x aircraft posted"; else bad="$bad posting-history"; echo "  posting history: not readable"; fi
+  fi
+  if [ -f "$b/graphs-xml.tar.gz" ]; then
+    if gzip -t "$b/graphs-xml.tar.gz" 2>/dev/null; then
+      n=$(tar -tzf "$b/graphs-xml.tar.gz" | grep -c '\.xml$')
+      x=$(tar -tzf "$b/graphs-xml.tar.gz" | grep -m1 'messages\|\.xml$')
+      lu=$(tar -xzOf "$b/graphs-xml.tar.gz" "$x" 2>/dev/null | grep -m1 -o '<lastupdate>[0-9]*' | tr -dc 0-9)
+      echo "  graphs1090: $n databases$( [ -n "$lu" ] && echo ", last point $(date -d "@$lu" '+%Y-%m-%d %H:%M')")"
+      [ "$n" -gt 0 ] || bad="$bad graphs1090"
+    else bad="$bad graphs1090"; echo "  graphs1090: the archive is damaged"; fi
+  fi
+  if [ -d "$b/journal" ]; then
+    for x in "$b/journal"/*; do
+      if command -v journalctl >/dev/null 2>&1 && n=$(journalctl -D "$x" --list-boots --no-pager 2>/dev/null | grep -c .) && [ "$n" -gt 0 ]; then
+        first=$(journalctl -D "$x" --no-pager -o short-iso 2>/dev/null | head -1 | cut -c1-16)
+        last=$(journalctl -D "$x" --no-pager -o short-iso -n 1 2>/dev/null | tail -1 | cut -c1-16)
+        echo "  kept logs: $n boot(s), $first to $last"
+      else echo "  kept logs: $(bk_size "$x") (not read here: no journalctl)"; fi
+    done
+  fi
+  if [ -n "$bad" ]; then echo "  NOT COMPLETE:$bad would not come back."; return 1; fi
+  echo "  Everything in it reads back; made $made."
 }
 
 backup_show() {   # backup_show FILE
@@ -189,7 +233,7 @@ backup_show() {   # backup_show FILE
   [ -f "${1:-}" ] || { err "No such file: ${1:-}"; return 1; }
   st=$(mktemp -d) || return 1
   if ! bk_unpack "$1" "$st" || [ "$(bk_get FORMAT "$st/zb/MANIFEST")" != "$BK_FORMAT" ]; then rm -rf "$st"; err "$1 is not a ZenithBoard backup."; return 1; fi
-  bk_describe "$st/zb"; rm -rf "$st"
+  local rc=0; bk_describe "$st/zb" || rc=1; rm -rf "$st"; return "$rc"
 }
 
 # ---- identities: now when the network is installed, else kept for its installation
@@ -350,18 +394,62 @@ backup_restore() {
   return 0
 }
 
+# Where backups are: the folder given, else the sudo user's home and the current folder; the console's one apart.
+bk_home() { getent passwd "${SUDO_USER:-$(id -un)}" 2>/dev/null | cut -d: -f6; }
+bk_files() {   # bk_files DIR...  -> the backups, newest first (their names carry the date, YYYYMMDD-HHMM)
+  local d
+  for d in "$@"; do [ -d "$d" ] && find "$d" -maxdepth 1 -type f -name 'zenithboard-backup-*.tar.gz'; done | sort -u |
+    while IFS= read -r f; do printf '%s\t%s\n' "$(stat -c %Y "$f")" "$f"; done | sort -rn | cut -f2
+}
+
+backup_list() {   # backup_list [DIR]
+  local f n=0 dirs
+  if [ -n "${1:-}" ]; then dirs=("$1"); else dirs=("$(bk_home)" "$PWD"); fi
+  while IFS= read -r f; do
+    [ -n "$f" ] || continue
+    n=$((n + 1)); printf '  %s  %6s  %s\n' "$(date -r "$f" '+%Y-%m-%d %H:%M')" "$(bk_size "$f")" "$f"
+  done < <(bk_files "${dirs[@]}")
+  [ "$n" -gt 0 ] || echo "  No backup in ${dirs[*]}."
+  [ ! -f "$BK_CONSOLE_OUT" ] || printf '  %s  %6s  %s  (the console'"'"'s, replaced by each new one)\n' "$(date -r "$BK_CONSOLE_OUT" '+%Y-%m-%d %H:%M')" "$(bk_size "$BK_CONSOLE_OUT")" "$BK_CONSOLE_OUT"
+  return 0
+}
+
+backup_clean() {   # backup_clean [--keep N] [--yes] [DIR]  -> the older backups deleted, the N newest kept (3)
+  local keep=3 yes=0 dir="" f old=() w
+  while [ $# -gt 0 ]; do case "$1" in --keep) keep="${2:-}"; shift ;; --yes) yes=1 ;; *) dir="$1" ;; esac; shift; done
+  [[ $keep =~ ^[0-9]+$ ]] && [ "$keep" -ge 1 ] || { err "--keep takes a number, 1 or more."; return 1; }
+  [ -n "$dir" ] || dir=$(bk_home)
+  while IFS= read -r f; do [ -n "$f" ] && old+=("$f"); done < <(bk_files "$dir" | tail -n +"$((keep + 1))")
+  if [ "${#old[@]}" -eq 0 ]; then echo "Nothing to delete: $keep backup(s) or fewer in $dir."; return 0; fi
+  echo "Kept: the $keep newest. Deleted:"; printf '  %s\n' "${old[@]}"
+  if [ "$yes" != 1 ]; then
+    read -r -p "Type delete to go on: " w || w=""
+    [ "$w" = delete ] || { echo "Nothing was deleted."; return 1; }
+  fi
+  rm -f -- "${old[@]}" && echo "Deleted ${#old[@]} backup(s)."
+}
+
+backup_delete_console() {
+  if [ -f "$BK_CONSOLE_OUT" ]; then rm -f "$BK_CONSOLE_OUT"; echo "The console's backup is deleted ($BK_CONSOLE_OUT)."
+  else echo "The console holds no backup."; fi
+}
+
 backup_menu() {
   local c f out
   while true; do
     c=$(wt_menu "Backup and restore\n\nOne file with the settings, the features that are on, the statistics, graphs1090's history, the kept logs and the networks' identities: to keep, or to move to a new card." \
       make "1  Make a backup now (in your home folder)" \
-      show "2  Show what a backup holds" \
-      restore "3  Restore a backup (asks you to type RESTORE)" \
+      show "2  Show what a backup holds, and check it reads back" \
+      list "3  List the backups, newest first" \
+      clean "4  Delete the older ones, keep the 3 newest (asks you to type delete)" \
+      restore "5  Restore a backup (asks you to type RESTORE)" \
       back "Return to the previous menu") || return 0
     case "$c" in
       make) out=$(backup_make "$(getent passwd "${SUDO_USER:-root}" | cut -d: -f6)/zenithboard-backup-$(hostname)-$(date +%Y%m%d-%H%M).tar.gz" 2>&1); wt_msg "$out" 20 ;;
       show) f=$(wt_input "The backup file (its full path):" "$(ls -t "$(getent passwd "${SUDO_USER:-root}" | cut -d: -f6)"/zenithboard-backup-*.tar.gz 2>/dev/null | head -1)") || continue
             wt_msg "$(backup_show "$f" 2>&1)" 20 ;;
+      list) wt_msg "Backups, newest first (their names carry the date, so they sort the same way):\n\n$(backup_list "" 2>&1)" 20 ;;
+      clean) clear; backup_clean "$(bk_home)"; read -r -p "Press Enter to go back to the menu. " _ ;;
       restore) f=$(wt_input "The backup file to restore (its full path; copy it here first with scp):" "$(ls -t "$(getent passwd "${SUDO_USER:-root}" | cut -d: -f6)"/zenithboard-backup-*.tar.gz 2>/dev/null | head -1)") || continue
             clear; backup_restore "$f"; read -r -p "Press Enter to go back to the menu. " _ ;;
       *) return 0 ;;
