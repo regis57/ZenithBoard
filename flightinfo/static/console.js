@@ -283,6 +283,7 @@
   window.addEventListener("hashchange", route);
   function route() {
     var want = (location.hash || "#overview").slice(1);
+    if (want === "first-steps") { history.replaceState(null, "", location.pathname + "#overview"); want = "overview"; setTimeout(S.openWizard, 0); }
     if (SECTION_IDS.indexOf(want) < 0) want = "overview";      // only a section's own name: never a property of the object
     if (want === "system") S.sessions = null;            // who is signed in, read again each time
     S.section = want;
@@ -514,6 +515,9 @@
         chip("Network watchdog " + (f.netwatch || "?"), "reliability", f.netwatch === "on"),
         chip("Security fixes " + (f.patches || "?"), "reliability", f.patches === "on"),
         f.wifi ? chip("Wi-Fi: " + f.wifi, "system") : null), "w6"));
+      var gaps = setupGaps();
+      if (gaps.length) out.push(card("Finish setting up", "gear", null, [h("ul", { "class": "ticks no" }, gaps.map(function (g) { return h("li", { text: g }); })),
+        h("div", { "class": "actions" }, h("button", { type: "button", "class": "primary", text: "Open the first steps", onclick: function () { S.openWizard(); } }))], "w12"));
       out.push(card("Pages", "link", "What this Pi shows, and what it can show once switched on.", h("div", { "class": "pages" }, pages()), "w12"));
       return out;
     },
@@ -615,7 +619,8 @@
       var f = S.facts;
       return [
         card("Updates", "power", "From GitHub, checked against its signature before anything runs; your settings are never changed by an update.", [
-          h("div", { "class": "actions" }, btn("Update ZenithBoard and the wall", "update-quick", {}, "primary"), btn("Update everything", "update"), btn("Installed components", "update-list")),
+          h("div", { "class": "actions" }, btn("Update ZenithBoard and the wall", "update-quick", {}, "primary"), btn("Update everything", "update"), btn("Installed components", "update-list"),
+            h("button", { type: "button", "class": "btn", text: "First steps again", onclick: function () { S.openWizard(); } })),
           h("p", { "class": "note", text: "ZenithBoard " + (S.session.version || "") + " runs here. The release notes: " }, h("a", { href: "https://github.com/regis57/ZenithBoard/releases", target: "_blank", rel: "noopener noreferrer", text: "GitHub ↗" }))
         ], "w6"),
         card("Network", "link", f.ip ? "This Pi: " + f.ip + (f.ddns ? " · " + f.ddns : "") : null, [
@@ -875,21 +880,53 @@
   function closeModal() { $("modal").hidden = true; $("modal-panel").innerHTML = ""; S.wizardOpen = false; }
 
   // ---- the wizard: the first time, five short steps; only what differs from the Pi's settings is applied
+  // ---- the first steps (0.39.0; 0.41.0: the antenna, the feeders, sharing, the phone; open again at any time from
+  // System or the overview). Only what differs from the Pi's settings is applied, in the review's order.
+  var FEEDERS = [["adsbexchange_feed", "ADSB Exchange", "https://www.adsbexchange.com/myip/"], ["piaware", "FlightAware", "https://www.flightaware.com/adsb/piaware/claim"],
+    ["fr24feed", "Flightradar24", ":8754"], ["pfclient", "Plane Finder", ":30053"]];
+  function setupGaps() {
+    var c = S.cfg, f = S.facts, out = [];
+    if (!(Number(c.LAT) || Number(c.LON))) out.push("The antenna's position is not set");
+    if (!f.decoder) out.push("No decoder yet: sudo zenithboard menu → 1 ADSB");
+    if (!on(c.STATS)) out.push("Statistics are off");
+    if (f.watchdog !== "on" || f.netwatch !== "on") out.push("The watchdogs are not both on");
+    return out;
+  }
   function wizard() {
     var c = S.cfg, f = S.facts;
     var W = {
-      mode: c.DISPLAY_MODE || "dots", color: c.THEME || "amber", units: c.UNITS || "metric", radius: String(Number(c.RADIUS) || 10),
-      stats: on(c.STATS) ? "on" : "off", localdb: on(c.LOCAL_DB) ? "on" : "off",
-      watchdog: f.watchdog || "off", netwatch: f.netwatch || "off", patches: f.patches || "off", keeplogs: f.keeplogs || "off"
+      region: c.REGION || "world", units: c.UNITS || "metric", alt: c.ALT_M || "0",
+      lat: (Number(c.LAT) || Number(c.LON)) ? c.LAT : "", lon: (Number(c.LAT) || Number(c.LON)) ? c.LON : "",   // 0, 0: not set
+      mode: c.DISPLAY_MODE || "dots", color: c.THEME || "amber", radius: String(Number(c.RADIUS) || 10),
+      stats: on(c.STATS) ? "on" : "off", graphs: f.graphs === "on" ? "on" : "off", localdb: on(c.LOCAL_DB) ? "on" : "off",
+      watchdog: f.watchdog || "off", netwatch: f.netwatch || "off", keeplogs: f.keeplogs || "off", patches: f.patches || "off",
+      "wifi-harden": f.wifi_harden || "off", sum_daily: on(c.SOCIAL_DAILY) ? "on" : "off", sum_weekly: on(c.SOCIAL_WEEKLY) ? "on" : "off",
+      "phone-signin": on(c.CONSOLE_PHONE_SIGNIN) ? "on" : "off"
     };
-    var start = JSON.parse(JSON.stringify(W)), step = 0;
+    var start = JSON.parse(JSON.stringify(W)), step = 0, err = null;
+    function svcWord(k) { var st = f["svc_" + k]; return st === undefined ? "not installed" : st === "active" ? "running" : st; }
     var STEPS = [
       function () {
+        var feeders = FEEDERS.filter(function (x) { return f["svc_" + x[0]] !== undefined; }).map(function (x) { return x[1]; });
         return [h("h3", { text: "Welcome to the console" }),
-          h("p", { "class": "lead", text: "ZenithBoard's settings from this browser, next to the wall, the menu and the zenithboard command, which all stay as they are. Each change here runs the same command as over SSH, and you see what it prints." }),
-          h("ul", { "class": "ticks" }, h("li", { text: "Answers your home network only" }), h("li", { text: "Signed in by password, or a phone paired with a QR code" }),
-            h("li", { text: "A fixed list of actions; uninstalling, Wi-Fi and passwords stay in the terminal" }), h("li", { text: "Off again at any time: sudo zenithboard console off" })),
-          h("p", { "class": "note", text: "Four short steps (the wall, what to collect, what keeps it running, your phone), then a review. Nothing is changed before you apply it there." })];
+          h("p", { "class": "lead", text: "ZenithBoard's settings from this browser. The menu and the zenithboard command stay as they are; each change here runs the same command, and you see what it prints." }),
+          h("ul", { "class": "ticks" },
+            h("li", { text: "This Pi: " + (f.model || "Raspberry Pi") + ", ZenithBoard " + (S.session.version || "") }),
+            h("li", { text: "Decoder: " + (f.decoder || "none yet (sudo zenithboard menu → 1 ADSB)") }),
+            h("li", { text: "Feeding: " + (feeders.join(", ") || "nobody yet") }),
+            h("li", { text: "Answers your home network only; uninstalling, Wi-Fi and passwords stay in the terminal" })),
+          h("p", { "class": "note", text: "Seven short steps, then a review: nothing changes before you apply it. Open them again at any time: System → First steps." })];
+      },
+      function () {
+        var lat = h("input", { type: "text", inputmode: "decimal", value: W.lat, "aria-label": "Latitude", oninput: function () { W.lat = lat.value.trim(); } });
+        var lon = h("input", { type: "text", inputmode: "decimal", value: W.lon, "aria-label": "Longitude", oninput: function () { W.lon = lon.value.trim(); } });
+        var alt = h("input", { type: "number", value: W.alt, "aria-label": "Altitude in metres", oninput: function () { W.alt = alt.value.trim(); } });
+        return [h("h3", { text: "Where the antenna is" }),
+          h("p", { "class": "lead", text: "The decoder, MLAT and the wall's distances need it; it is never shown on the wall or in a post. A right-click on your roof in a map gives the two numbers." }),
+          wrow("Region", wseg("region", ["world", "us"], ["World", "United States"])),
+          wrow("Units", wseg("units", ["metric", "imperial"], ["km · m", "mi · ft"])),
+          h("div", { "class": "fields" }, field("Latitude", lat), field("Longitude", lon), field("Alt. m", alt)),
+          err ? h("p", { "class": "err", text: err }) : null];
       },
       function () {
         return [h("h3", { text: "The wall" }), h("p", { "class": "lead", text: "The default of every screen; a tablet can still pick its own with its gear." }),
@@ -898,38 +935,70 @@
             var b = h("button", { type: "button", "class": "swatch" + (W.color === t ? " on" : ""), "aria-label": t, onclick: function () { W.color = t; theme(t); redraw(); } });
             b.style.background = THEME_HEX[t]; return b;
           }))),
-          wrow("Units", wseg("units", ["metric", "imperial"], ["km · m", "mi · ft"])),
           wrow("Radius", wseg("radius", ["1", "2", "5", "10", "15", "30", "50"]))];
       },
       function () {
-        return [h("h3", { text: "What to collect" }), h("p", { "class": "lead", text: "Both stay on the card; nothing is sent anywhere." }),
-          wrow("Statistics", wsw("stats"), "A sample every 15 minutes, 30 days kept (about 30 KB a day): the /stats page, and the summaries' figures."),
+        var hh = host();
+        return [h("h3", { text: "Feeding the networks" }),
+          h("p", { "class": "lead", text: "Each network is added in the terminal: sudo zenithboard menu → 1 ADSB. Their own installers ask questions as they go (a station name, an e-mail, a sharing key) and give a claim link or code to keep: the console runs commands that ask nothing, and keeps no key." }),
+          h("div", { "class": "list" }, [["readsb", "Decoder (readsb)"], ["dump1090_fa", "Decoder (dump1090-fa)"]].filter(function (x) { return f["svc_" + x[0]] !== undefined; }).concat(FEEDERS).map(function (x) {
+            var st = svcWord(x[0]), url = x[2] ? (x[2][0] === ":" ? "http://" + hh + x[2] + "/" : x[2]) : null;
+            return h("div", { "class": "li" }, h("div", null, h("b", { text: x[1] }), h("small", { text: st })),
+              st !== "not installed" && url ? h("a", { href: url, target: "_blank", rel: "noopener noreferrer", text: "Its page ↗" }) : h("span", { "class": "pill " + (st === "running" ? "ok" : "queued"), text: st === "running" ? "ok" : st === "not installed" ? "terminal" : st }));
+          })),
+          h("p", { "class": "note", text: "ADSB Exchange comes first and is always on; FlightAware, Flightradar24 and Plane Finder only if you want them. Their state is also on the overview." })];
+      },
+      function () {
+        return [h("h3", { text: "What to collect" }), h("p", { "class": "lead", text: "All of it stays on the card; nothing is sent anywhere." }),
+          wrow("Statistics", wsw("stats"), "A sample every 15 minutes, 30 days kept: the /stats page and the summaries' figures."),
+          wrow("graphs1090", wsw("graphs"), "Years of the decoder's graphs on port 8542; its author's installer, a few minutes."),
           wrow("The receiver map's aircraft database", wsw("localdb"), f.map ? "Registrations and models read on the card (tar1090)." : "Needs the receiver map (tar1090), not seen on this Pi.")];
       },
       function () {
-        return [h("h3", { text: "What keeps it running" }), h("p", { "class": "lead", text: "Recommended for a Pi left outdoors on Wi-Fi. Each one off again puts back what it found." }),
+        return [h("h3", { text: "What keeps it running" }), h("p", { "class": "lead", text: "Recommended for a Pi left alone. Each one off again puts back what it found." }),
           wrow("Hardware watchdog", wsw("watchdog"), "The chip restarts a frozen Pi after about 10 seconds."),
           wrow("Network watchdog", wsw("netwatch"), "No router for 6 minutes: the network restarts; 12: the Pi."),
           wrow("Logs kept after a restart", wsw("keeplogs"), "Up to 50 MB, to read what happened before a freeze."),
-          wrow("Daily security fixes", wsw("patches"), "Debian's security channel only; feeders untouched, no reboot.")];
+          wrow("Daily security fixes", wsw("patches"), "Debian's security channel only; feeders untouched, no reboot."),
+          f.wifi ? wrow("Wi-Fi hardening", wsw("wifi-harden"), "Retry without end after a loss; no radio power saving.") : null];
       },
       function () {
-        return [h("h3", { text: "Your phone" }),
-          h("p", { "class": "lead", text: "Scan a QR code once and the phone stays signed in, no password typed, as long as it opens the console once a month. Face ID and passkeys need HTTPS under a domain name, which a Pi at a home address does not have: the QR code is how a phone signs in here." }),
+        var acct = f.bluesky;
+        return [h("h3", { text: "Sharing on Bluesky" }),
+          h("p", { "class": "lead", text: acct ? "Account @" + acct + ". Posting each crossing is switched in Sharing; the summaries here." :
+            "No Bluesky account on this Pi: it is set up in the terminal (it asks for an app password): sudo zenithboard social setup. Skip this step until then." }),
+          wrow("Summary of the last 24 hours", wsw("sum_daily"), "Every day at its time (21:00 unless changed in Sharing), from the statistics."),
+          wrow("Summary of the week", wsw("sum_weekly"), "Sunday 19:00 unless changed; four posts, two minutes apart."),
+          W.stats !== "on" && (W.sum_daily === "on" || W.sum_weekly === "on") ? h("p", { "class": "note", text: "They need the statistics: switch them on in step 5." }) : null];
+      },
+      function () {
+        return [h("h3", { text: "Your phone, and this computer" }),
+          h("p", { "class": "lead", text: "Scan a QR code once and the phone stays signed in, no password typed, as long as it opens the console once a month. Face ID and passkeys need HTTPS under a domain name, which a Pi at a home address does not have." }),
           h("div", { "class": "actions" }, h("button", { type: "button", "class": "btn", text: "Pair a phone now", onclick: function () { S.wizardOpen = false; pairPhone(reopen); } })),
-          h("p", { "class": "note", text: "Or later: System → Signed in → Pair a phone; or over SSH: sudo zenithboard console pair." })];
+          wrow("Sign computers in with the phone", wsw("phone-signin"), "A computer's sign-in page then shows a QR code; the phone says yes, no password.")];
       },
       function () {
         var plan = changes();
         return [h("h3", { text: plan.length ? "Ready" : "Nothing to change" }),
-          h("p", { "class": "lead", text: plan.length ? "These are applied one after the other; each is the zenithboard command shown in Activity." : "Everything is already as you chose." }),
-          h("ul", { "class": "ticks plan", id: "wiz-plan" }, plan.map(function (p) { return h("li", { "data-k": p[0], text: p[2] }); }))];
+          h("p", { "class": "lead", text: plan.length ? "Applied one after the other; each is the zenithboard command you can read in Activity." : "Everything is already as you chose." }),
+          h("ul", { "class": "ticks plan", id: "wiz-plan" }, plan.map(function (p) { return h("li", { "data-k": p.k, text: p.words }); })),
+          setupGaps().length && !plan.length ? h("p", { "class": "note", text: "Still to do: " + setupGaps().join("; ") + "." }) : null];
       }
     ];
-    var ACTION_OF = { mode: "mode", color: "color", units: "units", radius: "radius", stats: "stats", localdb: "localdb", watchdog: "watchdog", netwatch: "netwatch", patches: "patches", keeplogs: "keeplogs" };
-    var WORDS = { mode: "Look", color: "Colour", units: "Units", radius: "Radius", stats: "Statistics", localdb: "Receiver map's database", watchdog: "Hardware watchdog", netwatch: "Network watchdog", patches: "Daily security fixes", keeplogs: "Logs kept after a restart" };
+    var WORDS = { region: "Region", units: "Units", mode: "Look", color: "Colour", radius: "Radius", stats: "Statistics", graphs: "graphs1090", localdb: "Receiver map's database",
+      watchdog: "Hardware watchdog", netwatch: "Network watchdog", keeplogs: "Logs kept after a restart", patches: "Daily security fixes", "wifi-harden": "Wi-Fi hardening",
+      sum_daily: "Summary of the last 24 hours", sum_weekly: "Summary of the week", "phone-signin": "Computers signed in by the phone" };
+    var ORDER = ["region", "units", "mode", "color", "radius", "stats", "localdb", "watchdog", "netwatch", "keeplogs", "patches", "wifi-harden", "sum_daily", "sum_weekly", "phone-signin", "graphs"];
     function changes() {
-      return Object.keys(W).filter(function (k) { return W[k] !== start[k]; }).map(function (k) { return [k, ACTION_OF[k], WORDS[k] + ": " + W[k]]; });
+      var out = [];
+      if (W.lat !== start.lat || W.lon !== start.lon || W.alt !== start.alt) out.push({ k: "location", action: "location", params: { lat: W.lat, lon: W.lon, alt: W.alt }, words: "Antenna position: " + W.lat + ", " + W.lon + ", " + W.alt + " m" });
+      ORDER.forEach(function (k) {
+        if (W[k] === start[k]) return;
+        var action = k, params = { value: W[k] };
+        if (k === "sum_daily" || k === "sum_weekly") { action = "summary"; params = { period: k === "sum_daily" ? "daily" : "weekly", value: W[k] }; }
+        out.push({ k: k, action: action, params: params, words: WORDS[k] + ": " + W[k] });
+      });
+      return out;
     }
     function wrow(title, ctl, hint) { var t = ctl && ctl.classList && ctl.classList.contains("sw"); return h("div", { "class": "row" + (t ? " tight" : "") }, h("div", { "class": "what" }, h("b", { text: title }), hint ? h("span", { text: hint }) : null), h("div", { "class": "ctl" + (t ? " end" : "") }, ctl)); }
     function wseg(k, choices, labels) {
@@ -938,6 +1007,16 @@
       }));
     }
     function wsw(k) { return h("button", { type: "button", role: "switch", "aria-checked": W[k] === "on" ? "true" : "false", "class": "sw" + (W[k] === "on" ? " on" : ""), onclick: function () { W[k] = W[k] === "on" ? "off" : "on"; redraw(); } }); }
+    function valid() {          // the position, before leaving its step: the same ranges as the command
+      if (step !== 1) return true;
+      var la = Number(W.lat), lo = Number(W.lon), al = Number(W.alt);
+      var changed = W.lat !== start.lat || W.lon !== start.lon || W.alt !== start.alt;
+      if (!changed) return true;
+      err = (W.lat === "" || isNaN(la) || la < -90 || la > 90) ? "Latitude: a number between -90 and 90, e.g. 49.1193" :
+        (W.lon === "" || isNaN(lo) || lo < -180 || lo > 180) ? "Longitude: a number between -180 and 180, e.g. 6.1757" :
+        (isNaN(al) || al < -500 || al > 9000) ? "Altitude: metres above the sea, e.g. 180" : null;
+      return !err;
+    }
     function done() { api("wizard", { body: { done: true } }); S.session.wizard_done = true; theme(S.cfg.THEME); closeModal(); }
     function apply() {
       var plan = changes(), i = 0, ok = true;
@@ -945,12 +1024,12 @@
       function next() {
         if (i >= plan.length) {
           api("wizard", { body: { done: true } }); S.session.wizard_done = true;
-          if (foot) foot.appendChild(h("button", { type: "button", "class": "primary", text: ok ? "Done" : "Close", onclick: function () { closeModal(); loadState(); } }));
+          if (foot) foot.appendChild(h("button", { type: "button", "class": "primary", text: ok ? "Done" : "Close (see Activity)", onclick: function () { closeModal(); loadState(); } }));
           return;
         }
-        var p = plan[i], li = document.querySelector('#wiz-plan li[data-k="' + p[0] + '"]');
+        var p = plan[i], li = document.querySelector('#wiz-plan li[data-k="' + p.k + '"]');
         if (li) li.className = "run";
-        run(p[1], { value: W[p[0]] }, { confirmed: true, quiet: true }).then(function (j) {
+        run(p.action, p.params, { confirmed: true, quiet: true }).then(function (j) {
           var good = j && j.state === "done" && j.rc === 0; ok = ok && good;
           if (li) li.className = good ? "ok" : "bad";
           i++; next();
@@ -968,14 +1047,15 @@
         h("header", null, h("h2", { text: "First steps · " + (step + 1) + " of " + STEPS.length }), h("button", { type: "button", "class": "ghost", "aria-label": "Close", text: "×", onclick: done })),
         dotsRow, body,
         h("div", { "class": "modal-foot" },
-          step === 0 ? h("button", { type: "button", "class": "ghost", text: "Skip, I'll look around", onclick: done }) : h("button", { type: "button", "class": "btn", text: "Back", onclick: function () { step--; redraw(); } }),
+          step === 0 ? h("button", { type: "button", "class": "ghost", text: "Skip, I'll look around", onclick: done }) : h("button", { type: "button", "class": "btn", text: "Back", onclick: function () { err = null; step--; redraw(); } }),
           last ? h("button", { type: "button", "class": "primary", text: changes().length ? "Apply " + changes().length + " change" + (changes().length > 1 ? "s" : "") : "Finish", onclick: function () { if (changes().length) apply(); else done(); } })
-            : h("button", { type: "button", "class": "primary", text: "Next", onclick: function () { step++; redraw(); } }))), true);
+            : h("button", { type: "button", "class": "primary", text: "Next", onclick: function () { if (!valid()) return redraw(); err = null; step++; redraw(); } }))), true);
       S.wizardOpen = true;
     }
     S.wizardOpen = true;
     redraw();
   }
+  S.openWizard = function () { if (S.session) wizard(); };
 
   boot();
 })();
