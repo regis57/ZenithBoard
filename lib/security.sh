@@ -19,8 +19,10 @@ sec_wall() {
   case "$who" in
     any) sec_line WARN "The wall answers anyone (ALLOW_FROM=any): with a forwarded port it is public, antenna position included" "sudo zenithboard config-set ALLOW_FROM private" ;;
     private|"") sec_line OK "The wall answers home networks only (ALLOW_FROM=private)" ;;
+    private,100.64.0.0/10) sec_line OK "The wall answers home networks and your Tailscale network only (ALLOW_FROM=$who)" ;;
     *) sec_line OK "The wall answers only $who (ALLOW_FROM)" ;;
   esac
+  [ "$(cfg_get TAILSCALE 0)" = 1 ] && sec_line INFO "Tailscale is on: the devices signed in to your Tailscale account reach the wall, the receiver map and graphs1090, encrypted, with no port opened (off: sudo zenithboard tailscale off)"
   [ "$(cfg_get DDNS_PROVIDER none)" = none ] || sec_line INFO "A domain name points at this Pi ($(cfg_get DDNS_HOST)); whatever your router forwards is reachable by name"
 }
 
@@ -112,7 +114,11 @@ sec_secrets() {
 sec_console() {
   local f m o
   [ "$(cfg_get CONSOLE 0)" = 1 ] || { sec_line OK "The web console is off"; return 0; }
-  sec_line INFO "The web console is on (/console): home networks only, whatever ALLOW_FROM says; its pages travel unencrypted on your network (plain HTTP)"
+  if [ "$(cfg_get CONSOLE_TAILSCALE 0)" = 1 ]; then
+    sec_line INFO "The web console is on (/console): home networks and your Tailscale network (encrypted by Tailscale), whatever ALLOW_FROM says; at home its pages travel unencrypted (plain HTTP)"
+  else
+    sec_line INFO "The web console is on (/console): home networks only, whatever ALLOW_FROM says; its pages travel unencrypted on your network (plain HTTP)"
+  fi
   sec_line INFO "Its helper runs as root, outside a sandbox by design, and runs only the commands of its fixed list"
   f="${CONSOLE_ENV:-$ZB_ETC/console.env}"
   if [ ! -f "$f" ]; then sec_line INFO "No console password: only a phone paired with 'sudo zenithboard console pair' can sign in"; return 0; fi

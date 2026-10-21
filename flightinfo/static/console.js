@@ -639,9 +639,9 @@
           h("p", { "class": "note" }, "Step by step, and why the MAC address does not get in the way: ", h("a", { href: "https://github.com/regis57/ZenithBoard/wiki/Backup-and-restore", target: "_blank", rel: "noopener noreferrer", text: "Backup and restore ↗" }))
         ], "w6"),
         card("Network", "link", f.ip ? "This Pi: " + f.ip + (f.ddns ? " · " + f.ddns : "") : null, [
-          h("div", { "class": "actions" }, btn("Network", "net-status"), btn("Wi-Fi", "wifi-status"), btn("Domain name", "ddns-status"),
+          h("div", { "class": "actions" }, btn("Network", "net-status"), btn("Wi-Fi", "wifi-status"), btn("Domain name", "ddns-status"), btn("Tailscale", "tailscale-status"),
             S.cfg.DDNS_PROVIDER && S.cfg.DDNS_PROVIDER !== "none" ? btn("Refresh the domain name", "ddns-update") : null),
-          h("p", { "class": "note", text: "Wi-Fi networks, fixed addresses and the domain name's key stay in the terminal (sudo zenithboard menu → 3 Connectivity): one mistake there cuts the Pi off the network this page comes through." })
+          h("p", { "class": "note", text: "Wi-Fi networks, fixed addresses, the domain name's key and Tailscale (its sign-in) stay in the terminal (sudo zenithboard menu → 3 Connectivity): one mistake there cuts the Pi off the network this page comes through." })
         ], "w6"),
         card("Signed in", "phone", "Browsers and phones signed in to this console. Signed in with the password: a week (a day unused). A paired phone: as long as it opens the console once a month.", [
           sessionsList(),

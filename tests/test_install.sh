@@ -114,7 +114,7 @@ check "start: a backup first, WinSCP named, cancel changes nothing" '[ "$rc" = 0
 run startadsb start ok no ok CANCEL 0
 check "start: ADS-B next, and without a decoder the rest waits" '[ "$rc" = 0 ] && grep -q "^msgbox	ADS-B first" "$t/startadsb.screens" && grep -q "^radiolist	ADS-B decoder" "$t/startadsb.screens" && grep -q "the rest waits" "$t/startadsb.screens" && ! grep -q "web console, the same settings" "$t/startadsb.screens"'
 check "start: the console comes after the wall, the list before it" 'awk "/^start_here\(\)/,/^}/" lib/menus.sh | grep -n "is_flightinfo\|start_recommended\|start_console" | tr "\n" " " | grep -q "is_flightinfo.*start_recommended.*start_console"'
-check "outside: the safe way first, the dangers named, port 22 never" 'grep -q "Only the first is safe" lib/menus.sh && grep -q "NEVER forward port 22" lib/menus.sh && grep -q "100.64.0.0/10" lib/menus.sh'
+check "outside: the safe way first, the dangers named, port 22 never" 'grep -q "Only the first is safe" lib/menus.sh && grep -q "NEVER forward port 22" lib/menus.sh && grep -q "tailscale_menu" lib/menus.sh && grep -q "100.64.0.0/10" lib/tailscale.sh'
 check "README: the wall address comes from menu 2"   'grep -q "menu \*2 The wall\* printed" README.md && ! grep -q "address from step 2" README.md'
 
 # ---- a machine that is not a Pi: a warning, no error from a missing model file

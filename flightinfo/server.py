@@ -27,7 +27,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.44.0"
+VERSION = "0.45.0"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -731,16 +731,18 @@ def _as_ip(addr):
 
 
 def allowed_networks(policy):
-    """-> list of networks, or None for "any". Unreadable input means private only, never open."""
+    """-> list of networks, or None for "any". Unreadable input means private only, never open. 0.45.0: a list may
+    name "private" among its networks (Tailscale's range is added to it as "private,100.64.0.0/10")."""
     policy = str(policy or "private").strip().lower()
-    if policy == "any":
-        return None
-    if policy == "private":
-        return list(PRIVATE_NETWORKS)
     nets = []
     for part in policy.split(","):
         part = part.strip()
         if not part:
+            continue
+        if part == "any":
+            return None
+        if part == "private":
+            nets.extend(PRIVATE_NETWORKS)
             continue
         try:
             nets.append(ipaddress.ip_network(part, strict=False))

@@ -228,15 +228,17 @@ connectivity_menu() {
       wifi "1  Wi-Fi: on/off, country, networks" \
       ip "2  A fixed address for the Pi" \
       outside "3  From outside your home, safely (read first)" \
-      name "4  A domain name for your home (DuckDNS...)" \
-      status "5  Status of all of the above" \
+      tailscale "4  Tailscale: from anywhere, no port opened ($(ts_state))" \
+      name "5  A domain name for your home (DuckDNS...)" \
+      status "6  Status of all of the above" \
       back "Return to the previous menu") || return 0
     case "$c" in
       wifi) wifi_menu ;;
       ip) net_static_menu ;;
       outside) outside_help ;;
+      tailscale) tailscale_menu ;;
       name) ddns_menu ;;
-      status) clear; net_status; echo; wifi_has_nm && [ -n "$(wifi_iface)" ] && { wifi_status; echo; }; ddns_status; echo; ddns_reach_note; menu_pause ;;
+      status) clear; net_status; echo; wifi_has_nm && [ -n "$(wifi_iface)" ] && { wifi_status; echo; }; ddns_status; echo; ddns_reach_note; echo; tailscale_status; menu_pause ;;
       *) return 0 ;;
     esac
   done
@@ -247,7 +249,7 @@ connectivity_menu() {
 # answers home networks only, whatever ALLOW_FROM says; the receiver map (lighttpd, port 80) has no such guard.
 outside_help() {
   local ip; ip=$(local_ip)
-  wt_scroll "REACHING ZENITHBOARD FROM OUTSIDE YOUR HOME\n\nAt home everything works with no change: the wall (http://$ip:$(cfg_get PORT 8080)/), the web console, the receiver map.\n\nFrom outside, there are two ways. Only the first is safe.\n\n1. A VPN: your phone or computer joins your home network from anywhere. Nothing is open to the internet.\n   - The best: the VPN your router has built in (WireGuard or OpenVPN, in many home routers and boxes; its menu often says 'VPN server'). Connected through it you are 'at home': the wall AND the console answer, nothing to change on the Pi. If your home address changes, a domain name (item 4) lets the VPN find it.\n   - Or Tailscale / ZeroTier installed on the Pi (their own installers, not ZenithBoard's). You then come from their addresses (Tailscale: 100.64.0.0/10): allow them for the wall, together with your home range, e.g.\n       sudo zenithboard config-set ALLOW_FROM 192.168.0.0/16,100.64.0.0/10\n     The web console stays for home networks only: reach it through your router's VPN, or at home.\n\n2. Opening a port in your router ('port forwarding'): the wall becomes PUBLIC.\n   DANGERS: no password and no encryption; anyone who finds it sees the aircraft around your antenna, which tells roughly where you live; robots scan every address all day.\n   If you still want it: a fixed address for the Pi (item 2), a domain name (item 4), forward ONLY port $(cfg_get PORT 8080) to the Pi, then  sudo zenithboard config-set ALLOW_FROM any\n   NEVER forward port 22 (SSH: your Pi's login) or port 80 (the receiver map has no guard). The console never answers from the internet anyway.\n\nCheck what is open at any time: menu 4 Troubleshoot -> Security check.\nSome internet providers share one public address between many homes (CGNAT): no port can be opened then, a VPN like Tailscale still works."
+  wt_scroll "REACHING ZENITHBOARD FROM OUTSIDE YOUR HOME\n\nAt home everything works with no change: the wall (http://$ip:$(cfg_get PORT 8080)/), the web console, the receiver map.\n\nFrom outside, there are two ways. Only the first is safe.\n\n1. A VPN: your phone or computer joins your home network from anywhere. Nothing is open to the internet.\n   - The best: the VPN your router has built in (WireGuard or OpenVPN, in many home routers and boxes; its menu often says 'VPN server'). Connected through it you are 'at home': the wall AND the console answer, nothing to change on the Pi. If your home address changes, a domain name (item 5) lets the VPN find it.\n   - Or Tailscale on the Pi: item 4 of this menu installs it, connects it and lets the wall answer it (sudo zenithboard tailscale on), and takes it all away again. Free account on tailscale.com, its app on your phone. Works even behind a shared address (CGNAT). The web console over it too only if you choose.\n\n2. Opening a port in your router ('port forwarding'): the wall becomes PUBLIC.\n   DANGERS: no password and no encryption; anyone who finds it sees the aircraft around your antenna, which tells roughly where you live; robots scan every address all day.\n   If you still want it: a fixed address for the Pi (item 2), a domain name (item 5), forward ONLY port $(cfg_get PORT 8080) to the Pi, then  sudo zenithboard config-set ALLOW_FROM any\n   NEVER forward port 22 (SSH: your Pi's login) or port 80 (the receiver map has no guard). The console never answers from the internet anyway.\n\nCheck what is open at any time: menu 4 Troubleshoot -> Security check.\nSome internet providers share one public address between many homes (CGNAT): no port can be opened then, a VPN like Tailscale still works."
 }
 
 # ---------------------------------------------------------------- 4 Troubleshoot

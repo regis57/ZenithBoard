@@ -64,6 +64,11 @@ LOCAL_NETS = tuple(ipaddress.ip_network(n) for n in (
     "127.0.0.0/8", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "169.254.0.0/16",
     "::1/128", "fc00::/7", "fe80::/10"))
 LOCAL_SUFFIXES = (".local", ".lan", ".home", ".home.arpa", ".internal")
+TAILSCALE_NET = ipaddress.ip_network("100.64.0.0/10")    # 0.45.0: with CONSOLE_TAILSCALE=1 only (tailscale.com/kb/1015)
+
+
+def tailscale_ok(cfg):
+    return str((cfg or {}).get("CONSOLE_TAILSCALE", "0")).lower() in ("1", "on", "yes", "true")
 
 SECURITY_HEADERS = {
     "Content-Security-Policy": "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; "
@@ -78,7 +83,7 @@ SECURITY_HEADERS = {
 # what the page may read of config.env: the settings it shows, never a secret (there are none in config.env)
 SHOWN_KEYS = {
     "UNITS": "metric", "RADIUS": "10", "THEME": "amber", "DISPLAY_MODE": "dots", "CYCLE_SECONDS": "14",
-    "SHOW_PHOTOS": "1", "SHOW_ROUTES": "1", "LOCAL_DB": "0", "GRAPHS_LOOK": "zenithboard", "AUTO_DATA_REFRESH": "1", "STATS": "0", "GAINLOG": "0",
+    "SHOW_PHOTOS": "1", "SHOW_ROUTES": "1", "LOCAL_DB": "0", "GRAPHS_LOOK": "zenithboard", "TAILSCALE": "0", "CONSOLE_TAILSCALE": "0", "AUTO_DATA_REFRESH": "1", "STATS": "0", "GAINLOG": "0",
     "REGION": "world", "LAT": "", "LON": "", "ALT_M": "0", "PORT": "8080", "DDNS_PROVIDER": "none",
     "SOCIAL": "0", "SOCIAL_STYLE": "dotmap", "SOCIAL_THEME": "", "SOCIAL_UNITS": "", "SOCIAL_MAP": "normal",
     "SOCIAL_PHOTOLINK": "0", "SOCIAL_SENTENCE": "factual", "SOCIAL_GAP_MIN": "0", "SOCIAL_AREA": "",
@@ -98,16 +103,16 @@ def now():
 
 
 # --------------------------------------------------------------------------- who may come in
-def client_ok(addr):
+def client_ok(addr, tailscale=False):
     try:
         ip = ipaddress.ip_address(str(addr).split("%")[0])
     except ValueError:
         return False
     ip = getattr(ip, "ipv4_mapped", None) or ip
-    return any(ip in n for n in LOCAL_NETS)
+    return any(ip in n for n in LOCAL_NETS) or bool(tailscale and ip in TAILSCALE_NET)
 
 
-def host_ok(host, extra=""):
+def host_ok(host, extra="", tailscale=False):
     """The name the browser used: an address, a local name or this Pi's own name. A site elsewhere that points its own
     name at the Pi (DNS rebinding) sends its own name, and gets nothing."""
     host = str(host or "").strip().lower()
@@ -123,6 +128,8 @@ def host_ok(host, extra=""):
     except ValueError:
         pass                                     # not an address: a name, checked below
     if host == "localhost" or host.endswith(LOCAL_SUFFIXES):
+        return True
+    if tailscale and host.endswith(".ts.net"):       # its MagicDNS name, given by Tailscale to this tailnet's devices
         return True
     names = {socket.gethostname().lower()} | {h.strip().lower() for h in str(extra or "").split(",") if h.strip()}
     return host in names
@@ -628,9 +635,10 @@ class Console(object):
         """-> a Reply for /console..., or None for any other path."""
         if req.path != "/console" and not req.path.startswith("/console/"):
             return None
-        if not client_ok(req.client):
+        ts = tailscale_ok(req.cfg)
+        if not client_ok(req.client, ts):
             return Reply(403, b"The console answers your home network only.", "text/plain")
-        if not host_ok(req.headers.get("host"), req.cfg.get("CONSOLE_HOSTS", "")):
+        if not host_ok(req.headers.get("host"), req.cfg.get("CONSOLE_HOSTS", ""), ts):
             return Reply(403, b"Open the console by the Pi's address (http://192.168.x.x:8080/console) or its local name.", "text/plain")
         if req.method == "GET" and req.path in ("/console", "/console/"):
             return Reply(200, None, file="console.html")

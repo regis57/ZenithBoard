@@ -66,7 +66,7 @@ split-flap, and its colour: graphs1090 and the web console take the same colour)
 
 ![3 Connectivity](https://raw.githubusercontent.com/regis57/ZenithBoard/main/docs/images/menu-connectivity.png)
 
-Wi-Fi, a fixed address, a domain name, the status of all three. **Item 3, read before opening anything:**
+Wi-Fi, a fixed address, Tailscale, a domain name, the status of all of them. **Item 3, read before opening anything:**
 
 ![From outside your home, safely](https://raw.githubusercontent.com/regis57/ZenithBoard/main/docs/images/menu-outside.png)
 
@@ -75,15 +75,50 @@ Wi-Fi, a fixed address, a domain name, the status of all three. **Item 3, read b
   * Best: the VPN built into your router or box (WireGuard or OpenVPN; its menu often says *VPN server*). Through it
     you are "at home": the wall and the console answer, nothing to change on the Pi. A domain name (item 4) lets the
     VPN find your home when its address changes.
-  * Or Tailscale or ZeroTier, installed on the Pi with their own installers. You then come from their addresses
-    (Tailscale's: `100.64.0.0/10`): allow them for the wall with your home range, for example
-    `sudo zenithboard config-set ALLOW_FROM 192.168.0.0/16,100.64.0.0/10`. The web console stays for home networks.
+  * Or **Tailscale** on the Pi: item 4, below. It works even behind a provider's shared address (CGNAT).
 * **Opening a port makes the wall public**: no password, no encryption, and the aircraft around your antenna tell
   roughly where you live; robots scan every address all day. If you still want it: a fixed address, a domain name,
   forward **only** port 8080, then `sudo zenithboard config-set ALLOW_FROM any`. **Never** forward port 22 (SSH, the
   Pi's login) or port 80 (the receiver map has no guard). The console never answers from the internet anyway.
 * Some providers share one public address between many homes (CGNAT): no port can be opened, a VPN like Tailscale
   still works.
+
+### Tailscale
+
+*3 Connectivity → 4 Tailscale* (0.45.0, off by default), or `sudo zenithboard tailscale on|off|status|remove`.
+
+![Tailscale](https://raw.githubusercontent.com/regis57/ZenithBoard/main/docs/images/menu-tailscale.png)
+
+**How to use it, step by step:**
+
+1. Make a free account on [tailscale.com](https://tailscale.com/) (with a Google, Microsoft, GitHub or Apple account,
+   among others; free for personal use). ZenithBoard never makes one and never sees its password.
+2. Install the Tailscale app on your phone and/or your computer, and sign in to that account.
+3. Here, *2 Install and connect* (or `sudo zenithboard tailscale on`). It installs Tailscale from its own repository
+   ([pkgs.tailscale.com](https://pkgs.tailscale.com/stable/), the steps of its page for your system; apt checks the
+   package against Tailscale's key), then prints **a sign-in link and its QR code**. Open the link on your computer,
+   or scan the code with your phone; sign in to the same account; approve the Pi. The menu waits until it is done.
+4. It then prints the addresses to use **from anywhere, with Tailscale on in the app**: the wall
+   `http://100.x.y.z:8080/`, `/stats`, graphs1090 on port 8542, and a name like `zenithboard.tailXXXX.ts.net`.
+5. The web console stays for your home network, unless you choose *3 The web console over Tailscale too*
+   (`sudo zenithboard tailscale console on`): then only devices signed in to your Tailscale account reach it, encrypted
+   by Tailscale, and its password still applies.
+
+What it changes on the Pi: the Tailscale package, its repository and its key; the wall answers Tailscale's addresses
+(`100.64.0.0/10`, [Tailscale's own range](https://tailscale.com/kb/1015/100.x-addresses)) on top of what it answered
+(`ALLOW_FROM=private,100.64.0.0/10`). Nothing is opened in your router.
+
+![How it works, in the menu](https://raw.githubusercontent.com/regis57/ZenithBoard/main/docs/images/menu-tailscale-how.png)
+
+**How to take it away:**
+
+* **Disconnect for a while**: *4 Disconnect* (`sudo zenithboard tailscale off`). The Pi leaves your Tailscale network,
+  the wall answers what it answered before; it stays installed and signed in, so *2* (or `on`) brings it back at once.
+* **Remove it completely**: *5 Remove it completely* (`sudo zenithboard tailscale remove`, type `remove`). The Pi signs
+  out (its key expires), Tailscale stops, and the package, its repository, its key and its state on the Pi are
+  removed (when ZenithBoard installed them; a Tailscale you installed by hand is only signed out and stopped). The
+  console's setting goes back to home only. **Last, in your account**: remove the Pi from the list of machines,
+  [login.tailscale.com/admin/machines](https://login.tailscale.com/admin/machines).
 
 `zenithboard security` (*4 Troubleshoot → 5*) says what is open at any time. More: [Security](Security).
 

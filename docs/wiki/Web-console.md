@@ -16,6 +16,10 @@ sudo zenithboard console password     # choose its password (asked twice, never 
 sudo zenithboard console on           # prints the address: http://192.168.x.x:8080/console
 ```
 
+**From outside your home**: with Tailscale (*3 Connectivity → 4 Tailscale*, 0.45.0), `sudo zenithboard tailscale
+console on` lets the console answer your Tailscale network too, by its `100.x.y.z` address or its `*.ts.net` name;
+off by default, home networks only otherwise.
+
 The console is a page of the wall's server: on a new card, install the wall first (menu *Start here*, or *2 The wall*). Before it,
 `console on` says so and changes nothing (0.43.0: it used to stop on *chown: invalid user: zenithboard*, the wall's own
 user not existing yet); `console password` works already.

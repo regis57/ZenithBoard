@@ -22,7 +22,7 @@ Read the whole file with `zenithboard config`.
 | `LOCAL_DB_DIR` | `/usr/local/share/tar1090/git-db/db` | `zenithboard config-set LOCAL_DB_DIR PATH` | Where that database is |
 | `PORT` | `8080` | `zenithboard config-set PORT 8090` | The wall's port. Needs a restart of the service |
 | `BIND_ADDRESS` | `0.0.0.0` | `zenithboard config-set BIND_ADDRESS 127.0.0.1` | The interface the wall listens on. `127.0.0.1` keeps it to this Pi (behind a reverse proxy, say). Needs a restart of the service |
-| `ALLOW_FROM` | `private` | `zenithboard config-set ALLOW_FROM any` | Who may read the wall: `private` (home networks: 10/8, 172.16/12, 192.168/16, the Pi itself, link-local and their IPv6 equivalents), `all`, or a list of networks such as `10.8.0.0/24,100.64.0.0/10`. Anyone else gets a 403. An unreadable value means `private` |
+| `ALLOW_FROM` | `private` | `zenithboard config-set ALLOW_FROM any` | Who may read the wall: `private` (home networks: 10/8, 172.16/12, 192.168/16, the Pi itself, link-local and their IPv6 equivalents), `all`, or a list of networks such as `10.8.0.0/24,100.64.0.0/10`; since 0.45.0 the list may name `private` too (`private,100.64.0.0/10` is what `tailscale on` makes). Anyone else gets a 403. An unreadable value means `private` |
 
 ## Position and region
 
@@ -68,6 +68,8 @@ The dynamic-DNS **token is not stored here.** It is asked for interactively and 
 | `WIFI_HARDEN` | `0` | `zenithboard wifi harden on\|off` | The two Wi-Fi profile settings above are applied. `WIFI_HARDEN_PREV` keeps what they were, for `off` |
 | `PRESET_NAME` | — | `zenithboard preset add\|del` | A tablet preset, e.g. `PRESET_KITCHEN="theme=green mode=flap"`; `?p=kitchen` applies it. Comes along in `settings export` |
 | `STATS` | `0` | `zenithboard stats on\|off` | A sample every 15 minutes for the `/stats` page and `zenithboard stats`. See [Statistics](Statistics) |
+| `TAILSCALE` | `0` | `zenithboard tailscale on\|off` | Whether Tailscale was switched on from ZenithBoard (0.45.0). What it installed: `/etc/zenithboard/tailscale.state` (`BY_ZB=1`) |
+| `CONSOLE_TAILSCALE` | `0` | `zenithboard tailscale console on\|off` | The web console answers Tailscale's addresses (`100.64.0.0/10`) and `*.ts.net` names too |
 | `GRAPHS_LOOK` | `zenithboard` (0.44.0; `original` before) | `zenithboard graphs look zenithboard\|original` | graphs1090 in ZenithBoard's look (0.43.0). The look itself is a marked block at the end of `/etc/default/graphs1090` and three files beside graphs1090's page; this keeps the choice for after an update or a new `graphs on` |
 | `GRAPHS1090` | `0` | `zenithboard graphs on\|off` | Whether graphs1090 was turned on (0.32.0). What `on` found, to put it back, is in `/etc/zenithboard/graphs1090.state`. See [Statistics](Statistics#graphs1090-years-of-the-decoders-graphs-optional) |
 | `CONSOLE` | `0` | `zenithboard console on\|off` | The web console at `/console` (0.39.0). Its password's hash is in `console.env`, never here. See [Web console](Web-console) |
