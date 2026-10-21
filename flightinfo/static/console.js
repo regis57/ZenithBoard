@@ -640,7 +640,7 @@ window.ZBI18N.start({ part: "console" }, function () {
             on(c.STATS) ? null : h("p", { "class": "note", text: t("Statistics are off: no summary can be made until they are on (Receiver).") }),
             h("div", { "class": "actions" }, btn(t("All summaries"), "summaries"),
               ["2", "3", "4"].map(function (n) { return h("a", { "class": "btn", href: "/social/preview" + n, target: "_blank", rel: "noopener", text: postName(n) }); })),
-            h("p", { "class": "note", text: t("One summary a day, a week, a month: a time moved later after that one went out applies from the next. Why one did not go out: zenithboard logs social | grep -i summary") }),
+            h("p", { "class": "note", text: t("Each summary goes once at its time: moved to later today, it goes today; set to a time already past, from the next one. Why one did not go out: sudo zenithboard social summary why") }),
             h("p", { "class": "note", text: t("Posting one now stays in the terminal, where you see it first: sudo zenithboard social summary weekly post") })], "w12")
       ];
     },

@@ -115,6 +115,7 @@ ZenithBoard $ZB_VERSION - ADSB Flight Info
   zenithboard social places on|off      name the towns on the maps from the region's own list (GeoNames, made on the Pi)
   zenithboard social sentence LIST      the words of a post: factual story board spotter lookup (several: a,b) or random
   zenithboard social summary [daily|weekly|monthly on|off|at TIME|parts LIST|test|post[2-4]]   summaries of 24 h, a week, 30 days (off by default; needs statistics)
+  zenithboard social summary why        why a summary did not go out: as set, last and next, what it needs, the journal
   zenithboard social weekly ...         the same as: social summary weekly ...
   zenithboard social map NAME|rotate    the map of the dotmap and flap looks: normal, night, satellite, terrain, none, or in turn
   zenithboard social test [HEX]         draw the picture and print the text, post nothing (see it at /social/preview)

@@ -268,7 +268,7 @@
  "30 days": "30 dienų",
  "Statistics are off: no summary can be made until they are on (Receiver).": "Statistika išjungta: kol ji neįjungta (skiltis Imtuvas), suvestinių sudaryti negalima.",
  "All summaries": "Visos suvestinės",
- "One summary a day, a week, a month: a time moved later after that one went out applies from the next. Why one did not go out: zenithboard logs social | grep -i summary": "Viena suvestinė per dieną, savaitę, mėnesį: jei laikas perkeliamas vėliau, kai suvestinė jau išsiųsta, jis galios nuo kitos. Kodėl suvestinė neišsiųsta: zenithboard logs social | grep -i summary",
+ "Each summary goes once at its time: moved to later today, it goes today; set to a time already past, from the next one. Why one did not go out: sudo zenithboard social summary why": "Kiekviena suvestinė skelbiama vieną kartą savo laiku: perkelta vėlesniam šiandienos laikui, ji paskelbiama šiandien; nustatyta jau praėjusiam laikui – nuo kitos suvestinės. Kodėl kuri nors nebuvo paskelbta: sudo zenithboard social summary why",
  "Posting one now stays in the terminal, where you see it first: sudo zenithboard social summary weekly post": "Paskelbti suvestinę iš karto galima tik terminale, kur ją pirmiausia pamatysite: sudo zenithboard social summary weekly post",
  "Which log": "Kuris žurnalas",
  "The decoder": "Dekoderis",

@@ -1779,7 +1779,7 @@ class WeeklyTest(unittest.TestCase):
         self.assertEqual([p for _, p in sent], [1, 2, 1, 3], "the week's 1 and 2, then the day's 1 and 3")
         times = [t for t, _ in sent]
         self.assertTrue(all(social.SECOND_AFTER_S <= b - a < social.SECOND_AFTER_S + 30 for a, b in zip(times, times[1:])))
-        self.assertEqual(state["summaries"], {"weekly": "2026-W42", "daily": "2026-10-18"})
+        self.assertEqual(state["summaries"], {"weekly": "2026-W42@sun 19:00", "daily": "2026-10-18@19:00"})
         self.assertEqual(state["summary_queue"], [])
         q = social.schedule_summaries(self.c, state, self.sunday() + 3 * 3600)
         self.assertEqual(q, [], "already done this cycle: nothing again")
@@ -1886,7 +1886,7 @@ class WeeklyTest(unittest.TestCase):
         self.assertEqual(len(sent), 2, "a failure, then one post ten minutes later, then nothing more that week")
         self.assertGreaterEqual(sent[0], start + 5 * 60, "not before 19:00")
         self.assertGreaterEqual(sent[1] - sent[0], social.RETRY_AFTER_FAIL_S)
-        self.assertEqual(state["summaries"]["weekly"], "2026-W42")
+        self.assertEqual(state["summaries"]["weekly"], "2026-W42@sun 19:00")
 
     def run_loop(self, start, hours, results, events=None, state=None):
         """The service loop on a Sunday evening. results: {part: [answers in turn]} (the last one repeats). events:
@@ -1939,25 +1939,52 @@ class WeeklyTest(unittest.TestCase):
         import datetime
         return time.mktime(datetime.datetime(y, mo, d, h, mi).timetuple())
 
-    def test_a_daily_moved_later_after_it_went_out_waits_for_tomorrow(self):
-        # 0.48.0, the owner on 21 October: the daily went out at 21:00, its time was then moved to 23:35 (twice), and
-        # nothing went out at 23:35. One a day, by design; now said by `social summary` and in the journal
+    def test_a_daily_moved_later_after_it_went_out_goes_again_at_the_new_time(self):
+        # 0.49.0, the owner on 22 October: one summary per scheduled slot, not per day. Moved to later the same day,
+        # it goes at the new time; the slot already gone does not go again
         import social_week as sw
         self.c.update(SOCIAL_WEEKLY="0", SOCIAL_DAILY="1", SOCIAL_DAILY_AT="21:00", SOCIAL_DAILY_PARTS="1,2,3,4")
         ok = [self.OK]
         moved = lambda: self.c.update(SOCIAL_DAILY_AT="23:35")
         sent, state = self.run_loop(self.at(2026, 10, 21, 20, 58), 3, {1: ok, 2: ok, 3: ok, 4: ok}, events=[(self.at(2026, 10, 21, 23, 20), moved)])
-        self.assertEqual([p for _, p in sent], [1, 2, 3, 4], "21:00, the four posts; nothing at 23:35")
-        self.assertTrue(all(t < self.at(2026, 10, 21, 21, 10) for t, _ in sent))
+        self.assertEqual([p for _, p in sent], [1, 2, 3, 4, 1, 2, 3, 4], "21:00, then 23:35")
+        self.assertTrue(self.at(2026, 10, 21, 21, 0) <= sent[0][0] < self.at(2026, 10, 21, 21, 1))
+        self.assertTrue(self.at(2026, 10, 21, 23, 35) <= sent[4][0] < self.at(2026, 10, 21, 23, 36))
         self.assertIn("daily summary due (every day at 21:00): posts 1,2,3,4 queued, 2 min apart, the first now", self.journal)
-        now = self.at(2026, 10, 21, 23, 37)
-        w = sw.when_words(self.c, state, now, "daily")
-        self.assertIn("last: 2026-10-21 21:0", w)
-        self.assertIn("next: Thu 2026-10-22 23:35", w, "the new time, from tomorrow")
-        # and the next day it goes at the new time
-        sent2, _ = self.run_loop(self.at(2026, 10, 22, 23, 30), 1, {1: ok, 2: ok, 3: ok, 4: ok}, state=state)
-        self.assertEqual([p for _, p in sent2], [1, 2, 3, 4])
-        self.assertTrue(self.at(2026, 10, 22, 23, 35) <= sent2[0][0] < self.at(2026, 10, 22, 23, 36))
+        self.assertIn("daily summary now every day at 23:35", self.journal)
+        self.assertEqual(state["summaries"]["daily"], "2026-10-21@23:35")
+        w = sw.when_words(self.c, state, self.at(2026, 10, 21, 23, 50), "daily")
+        self.assertIn("next: Thu 2026-10-22 23:35", w)
+
+    def test_a_time_set_after_it_has_passed_waits_for_the_next(self):
+        # set at 22:00 to 21:00, or switched on at 22:00 when set for 21:00: nothing at once, the next day at 21:00
+        import social_week as sw
+        self.c.update(SOCIAL_WEEKLY="0", SOCIAL_DAILY="1", SOCIAL_DAILY_AT="23:00", SOCIAL_DAILY_PARTS="1")
+        moved = lambda: self.c.update(SOCIAL_DAILY_AT="21:00")
+        sent, state = self.run_loop(self.at(2026, 10, 21, 21, 30), 1, {1: [self.OK]}, events=[(self.at(2026, 10, 21, 22, 0), moved)])
+        self.assertEqual(sent, [], "21:00 had passed when it was set")
+        self.assertIn("daily summary set to every day at 21:00, already past today: from the next one, Thu 2026-10-22 21:00", self.journal)
+        self.assertIn("next: Thu 2026-10-22 21:00", sw.when_words(self.c, state, self.at(2026, 10, 21, 22, 30), "daily"))
+        sent2, _ = self.run_loop(self.at(2026, 10, 22, 20, 59), 0.2, {1: [self.OK]}, state=state)
+        self.assertEqual([p for _, p in sent2], [1], "the next day at its time")
+        # switched on after its time
+        self.c.update(SOCIAL_DAILY="0", SOCIAL_DAILY_AT="21:00")
+        on = lambda: self.c.update(SOCIAL_DAILY="1")
+        sent3, _ = self.run_loop(self.at(2026, 10, 23, 20, 0), 2, {1: [self.OK]}, events=[(self.at(2026, 10, 23, 21, 30), on)], state={"summary_seen": {}})
+        self.assertEqual(sent3, [], "switched on at 21:30 for 21:00: not at once")
+
+    def test_a_pi_back_after_its_time_posts_it_the_same_day(self):
+        # the setting unchanged, the service down at 21:00 and back at 21:40: it goes then (as before 0.49.0)
+        self.c.update(SOCIAL_WEEKLY="0", SOCIAL_DAILY="1", SOCIAL_DAILY_AT="21:00", SOCIAL_DAILY_PARTS="1")
+        state = {"summary_seen": {"daily": "on 21:00", "weekly": "off", "monthly": "off"}}
+        sent, _ = self.run_loop(self.at(2026, 10, 21, 21, 40), 0.2, {1: [self.OK]}, state=state)
+        self.assertEqual([p for _, p in sent], [1])
+
+    def test_a_cycle_gone_before_0_49_is_not_posted_again(self):
+        # 0.38.0 to 0.48.0 kept "2026-W43": the week's summary gone at 19:00, the service restarted at 20:00 on 0.49.0
+        state = {"summaries": {"weekly": "2026-W43"}}
+        sent, _ = self.run_loop(self.at(2026, 10, 25, 20, 0), 1, {1: [self.OK]}, state=state)
+        self.assertEqual(sent, [])
 
     def test_a_daily_set_later_before_it_went_out_goes_at_the_new_time(self):
         self.c.update(SOCIAL_WEEKLY="0", SOCIAL_DAILY="1", SOCIAL_DAILY_AT="21:00", SOCIAL_DAILY_PARTS="1,3")

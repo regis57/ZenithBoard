@@ -268,7 +268,7 @@
  "30 days": "30 天",
  "Statistics are off: no summary can be made until they are on (Receiver).": "统计已关闭：开启统计之前无法生成汇总（可在接收机栏目中开启）。",
  "All summaries": "所有汇总",
- "One summary a day, a week, a month: a time moved later after that one went out applies from the next. Why one did not go out: zenithboard logs social | grep -i summary": "每天、每周、每月各发一条汇总：若在本期汇总发出后才把时间调晚，则从下一期开始生效。查看汇总为何未发出：zenithboard logs social | grep -i summary",
+ "Each summary goes once at its time: moved to later today, it goes today; set to a time already past, from the next one. Why one did not go out: sudo zenithboard social summary why": "每个汇总在设定时间发布一次：改到今天稍后的时间，今天就会发布；设为已经过去的时间，则从下一次开始。查看某个汇总为何没有发布：sudo zenithboard social summary why",
  "Posting one now stays in the terminal, where you see it first: sudo zenithboard social summary weekly post": "立即发布汇总仍需在终端中进行，以便你先预览：sudo zenithboard social summary weekly post",
  "Which log": "选择日志",
  "The decoder": "解码器",

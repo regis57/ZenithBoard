@@ -268,7 +268,7 @@
  "30 days": "30 днів",
  "Statistics are off: no summary can be made until they are on (Receiver).": "Статистику вимкнено: підсумки неможливі, доки її не ввімкнено (Приймач).",
  "All summaries": "Усі підсумки",
- "One summary a day, a week, a month: a time moved later after that one went out applies from the next. Why one did not go out: zenithboard logs social | grep -i summary": "Один підсумок на день, тиждень, місяць: якщо час пересунули на пізніший уже після того, як підсумок вийшов, зміна діє з наступного. Чому підсумок не вийшов: zenithboard logs social | grep -i summary",
+ "Each summary goes once at its time: moved to later today, it goes today; set to a time already past, from the next one. Why one did not go out: sudo zenithboard social summary why": "Кожен підсумок публікується один раз у свій час: якщо перенести його на пізніший час сьогодні, він вийде сьогодні; якщо задати час, що вже минув, — починаючи з наступного. Чому підсумок не вийшов: sudo zenithboard social summary why",
  "Posting one now stays in the terminal, where you see it first: sudo zenithboard social summary weekly post": "Опублікувати підсумок негайно можна лише в терміналі, де ви спершу його побачите: sudo zenithboard social summary weekly post",
  "Which log": "Який журнал",
  "The decoder": "Декодер",

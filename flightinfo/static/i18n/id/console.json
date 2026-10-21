@@ -268,7 +268,7 @@
  "30 days": "30 hari",
  "Statistics are off: no summary can be made until they are on (Receiver).": "Statistik nonaktif: rekap tidak dapat dibuat sampai statistik diaktifkan (Penerima).",
  "All summaries": "Semua rekap",
- "One summary a day, a week, a month: a time moved later after that one went out applies from the next. Why one did not go out: zenithboard logs social | grep -i summary": "Satu rekap per hari, per minggu, per bulan: waktu yang dimundurkan setelah rekap periode itu terkirim berlaku mulai rekap berikutnya. Mengapa rekap tidak terkirim: zenithboard logs social | grep -i summary",
+ "Each summary goes once at its time: moved to later today, it goes today; set to a time already past, from the next one. Why one did not go out: sudo zenithboard social summary why": "Setiap rekap diposting sekali pada waktunya: dipindah ke waktu yang lebih lambat hari ini, rekap tetap diposting hari ini; diatur ke waktu yang sudah lewat, mulai rekap berikutnya. Mengapa sebuah rekap tidak diposting: sudo zenithboard social summary why",
  "Posting one now stays in the terminal, where you see it first: sudo zenithboard social summary weekly post": "Memposting rekap sekarang tetap dilakukan di terminal, tempat Anda melihatnya lebih dulu: sudo zenithboard social summary weekly post",
  "Which log": "Log mana",
  "The decoder": "Dekoder",

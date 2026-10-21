@@ -268,7 +268,7 @@
  "30 days": "Siku 30",
  "Statistics are off: no summary can be made until they are on (Receiver).": "Takwimu zimezimwa: hakuna muhtasari unaoweza kutengenezwa hadi ziwashwe (Kipokezi).",
  "All summaries": "Mihtasari yote",
- "One summary a day, a week, a month: a time moved later after that one went out applies from the next. Why one did not go out: zenithboard logs social | grep -i summary": "Muhtasari mmoja kwa siku, kwa wiki, kwa mwezi: muda uliosogezwa mbele baada ya muhtasari huo kutumwa unaanza kutumika kuanzia unaofuata. Kwa nini mmoja haukutumwa: zenithboard logs social | grep -i summary",
+ "Each summary goes once at its time: moved to later today, it goes today; set to a time already past, from the next one. Why one did not go out: sudo zenithboard social summary why": "Kila muhtasari huchapishwa mara moja kwa wakati wake: ukisogezwa hadi baadaye leo, huchapishwa leo; ukiwekwa kwa wakati ambao umeshapita, kuanzia unaofuata. Kwa nini muhtasari haukuchapishwa: sudo zenithboard social summary why",
  "Posting one now stays in the terminal, where you see it first: sudo zenithboard social summary weekly post": "Kuchapisha mmoja sasa kunabaki kwenye terminal, ambapo unauona kwanza: sudo zenithboard social summary weekly post",
  "Which log": "Kumbukumbu ipi",
  "The decoder": "Kisimbuzi",

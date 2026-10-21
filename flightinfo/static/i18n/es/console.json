@@ -268,7 +268,7 @@
  "30 days": "30 días",
  "Statistics are off: no summary can be made until they are on (Receiver).": "Las estadísticas están desactivadas: no se puede hacer ningún resumen hasta que se activen (Receptor).",
  "All summaries": "Todos los resúmenes",
- "One summary a day, a week, a month: a time moved later after that one went out applies from the next. Why one did not go out: zenithboard logs social | grep -i summary": "Un resumen al día, a la semana, al mes: si se retrasa la hora después de que haya salido uno, el cambio se aplica a partir del siguiente. Por qué no salió uno: zenithboard logs social | grep -i summary",
+ "Each summary goes once at its time: moved to later today, it goes today; set to a time already past, from the next one. Why one did not go out: sudo zenithboard social summary why": "Cada resumen se publica una vez a su hora: si lo pasas a más tarde hoy, sale hoy; si lo pones a una hora ya pasada, a partir del siguiente. Por qué uno no salió: sudo zenithboard social summary why",
  "Posting one now stays in the terminal, where you see it first: sudo zenithboard social summary weekly post": "Publicar uno ahora se hace en el terminal, donde lo ves antes: sudo zenithboard social summary weekly post",
  "Which log": "Qué registro",
  "The decoder": "El decodificador",

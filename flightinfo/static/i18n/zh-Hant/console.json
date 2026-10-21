@@ -268,7 +268,7 @@
  "30 days": "30 天",
  "Statistics are off: no summary can be made until they are on (Receiver).": "統計已關閉：開啟統計前無法產生摘要（接收器）。",
  "All summaries": "所有摘要",
- "One summary a day, a week, a month: a time moved later after that one went out applies from the next. Why one did not go out: zenithboard logs social | grep -i summary": "每日、每週、每月各一則摘要：若在本期摘要發出後才把時間往後調，會從下一期開始套用。想知道某則摘要為何沒有發出：zenithboard logs social | grep -i summary",
+ "Each summary goes once at its time: moved to later today, it goes today; set to a time already past, from the next one. Why one did not go out: sudo zenithboard social summary why": "每則摘要在設定時間發布一次：改到今天稍晚的時間，今天就會發布；設為已經過去的時間，則從下一次開始。查看某則摘要為何沒有發布：sudo zenithboard social summary why",
  "Posting one now stays in the terminal, where you see it first: sudo zenithboard social summary weekly post": "立即發布摘要仍須在終端機中進行，您可先在那裡預覽內容：sudo zenithboard social summary weekly post",
  "Which log": "哪個記錄檔",
  "The decoder": "解碼器",

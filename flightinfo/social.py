@@ -1258,10 +1258,25 @@ def schedule_summaries(c, state, now):
     import social_week
     queue = state.setdefault("summary_queue", [])
     done = state.setdefault("summaries", {})
+    seen = state.setdefault("summary_seen", {})
     for period in social_week.ORDER:
+        # 0.49.0: a time or a switch changed since the last look. Set (or switched on) after its time has passed
+        # today: that slot is marked as gone, so it does not go at once; it goes from the next cycle. Moved to later
+        # today: nothing to mark, it goes at its new time (the owner, 22 October)
+        now_set = social_week.setting_of(c, period)
+        if social_week.changed(c, state, period):
+            if social_week.is_on(c, period) and social_week.slot_passed(c, period, now) \
+                    and not social_week.slot_done(c, state, period, now):
+                done[period] = social_week.slot_key(c, period, now)
+                nxt = social_week.next_due(c, dict(state, summary_seen=dict(seen, **{period: now_set})), now, period)
+                print("social: %s summary set to %s, already past today: from the next one%s" % (
+                    period, social_week.at_words(c, period), (", " + nxt.strftime("%a %Y-%m-%d %H:%M")) if nxt else ""), flush=True)
+            else:
+                print("social: %s summary now %s" % (period, social_week.at_words(c, period) if social_week.is_on(c, period) else "off"), flush=True)
+        seen[period] = now_set
         if not social_week.due(c, state, now, period):
             continue
-        key = social_week.cycle_key(period, now)
+        key = social_week.slot_key(c, period, now)
         at = max([now] + [q["at"] + SECOND_AFTER_S for q in queue])
         parts = social_week.parts_of(c, period)
         for i, part in enumerate(parts):

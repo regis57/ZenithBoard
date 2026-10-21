@@ -268,7 +268,7 @@
  "30 days": "30 дней",
  "Statistics are off: no summary can be made until they are on (Receiver).": "Статистика выключена: сводки невозможны, пока она не включена (раздел Приёмник).",
  "All summaries": "Все сводки",
- "One summary a day, a week, a month: a time moved later after that one went out applies from the next. Why one did not go out: zenithboard logs social | grep -i summary": "Одна сводка в день, в неделю, в месяц: если время перенесено на более позднее уже после отправки сводки, оно действует со следующей. Почему сводка не ушла: zenithboard logs social | grep -i summary",
+ "Each summary goes once at its time: moved to later today, it goes today; set to a time already past, from the next one. Why one did not go out: sudo zenithboard social summary why": "Каждая сводка публикуется один раз в своё время: если перенести её на более позднее время сегодня, она выйдет сегодня; если задать уже прошедшее время, — начиная со следующей. Почему сводка не вышла: sudo zenithboard social summary why",
  "Posting one now stays in the terminal, where you see it first: sudo zenithboard social summary weekly post": "Опубликовать сводку прямо сейчас можно только в терминале, где вы сначала её увидите: sudo zenithboard social summary weekly post",
  "Which log": "Какой журнал",
  "The decoder": "Декодер",
