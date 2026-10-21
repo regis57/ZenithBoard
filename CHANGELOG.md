@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.39.1
+- `zenithboard memory`: the WHAT column cut *name on the network (mDNS)* to *name on the network (mDN*, seen on the reference Pi; now *network name (mDNS)*, and a test keeps every name within the column. Named too: Debian security fixes (`unattended-upgrades`), devices, logins, clock (NTP), Bluetooth, the web console's helper.
+
 ## 0.39.0
 - **A web console, `/console`, as a test** the owner may take out again: ZenithBoard's settings from a browser or a phone on the home network, in the wall's look. Off by default: `sudo zenithboard console password`, then `sudo zenithboard console on` (menu *Settings → 7 Web console*); `off` stops it and keeps the password, `forget` deletes it. Asked for by the owner.
 - One section on screen at a time — a side bar on a computer, tabs at the bottom of a phone, no long scrolling: **Overview** (up time, temperature and power, memory, card, each service, links to every page the Pi serves and to those it can serve once switched on), **Wall**, **Receiver**, **Sharing** (Bluesky, the picture, the three summaries), **Reliability**, **System** (updates, network status, who is signed in, the security check). **Activity** shows the command running as it prints, the last jobs, the journal of changes and the sign-ins. A **first-run wizard** (the wall, statistics, the watchdogs, your phone, a review) applies only what differs.

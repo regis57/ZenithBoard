@@ -17,6 +17,8 @@ The project's reference Pi is a Raspberry Pi 3 Model B (1 GB), outdoors, on Wi-F
 
 **With Plane Finder as a fourth feed** (20 October 2026, 22:40, about four hours up): ADS-B Exchange, FlightAware, Flightradar24 and Plane Finder, the wall, statistics and social sharing — **575 MB of 1 GB still available**, no swap used, 34 °C, no under-voltage, card 6 % full. Then, with 0.34.0's `sudo zenithboard memory` (23:40, about five hours up; PSS, so the services add up): **212 MB for all the services**, 600 MB available, 193 threads. The largest: social sharing 39 MB (73 MB at its peak, while drawing), the wall 36 MB, **Plane Finder 27 MB**, Flightradar24 17 MB, FlightAware 13 MB (two processes), ADS-B Exchange 15 MB (feed 7 and MLAT 8), readsb 5 MB, tar1090 and lighttpd 1 MB each. Debian's own `unattended-upgrades` 13 MB. The card is a 64 GB one (62.5 GB), 3.5 GB used.
 
+**The next morning** (21 October 2026, 07:56, after the 0.39.0 update): **180 MB for all the services**, 619 MB available, 190 threads, load 1.1 on four cores, 28 MB of swap used. The wall 21 MB (30 at its peak), social sharing 24 MB, Flightradar24 17 MB, FlightAware 13 MB. **Plane Finder 43 MB**, up from 27 MB the evening before: it was the one service not restarted by the update (it has run since the evening), so it grows while it runs; a figure to watch over the next days rather than a problem at 43 MB.
+
 `zenithboard health` gives the same lines on any Pi; [Reliability and diagnostics](Reliability-and-diagnostics) says how to read them.
 
 ## Which board for what

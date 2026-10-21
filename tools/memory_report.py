@@ -28,7 +28,10 @@ NAMES = {
     "fr24feed": "Flightradar24", "pfclient": "Plane Finder", "zenithboard-flightinfo": "the wall",
     "zenithboard-social": "Bluesky posts", "collectd": "graphs1090 (collect)", "graphs1090": "graphs1090 (draw)",
     "NetworkManager": "network", "systemd-journald": "system logs", "sshd": "SSH", "ssh": "SSH", "cron": "cron",
-    "avahi-daemon": "name on the network (mDNS)", "dbus": "system bus", "wpa_supplicant": "Wi-Fi", "rsyslog": "system logs (text)",
+    "avahi-daemon": "network name (mDNS)", "dbus": "system bus", "wpa_supplicant": "Wi-Fi", "rsyslog": "system logs (text)",
+    # 0.39.1: unnamed or cut on the reference Pi's first `memory` with 0.39.0 (the column is 24 characters)
+    "unattended-upgrades": "Debian security fixes", "systemd-udevd": "devices", "systemd-logind": "logins",
+    "systemd-timesyncd": "clock (NTP)", "bluetooth": "Bluetooth", "zenithboard-console": "web console's helper",
 }
 SMALL_KB = 1024                   # services under 1 MB are counted together
 

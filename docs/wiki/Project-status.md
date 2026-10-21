@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **21 October 2026**, version **0.39.0**.
+Last updated: **21 October 2026**, version **0.39.1**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -27,7 +27,7 @@ One Raspberry Pi 3B, outdoors, on Wi-Fi, with an R820T dongle.
 | The systemd sandbox | The wall server runs inside it; `systemd-analyze security` gives 1.3 (OK) |
 | Signed updates | Checked against GitHub's current key, silent once confirmed |
 | `zenithboard health` | Reports power, temperature, memory, card and the previous boot correctly; since 0.34.0 the card's size too (*3.5 GB used of 61.0 GB, the card: 62.5 GB*) |
-| `zenithboard memory` (0.34.0) | Service by service on the reference Pi: 155 to 212 MB for all the services with four feeds, social sharing and the wall; Plane Finder 19 to 27 MB. See [Hardware](Hardware) |
+| `zenithboard memory` (0.34.0) | Service by service on the reference Pi: 155 to 212 MB for all the services with four feeds, social sharing and the wall (180 MB on 21 October, 619 MB available); Plane Finder 19 to 43 MB, growing while it runs. See [Hardware](Hardware) |
 | Feeding Plane Finder | Since 20 October 2026; its page on port 30053 shows the aircraft decoded (KLM31L, PH-HSE, Amsterdam → Geneva) |
 | The statistics page | Running since 0.16.0; the lists of 0.31.0 and 0.37.0's look, toggle, cargo, business jets and flags seen on the real page (*45 cargo aircraft, DHL 11, ASL Airlines Belgium 10…*) |
 | `social weekly test` | Run on the reference Pi (0.33.0, 0.35.0): the right totals (*6 437 aircraft, 354.6 million messages, busiest Friday*), the lists left out until they cover the week (0.34.1) |
@@ -63,6 +63,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 21 October 2026, 07:56 | `sudo zenithboard memory` after 0.39.0: 180 MB for all the services, 619 MB available, load 1.1. Plane Finder at 43 MB (27 the evening before), the one service the update did not restart: to watch. Two labels were cut or missing in the WHAT column (*name on the network (mDN*, `unattended-upgrades` unnamed): 0.39.1 |
 | 21 October 2026, 07:34 | The owner asked for a break-glass procedure for the console, step by step, and a way to start again. The terminal is the way in, by design; the [Web console](Web-console#break-glass-when-the-console-is-in-the-way) page now lists each case (password forgotten, locked out, phone lost, a job queued or stuck, a setting to undo, the page not loading) with its commands, and how to start again from zero or take the console out. Documentation only |
 | 21 October 2026, 01:06 | The owner asked for a web console to try, removable if it does not satisfy, "right the first time": a wizard, ZenithBoard's look, a password or Face ID / a QR code on his iPhone ("careful with the black background"), a phone layout, a menu with no endless scrolling, links to the pages that exist or will. 0.39.0, built while he slept. Face ID / passkeys are not possible over plain HTTP at a home address (WebAuthn needs HTTPS under a domain); a one-time QR code, dark on white, signs the phone in instead |
 | 21 October 2026, 00:56 | End of the evening: 0.31.0 to 0.38.0 shipped in one night (statistics, graphs1090, the summaries and their four posts, real flags, the page's new look and toggle, `health` and `memory`). The owner asked for the Roadmap and this page to say where things stand: Plane Finder moves to *proven*, the summaries and graphs1090 join *Now*, and a web console is written down as a proposal, not started |
