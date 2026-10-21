@@ -57,6 +57,9 @@ check "pair: says how to see the QR code without qrencode" 'command -v qrencode 
 out=$(console_state_lines 2>/dev/null)
 check "state: KEY=value lines for the overview"       'printf "%s\n" "$out" | grep -q "^version=$ZB_VERSION$" && printf "%s\n" "$out" | grep -q "^watchdog=\(on\|off\)$" && ! printf "%s\n" "$out" | grep -qv "^[a-z0-9_]*="'
 
+out=$(console_phone_signin on)
+check "phone-signin: on, off, said"                   '[ "$(cfg_get CONSOLE_PHONE_SIGNIN)" = 1 ] && console_phone_signin off >/dev/null && [ "$(cfg_get CONSOLE_PHONE_SIGNIN)" = 0 ] && console_phone_signin | grep -q OFF'
+check "phone-signin: off by default"                  'grep -qx "CONSOLE_PHONE_SIGNIN=0" lib/common.sh'
 out=$(console_off)
 check "off: the units go, the password stays"         '[ "$(cfg_get CONSOLE)" = 0 ] && [ ! -f "$t/sysd/zenithboard-console.path" ] && [ -f "$CONSOLE_ENV" ]'
 out=$(console_forget)

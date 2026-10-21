@@ -198,6 +198,9 @@ input.day { width: 4.5em; }
 /* a QR code is dark on light, with its margin: on the black page it sits on its own white square */
 .qr { background: #fff; padding: 14px; border-radius: 10px; width: min(300px, 78vw); margin: 6px auto 12px; }
 .qr svg { display: block; width: 100%; height: auto; }
+.qr.small { width: min(220px, 60vw); margin-top: 0; }
+.gate-phone { border-top: 1px solid var(--line); padding-top: 14px; text-align: center; }
+.gate-phone .sub { margin-top: 0; }
 .qr-note { text-align: center; color: var(--muted); font-size: 13px; }
 .qr-ok { text-align: center; color: var(--ok); font: 700 15px var(--mono); }
 .count { font: 700 22px var(--mono); color: var(--on); text-align: center; }

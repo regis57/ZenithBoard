@@ -159,7 +159,9 @@
   function boot() {
     dots($("gate-logo"), "ZENITHBOARD", 10); dots($("gate-sub"), "CONSOLE", 10);
     var m = /[#&]pair=([A-Za-z0-9_-]{16,64})/.exec(location.hash), pairTok = m && m[1];
-    if (pairTok) history.replaceState(null, "", location.pathname);      // a used link is not kept in the history
+    var ma = /[#&]approve=([A-Za-z0-9_-]{8,40})/.exec(location.hash);
+    if (ma) S.approveId = ma[1];                                          // answered once signed in (0.40.0)
+    if (pairTok || ma) history.replaceState(null, "", location.pathname);   // a used link is not kept in the history
     return api("session").then(function (r) {
       var s = r.data;
       if (s.enabled === false) return gate("off");
@@ -171,10 +173,76 @@
           gate(s.has_password ? "login" : "nopw", p.data.error || "This pairing code did not work.");
         });
       }
-      if (!s.signed_in) return gate(s.has_password ? "login" : "nopw", S.unwritable ? WRITE_MSG : null);
+      S.phoneSignin = !!s.phone_signin;
+      if (!s.signed_in) {
+        gate(s.has_password ? "login" : "nopw", S.unwritable ? WRITE_MSG : (S.approveId ? "Sign this phone in first; then the computer's request is shown." : null));
+        if (S.phoneSignin && !S.approveId) phoneSignin();
+        return;
+      }
+      stopPhoneSignin();
       S.session = s;
       startApp();
     }).catch(function () { gate("login", "The Pi does not answer. Is the wall running?"); });
+  }
+
+  // ---- 0.40.0: a computer signed in by a phone. This page (on the computer) shows a QR code and a four-digit code;
+  // a phone already signed in scans it, checks the code and says yes; this page, asking with its own secret, is then
+  // signed in. The QR code carries the request's name only, never the secret.
+  var PS = { timer: null, poll: null, renewals: 0 };
+  function stopPhoneSignin() { clearInterval(PS.timer); clearInterval(PS.poll); PS.timer = PS.poll = null; var b = $("gate-phone"); if (b) b.hidden = true; }
+  function phoneSignin() {
+    stopPhoneSignin();
+    var box = $("gate-phone"); if (!box) return;
+    api("approve/request", { body: {} }).then(function (r) {
+      if (!r.ok) { box.hidden = true; return; }
+      var d = r.data, until = Date.now() + d.seconds * 1000;
+      var url = location.protocol + "//" + location.host + "/console/#approve=" + d.id;
+      var qr = $("gate-qr"), count = $("gate-count"), note = $("gate-phone-note");
+      qr.innerHTML = ""; qr.appendChild(qrSvg(url)); qr.hidden = false;
+      $("gate-code").textContent = d.code; note.textContent = "Scan it with a phone already signed in to the console, check that it shows " + d.code + ", and say yes.";
+      box.hidden = false;
+      PS.timer = setInterval(function () {
+        var left = Math.max(0, Math.round((until - Date.now()) / 1000));
+        count.textContent = Math.floor(left / 60) + ":" + ("0" + left % 60).slice(-2);
+        if (!left) {
+          stopPhoneSignin(); box.hidden = false;
+          // a page left open renews its code a few times, then waits for a click (no endless requests)
+          if (PS.renewals++ < 5 && document.visibilityState === "visible") phoneSignin();
+          else { qr.hidden = true; note.textContent = "The code is out of date."; count.textContent = ""; $("gate-code").textContent = ""; }
+        }
+      }, 1000);
+      PS.poll = setInterval(function () {
+        api("approve/poll", { body: { id: d.id, secret: d.secret } }).then(function (p) {
+          var st = p.data.state;
+          if (st === "approved") { stopPhoneSignin(); boot(); }
+          else if (st === "refused") { stopPhoneSignin(); box.hidden = false; qr.hidden = true; note.textContent = "Refused on the phone."; count.textContent = ""; }
+        });
+      }, 2000);
+    });
+  }
+  function approveComputer(id) {
+    api("approve?id=" + encodeURIComponent(id)).then(function (r) {
+      if (!r.ok) return toast(r.data.error || "This sign-in code is out of date.", true);
+      var d = r.data;
+      if (d.state !== "waiting") return toast("This computer's request is " + d.state + ": it shows a new code.", true);
+      function answer(yes) {
+        closeModal();
+        api("approve", { body: { id: id, yes: yes } }).then(function (a) {
+          if (!a.ok) toast(a.data.error || "Too late: the computer shows a new code.", true);
+          else toast(yes ? d.label + " is signed in." : "Refused.");
+          if (yes) { S.sessions = null; }
+        });
+      }
+      openModal(h("div", null,
+        h("header", null, h("h2", { text: "Sign a computer in" }), h("button", { type: "button", "class": "ghost", "aria-label": "Close", text: "×", onclick: function () { closeModal(); } })),
+        h("div", { "class": "modal-body" },
+          h("p", { text: "Sign in " + d.label + " at " + d.ip + "?" }),
+          h("div", { "class": "count", text: d.code }),
+          h("p", { "class": "qr-note", text: "Say yes only if the computer in front of you shows this same code. It is signed in for a week (a day unused); System → Signed in signs it out." })),
+        h("div", { "class": "modal-foot" },
+          h("button", { type: "button", "class": "btn", text: "Refuse", onclick: function () { answer(false); } }),
+          h("button", { type: "button", "class": "primary", text: "Sign it in", onclick: function () { answer(true); } }))));
+    });
   }
 
   // ---- signed in
@@ -186,7 +254,8 @@
     loadState().then(function () {
       route();
       if (S.unwritable) toast(WRITE_MSG, true);
-      if (!S.session.wizard_done) wizard();
+      if (S.approveId) { var aid = S.approveId; S.approveId = null; approveComputer(aid); }
+      else if (!S.session.wizard_done) wizard();
     });
   }
   function loadState() {
@@ -258,6 +327,7 @@
     watchdog: ["Hardware watchdog", "If the Pi freezes completely, its own chip restarts it after about 10 seconds. Off takes the setting away again."],
     "update-quick": ["Update ZenithBoard and the wall?", "Seconds. The wall restarts, so this page reconnects by itself. The feeders are left as they are."],
     update: ["Update everything?", "ZenithBoard, the decoder and every feeder, one after the other: several minutes. The wall restarts during it; this page follows. A new GitHub signing key is never accepted from here: the update says so, and it is answered over SSH."],
+    "phone-signin": ["Sign computers in with a phone", "When on, a computer's sign-in page shows a QR code. A phone already signed in scans it, sees the computer, its address and a four-digit code, and says yes: the computer is signed in, no password. Off again: computers use the password."],
     "console-off": ["Turn the console off?", "Its pages stop answering at once, this one included. Turn it on again over SSH: sudo zenithboard console on"]
   };
   function run(action, params, opts) {
@@ -514,6 +584,7 @@
         ], "w6"),
         card("Signed in", "phone", "Browsers and phones signed in to this console. Signed in with the password: a week (a day unused). A paired phone: as long as it opens the console once a month.", [
           sessionsList(),
+          row("Sign computers in with a phone", "A computer's sign-in page shows a QR code; a phone signed in here scans it and says yes", sw("phone-signin", on(S.cfg.CONSOLE_PHONE_SIGNIN))),
           h("div", { "class": "actions" }, h("button", { type: "button", "class": "primary", text: "Pair a phone", onclick: function () { pairPhone(); } }),
             h("button", { type: "button", "class": "btn", text: "Sign out the others", onclick: function () {
               api("sessions/revoke", { body: { id: "others" } }).then(function (r) { toast((r.data.count || 0) + " signed out."); loadSessions(); });
@@ -752,7 +823,7 @@
   function openModal(content, big) {
     var p = $("modal-panel"); p.innerHTML = ""; p.className = "modal-panel" + (big ? " big" : "");
     p.appendChild(content); $("modal").hidden = false;
-    var f = p.querySelector("button.primary, input, button"); if (f) setTimeout(function () { f.focus(); }, 30);
+    var f = p.querySelector("button.primary") || p.querySelector("input, button"); if (f) setTimeout(function () { f.focus(); }, 30);
   }
   function closeModal() { $("modal").hidden = true; $("modal-panel").innerHTML = ""; S.wizardOpen = false; }
 
