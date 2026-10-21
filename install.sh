@@ -33,6 +33,8 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=lib/console.sh
 . "$ROOT/lib/console.sh"
 . "$ROOT/lib/update.sh"
+# shellcheck source=lib/backup.sh
+. "$ROOT/lib/backup.sh"
 
 zb_tmp_init   # the private folder for downloads, made here in the main shell (see zb_tmp in lib/common.sh)
 
@@ -269,7 +271,7 @@ settings_menu() {
 # the menu review of 0.21.0) must not take a working receiver down. Your settings are offered as a file first.
 uninstall_all() {
   local word
-  wt_yesno "UNINSTALL EVERYTHING?\n\nThis removes FlightInfo, all feeders, graphs1090 and the decoder installed through this menu (and ACARS / Grafana if an older ZenithBoard installed them).\n\nFirst, keep your settings as a file? (Maintenance -> Save settings, or: zenithboard settings export)" 14 || return 0
+  wt_yesno "UNINSTALL EVERYTHING?\n\nThis removes FlightInfo, all feeders, graphs1090 and the decoder installed through this menu (and ACARS / Grafana if an older ZenithBoard installed them).\n\nFirst, keep a backup? (Maintenance -> Back up everything, or: sudo zenithboard backup make)" 14 || return 0
   word=$(wt_input "To go on, type the word  uninstall  (anything else cancels)." "") || return 0
   [ "$word" = uninstall ] || { wt_msg "Not uninstalled: nothing was changed." 7; return 0; }
   clear
@@ -301,6 +303,7 @@ maintenance_menu() {
     c=$(wt_menu "Maintenance\n\nSettings file: $ZB_CONFIG   (secrets are in their own root-only files and never leave with it)" \
       save "Save my settings to a file (to keep, or to move to another Pi)" \
       restore "Restore settings from a file (the ones from before are kept as .bak)" \
+      backup "Back up everything, or restore on a new card: statistics, graphs, logs, networks' identities" \
       uninstall "Uninstall everything (asks you to type the word)" \
       back "Return to the previous menu") || return 0
     case "$c" in
@@ -316,6 +319,7 @@ maintenance_menu() {
         [ -f "$f" ] || { wt_msg "No such file: $f" 7; continue; }
         wt_yesno "Restore the settings in $f?\n\nEvery setting in it replaces the current one. The current file is kept first as $ZB_CONFIG.bak-DATE, so this can be undone the same way." 12 || continue
         clear; settings_import "$f" && settings_apply; read -rp "Press Enter to continue..." _ ;;
+      backup) backup_menu ;;
       uninstall) uninstall_all ;;
       *) return 0 ;;
     esac
@@ -332,7 +336,7 @@ main_menu() {
       3 "Settings    - network (Wi-Fi, IP, domain), receiver, wall, logs" \
       4 "Status      - what is running" \
       5 "Update      - ZenithBoard and the wall in seconds, or everything" \
-      6 "Maintenance - save or restore your settings, uninstall" \
+      6 "Maintenance - back up, save or restore your settings, uninstall" \
       0 "Exit") || exit 0
     case "$c" in
       1) adsb_menu ;;

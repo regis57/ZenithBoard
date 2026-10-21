@@ -496,6 +496,15 @@ sudo zenithboard settings import FILE          # the file from before is kept as
 
 Nothing that looks like a secret leaves with it: the Bluesky app password and the feeders' keys stay in their own root-only files. An import takes only `KEY=VALUE` lines and says how many it skipped.
 
+**Moving to a new card: a backup of everything** (0.42.0), the same menu or:
+
+```bash
+sudo zenithboard backup make                   # settings, what is on, statistics, graphs, kept logs, the networks' identities
+sudo zenithboard backup restore FILE           # on the new card, before menu 1: asks you to type RESTORE
+```
+
+The new card carries on where the old one stopped: the same stations on ADSB Exchange, FlightAware, Flightradar24 and Plane Finder, the same statistics and graphs, the old logs readable, and every feature that was on switched on again. The file holds Flightradar24's key: keep it to yourself. Switch the old card off first. Details, and why the MAC address does not get in the way: wiki [Backup and restore](https://github.com/regis57/ZenithBoard/wiki/Backup-and-restore). The web console makes one too, without the networks' identities.
+
 **One exception: readsb is never removed automatically.** Its installer builds it from source and provides no way back, so ZenithBoard says so and prints the commands to run by hand rather than deleting system files it did not put there. Everything else is removed normally.
 
 ### When FlightAware, ADSB Exchange, Flightradar24 or Plane Finder change something

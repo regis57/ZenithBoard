@@ -41,6 +41,8 @@ HERE="$(dirname "$(readlink -f "$0")")"
 . "$HERE/../lib/settings.sh"
 # shellcheck source=lib/console.sh
 . "$HERE/../lib/console.sh"
+# shellcheck source=lib/backup.sh
+. "$HERE/../lib/backup.sh"
 
 zb_tmp_init   # the private folder for downloads, made here in the main shell (see zb_tmp in lib/common.sh)
 
@@ -83,6 +85,10 @@ ZenithBoard $ZB_VERSION - ADSB Flight Info
   zenithboard stats csv|clear           the raw samples / empty them
   zenithboard stats gaps                callsigns shown without an airline, types drawn with the generic silhouette (30 days)
   zenithboard graphs on|off|status      graphs1090: years of the decoder's graphs on port 8542 (off by default)
+  zenithboard backup make [FILE]        everything to move to a new card: settings, features on, statistics, graphs,
+                                        kept logs, the networks' identities (keep the file private)
+  zenithboard backup show FILE          what a backup holds, changing nothing
+  zenithboard backup restore FILE       put it back on this Pi (asks you to type RESTORE; what was here is kept)
   zenithboard settings export [FILE]    your settings as one file (no secrets), to keep or to move to another Pi
   zenithboard settings import FILE      put them on this Pi (the ones from before are kept in a .bak file)
   zenithboard preset list|add|del       a name for a tablet's own choices: ?p=NAME in its address (add NAME theme=green mode=flap ...)
@@ -257,6 +263,13 @@ case "${1:-}" in
         esac ;;
       status) data_refresh_status; localdb_status ;;
       *) die "Usage: zenithboard data update | auto on|off | localdb on|off | status" ;;
+    esac ;;
+  backup)
+    case "${2:-}" in
+      make) root_or_die; shift 2; backup_make "$@" ;;
+      show) [ -n "${3:-}" ] || die "Usage: zenithboard backup show FILE"; backup_show "$3" ;;
+      restore) root_or_die; [ -n "${3:-}" ] || die "Usage: sudo zenithboard backup restore FILE"; shift 2; backup_restore "$@" ;;
+      *) die "Usage: sudo zenithboard backup make [FILE]   |   zenithboard backup show FILE   |   sudo zenithboard backup restore FILE" ;;
     esac ;;
   settings)
     case "${2:-}" in

@@ -78,7 +78,7 @@ One section on screen at a time: a side bar on a computer, tabs at the bottom of
 | Receiver | Region, antenna position, statistics, graphs1090, the gain (check, one step down or up), the gain log, status |
 | Sharing | Bluesky on or off, the gap, the picture (look, colour, map, units, photo link, the words), the three summaries (on or off, day and time, which posts, a try); *Try a post* and the pictures |
 | Reliability | Hardware and network watchdogs, logs kept after a restart, Wi-Fi hardening, daily security fixes, daily log clean-up; health, memory, logs |
-| System | Update ZenithBoard and the wall, update everything; network, Wi-Fi and domain name status; who is signed in, pairing a phone; the security check; turning the console off |
+| System | Update ZenithBoard and the wall, update everything; a backup to make and download (0.42.0, without the networks' identities: [Backup and restore](Backup-and-restore#from-the-web-console)); network, Wi-Fi and domain name status; who is signed in, pairing a phone; the security check; turning the console off |
 
 **What every control does appears in its own card**, under it, as the Pi prints it: a button (Health, Memory, Status, a
 log, a try of a post), a switch, a choice, a field applied, an update or graphs1090 that takes minutes. The command is
@@ -103,7 +103,7 @@ Click one of the last jobs to read what it printed: it opens at the top of the d
 **Only in the terminal, on purpose:** uninstalling and anything that asks for a typed word; Wi-Fi on, off, networks,
 country, and fixed addresses (one mistake cuts the Pi off the network the page comes through); passwords, tokens and
 keys (the Bluesky account, the domain name, the console's own); posting to Bluesky; emptying statistics or logs;
-importing settings; `config-set`. An update never accepts a new GitHub signing key from the console: it says so, and
+importing settings or restoring a backup; `config-set`. An update never accepts a new GitHub signing key from the console: it says so, and
 the key is answered over SSH.
 
 ## How it is kept safe
@@ -180,7 +180,7 @@ sudo zenithboard console pair        # the phone again (QR code)
 |---|---|
 | `/etc/zenithboard/console.env` | The password's scrypt hash and when everyone was last signed out. root:zenithboard 0640 |
 | `/var/lib/zenithboard/console/state/` | The wall's: sessions (hashes), the job spool, the sign-in record. 0700 |
-| `/var/lib/zenithboard/console/out/` | Root's: each job's output and end, the journal, the overview's facts, a terminal pairing code's hash |
+| `/var/lib/zenithboard/console/out/` | Root's: each job's output and end, the journal, the overview's facts, a terminal pairing code's hash, the last backup made here (`backup.tar.gz`, root:zenithboard 0640, one at a time) |
 | `/etc/systemd/system/zenithboard-console.path` · `.service` | The helper, installed by `console on` only |
 | `CONSOLE=1` in `config.env` | On; `CONSOLE_HOSTS=name1,name2` adds names the page may be opened by |
 

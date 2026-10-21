@@ -270,7 +270,7 @@
   function loadState() {
     return api("state").then(function (r) {
       if (!r.ok) return;
-      S.cfg = r.data.cfg || {}; S.facts = r.data.facts || {}; S.factsAt = r.data.facts_at || 0;
+      S.cfg = r.data.cfg || {}; S.facts = r.data.facts || {}; S.factsAt = r.data.facts_at || 0; S.backup = r.data.backup || null;
       S.catalog = r.data.catalog || {}; S.sections = r.data.sections || [];
       theme(S.cfg.THEME);
       // the overview's facts are read as root by the helper after each change; older than two minutes: again
@@ -623,6 +623,11 @@
             h("button", { type: "button", "class": "btn", text: "First steps again", onclick: function () { S.openWizard(); } })),
           h("p", { "class": "note", text: "ZenithBoard " + (S.session.version || "") + " runs here. The release notes: " }, h("a", { href: "https://github.com/regis57/ZenithBoard/releases", target: "_blank", rel: "noopener noreferrer", text: "GitHub ↗" }))
         ], "w6"),
+        card("Backup", "out", "One file with the settings, the features that are on, the statistics, what was posted, graphs1090's history and the kept logs: to keep, or to start a new card where this one stopped.", [
+          h("div", { "class": "actions" }, btn("Make a backup", "backup", {}, "primary"),
+            S.backup ? h("a", { "class": "btn", href: "/console/api/backup", download: "", text: "Download it (" + (S.backup.bytes / 1048576).toFixed(1) + " MB, " + ago(S.backup.at) + ")" }) : null),
+          h("p", { "class": "note", text: "The networks' identities (ADSB Exchange's UUID, FlightAware's feeder ID, Flightradar24's sharing key, Plane Finder's share code) are left out here: keys never travel through this page. To move to a new card, make the full backup in the terminal: sudo zenithboard backup make (or the menu: 6 Maintenance → Back up everything). A backup is put back in the terminal too: sudo zenithboard backup restore FILE, which asks you to type RESTORE and keeps what it replaces." })
+        ], "w6"),
         card("Network", "link", f.ip ? "This Pi: " + f.ip + (f.ddns ? " · " + f.ddns : "") : null, [
           h("div", { "class": "actions" }, btn("Network", "net-status"), btn("Wi-Fi", "wifi-status"), btn("Domain name", "ddns-status"),
             S.cfg.DDNS_PROVIDER && S.cfg.DDNS_PROVIDER !== "none" ? btn("Refresh the domain name", "ddns-update") : null),
@@ -643,7 +648,7 @@
             h("li", { text: "Uninstalling, and anything that asks for a typed word" }),
             h("li", { text: "Wi-Fi, fixed addresses (they can cut this page off)" }),
             h("li", { text: "Passwords, tokens and keys: Bluesky, the domain name, this console's own" }),
-            h("li", { text: "Posting to Bluesky, emptying statistics or logs, importing settings" })),
+            h("li", { text: "Posting to Bluesky, emptying statistics or logs, importing settings, restoring a backup" })),
           h("p", { "class": "note", text: "This page travels unencrypted on your home network (plain HTTP), like the wall. It answers home addresses only." }),
           h("div", { "class": "actions" }, btn("Turn the console off", "console-off", {}, "danger"))
         ], "w6")
@@ -915,7 +920,8 @@
             h("li", { text: "Decoder: " + (f.decoder || "none yet (sudo zenithboard menu → 1 ADSB)") }),
             h("li", { text: "Feeding: " + (feeders.join(", ") || "nobody yet") }),
             h("li", { text: "Answers your home network only; uninstalling, Wi-Fi and passwords stay in the terminal" })),
-          h("p", { "class": "note", text: "Seven short steps, then a review: nothing changes before you apply it. Open them again at any time: System → First steps." })];
+          h("p", { "class": "note", text: "Seven short steps, then a review: nothing changes before you apply it. Open them again at any time: System → First steps again." }),
+          h("p", { "class": "note", text: "Moving from an old card? Restore its backup first, in the terminal (sudo zenithboard backup restore FILE): the settings, what was on, the statistics and the networks' identities come back, and these steps are then only a check." })];
       },
       function () {
         var lat = h("input", { type: "text", inputmode: "decimal", value: W.lat, "aria-label": "Latitude", oninput: function () { W.lat = lat.value.trim(); } });

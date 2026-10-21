@@ -17,6 +17,7 @@ import math
 import os
 import queue
 import re
+import shutil
 import socket
 import sys
 import threading
@@ -26,7 +27,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.41.0"
+VERSION = "0.42.0"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -1821,6 +1822,25 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _stream(self, reply):
+        """A console download (0.42.0): read and sent in 64 kB pieces, so a backup of tens of MB never sits in memory."""
+        try:
+            fh = open(reply.stream, "rb")
+        except OSError:
+            self._send(404, {"error": "No backup yet."})
+            return
+        with fh:
+            self.send_response(200)
+            self.send_header("Content-Type", reply.ctype)
+            self.send_header("Content-Length", str(os.fstat(fh.fileno()).st_size))
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("Content-Disposition", 'attachment; filename="%s"' % reply.download)
+            for k, v in reply.headers.items():
+                if k in console.SECURITY_HEADERS:
+                    self.send_header(k, v)
+            self.end_headers()
+            shutil.copyfileobj(fh, self.wfile, 65536)
+
     def _console(self, cfg, url):
         """The web console (0.39.0): its own checks, then its reply. None when the path is not the console's."""
         body = b""
@@ -1840,6 +1860,9 @@ class Handler(BaseHTTPRequestHandler):
             return None
         if reply.file:
             self._file(STATIC_DIR, reply.file, reply.headers)
+            return True
+        if reply.stream:
+            self._stream(reply)
             return True
         out = reply.body if reply.body is not None else b""
         if isinstance(out, str):

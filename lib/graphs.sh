@@ -84,6 +84,7 @@ graphs_on() {
   log "Installing graphs1090 (wiedehopf's installer: a minute or two)"
   graphs_run_installer || { err "graphs1090 is not installed. To put back what was changed: sudo zenithboard graphs off"; return 1; }
   cfg_set GRAPHS1090 1
+  ! declare -F bk_pending_apply >/dev/null || bk_pending_apply graphs       # 0.42.0: the history from a backup
   echo "graphs1090 is ON (version $(graphs_version)). The first points appear within ten minutes:"
   graphs_urls
   echo "    Its graphs are kept in memory and written to the card once a day (23:42) and at shutdown: unplugging"

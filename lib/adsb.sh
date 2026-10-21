@@ -136,7 +136,9 @@ install_piaware() {
   piaware-config allow-mlat no
   piaware-config allow-auto-updates yes
   systemctl enable piaware; systemctl restart piaware
-  echo "    Claim this receiver at https://flightaware.com/adsb/piaware/claim (same public IP as this Pi)."
+  # 0.42.0: a feeder ID restored from a backup before this install keeps the old station; nothing to claim then
+  if [ -f "${BK_PENDING:-/nonexistent}/piaware-feeder-id" ]; then bk_pending_apply piaware
+  else echo "    Claim this receiver at https://flightaware.com/adsb/piaware/claim (same public IP as this Pi)."; fi
 }
 remove_piaware() { systemctl disable --now piaware 2>/dev/null || true; apt_remove piaware; }
 
@@ -212,6 +214,10 @@ install_fr24() {
   local fr; fr=$(zb_tmp install_fr24.sh) || return 1
   fetch "$FR24_INSTALL_URL" "$fr" || return 1
   fr24_signup_help
+  if [ -n "$(declare -F bk_pending_fr24_key >/dev/null && bk_pending_fr24_key)" ]; then
+    # 0.42.0: shown on this terminal only (never logged): FR24's sign-up asks for it, and it is set again afterwards
+    printf '  Your sharing key, from your backup:  %s   (paste it at the sharing-key question)\n\n' "$(bk_pending_fr24_key)" >&2
+  fi
   if ! bash "$fr" && ! command -v fr24feed >/dev/null 2>&1; then
     # the installer adds the repository and then stops when apt refuses it: repair the key, then finish the job
     [ -n "$(fr24_source_file)" ] || { err "The Flightradar24 installer failed before adding its repository."; return 1; }
@@ -219,6 +225,7 @@ install_fr24() {
     if fr24_repo_broken; then err "apt still refuses the Flightradar24 repository. Nothing was changed about signature checking."; return 1; fi
     apt_install fr24feed || return 1
   fi
+  [ ! -f "${BK_PENDING:-/nonexistent}/fr24key" ] || bk_pending_apply fr24
   if fr24_has_key; then
     fr24_write_ini
     systemctl enable fr24feed 2>/dev/null || true
@@ -237,6 +244,7 @@ install_planefinder() {
   fetch "$url" "$deb" || { warn "Check lib/versions.sh: the Plane Finder package URL may have changed."; return 1; }
   dpkg -i "$deb" || apt-get -f install -y
   systemctl enable pfclient; systemctl restart pfclient
+  [ -f "${BK_PENDING:-/nonexistent}/pfclient-config.json" ] && bk_pending_apply planefinder && return 0
   echo "    Finish setup at http://$(local_ip):30053  (data source: Beast, 127.0.0.1, port 30005)."
 }
 remove_planefinder() { systemctl disable --now pfclient 2>/dev/null || true; apt_remove pfclient; }
