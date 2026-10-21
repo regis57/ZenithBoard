@@ -1686,6 +1686,33 @@ class WeeklyTest(unittest.TestCase):
         self.assertEqual((sw.cycle_key("daily", wed), sw.cycle_key("weekly", wed), sw.cycle_key("monthly", wed)),
                          ("2026-10-21", "2026-W43", "2026-10"))
 
+    def test_lists_begun_inside_the_period_are_shown_from_half_of_it(self):
+        # the reference Pi, 21 October 2026: the first daily summary had no airline, no model and none of posts 2 to
+        # 4, the lists having begun the day before; the statistics page showed them. 0.40.4: shown, saying since when
+        import social_week as sw
+        for n in ("fleet-2026-10-10", "fleet-2026-10-16"):
+            os.unlink(os.path.join(self.d, n))
+        with open(os.path.join(self.d, "fleet-2026-10-17"), "w") as fh:          # began on the 17th at 20:15
+            fh.write("4ca001\tRYR5ZK\t35000\tB738\t\t\t2015\na00001\tFDX1\t31000\tB77L\t\t\t2130\n")
+        day = sw.week_data(self.c, self.d, self.now, period="daily")             # the 24 hours from the 17th, 19:05
+        self.assertFalse(day["covered"])
+        self.assertTrue(day["shown"], "23 hours of 24")
+        self.assertEqual(day["since"], "17 October, 20:15")
+        self.assertEqual(sorted(n for n, _ in day["airlines"]), ["FedEx", "Ryanair"])
+        self.assertTrue(sw.has_part(day, 2), "the cargo post goes out too")
+        sw.draw(day, "amber", "above Trémery", os.path.join(self.d, "d.png"))
+        week = sw.week_data(self.c, self.d, self.now)                           # two days of seven: still left out
+        self.assertEqual((week["shown"], week["since"], week["airlines"]), (False, None, []))
+        os.unlink(os.path.join(self.d, "fleet-2026-10-17"))
+        with open(os.path.join(self.d, "fleet-2026-10-18"), "w") as fh:          # began this morning: 9 hours of 24
+            fh.write("4ca001\tRYR5ZK\t35000\tB738\t\t\t1000\n")
+        day = sw.week_data(self.c, self.d, self.now, period="daily")
+        self.assertEqual((day["shown"], day["airlines"]), (False, []))
+        self.assertFalse(sw.has_part(day, 2))
+        with open(os.path.join(self.d, "fleet-2026-10-18"), "w") as fh:          # a file from before the time column
+            fh.write("4ca001\tRYR5ZK\t35000\tB738\n")
+        self.assertEqual(sw.fleet_since(self.d, "2026-10-18")[1], "18 October")
+
     def test_the_day_and_the_thirty_days(self):
         import datetime
         import social_week as sw

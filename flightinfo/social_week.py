@@ -15,6 +15,7 @@ so in its journal once that week.
 """
 import datetime
 import os
+import re
 
 import server
 
@@ -164,13 +165,25 @@ def week_data(c, stats_dir=None, now=None, posts=None, period="weekly"):
     # test, the evening the lists began (0.31.0), said "6 435 aircraft heard" and "Ryanair (14)": a week against two
     # hours. The last 24 hours start yesterday: the lists must have begun before it
     covered = bool(fleet_from and fleet_from < dates[0])
+    # 0.40.4: lists that began inside the period are shown all the same when they cover half of it at least, saying
+    # since when (the owner, 21 October: the first daily summary went out with no airline, no model and none of
+    # posts 2 to 4, the lists having begun the day before; the statistics page showed them). Under half, they stay
+    # out, as 0.34.1 decided: "6 435 aircraft heard" beside "Ryanair (14)" says something false.
+    shown, since = covered, None
+    if fleet_from and not covered and fleet_from <= dates[-1]:
+        began, since = fleet_since(stats_dir, fleet_from)
+        start = now_dt - datetime.timedelta(hours=24) if n == 1 else \
+            datetime.datetime.combine(datetime.date.fromisoformat(dates[-n]), datetime.time())
+        whole = (now_dt - start).total_seconds()
+        shown = whole > 0 and (now_dt - max(began, start)).total_seconds() >= whole / 2
+        since = since if shown else None
     posted = sum(int((posts or {}).get(d, 0)) for d in dates[-n:] if n > 1) if n > 1 else \
         int((posts or {}).get(dates[-1], 0))
     w = st["window"]
     if n == 1:
         if not w["totals"]["messages"] and not w["totals"]["aircraft"]:
             return None
-        fleet = server.read_fleet(c, stats_dir, now_dt, rng="24h") if covered else {}
+        fleet = server.read_fleet(c, stats_dir, now_dt, rng="24h") if shown else {}
         row = [v if c_ else None for v, c_ in zip(w["aircraft"], w["messages"])]
         known = [(v, i) for i, v in enumerate(row) if v is not None]
         # the busiest hour as the weekly one counts it: the most aircraft with a position, not the most messages
@@ -195,7 +208,7 @@ def week_data(c, stats_dir=None, now=None, posts=None, period="weekly"):
             v = [r[h] for r in rows if r[h] is not None]
             hours.append(sum(v) / len(v) if v else None)
         known = [(v, h) for h, v in enumerate(hours) if v is not None]
-        fleet = server.read_fleet(c, stats_dir, now_dt, since=dates[0]) if covered else {}
+        fleet = server.read_fleet(c, stats_dir, now_dt, since=dates[0]) if shown else {}
         out = {"dates": dates, "aircraft": len(seen) or max(k for _, k in per_day), "messages": messages,
                "per_day": per_day, "best_day": best_day if best_day[1] else None,
                "busiest_hour": max(known)[1] if known else None, "heat": rows}
@@ -205,9 +218,33 @@ def week_data(c, stats_dir=None, now=None, posts=None, period="weekly"):
                 "cargo_models": fleet.get("cargo_models") or {},
                 "bizjet_countries": [(cc, k) for cc, k in fleet.get("bizjet_countries") or [] if cc][:TOP],
                 "military": fleet.get("military") or [], "military_total": fleet.get("military_total", 0),
-                "misc": fleet.get("misc") or {}, "covered": covered, "posted": posted, "fleet_from": fleet_from,
+                "misc": fleet.get("misc") or {}, "covered": covered, "shown": shown, "since": since, "posted": posted,
+                "fleet_from": fleet_from,
                 "fleet_week": first_full_week(fleet_from) if period == "weekly" else first_full(fleet_from, n)})
     return out
+
+
+def fleet_since(stats_dir, day):
+    """When the lists began -> (datetime, words): "20 October, 19:15" from the earliest time an aircraft was last seen
+    in that day's file (its seventh column, 0.37.0 on), or the day's start and "20 October" when the file is older than
+    that column."""
+    times = []
+    try:
+        with open(os.path.join(stats_dir, "fleet-" + day), encoding="utf-8") as fh:
+            for line in fh:
+                cols = line.rstrip("\n").split("\t")
+                if len(cols) >= 7 and re.match(r"^([01]\d|2[0-3])[0-5]\d$", cols[6]):
+                    times.append(cols[6])
+                elif line.strip():
+                    times = []                   # a line from before 0.37.0: the start of the day is not known
+                    break
+    except OSError:
+        pass                                     # no file: the day alone
+    d = datetime.date.fromisoformat(day)
+    if times:
+        t = min(times)
+        return datetime.datetime.combine(d, datetime.time(int(t[:2]), int(t[2:]))), "%s, %s:%s" % (short_date(day), t[:2], t[2:])
+    return datetime.datetime.combine(d, datetime.time()), short_date(day)
 
 
 def first_full(fleet_from, days):
@@ -354,7 +391,7 @@ def has_part(w, part):
     """Something to say in that post, over the whole week. The first always has (when there are statistics)."""
     if part == 1:
         return bool(w)
-    if not (w and w.get("covered")):
+    if not (w and (w.get("shown") or w.get("covered"))):
         return False
     if part == 2:
         return bool(w.get("cargo") or w.get("bizjets"))
@@ -474,6 +511,8 @@ def _header(d, f, col, dim, title, w):
     d.text((W - M, 34), span, font=f["head"], fill=dim, anchor="ra")
     d.line([(M, 86), (W - M, 86)], fill=OFF, width=2)
     d.text((W - M, H - 34), "ZENITHBOARD", font=f["lbl"], fill=FAINT, anchor="ra")
+    if w.get("since"):                           # 0.40.4: lists shown though they began inside the period
+        d.text((M, H - 34), "Lists counted since " + w["since"], font=f["small"], fill=FAINT)
 
 
 def _fit(d, text, fnt, width):
@@ -502,7 +541,7 @@ def _ranks(d, f, col, x, y, width, title, pairs, rows=TOP, step=44, fnt="name"):
 
 
 def _not_yet(d, f, x, y, w):
-    if w.get("covered"):
+    if w.get("covered") or w.get("shown"):
         why = "Nothing in the lists for this period."
     elif w.get("fleet_from"):
         why = "Counted since %s: shown from the summary of %s." % (short_date(w["fleet_from"]), short_date(w["fleet_week"]))
