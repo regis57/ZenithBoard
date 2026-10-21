@@ -189,6 +189,10 @@ console_state_lines() {
     "$(watchdog_state)" "$(netwatch_state)" "$(keeplogs_state)" "$(wifi_harden_state)" "$(patches_state)" "$(graphs_state)" \
     "$( [ "$(cfg_get LOG_AUTOCLEAN 0)" = 1 ] && echo on || echo off)"
   printf 'bluesky=%s\n' "$(social_account)"
+  if declare -F ts_state >/dev/null; then                 # 0.45.1: Tailscale on the overview and its own card
+    printf 'tailscale=%s\n' "$(ts_state)"
+    [ "$(ts_state)" != on ] || printf 'tailscale_ip=%s\ntailscale_name=%s\n' "$(ts_ip)" "$(ts_name)"
+  fi
   for d in /usr/local/share/tar1090/html /usr/share/tar1090/html; do [ -d "$d" ] && { printf 'map=tar1090\n'; break; }; done
   [ -d /usr/share/skyaware/html ] || [ -d /usr/share/dump1090-fa/html ] && printf 'skyaware=1\n'
   is_wifi=$(wifi_has_nm && [ -n "$(wifi_iface)" ] && echo 1); [ -z "$is_wifi" ] || printf 'wifi=%s\n' "$(wifi_summary)"
