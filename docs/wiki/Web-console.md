@@ -66,6 +66,23 @@ One section on screen at a time: a side bar on a computer, tabs at the bottom of
 | System | Update ZenithBoard and the wall, update everything; network, Wi-Fi and domain name status; who is signed in, pairing a phone; the security check; turning the console off |
 
 **Activity** (top right) shows the job running as it prints, the last jobs, the journal of changes and the sign-ins.
+Click one of the last jobs to read what it printed: it opens at the top of the drawer.
+
+### How it behaves, by design
+
+* **One change at a time.** The Pi runs the console's commands one after the other, like typing them one by one in a
+  terminal. A change made while a long one runs (installing graphs1090, an update: minutes) waits its turn: its control
+  shows a dashed, waiting state, and the page says *Queued: graphs1090 runs first*. Nothing is lost, and the order is
+  the order of your clicks. Only a change waiting with nothing running means the helper is missing (see below).
+* **The QR code is never on the sign-in page.** It is made by a browser already signed in (*System → Signed in → Pair
+  a phone*) or over SSH (`sudo zenithboard console pair`). Shown on the sign-in page, it would sign in anyone on the
+  network who scans it.
+* **A QR code signs in the phone that scans it, and only that one, once.** It does not sign in the computer that
+  showed it (that one is already signed in), nor another device later. Each browser has its own sign-in: the password,
+  or its own QR code.
+* **Signing a computer in with the phone instead of the password** (scan a code on the computer's screen with a phone
+  already signed in, say yes on the phone) is a possible next step, not built: it is a new way in, so it waits for the
+  owner's decision. See the [Roadmap](Roadmap).
 
 **Only in the terminal, on purpose:** uninstalling and anything that asks for a typed word; Wi-Fi on, off, networks,
 country, and fixed addresses (one mistake cuts the Pi off the network the page comes through); passwords, tokens and
@@ -116,7 +133,8 @@ when you do not need it. `zenithboard security` says it is on and checks the pas
 | **Phone lost, or a browser you do not know in *Signed in*** | 1. `sudo zenithboard console signout` (every browser and phone out at once). 2. `sudo zenithboard console password` if the password may be known. 3. Pair your phone again: `sudo zenithboard console pair` |
 | **The page says the console is off** | `sudo zenithboard console on` |
 | **403 "home network only" or "open it by the Pi's address"** | 1. Open it as `http://192.168.x.x:8080/console` (the Pi's address: `hostname -I`), from a device on the home network. 2. By a name of your own (not `*.local`): `sudo zenithboard config-set CONSOLE_HOSTS your.name`. 3. A VPN whose addresses are not private (Tailscale's 100.64/10) is refused by design: use SSH through it instead. A narrower `ALLOW_FROM` applies too (`zenithboard config`) |
-| **A change stays *queued*** (the page also warns after 20 s) | The helper is not running. 1. `sudo zenithboard console status` (Helper: active?). 2. `sudo zenithboard console on` (reinstalls it). 3. Still queued: `journalctl -u zenithboard-console -n 50` and `systemctl status zenithboard-console.path` |
+| **A change stays *queued*** behind another (*Queued: … runs first*) | Normal: one change at a time. Wait for the one running (its output: *Activity*). To give up on it: see *A change stays running* |
+| **A change stays *queued*** with nothing running (the page warns after 20 s) | The helper is not running. 1. `sudo zenithboard console status` (Helper: active?). 2. `sudo zenithboard console on` (reinstalls it). 3. Still queued: `journalctl -u zenithboard-console -n 50` and `systemctl status zenithboard-console.path` |
 | **A change stays *running*** | 1. Look at what it prints: *Activity*, or `sudo ls -t /var/lib/zenithboard/console/out/ \| head`, then `sudo cat` the newest `.log`. An update or graphs1090 can take minutes. 2. To stop it: `sudo systemctl stop zenithboard-console.service` |
 | **Jobs piling up, or you want none to run** | 1. `sudo zenithboard console off` (the helper stops; nothing more runs). 2. Drop what waits: `sudo rm -f /var/lib/zenithboard/console/state/spool/*.job`. 3. `sudo zenithboard console on` when you want it back |
 | **A setting made from the console broke something** | 1. *Activity → Changes*, or `sudo zenithboard console status` (the last five), or `sudo cat /var/lib/zenithboard/console/out/journal.log`: each line is the command run, with its value. 2. Run the opposite yourself (`sudo zenithboard radius 10`, `sudo zenithboard watchdog off`…) or use the menu. Nothing the console does is beyond what those commands undo |

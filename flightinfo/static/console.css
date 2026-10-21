@@ -181,6 +181,8 @@ button.page { font: inherit; text-align: left; width: 100%; }
 .list .li small { display: block; color: var(--muted); font: 11.5px var(--mono); }
 .list button.li { background: none; border: 0; border-top: 1px solid var(--line); text-align: left; cursor: pointer; color: inherit; padding: 8px 0; }
 .list button.li:hover b { color: var(--on); }
+.list button.li.sel b { color: var(--on); }
+.list button.li.sel { box-shadow: inset 3px 0 0 var(--on); padding-left: 10px; }
 .mono-list { font: 12px var(--mono); color: var(--muted); white-space: pre-wrap; margin: 0; max-height: 220px; overflow: auto; }
 .sub { font: 700 11px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 14px 0 6px; }
 .drawer-body .sub { margin-top: 0; }

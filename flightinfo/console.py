@@ -410,8 +410,20 @@ def job_status(job_id, offset=0):
         spooled = os.path.join(SPOOL_DIR, job_id + ".job")
         if not os.path.exists(spooled):
             return None
-        age = now() - os.path.getmtime(spooled)
-        return {"id": job_id, "state": "queued", "age": int(age), "log": "", "next": 0}
+        mine = os.path.getmtime(spooled)
+        # 0.39.3: the helper runs one job at a time; one queued behind a long one (graphs1090, an update) is waiting,
+        # not lost: say which one runs and how many are before it, so the page does not blame the helper (the owner's
+        # recording, 21 October: "has not taken the job" while graphs1090 was installing)
+        ahead = 0
+        try:
+            for n in os.listdir(SPOOL_DIR):
+                if n.endswith(".job") and n != job_id + ".job" and os.path.getmtime(os.path.join(SPOOL_DIR, n)) < mine:
+                    ahead += 1
+        except OSError:
+            pass                                 # the spool changed while it was read: the count is a hint only
+        running = [j for j in recent_jobs(10) if j.get("state") == "running" and now() - (j.get("started") or 0) < 7200]
+        return {"id": job_id, "state": "queued", "age": int(now() - mine), "log": "", "next": 0, "ahead": ahead,
+                "behind": running[0].get("action") if running else None}
     text, nxt = "", offset
     try:
         with open(os.path.join(OUT_DIR, job_id + ".log"), "rb") as fh:

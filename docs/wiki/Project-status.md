@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **21 October 2026**, version **0.39.2**.
+Last updated: **21 October 2026**, version **0.39.3**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -63,6 +63,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 21 October 2026, 08:34 | The console in use on the Pi (0.39.2), recorded: the iPhone paired by QR code (08:23), the PC signed in with the password, statistics off and on, MLAT guard, graphs1090 installed from the page (about a minute), the summaries' switches. Seen: changes made while graphs1090 installed waited, and the page blamed the helper for it, repeatedly; a past job clicked in *Activity* opened its output out of sight. 0.39.3. The owner asked why the PC is not signed in by a QR code already used: a code signs in the phone that scans it, once; signing a computer in with the phone is written down as a proposal |
 | 21 October 2026, 08:05 | First try of the console on the Pi: neither the password nor the QR code worked, *this pairing code is used or out of date*. The wall had been restarted by the update before `console on` made its folder, so its sandbox kept the folder read-only and every code was refused (failed codes then count against sign-in tries too). 0.39.2: the code no longer depends on that write, `console on` restarts the wall, the page says when the folder is read-only. The owner also asked whether the terminal is needed at every visit: no, and sessions now last while used (a week with the password, a month between uses for a phone) |
 | 21 October 2026, 07:56 | `sudo zenithboard memory` after 0.39.0: 180 MB for all the services, 619 MB available, load 1.1. Plane Finder at 43 MB (27 the evening before), the one service the update did not restart: to watch. Two labels were cut or missing in the WHAT column (*name on the network (mDN*, `unattended-upgrades` unnamed): 0.39.1 |
 | 21 October 2026, 07:34 | The owner asked for a break-glass procedure for the console, step by step, and a way to start again. The terminal is the way in, by design; the [Web console](Web-console#break-glass-when-the-console-is-in-the-way) page now lists each case (password forgotten, locked out, phone lost, a job queued or stuck, a setting to undo, the page not loading) with its commands, and how to start again from zero or take the console out. Documentation only |
