@@ -10,7 +10,9 @@
 // and the United States' together, cut along the diagonal (the owner's choice, 21 October 2026).
 (function () {
   "use strict";
-  // code, its own name, flag(s); the order of the list shown
+  // code, its own name, flag(s); the order of the list shown. A language spoken across many countries has a picture of
+  // its own rather than one country's flag (0.48.0, the owner's choice): Swahili the map of Africa, Arabic its letter
+  // ʿayn. Flags are the wall's PNGs (/flags/CC.png); "@name" is a picture in /static/i18n/flags/name.svg.
   var LANGS = [
     ["en", "English", ["GB", "US"]],
     ["fr", "Français", ["FR"]],
@@ -19,14 +21,22 @@
     ["it", "Italiano", ["IT"]],
     ["es", "Español", ["ES"]],
     ["pt-BR", "Português (Brasil)", ["BR"]],
+    ["pl", "Polski", ["PL"]],
+    ["fi", "Suomi", ["FI"]],
+    ["et", "Eesti", ["EE"]],
+    ["lv", "Latviešu", ["LV"]],
+    ["lt", "Lietuvių", ["LT"]],
     ["id", "Bahasa Indonesia", ["ID"]],
+    ["sw", "Kiswahili", ["@africa"]],
     ["ru", "Русский", ["RU"]],
     ["uk", "Українська", ["UA"]],
+    ["ar", "العربية", ["@arabic"]],
     ["ja", "日本語", ["JP"]],
     ["ko", "한국어", ["KR"]],
     ["zh-Hans", "简体中文", ["CN"]],
     ["zh-Hant", "繁體中文", ["TW"]]
   ];
+  var RTL = ["ar"];
   var KEY = "zb-lang";
   var cur = "en", cat = {}, avail = ["en"], conf = {};
 
@@ -58,7 +68,9 @@
     } else if (typeof tr === "string" && tr !== "") return fill(tr, v);
     return fill(Number(n) === 1 ? one : other, v);
   }
-  function locale() { return cur; }
+  // Arabic in Western digits: the Pi's own numbers (addresses, times, the output) are written so, and mixing both
+  // digit sets on one page reads worse than either
+  function locale() { return cur === "ar" ? "ar-u-nu-latn" : cur; }
   function num(x, digits) {
     if (typeof x !== "number" && !(typeof x === "string" && x !== "" && !isNaN(Number(x)))) return x;
     var d = digits === undefined ? undefined : digits;
@@ -120,7 +132,9 @@
     box.className = "zb-flag" + (f.length > 1 ? " two" : "");
     f.forEach(function (cc) {
       var img = document.createElement("img");
-      img.src = (base || conf.flagBase || "/flags/") + cc + ".png"; img.alt = ""; img.width = 24; img.height = 16;
+      img.src = cc.charAt(0) === "@" ? (conf.staticBase || "/static/") + "i18n/flags/" + cc.slice(1) + ".svg"
+        : (base || conf.flagBase || "/flags/") + cc + ".png";
+      img.alt = ""; img.width = 24; img.height = 16;
       box.appendChild(img);
     });
     return box;
@@ -153,12 +167,30 @@
     if (list().length < 2) wrap.hidden = true;            // English alone on this Pi: nothing to choose
     return wrap;
   }
-  // the first sign-in: every language offered, by its own name; the browser's own language first in light
+  // the first visit: the browser's own language and English as two large buttons, every other one in a single list
+  // (0.48.0, the owner: twenty flags on the first page would be too many)
   function chooser(onPick) {
-    var box = document.createElement("div"); box.className = "zb-lang-first";
-    var guess = browserGuess();
-    list().forEach(function (code) { box.appendChild(listButton(code, onPick || function (c) { choose(c); }, code === guess)); });
-    return box;
+    var wrap = document.createElement("div"), box = document.createElement("div");
+    var pick = onPick || function (c) { choose(c); };
+    box.className = "zb-lang-first";
+    var guess = browserGuess(), first = [guess].concat(guess === "en" ? [] : ["en"]);
+    if (first.length < 2) first.push(list().filter(function (c) { return c !== "en"; })[0]);
+    first = first.filter(Boolean);
+    first.forEach(function (code) { box.appendChild(listButton(code, pick, code === guess)); });
+    wrap.appendChild(box);
+    var rest = list().filter(function (c) { return first.indexOf(c) < 0; });
+    if (rest.length) {
+      var more = document.createElement("label"); more.className = "zb-lang-more";
+      var sel = document.createElement("select");
+      var o0 = document.createElement("option"); o0.value = ""; o0.textContent = t("Other languages ({n})", { n: rest.length }); sel.appendChild(o0);
+      rest.forEach(function (code) {
+        var o = document.createElement("option"); o.value = code; o.textContent = info(code)[1]; o.lang = code; sel.appendChild(o);
+      });
+      sel.setAttribute("aria-label", t("Other languages"));
+      sel.addEventListener("change", function () { if (sel.value) pick(sel.value); });
+      more.appendChild(sel); wrap.appendChild(more);
+    }
+    return wrap;
   }
   function browserGuess() {
     var want = (navigator.languages || [navigator.language || "en"]), l = list();
@@ -189,7 +221,13 @@
     var cfgP = typeof opts.config === "object" && opts.config ? Promise.resolve(opts.config) :
       fetch(opts.config || "/api/config", { cache: "no-store", credentials: "same-origin" }).then(function (r) { return r.json(); });
     var done = false;
-    function go() { if (done) return; done = true; document.documentElement.lang = cur; translateDom(document); run(); }
+    function go() {
+      if (done) return;
+      done = true;
+      document.documentElement.lang = cur;
+      if (opts.dir !== false) document.documentElement.dir = RTL.indexOf(cur) >= 0 ? "rtl" : "ltr";   // graphs1090's page: its own
+      translateDom(document); run();
+    }
     cfgP.catch(function () { return {}; }).then(function (c) {
       c = c || {};
       conf.server = c.lang || "";
@@ -211,6 +249,7 @@
     t: t, tn: tn, num: num, locale: locale, lang: function () { return cur; }, langs: list, name: function (c) { return info(c)[1]; },
     saved: saved, serverLang: function () { return conf.server || ""; }, start: start, translateDom: translateDom,
     picker: picker, chooser: chooser, choose: choose, flag: flag, browserGuess: browserGuess, LANGS: LANGS,
+    rtl: function () { return RTL.indexOf(cur) >= 0; },
     _load: function (lang, catalogue, langs) { cur = lang; cat = catalogue || {}; avail = ["en"].concat(langs || []); }   // the tests
   };
 })();

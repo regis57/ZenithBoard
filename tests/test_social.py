@@ -1888,18 +1888,22 @@ class WeeklyTest(unittest.TestCase):
         self.assertGreaterEqual(sent[1] - sent[0], social.RETRY_AFTER_FAIL_S)
         self.assertEqual(state["summaries"]["weekly"], "2026-W42")
 
-    def run_loop(self, start, hours, results):
-        """The service loop on a Sunday evening. results: {part: [answers in turn]} (the last one repeats)."""
+    def run_loop(self, start, hours, results, events=None, state=None):
+        """The service loop on a Sunday evening. results: {part: [answers in turn]} (the last one repeats). events:
+        [(time, function)], each called once when the clock passes it (a setting changed while it runs)."""
         self.periods = []
+        events = sorted(events or [], key=lambda e: e[0])
         import contextlib
         clock = [start]
-        sent, state = [], warm()
+        sent, state = [], (state if state is not None else warm())
 
         class Stop(Exception):
             pass
 
         def fake_sleep(sec):
             clock[0] += sec
+            while events and events[0][0] <= clock[0]:
+                events.pop(0)[1]()
             if clock[0] > start + hours * 3600:
                 raise Stop()
 
@@ -1917,9 +1921,11 @@ class WeeklyTest(unittest.TestCase):
             setattr(social, name, fake)
         self.addCleanup(setattr, time, "time", time.time); time.time = lambda: clock[0]
         self.addCleanup(setattr, time, "sleep", time.sleep); time.sleep = fake_sleep
-        with contextlib.redirect_stdout(io.StringIO()):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
             with self.assertRaises(Stop):
                 social.cmd_run()
+        self.journal = out.getvalue()
         return sent, state
 
     OK = {"bluesky": "at://did/post/1"}
@@ -1928,6 +1934,57 @@ class WeeklyTest(unittest.TestCase):
     def sunday(self):
         import datetime
         return time.mktime(datetime.datetime(2026, 10, 18, 18, 58).timetuple())
+
+    def at(self, y, mo, d, h, mi):
+        import datetime
+        return time.mktime(datetime.datetime(y, mo, d, h, mi).timetuple())
+
+    def test_a_daily_moved_later_after_it_went_out_waits_for_tomorrow(self):
+        # 0.48.0, the owner on 21 October: the daily went out at 21:00, its time was then moved to 23:35 (twice), and
+        # nothing went out at 23:35. One a day, by design; now said by `social summary` and in the journal
+        import social_week as sw
+        self.c.update(SOCIAL_WEEKLY="0", SOCIAL_DAILY="1", SOCIAL_DAILY_AT="21:00", SOCIAL_DAILY_PARTS="1,2,3,4")
+        ok = [self.OK]
+        moved = lambda: self.c.update(SOCIAL_DAILY_AT="23:35")
+        sent, state = self.run_loop(self.at(2026, 10, 21, 20, 58), 3, {1: ok, 2: ok, 3: ok, 4: ok}, events=[(self.at(2026, 10, 21, 23, 20), moved)])
+        self.assertEqual([p for _, p in sent], [1, 2, 3, 4], "21:00, the four posts; nothing at 23:35")
+        self.assertTrue(all(t < self.at(2026, 10, 21, 21, 10) for t, _ in sent))
+        self.assertIn("daily summary due (every day at 21:00): posts 1,2,3,4 queued, 2 min apart, the first now", self.journal)
+        now = self.at(2026, 10, 21, 23, 37)
+        w = sw.when_words(self.c, state, now, "daily")
+        self.assertIn("last: 2026-10-21 21:0", w)
+        self.assertIn("next: Thu 2026-10-22 23:35", w, "the new time, from tomorrow")
+        # and the next day it goes at the new time
+        sent2, _ = self.run_loop(self.at(2026, 10, 22, 23, 30), 1, {1: ok, 2: ok, 3: ok, 4: ok}, state=state)
+        self.assertEqual([p for _, p in sent2], [1, 2, 3, 4])
+        self.assertTrue(self.at(2026, 10, 22, 23, 35) <= sent2[0][0] < self.at(2026, 10, 22, 23, 36))
+
+    def test_a_daily_set_later_before_it_went_out_goes_at_the_new_time(self):
+        self.c.update(SOCIAL_WEEKLY="0", SOCIAL_DAILY="1", SOCIAL_DAILY_AT="21:00", SOCIAL_DAILY_PARTS="1,3")
+        moved = lambda: self.c.update(SOCIAL_DAILY_AT="23:35")
+        sent, _ = self.run_loop(self.at(2026, 10, 21, 20, 30), 4, {1: [self.OK], 3: [self.OK]},
+                                events=[(self.at(2026, 10, 21, 20, 40), moved)])
+        self.assertEqual([p for _, p in sent], [1, 3], "only the posts picked, in order")
+        self.assertTrue(self.at(2026, 10, 21, 23, 35) <= sent[0][0] < self.at(2026, 10, 21, 23, 36), "at 23:35, not 21:00")
+        self.assertGreaterEqual(sent[1][0] - sent[0][0], social.SECOND_AFTER_S)
+
+    def test_when_each_summary_goes_next(self):
+        import social_week as sw
+        c = dict(self.c, SOCIAL_DAILY="1", SOCIAL_DAILY_AT="21:00", SOCIAL_WEEKLY="1", SOCIAL_WEEKLY_AT="sun 19:00",
+                 SOCIAL_MONTHLY="1", SOCIAL_MONTHLY_AT="1 09:00")
+        wed = self.at(2026, 10, 21, 12, 0)                                   # a Wednesday
+        self.assertEqual(sw.next_due(c, {}, wed, "daily").strftime("%Y-%m-%d %H:%M"), "2026-10-21 21:00")
+        self.assertEqual(sw.next_due(c, {}, wed, "weekly").strftime("%Y-%m-%d %H:%M"), "2026-10-25 19:00")
+        self.assertEqual(sw.next_due(c, {}, wed, "monthly").strftime("%Y-%m-%d %H:%M"), "2026-11-01 09:00")
+        late = self.at(2026, 10, 21, 22, 0)                                  # past its time, not gone yet: now
+        self.assertLess(abs(sw.next_due(c, {}, late, "daily").timestamp() - late), 1)
+        done = {"summaries": {"daily": "2026-10-21", "weekly": "2026-W43", "monthly": "2026-10"}}
+        self.assertEqual(sw.next_due(c, done, late, "daily").strftime("%Y-%m-%d %H:%M"), "2026-10-22 21:00")
+        sun = self.at(2026, 10, 25, 20, 0)
+        self.assertEqual(sw.next_due(c, {}, sun, "weekly").strftime("%Y-%m-%d"), "2026-10-25", "this week's not gone: now")
+        self.assertEqual(sw.next_due(c, {"summaries": {"weekly": "2026-W43"}}, sun, "weekly").strftime("%Y-%m-%d %H:%M"), "2026-11-01 19:00")
+        self.assertIsNone(sw.next_due(dict(c, SOCIAL_DAILY="0"), {}, wed, "daily"))
+        self.assertIn("(off)", sw.when_words(dict(c, SOCIAL_DAILY="0"), {}, wed, "daily"))
 
     def test_four_posts_two_minutes_apart(self):
         # 0.35.0 the second, 0.36.0 the third (military) and the fourth (helicopters, light aircraft, gliders)

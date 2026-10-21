@@ -20,9 +20,9 @@ sh_codes=$(sed -n 's/^ZB_LANG_CODES="\(.*\)"$/\1/p' lib/common.sh)
 py_codes=$(python3 -c 'import sys; sys.path.insert(0, "flightinfo"); import console_actions as a; print(" ".join(a.LANGS))')
 js_codes=$(node -e 'global.window = {}; require("./flightinfo/static/i18n.js"); console.log(window.ZBI18N.LANGS.map(function (l) { return l[0]; }).join(" "))')
 tool_codes="en $(python3 -c 'import sys; sys.path.insert(0, "tools"); import i18n; print(" ".join(i18n.LANGS))')"
-check "the same fourteen codes everywhere"                 '[ "$sh_codes" = "$py_codes" ] && [ "$py_codes" = "$js_codes" ] && [ "$js_codes" = "$tool_codes" ] && [ "$(echo $sh_codes | wc -w)" = 14 ]'
-check "both Chinese scripts, Italian, English with two flags" 'node -e "global.window = {}; require(\"./flightinfo/static/i18n.js\"); var L = window.ZBI18N.LANGS; var f = {}; L.forEach(function (l) { f[l[0]] = l[2].join(\"+\"); }); if (f.en !== \"GB+US\" || f[\"zh-Hans\"] !== \"CN\" || f[\"zh-Hant\"] !== \"TW\" || f.it !== \"IT\" || f[\"pt-BR\"] !== \"BR\") process.exit(1)"'
-check "every flag a picture the wall carries"              'for c in GB US FR DE NL IT ES BR ID RU UA JP KR CN TW; do [ -f "flightinfo/data/flags/$c.png" ] || exit 1; done'
+check "the same twenty-one codes everywhere"              '[ "$sh_codes" = "$py_codes" ] && [ "$py_codes" = "$js_codes" ] && [ "$js_codes" = "$tool_codes" ] && [ "$(echo $sh_codes | wc -w)" = 21 ]'
+check "both Chinese scripts, Italian, the Baltic and Nordic ones, English with two flags, Swahili and Arabic their pictures" 'node -e "global.window = {}; require(\"./flightinfo/static/i18n.js\"); var L = window.ZBI18N.LANGS; var f = {}; L.forEach(function (l) { f[l[0]] = l[2].join(\"+\"); }); if (f.en !== \"GB+US\" || f[\"zh-Hans\"] !== \"CN\" || f[\"zh-Hant\"] !== \"TW\" || f.it !== \"IT\" || f[\"pt-BR\"] !== \"BR\" || f.fi !== \"FI\" || f.et !== \"EE\" || f.lv !== \"LV\" || f.lt !== \"LT\" || f.pl !== \"PL\" || f.sw !== \"@africa\" || f.ar !== \"@arabic\") process.exit(1)"'
+check "every flag a picture the wall carries"              'node -e "global.window = {}; require(\"./flightinfo/static/i18n.js\"); window.ZBI18N.LANGS.forEach(function (l) { l[2].forEach(function (f) { var p = f[0] === \"@\" ? \"flightinfo/static/i18n/flags/\" + f.slice(1) + \".svg\" : \"flightinfo/data/flags/\" + f + \".png\"; if (!require(\"fs\").existsSync(p)) { console.log(p); process.exit(1); } }); })"'
 
 # the review sheets: what is shipped, beside the English, nothing older
 for f in docs/translations/*.csv; do
@@ -47,6 +47,12 @@ with open(t + "/fr.csv", "w", encoding="utf-8-sig", newline="") as fh:
     w = csv.DictWriter(fh, list(rows[0].keys()), delimiter=";")
     w.writeheader(); w.writerows(rows)
 EOF
+ZB_I18N_DIR="$t/cat" ZB_I18N_REVIEW_DIR="$t/rev2" python3 tools/i18n.py apply "$t/fr.csv" --dry > "$t/dry.out" 2>&1
+check "apply --dry: each proposal shown beside the English, nothing changed" 'grep -q "proposed: Créer une sauvegarde" "$t/dry.out" && grep -q "English:  Make a backup" "$t/dry.out" && cmp -s "$t/cat/fr/console.json" flightinfo/static/i18n/fr/console.json'
+skip=$(python3 -c 'import csv,sys; print(next(r["id"] for r in csv.DictReader(open(sys.argv[1], encoding="utf-8-sig"), delimiter=";") if r["english"] == "Make a backup"))' "$t/fr.csv")
+cp -r "$t/cat" "$t/cat-skip"
+ZB_I18N_DIR="$t/cat-skip" ZB_I18N_REVIEW_DIR="$t/rev3" python3 tools/i18n.py apply "$t/fr.csv" --skip "$skip" > "$t/skip.out" 2>&1
+check "apply --skip: a proposal found inaccurate is not taken, and said" 'grep -q "\"Make a backup\": \"Faire une sauvegarde\"" "$t/cat-skip/fr/console.json" && grep -q "checked and not taken" "$t/skip.out"'
 ZB_I18N_DIR="$t/cat" ZB_I18N_REVIEW_DIR="$t/rev2" python3 tools/i18n.py apply "$t/fr.csv" > "$t/apply.out" 2>&1
 check "apply: the correction is taken, the old catalogue kept as .bak" 'grep -q "\"Make a backup\": \"Créer une sauvegarde\"" "$t/cat/fr/console.json" && [ -f "$t/cat/fr/console.json.bak" ]'
 check "apply: a correction losing {name} is refused, and said" 'grep -q "\"{name} is signed in.\": \"{name} est connecté.\"" "$t/cat/fr/console.json" && grep -q "refused: keep the same" "$t/apply.out"'

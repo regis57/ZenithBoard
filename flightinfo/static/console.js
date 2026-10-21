@@ -82,6 +82,11 @@ window.ZBI18N.start({ part: "console" }, function () {
     factual: t("factual"), story: t("story"), board: t("board"), spotter: t("spotter"), lookup: t("lookup") };
   // graphs1090 answers on another port, so another origin: the language goes with the link
   function langQ() { return I.lang() !== "en" ? "?lang=" + encodeURIComponent(I.lang()) : ""; }
+  // the summary's posts by what they show (0.48.0, the owner: "Post 2" alone said nothing)
+  function postName(n) {
+    return { "1": t("Post 1 · The period ↗"), "2": t("Post 2 · Cargo & business jets ↗"), "3": t("Post 3 · Military ↗"),
+      "4": t("Post 4 · General aviation ↗") }[String(n)] || t("Post {n} ↗", { n: n });
+  }
   function word(v) { return Object.prototype.hasOwnProperty.call(WORD, v) ? WORD[v] : (v === undefined || v === null || v === "" ? "?" : String(v)); }
   function dayName(d) {          // mon..sun in the page's language, from the browser's own calendar data
     var i = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"].indexOf(d);
@@ -498,8 +503,8 @@ window.ZBI18N.start({ part: "console" }, function () {
   function inlineTerm(j) {
     var pre = h("pre", { text: termText(j) }), st = pillOf(j);
     var links = j.state === "done" && (j.action === "social-test" || j.action === "summary-test") ? h("div", { "class": "actions" },
-      h("a", { "class": "btn", href: "/social/preview", target: "_blank", rel: "noopener", text: t("The picture ↗") }),
-      j.action === "summary-test" ? ["2", "3", "4"].map(function (n) { return h("a", { "class": "btn", href: "/social/preview" + n, target: "_blank", rel: "noopener", text: t("Post {n} ↗", { n: n }) }); }) : null) : null;
+      h("a", { "class": "btn", href: "/social/preview", target: "_blank", rel: "noopener", text: j.action === "summary-test" ? postName(1) : t("The picture ↗") }),
+      j.action === "summary-test" ? ["2", "3", "4"].map(function (n) { return h("a", { "class": "btn", href: "/social/preview" + n, target: "_blank", rel: "noopener", text: postName(n) }); }) : null) : null;
     // 0.45.1: Tailscale's sign-in link, as a button, while it waits for it (only its own address is taken)
     var tsl = j.action === "tailscale" && j.state !== "done" && /https:\/\/login\.tailscale\.com\/a\/[A-Za-z0-9]+/.exec(j.log || "");
     if (tsl && !links) links = h("div", { "class": "actions ts-signin" }, h("a", { "class": "primary", href: tsl[0], target: "_blank", rel: "noopener noreferrer", text: t("Sign in to Tailscale ↗") }));
@@ -634,7 +639,8 @@ window.ZBI18N.start({ part: "console" }, function () {
           [summaryRow("daily", t("24 hours")), summaryRow("weekly", t("The week")), summaryRow("monthly", t("30 days")),
             on(c.STATS) ? null : h("p", { "class": "note", text: t("Statistics are off: no summary can be made until they are on (Receiver).") }),
             h("div", { "class": "actions" }, btn(t("All summaries"), "summaries"),
-              ["2", "3", "4"].map(function (n) { return h("a", { "class": "btn", href: "/social/preview" + n, target: "_blank", rel: "noopener", text: t("Post {n} ↗", { n: n }) }); })),
+              ["2", "3", "4"].map(function (n) { return h("a", { "class": "btn", href: "/social/preview" + n, target: "_blank", rel: "noopener", text: postName(n) }); })),
+            h("p", { "class": "note", text: t("One summary a day, a week, a month: a time moved later after that one went out applies from the next. Why one did not go out: zenithboard logs social | grep -i summary") }),
             h("p", { "class": "note", text: t("Posting one now stays in the terminal, where you see it first: sudo zenithboard social summary weekly post") })], "w12")
       ];
     },
@@ -789,7 +795,8 @@ window.ZBI18N.start({ part: "console" }, function () {
     if (p === "monthly") dIn = h("input", { type: "number", "class": "day", min: 1, max: 28, value: day || "1", "aria-label": t("Day of the month") });
     var keyAt = "at-" + p, keyParts = "parts-" + p;
     return h("div", { "class": "row" },
-      h("div", { "class": "what" }, h("b", { text: title }), h("span", { text: lit ? t("On: {when}, posts {posts}", { when: day && p === "weekly" ? dayName(day) + " " + time : at, posts: parts.join(", ") }) : t("Off") })),
+      h("div", { "class": "what" }, h("b", { text: title }), h("span", { text: lit ? t("On: {when}, posts {posts}", { when: day && p === "weekly" ? dayName(day) + " " + time : at, posts: parts.join(", ") }) : t("Off") }),
+        lit ? h("span", { "class": "when", text: whenLine(p) }) : null),
       h("div", { "class": "ctl" },
         sw("summary", lit, { period: p }, "summary-" + p, title),
         dIn, tIn,
@@ -805,7 +812,20 @@ window.ZBI18N.start({ part: "console" }, function () {
               run("summary-parts", { period: p, value: next.sort().join(",") }, { key: keyParts });
             } });
         })),
-        h("button", { type: "button", "class": "btn", text: t("Try"), onclick: function () { run("summary-test", { period: p }, { key: "test-" + p, card: S.lastCard }); } })));
+        h("button", { type: "button", "class": "btn", text: t("Try (posts nothing)"), onclick: function () { run("summary-test", { period: p }, { key: "test-" + p, card: S.lastCard }); } })));
+  }
+  // 0.48.0: when that summary last went out and goes next, as the Pi computes it (one a day, a week, a month)
+  function whenLine(p) {
+    var f = S.facts, last = f["sum_" + p + "_last"], next = f["sum_" + p + "_next"];
+    if (last === undefined && next === undefined) return "";
+    var bits = [t("last: {when}", { when: last ? stamp(last) : t("never") })];
+    if (next) bits.push(next === "now" ? t("next: now") : t("next: {when}", { when: stamp(next) }));
+    return bits.join(" · ");
+  }
+  function stamp(v) {           // "2026-10-22 23:35" in the page's language; a day alone ("2026-10-21", a week "2026-W43") as it is
+    var m = /^(\d{4})-(\d\d)-(\d\d) (\d\d):(\d\d)$/.exec(v || "");
+    if (!m) return v;
+    try { return new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]).toLocaleString(I.locale(), { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }); } catch (e) { return v; }
   }
   function pages() {
     var f = S.facts, c = S.cfg, hh = host(), list = [];
@@ -922,8 +942,8 @@ window.ZBI18N.start({ part: "console" }, function () {
       body.appendChild(h("div", { "class": "term" }, h("div", { "class": "th" }, ico("terminal"), h("b", { text: j.label }), termPill), termPre));
       drawTerm();
       if (j.state === "done" && (j.action === "social-test" || j.action === "summary-test")) {
-        body.appendChild(h("div", { "class": "actions" }, h("a", { "class": "btn", href: "/social/preview", target: "_blank", rel: "noopener", text: t("The picture ↗") }),
-          j.action === "summary-test" ? ["2", "3", "4"].map(function (n) { return h("a", { "class": "btn", href: "/social/preview" + n, target: "_blank", rel: "noopener", text: t("Post {n} ↗", { n: n }) }); }) : null));
+        body.appendChild(h("div", { "class": "actions" }, h("a", { "class": "btn", href: "/social/preview", target: "_blank", rel: "noopener", text: j.action === "summary-test" ? postName(1) : t("The picture ↗") }),
+          j.action === "summary-test" ? ["2", "3", "4"].map(function (n) { return h("a", { "class": "btn", href: "/social/preview" + n, target: "_blank", rel: "noopener", text: postName(n) }); }) : null));
       }
     }
     var a = S.activity;

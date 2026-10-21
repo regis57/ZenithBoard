@@ -275,6 +275,15 @@ summary_valid_parts() {   # "all", or 1 to 4 comma-separated -> "1,3"; non-zero 
   [[ "$v" =~ ^[1-4](,[1-4])*$ ]] || return 1
   printf '%s' "$v" | tr ',' '\n' | sort -u | paste -sd, -
 }
+# 0.48.0: when each summary last went out and when it goes next, read from the service's state (root or the service's
+# user only: the state folder is theirs). One per day, week or month: a time moved later on a day whose summary
+# already went out applies from the next one, and this says so (the owner, 21 October: 21:00 then 23:35, nothing).
+summary_when() {   # summary_when [PERIOD] -> "last: ...   next: ..." (all three, and the queue, without PERIOD)
+  local out
+  [ "$(id -u)" -eq 0 ] || [ "$(id -un)" = "$ZB_USER" ] || return 0
+  out=$(python3 "$SOCIAL_PY" summary-when 2>/dev/null) || return 0
+  if [ -n "${1:-}" ]; then printf '%s\n' "$out" | sed -n "s/^$1 //p"; else printf '%s\n' "$out"; fi
+}
 summary_line() {   # one line: the summary, on or off, when and which posts
   local p=$1 k; k=$(summary_key "$p")
   if [ "$(cfg_get "$k" 0)" = 1 ]; then
@@ -287,7 +296,14 @@ social_summary() {   # social_summary [PERIOD [on|off|at VALUE|parts LIST]]
   local p=${1:-} what=${2:-} k v
   if [ -z "$p" ]; then
     echo "Summaries (times on this Pi's clock; posts: 1 the period, 2 cargo and business jets, 3 military, 4 general aviation):"
-    for p in $SUMMARY_PERIODS; do echo "  $(summary_line "$p")"; done
+    for p in $SUMMARY_PERIODS; do
+      echo "  $(summary_line "$p")"
+      v=$(summary_when "$p"); [ -z "$v" ] || echo "           $v"
+    done
+    v=$(summary_when | sed -n 's/^queue //p'); [ -z "$v" ] || echo "  In the queue: $v"
+    [ "$(id -u)" -eq 0 ] || echo "  (with sudo: when each last went out and when it goes next)"
+    echo "One summary a day, a week or a month: a time moved later on a day whose summary already went out applies from the next."
+    echo "Why one did not go out:  zenithboard logs social | grep -i summary"
     echo "Change:  sudo zenithboard social summary daily|weekly|monthly on|off|at TIME|parts LIST|test|post"
     return 0
   fi
@@ -309,6 +325,10 @@ social_summary() {   # social_summary [PERIOD [on|off|at VALUE|parts LIST]]
     *) echo "Usage: zenithboard social summary $p on|off|at TIME|parts LIST|test|post[2-4]"; return 1 ;;
   esac
   echo "Summary of $(summary_word "$p"): $(summary_line "$p")"
+  v=$(summary_when "$p"); [ -z "$v" ] || echo "  $v"
+  if [ "$what" = at ] && [ "$(cfg_get "$k" 0)" = 1 ] && [[ "$v" == *"last: $(date +%Y-%m-%d)"* ]] && [ "$p" = daily ]; then
+    echo "Today's already went out: one a day, so the new time applies from tomorrow. To post one now: sudo zenithboard social summary daily post"
+  fi
   if [ "$(cfg_get "$k" 0)" = 1 ]; then
     [ "$(cfg_get STATS 0)" = 1 ] || echo "It is made from the statistics, which are OFF: nothing will be posted until  sudo zenithboard stats on"
     [ "$(social_state)" = on ] || echo "Social sharing itself is OFF: the service that posts it starts with  sudo zenithboard social on"

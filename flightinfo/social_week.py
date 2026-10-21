@@ -134,10 +134,55 @@ def due(c, state, now, period="weekly"):
         return False
     if (lt.hour, lt.minute) < (hour, minute):
         return False
+    return done_for(state, period) != cycle_key(period, now)     # 0.33.0 to 0.37.0 kept the weekly key as "weekly"
+
+
+def next_due(c, state, now, period):
+    """0.48.0: when that summary goes out next, as a datetime; now when it is due now; None when it is off. One per
+    cycle (day, week, month): a time moved later on a day whose summary already went out applies from the next one (the
+    owner, 21 October: daily moved from 21:00 to 23:35 after the 21:00 one had gone, and nothing went out at 23:35)."""
+    if not is_on(c, period):
+        return None
+    if due(c, state, now, period):
+        return datetime.datetime.fromtimestamp(now)
+    day, hour, minute = at_of(c, period)
+    base = datetime.datetime.fromtimestamp(now)
+    for i in range(0, 62):
+        d = (base + datetime.timedelta(days=i)).replace(hour=hour, minute=minute, second=0, microsecond=0)
+        if period == "weekly" and d.weekday() != day:
+            continue
+        if period == "monthly" and d.day != day:
+            continue
+        if d.timestamp() < now:
+            continue
+        if done_for(state, period) == cycle_key(period, d.timestamp()):
+            continue
+        return d
+    return None
+
+
+def done_for(state, period):
+    """The cycle (day, ISO week, month) whose summary was already put in the queue, or None."""
     done = (state.get("summaries") or {}).get(period)
     if period == "weekly" and not done:
-        done = state.get("weekly")               # 0.33.0 to 0.37.0 kept the weekly key here
-    return done != cycle_key(period, now)
+        done = state.get("weekly")
+    return done
+
+
+def when_words(c, state, now, period):
+    """One line for `social summary`: when it last went out, when it goes out next (0.48.0)."""
+    last_at = (state.get("summaries_at") or {}).get(period)
+    done = done_for(state, period)
+    if isinstance(last_at, (int, float)):
+        last = "last: %s" % datetime.datetime.fromtimestamp(last_at).strftime("%Y-%m-%d %H:%M")
+    else:
+        last = "last: %s" % (done or "never")
+    nxt = next_due(c, state, now, period)
+    if nxt is None:
+        return last + ("" if is_on(c, period) else "   (off)")
+    if abs(nxt.timestamp() - now) < 61:
+        return last + "   next: now (due: in the queue at the service's next look)"
+    return last + "   next: " + nxt.strftime("%a %Y-%m-%d %H:%M")
 
 
 # --------------------------------------------------------------------------- what

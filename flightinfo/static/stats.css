@@ -124,3 +124,8 @@ th { font: 400 11px ui-monospace, Menlo, Consolas, monospace; letter-spacing: .1
 .mil .row .b { display: block; }
 /* 0.47.0: the period and the language side by side, top right */
 .top-r { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+/* 0.48.0: right to left (Arabic): the lists and the table mirrored; the charts keep their axes left to right */
+[dir="rtl"] .ranks li .name i { margin-left: 0; margin-right: 8px; }
+[dir="rtl"] .mil .row .n { text-align: left; }
+[dir="rtl"] th, [dir="rtl"] td { text-align: right; padding: 5px 0 5px 10px; }
+[dir="rtl"] svg, [dir="rtl"] pre, [dir="rtl"] code { direction: ltr; }

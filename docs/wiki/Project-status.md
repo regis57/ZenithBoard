@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **21 October 2026**, version **0.47.0**.
+Last updated: **22 October 2026**, version **0.48.0**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -63,6 +63,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 21 October 2026, 23:35 | The daily summary, moved from 21:00 to 23:35 after the 21:00 one had gone out (twice, from the console), did not go out at 23:35; *Try* drew the posts, as it should, without posting. One summary a day by design, but nothing said so: 0.48.0 shows when each last went out and goes next (`sudo zenithboard social summary`, the console) and logs when one is queued. The owner read the French console ("pas dégueulasse"), asked for every language now, Finnish, Estonian, Latvian, Lithuanian, Polish, Swahili and Arabic added (Hausa and Yoruba left out, 90% not reachable), a first page not crowded with flags, and the summary posts named in the console |
 | 21 October 2026, 23:06 | The owner's answers to the translation plan: both Chinese scripts, English's flag the UK's and the US's merged, no *unreviewed* mark but a review document per language with the English as reference (corrections he puts back), the terminal output in English, and Italian too. 0.47.0: the framework and French on the console, `/stats` and graphs1090's page, previewed at desk and phone width with a stand-in |
 | 21 October 2026, 22:25 | Tailscale works on the reference Pi ("ça marche"). The owner asked for it in the console too, and opened the next project, translations, starting with an analysis: [Translation plan](Translation-plan), measured on 0.45.0 (about 1 000 strings, 8 000 words per language; Noto CJK +91 MB on the card and +4.4 MB while a card is drawn). 0.46.0: *System → Tailscale* in the console, previewed with a stand-in |
 | 21 October 2026, 21:42 | The owner asked for Tailscale in the menu, with how to use it and how to take it away. 0.45.0: *3 Connectivity → 4 Tailscale* and `zenithboard tailscale on\|off\|status\|remove\|console`, the install steps of Tailscale's own page (pkgs.tailscale.com, read the same evening), tested against stand-ins; not yet run on the Pi |

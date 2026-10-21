@@ -189,6 +189,8 @@ console_state_lines() {
     "$(watchdog_state)" "$(netwatch_state)" "$(keeplogs_state)" "$(wifi_harden_state)" "$(patches_state)" "$(graphs_state)" \
     "$( [ "$(cfg_get LOG_AUTOCLEAN 0)" = 1 ] && echo on || echo off)"
   printf 'bluesky=%s\n' "$(social_account)"
+  # 0.48.0: when each summary last went out and goes next, beside its row in Sharing (the owner, 21 October)
+  [ -f "${SOCIAL_PY:-}" ] && python3 "$SOCIAL_PY" summary-when --facts 2>/dev/null
   if declare -F ts_state >/dev/null; then                 # 0.45.1: Tailscale on the overview and its own card
     printf 'tailscale=%s\n' "$(ts_state)"
     [ "$(ts_state)" != on ] || printf 'tailscale_ip=%s\ntailscale_name=%s\n' "$(ts_ip)" "$(ts_name)"

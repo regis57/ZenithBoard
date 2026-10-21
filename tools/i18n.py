@@ -11,8 +11,12 @@ The English text is the key. This tool finds every key in the pages' own files, 
   python3 tools/i18n.py sync LANG            add the new keys (empty: the page shows the English), drop the old ones
   python3 tools/i18n.py review LANG          write docs/translations/LANG.csv: the English beside the translation, an
                                              empty column for the correction, one for a comment
-  python3 tools/i18n.py apply FILE.csv       take the corrections of a review sheet back into the catalogues (a copy of
-                                             each catalogue changed is kept as .bak); the sheet is then written again
+  python3 tools/i18n.py apply FILE.csv [--dry] [--skip ID,ID]
+                                             take the corrections of a review sheet back into the catalogues (a copy of
+                                             each catalogue changed is kept as .bak); the sheet is then written again.
+                                             --dry lists each proposal (the English, today's, the proposed) and changes
+                                             nothing: every proposal is checked against the English before it goes in;
+                                             --skip names the rows found inaccurate, which are then not taken (0.48.0)
 
 Pages: console (console.js, console.html, the action labels and the answers of console_actions.py and console.py),
 stats (stats.js, stats.html, the period names the wall's server sends), graphs (graphs1090's page). i18n.js's own
@@ -32,7 +36,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STATIC = os.path.join(ROOT, "flightinfo", "static")
 CATALOGUES = os.environ.get("ZB_I18N_DIR") or os.path.join(STATIC, "i18n")             # the tests use copies
 REVIEW = os.environ.get("ZB_I18N_REVIEW_DIR") or os.path.join(ROOT, "docs", "translations")
-LANGS = ("fr", "de", "nl", "it", "es", "pt-BR", "id", "ru", "uk", "ja", "ko", "zh-Hans", "zh-Hant")
+LANGS = ("fr", "de", "nl", "it", "es", "pt-BR", "pl", "fi", "et", "lv", "lt", "id", "sw", "ru", "uk", "ar", "ja", "ko",
+         "zh-Hans", "zh-Hant")
 PAGES = {
     "console": ["flightinfo/static/i18n.js", "flightinfo/static/console.html", "flightinfo/static/console.js",
                 "flightinfo/console_actions.py", "flightinfo/console.py"],
@@ -320,7 +325,7 @@ def read_sheet(path):
     return list(csv.DictReader(io.StringIO(text), dialect=dialect))
 
 
-def cmd_apply(path):
+def cmd_apply(path, dry=False, skip=()):
     lang = os.path.splitext(os.path.basename(path))[0].split(".")[0]
     if lang not in LANGS:
         print("The file's name says its language (fr.csv, pt-BR.csv): %s is not one" % lang)
@@ -330,6 +335,9 @@ def cmd_apply(path):
     for r in rows:
         fix = (r.get("correction") or "").strip()
         if not fix:
+            continue
+        if (r.get("id") or "") in skip:
+            refused.append((r.get("id"), "checked and not taken: not accurate for the English (%s)" % fix))
             continue
         page_field = (r.get("page") or "").strip()
         page = page_field.split(" ")[0]
@@ -348,14 +356,29 @@ def cmd_apply(path):
         if not form and shape(fix) != want:
             refused.append((r.get("id"), "keep the same {placeholders} and <tags> as the English: %s %s" % want))
             continue
+        if dry:
+            print("%s\n  English:  %s\n  now:      %s\n  proposed: %s%s" % (
+                r.get("id"), eng, json.dumps(cats[page][key], ensure_ascii=False) if form else cats[page][key], fix,
+                ("\n  comment:  " + r["comment"]) if (r.get("comment") or "").strip() else ""))
+            continue
+        old = cats[page][key]
         if form:
             v = cats[page][key] if isinstance(cats[page][key], dict) else {"other": cats[page][key]}
             v[form.group(1)] = fix
             cats[page][key] = v
         else:
             cats[page][key] = fix
+            for other in cats:        # the same English on another page, translated the same way: corrected there too
+                if other != page and cats[other].get(key) == old:
+                    cats[other][key] = fix
+                    changed.setdefault(other, 0)
+                    changed[other] += 1
         changed.setdefault(page, 0)
         changed[page] += 1
+    if dry:
+        for rid, why in refused:
+            print("row %s would be refused: %s" % (rid, why))
+        return 0
     for page, n in changed.items():
         if os.path.exists(cat_path(lang, page)):
             shutil.copyfile(cat_path(lang, page), cat_path(lang, page) + ".bak")
@@ -385,8 +408,16 @@ def main(argv):
         return cmd_sync(rest[0])
     if cmd == "review" and len(rest) == 1:
         return cmd_review(rest[0])
-    if cmd == "apply" and len(rest) == 1:
-        return cmd_apply(rest[0])
+    if cmd == "apply" and rest:
+        skip = ()
+        if "--skip" in rest:
+            i = rest.index("--skip")
+            skip = tuple(x for x in (rest[i + 1] if i + 1 < len(rest) else "").split(",") if x)
+            rest = rest[:i] + rest[i + 2:]
+        dry = "--dry" in rest
+        rest = [x for x in rest if x != "--dry"]
+        if len(rest) == 1:
+            return cmd_apply(rest[0], dry=dry, skip=skip)
     print(__doc__)
     return 1
 

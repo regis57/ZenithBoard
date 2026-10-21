@@ -268,3 +268,25 @@ input.day { width: 4.5em; }
 .gate-lang-pick { align-self: flex-end; margin-bottom: -6px; }
 .gate-lang-pick:empty { display: none; }
 .bar-lang { display: inline-flex; align-items: center; margin-right: 4px; }
+.row .what span.when { color: var(--faint); font-size: 12px; margin-top: 2px; }
+/* 0.48.0: right to left (Arabic): the side bar on the right, the drawer from the left, the switches mirrored; what
+   the Pi prints (the terminal, commands) stays left to right */
+[dir="rtl"] .side { inset: 0 0 0 auto; border-right: 0; border-left: 1px solid var(--line); }
+[dir="rtl"] .main { margin-left: 0; margin-right: var(--side); }
+[dir="rtl"] .nav a .dot { margin-left: 0; margin-right: auto; }
+[dir="rtl"] .bar-tools { margin-left: 0; margin-right: auto; }
+[dir="rtl"] .bar-lang { margin-right: 0; margin-left: 4px; }
+[dir="rtl"] .badge { left: auto; right: 22px; }
+[dir="rtl"] .busy::before { margin-right: 0; margin-left: 10px; }
+[dir="rtl"] select { padding-right: 10px; padding-left: 26px; }
+[dir="rtl"] button.page, [dir="rtl"] .list button.li { text-align: right; }
+[dir="rtl"] .list button.li.sel { box-shadow: inset -3px 0 0 var(--on); padding-left: 0; padding-right: 10px; }
+[dir="rtl"] .drawer-panel { right: auto; left: 0; border-left: 0; border-right: 1px solid var(--line2); }
+[dir="rtl"] .sw::after { left: 28px; }
+[dir="rtl"] .sw.on::after { left: 4px; }
+[dir="rtl"] pre, [dir="rtl"] code, [dir="rtl"] .mono-list, [dir="rtl"] input[type="number"], [dir="rtl"] input[type="time"] { direction: ltr; text-align: left; }
+@media (max-width: 760px) {
+  [dir="rtl"] .main { margin-right: 0; }
+  [dir="rtl"] .row .ctl.end { margin-left: 0; margin-right: auto; }
+  [dir="rtl"] .drawer-panel { border-right: 0; }
+}

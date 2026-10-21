@@ -9,8 +9,9 @@
   var I = window.ZBI18N, conf = window.ZB_I18N_CONF || {};
   var wall = location.protocol + "//" + location.hostname + ":" + (conf.wallPort || 8080);
   if (!I) return draw(function (s) { return s; });
-  I.start({ part: "graphs", base: "zb-i18n/", config: { lang: conf.lang || "", langs: conf.langs || [] }, flagBase: wall + "/flags/" },
-    function () { draw(I.t); });
+  // dir false: graphs1090's own page keeps its layout; only ZenithBoard's brand turns right to left (0.48.0)
+  I.start({ part: "graphs", base: "zb-i18n/", config: { lang: conf.lang || "", langs: conf.langs || [] }, flagBase: wall + "/flags/",
+    staticBase: wall + "/static/", dir: false }, function () { draw(I.t); });
   function draw(t) {
     var NS = "http://www.w3.org/2000/svg";
     function dots(text, pitch) {
@@ -33,6 +34,7 @@
     var h1 = document.querySelector("h1");
     if (h1 && window.Font5x7) {
       var brand = document.createElement("div"); brand.className = "zb-brand";
+      if (I && I.rtl()) brand.dir = "rtl";
       var name = document.createElement("div"); name.setAttribute("role", "img"); name.setAttribute("aria-label", "ZenithBoard"); name.appendChild(dots("ZENITHBOARD", 10));
       var sub = document.createElement("div"); sub.className = "zb-sub"; sub.setAttribute("role", "img"); sub.setAttribute("aria-label", t("Graphs")); var gw = t("GRAPHS"); sub.appendChild(dots(/^[A-Z0-9 ]+$/.test(gw) ? gw : "GRAPHS", 10));
       var links = document.createElement("div"); links.className = "zb-links";

@@ -78,8 +78,10 @@ code is what signs a phone in meanwhile.
 
 ## Languages
 
-0.47.0: **English and French**, more to come ([Translation plan](Translation-plan)). The first visit asks, by each
-language's own name and flag, before the password; once signed in, that choice becomes the Pi's default
+**21 languages** (French 0.47.0, the others 0.48.0): English, French, German, Dutch, Italian, Spanish, Portuguese
+(Brazil), Polish, Finnish, Estonian, Latvian, Lithuanian, Indonesian, Swahili, Russian, Ukrainian, Arabic (right to
+left), Japanese, Korean, Chinese (Simplified and Traditional) — [Translating](Translating). The first visit asks before
+the password: the browser's own language and English as two buttons, the others in one list; once signed in, that choice becomes the Pi's default
 (`CONSOLE_LANG`) for every browser that did not choose. **The flag at the top** (here, on `/stats` and on graphs1090's
 page) changes it for that browser only. The Pi's default: *System → Language*, `sudo zenithboard console lang fr`, or
 the menu (*7 Options → 4 Web console → 7*). What the Pi prints — the output in the cards, *Activity*, the terminal —
