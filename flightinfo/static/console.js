@@ -9,7 +9,7 @@
   var $ = function (id) { return document.getElementById(id); };
   var S = {
     session: null, cfg: {}, facts: {}, factsAt: 0, catalog: {}, sections: [], section: "overview",
-    jobs: {}, pending: {}, wanted: {}, inline: {}, drawerJob: null, activity: null, sessions: null, warnedQueue: {}
+    jobs: {}, pending: {}, wanted: {}, inline: new Map(), drawerJob: null, activity: null, sessions: null, warnedQueue: {}
   };
   var SECTION_ICON = { overview: "overview", wall: "wall", receiver: "antenna", sharing: "share", reliability: "shield", system: "gear" };
   var THEME_HEX = { amber: "#ffb000", green: "#39ff6a", red: "#ff3b30", white: "#e8e8e8", turquoise: "#00d6d7" };
@@ -361,7 +361,7 @@
         S.jobs[id] = { id: id, action: action, label: opts.label || spec.label, params: params || {}, state: "queued", log: "", next: 0, key: key, quiet: opts.quiet };
         // 0.40.2: what a button shows appears in the card it was clicked in (the owner: "I click, but where do I look?");
         // a change that takes minutes, or a button outside a card, opens the Activity drawer as before
-        if (!opts.quiet && !opts.noDrawer && flags.indexOf("read") >= 0 && opts.card) { S.inline[S.section] = { id: id, card: opts.card }; draw(); }
+        if (!opts.quiet && !opts.noDrawer && flags.indexOf("read") >= 0 && opts.card) { S.inline.set(S.section, { id: id, card: opts.card }); draw(); }
         else if (!opts.quiet && !opts.noDrawer && (flags.indexOf("read") >= 0 || flags.indexOf("long") >= 0 || opts.show)) openDrawer(id);
         return follow(id);
       }).catch(function () {
@@ -448,7 +448,7 @@
       h("div", { "class": "ctl" + (end ? " end" : "") }, ctl));
   }
   function card(title, icon, lead, body, width) {
-    var shown = S.inline[S.section], j = shown && shown.card === title && S.jobs[shown.id];
+    var shown = S.inline.get(S.section), j = shown && shown.card === title && S.jobs[shown.id];
     return h("section", { "class": "card" + (width ? " " + width : ""), "data-title": title }, h("h2", null, icon ? ico(icon) : null, title),
       lead ? h("p", { "class": "lead", text: lead }) : null, body, j ? inlineTerm(j) : null);
   }
@@ -461,7 +461,7 @@
     var box = h("div", { "class": "term inline", id: "iterm-" + j.id },
       h("div", { "class": "th" }, ico("terminal"), h("b", { text: j.label + (j.params && j.params.value ? ": " + j.params.value : "") }), h("span", { "class": "pill " + st[0], text: st[1] }),
         h("button", { type: "button", "class": "ghost", title: "Open in Activity", text: "⤢", onclick: function () { openDrawer(j.id); } }),
-        h("button", { type: "button", "class": "ghost", "aria-label": "Close", text: "×", onclick: function () { delete S.inline[S.section]; draw(); } })),
+        h("button", { type: "button", "class": "ghost", "aria-label": "Close", text: "×", onclick: function () { S.inline.delete(S.section); draw(); } })),
       pre, links);
     setTimeout(function () { pre.scrollTop = pre.scrollHeight; }, 0);
     return box;
