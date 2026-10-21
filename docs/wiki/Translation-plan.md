@@ -2,9 +2,23 @@
 
 The owner's next project (21 October 2026): the web console, the statistics page, graphs1090's page, and the Bluesky
 posts and their pictures in **French, German, Dutch, Indonesian, Spanish, Portuguese (Brazil), Russian, Chinese,
-Korean, Japanese and Ukrainian**, chosen at the console's first sign-in or from flags at the top; the Linux menu stays
+Korean, Japanese and Ukrainian** (and Italian, added with the owner's answers), chosen at the console's first sign-in or from flags at the top; the Linux menu stays
 in English. And, in the posts, **your own message** assembled with ready-made ADS-B tags. This page is the analysis
-asked for first: is it feasible, what can break, what it costs the Pi. **Nothing here is built yet.**
+asked for first: is it feasible, what can break, what it costs the Pi.
+
+**Where it stands**: phase 1 is out in **0.47.0** — the framework and **French**, on the console, the statistics page
+and graphs1090's page; the language asked at the console's first visit and a flag at the top of every page. How to
+correct a language: [Translating](Translating).
+
+## The owner's answers (21 October 2026, 23:06)
+
+* **Chinese: both**, Simplified (`zh-Hans`, China's flag) and Traditional (`zh-Hant`, Taiwan's flag).
+* **English: the two flags merged**, the United Kingdom's and the United States', cut along the diagonal.
+* **No *unreviewed* mark**: instead, per language, a document with the English as the reference where people write
+  their local corrections, which the owner puts back: the review sheets `docs/translations/<lang>.csv` and
+  `tools/i18n.py apply` ([Translating](Translating)).
+* **The terminal output stays in English**: yes.
+* **Italian too.**
 
 ## In short
 
@@ -18,9 +32,9 @@ asked for first: is it feasible, what can break, what it costs the Pi. **Nothing
   only when one of those three is chosen for the posts.
 * **Regressions**: kept in check by the English text staying the key (gettext style), a test of every catalogue, and
   previews in three scripts (French, Russian, Japanese) at desk and phone width before each merge.
-* **Translations are machine-made** (by the session that builds them) and **marked unreviewed** in the language menu
-  until a native speaker has read them. Aviation words (callsign, squawk, MLAT) are checked against each language's
-  usage, not guessed.
+* **Translations are machine-made** (by the session that builds them), and **each language has a review sheet** where a
+  native speaker corrects them (the owner's choice over an *unreviewed* mark). Aviation words (callsign, squawk, MLAT)
+  are checked against each language's usage, not guessed.
 
 ## What is to be translated (measured, 0.45.0)
 
@@ -124,17 +138,18 @@ with plausible values is refused. Several templates rotate, in order or at rando
 
 1. **The framework and French** — the console, the statistics page, graphs1090's page; the language at first sign-in
    and in the top bar. French first: the owner reads it, so the framework is judged on a real translation.
-2. **German, Spanish, Dutch, Portuguese (Brazil), Indonesian** — Latin script, nothing new to draw.
+2. **German, Spanish, Dutch, Italian, Portuguese (Brazil), Indonesian** — Latin script, nothing new to draw.
 3. **The posts**: `SOCIAL_LANG`, the five post styles, the summaries and their cards, in the languages done so far;
    **your own templates and their tags**.
 4. **Russian and Ukrainian** — Cyrillic in the dot font for the pictures.
-5. **Japanese, Korean, Chinese** — Noto CJK for the cards on demand; the dot pictures' labels in English.
+5. **Japanese, Korean, Chinese (Simplified and Traditional)** — Noto CJK for the cards on demand; the dot pictures'
+   labels in English.
 
-Each step its own release, previewed, its translations marked unreviewed until read by a native speaker.
+Each step its own release, previewed, with its review sheets. Step 1 is done (0.47.0).
 
-## Questions for the owner
+## What 0.47.0 measured
 
-* Chinese: simplified (mainland) or traditional (Taiwan, Hong Kong), or both?
-* English's flag: the United Kingdom's or the United States'?
-* May the language list carry a small *unreviewed* mark until someone reads each language?
-* The console's terminal output stays in English (it is the Linux side): agreed?
+* **About 600 keys** for French across the three pages (console 490, statistics 90, graphs1090 25): 60 KB of catalogues,
+  one fetched per page load; nothing held by the wall's server, which only lists which languages it has.
+* The pages stay one script each: the console waits for its catalogue (a few KB, on the home network) before drawing;
+  a missing or broken catalogue shows the page in English.

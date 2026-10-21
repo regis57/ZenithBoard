@@ -3,10 +3,13 @@
 // One section on screen at a time (a side bar on a computer, tabs at the bottom of a phone), the wall's colour on
 // black. Every change is one action from the Pi's fixed list (flightinfo/console_actions.py), run by the Pi's root
 // helper as the same `zenithboard` command as over SSH; what it prints is shown in the Activity drawer as it comes.
-// Reads /console/api/*; draws nothing it was not told by the Pi.
-(function () {
+// Reads /console/api/*; draws nothing it was not told by the Pi. 0.47.0: started once its language is known
+// (flightinfo/static/i18n.js), so every word below is already in it.
+window.ZBI18N.start({ part: "console" }, function () {
   "use strict";
   var $ = function (id) { return document.getElementById(id); };
+  // 0.47.0: every word shown goes through t() (the English text is the key; flightinfo/static/i18n.js)
+  var I = window.ZBI18N, t = I.t, tn = I.tn, num = I.num;
   var S = {
     session: null, cfg: {}, facts: {}, factsAt: 0, catalog: {}, sections: [], section: "overview",
     jobs: {}, pending: {}, wanted: {}, inline: new Map(), drawerJob: null, activity: null, sessions: null, warnedQueue: {}
@@ -32,7 +35,8 @@
     phone: '<rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M11 18.5h2"/>',
     plane: '<path d="M10.5 3.5c0-.8.7-1.5 1.5-1.5s1.5.7 1.5 1.5V9l7 4v2l-7-2v4.5l2.5 2V21L12 20l-4 1v-1.5l2.5-2V13l-7 2v-2l7-4z"/>',
     terminal: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M13 15h4"/>',
-    power: '<path d="M12 3v8"/><path d="M6.3 7a8 8 0 1 0 11.4 0"/>'
+    power: '<path d="M12 3v8"/><path d="M6.3 7a8 8 0 1 0 11.4 0"/>',
+    globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 3.8 5.5 3.8 9s-1.3 6.5-3.8 9c-2.5-2.5-3.8-5.5-3.8-9s1.3-6.5 3.8-9z"/>'
   };
   function ico(name) {
     var s = document.createElement("span");
@@ -63,20 +67,34 @@
   function host() { return location.hostname.indexOf(":") >= 0 ? "[" + location.hostname + "]" : location.hostname; }
   function dur(s) {
     s = Math.max(0, Math.round(s));
-    if (s < 90) return s + " s";
-    if (s < 5400) return Math.round(s / 60) + " min";
-    if (s < 172800) return Math.round(s / 3600) + " h";
-    return Math.floor(s / 86400) + " d " + Math.round((s % 86400) / 3600) + " h";
+    if (s < 90) return t("{n} s", { n: s });
+    if (s < 5400) return t("{n} min", { n: Math.round(s / 60) });
+    if (s < 172800) return t("{n} h", { n: Math.round(s / 3600) });
+    return t("{d} d {h} h", { d: Math.floor(s / 86400), h: Math.round((s % 86400) / 3600) });
   }
-  function ago(t) { return t ? dur(Date.now() / 1000 - t) + " ago" : "never"; }
-  function size(mb) { mb = Number(mb); if (!(mb >= 0)) return "–"; return mb >= 2048 ? (mb / 1024).toFixed(1) + " GB" : Math.round(mb) + " MB"; }
-  function clock(t) { var d = new Date(t * 1000); return ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2); }
+  function ago(at) { return at ? t("{time} ago", { time: dur(Date.now() / 1000 - at) }) : t("never"); }
+  function size(mb) { mb = Number(mb); if (!(mb >= 0)) return "–"; return mb >= 2048 ? t("{n} GB", { n: num(mb / 1024, 1) }) : t("{n} MB", { n: num(mb, 0) }); }
+  // words the Pi answers in English (states, colours, choices), shown in the page's language
+  var WORD = { on: t("on"), off: t("off"), running: t("running"), queued: t("queued"), refused: t("refused"), done: t("done"),
+    "not installed": t("not installed"), posting: t("posting"), amber: t("amber"), green: t("green"), red: t("red"), white: t("white"),
+    turquoise: t("turquoise"), metric: t("metric"), imperial: t("imperial"), dots: t("dot matrix"), flap: t("split-flap"), world: t("world"),
+    us: t("United States"), daily: t("daily"), weekly: t("weekly"), monthly: t("monthly"),
+    factual: t("factual"), story: t("story"), board: t("board"), spotter: t("spotter"), lookup: t("lookup") };
+  // graphs1090 answers on another port, so another origin: the language goes with the link
+  function langQ() { return I.lang() !== "en" ? "?lang=" + encodeURIComponent(I.lang()) : ""; }
+  function word(v) { return Object.prototype.hasOwnProperty.call(WORD, v) ? WORD[v] : (v === undefined || v === null || v === "" ? "?" : String(v)); }
+  function dayName(d) {          // mon..sun in the page's language, from the browser's own calendar data
+    var i = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"].indexOf(d);
+    if (i < 0) return d;
+    try { return new Date(Date.UTC(2024, 0, 1 + i)).toLocaleDateString(I.locale(), { weekday: "short", timeZone: "UTC" }); } catch (e) { return d; }
+  }
+  function clock(at) { var d = new Date(at * 1000); return ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2); }
 
   var toastTimer = null;
   function toast(msg, bad) {
-    var t = $("toast");
-    t.textContent = msg; t.className = "toast" + (bad ? " bad" : ""); t.hidden = false;
-    clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.hidden = true; }, bad ? 7000 : 3500);
+    var el = $("toast");
+    el.textContent = msg; el.className = "toast" + (bad ? " bad" : ""); el.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(function () { el.hidden = true; }, bad ? 7000 : 3500);
   }
 
   // ---- the brand: the name in the 5 x 7 dots of the wall, the unlit ones faint behind (as on /stats)
@@ -125,13 +143,14 @@
   function signedOut() {
     S.session = null;
     $("app").hidden = true; closeDrawer(); closeModal();
-    gate("login", "You were signed out (the session ended, or someone signed everyone out).");
+    gate("login", t("You were signed out (the session ended, or someone signed everyone out)."));
   }
 
   // ---- before signing in
   function gate(which, msg) {
     $("gate").hidden = false; $("app").hidden = true;
-    ["gate-off", "login", "gate-nopw", "gate-pairing", "gate-help"].forEach(function (id) { $(id).hidden = true; });
+    ["gate-off", "login", "gate-nopw", "gate-pairing", "gate-help", "gate-lang"].forEach(function (id) { $(id).hidden = true; });
+    if (which === "lang") $("gate-lang").hidden = false;
     if (which === "off") $("gate-off").hidden = false;
     if (which === "pairing") $("gate-pairing").hidden = false;
     if (which === "nopw") { $("gate-nopw").hidden = false; $("gate-help").hidden = false; }
@@ -142,7 +161,7 @@
   }
   $("pw-eye").addEventListener("click", function () {
     var p = $("pw"); p.type = p.type === "password" ? "text" : "password";
-    this.setAttribute("aria-label", p.type === "password" ? "Show the password" : "Hide the password");
+    this.setAttribute("aria-label", p.type === "password" ? t("Show the password") : t("Hide the password"));
   });
   $("login").addEventListener("submit", function (e) {
     e.preventDefault();
@@ -150,22 +169,23 @@
     api("login", { body: { password: $("pw").value } }).then(function (r) {
       b.disabled = false;
       if (r.ok) { $("pw").value = ""; return boot(); }
-      $("login-err").textContent = r.data.error || "Could not sign in."; $("login-err").hidden = false;
+      $("login-err").textContent = t(r.data.error || "Could not sign in."); $("login-err").hidden = false;
       $("pw").select();
-    }).catch(function () { b.disabled = false; $("login-err").textContent = "The Pi does not answer."; $("login-err").hidden = false; });
+    }).catch(function () { b.disabled = false; $("login-err").textContent = t("The Pi does not answer."); $("login-err").hidden = false; });
   });
 
-  var WRITE_MSG = "The wall cannot write its console folder yet: pairing and changes will fail. Over SSH: sudo systemctl restart zenithboard-flightinfo";
+  var WRITE_MSG = t("The wall cannot write its console folder yet: pairing and changes will fail. Over SSH: sudo systemctl restart zenithboard-flightinfo");
   // 0.40.1: the version running on this Pi, linked to its release notes on GitHub (the releases page when unknown)
   function showVersion(a, v) {
     if (!a) return;
     var ok = /^\d+\.\d+\.\d+$/.test(String(v || ""));
     a.textContent = "ZenithBoard " + (ok ? v : "");
     a.href = "https://github.com/regis57/ZenithBoard/releases" + (ok ? "/tag/v" + v : "");
-    a.title = ok ? "What changed in " + v : "ZenithBoard's releases";
+    a.title = ok ? t("What changed in {version}", { version: v }) : t("ZenithBoard's releases");
   }
   function boot() {
     dots($("gate-logo"), "ZENITHBOARD", 10); dots($("gate-sub"), "CONSOLE", 10);
+    var gl = $("gate-lang-pick"); if (gl && !gl.firstChild) gl.appendChild(I.picker());
     var m = /[#&]pair=([A-Za-z0-9_-]{16,64})/.exec(location.hash), pairTok = m && m[1];
     var ma = /[#&]approve=([A-Za-z0-9_-]{8,40})/.exec(location.hash);
     if (ma) S.approveId = ma[1];                                          // answered once signed in (0.40.0)
@@ -179,19 +199,25 @@
         gate("pairing");
         return api("pair/redeem", { body: { token: pairTok } }).then(function (p) {
           if (p.ok) return boot();
-          gate(s.has_password ? "login" : "nopw", p.data.error || "This pairing code did not work.");
+          gate(s.has_password ? "login" : "nopw", t(p.data.error || "This pairing code did not work."));
         });
       }
       S.phoneSignin = !!s.phone_signin;
+      // 0.47.0: the very first visit, before anything else: the language, by its own name (the Pi has none yet and
+      // this browser chose none); chosen, it is this browser's, and the Pi's default once signed in
+      if (!s.signed_in && !I.saved() && !I.serverLang() && I.langs().length > 1) {
+        var box = $("gate-lang-list"); box.innerHTML = ""; box.appendChild(I.chooser());
+        return gate("lang");
+      }
       if (!s.signed_in) {
-        gate(s.has_password ? "login" : "nopw", S.unwritable ? WRITE_MSG : (S.approveId ? "Sign this phone in first; then the computer's request is shown." : null));
+        gate(s.has_password ? "login" : "nopw", S.unwritable ? WRITE_MSG : (S.approveId ? t("Sign this phone in first; then the computer's request is shown.") : null));
         if (S.phoneSignin && !S.approveId) phoneSignin();
         return;
       }
       stopPhoneSignin();
       S.session = s;
       startApp();
-    }).catch(function () { gate("login", "The Pi does not answer. Is the wall running?"); });
+    }).catch(function () { gate("login", t("The Pi does not answer. Is the wall running?")); });
   }
 
   // ---- 0.40.0: a computer signed in by a phone. This page (on the computer) shows a QR code and a four-digit code;
@@ -208,7 +234,7 @@
       var url = location.protocol + "//" + location.host + "/console/#approve=" + d.id;
       var qr = $("gate-qr"), count = $("gate-count"), note = $("gate-phone-note");
       qr.innerHTML = ""; qr.appendChild(qrSvg(url)); qr.hidden = false;
-      $("gate-code").textContent = d.code; note.textContent = "Scan it with a phone already signed in to the console, check that it shows " + d.code + ", and say yes.";
+      $("gate-code").textContent = d.code; note.textContent = t("Scan it with a phone already signed in to the console, check that it shows {code}, and say yes.", { code: d.code });
       box.hidden = false;
       PS.timer = setInterval(function () {
         var left = Math.max(0, Math.round((until - Date.now()) / 1000));
@@ -217,40 +243,40 @@
           stopPhoneSignin(); box.hidden = false;
           // a page left open renews its code a few times, then waits for a click (no endless requests)
           if (PS.renewals++ < 5 && document.visibilityState === "visible") phoneSignin();
-          else { qr.hidden = true; note.textContent = "The code is out of date."; count.textContent = ""; $("gate-code").textContent = ""; }
+          else { qr.hidden = true; note.textContent = t("The code is out of date."); count.textContent = ""; $("gate-code").textContent = ""; }
         }
       }, 1000);
       PS.poll = setInterval(function () {
         api("approve/poll", { body: { id: d.id, secret: d.secret } }).then(function (p) {
           var st = p.data.state;
           if (st === "approved") { stopPhoneSignin(); boot(); }
-          else if (st === "refused") { stopPhoneSignin(); box.hidden = false; qr.hidden = true; note.textContent = "Refused on the phone."; count.textContent = ""; }
+          else if (st === "refused") { stopPhoneSignin(); box.hidden = false; qr.hidden = true; note.textContent = t("Refused on the phone."); count.textContent = ""; }
         });
       }, 2000);
     });
   }
   function approveComputer(id) {
     api("approve?id=" + encodeURIComponent(id)).then(function (r) {
-      if (!r.ok) return toast(r.data.error || "This sign-in code is out of date.", true);
+      if (!r.ok) return toast(t(r.data.error || "This sign-in code is out of date."), true);
       var d = r.data;
-      if (d.state !== "waiting") return toast("This computer's request is " + d.state + ": it shows a new code.", true);
+      if (d.state !== "waiting") return toast(t("This computer's request is {state}: it shows a new code.", { state: d.state }), true);
       function answer(yes) {
         closeModal();
         api("approve", { body: { id: id, yes: yes } }).then(function (a) {
-          if (!a.ok) toast(a.data.error || "Too late: the computer shows a new code.", true);
-          else toast(yes ? d.label + " is signed in." : "Refused.");
+          if (!a.ok) toast(t(a.data.error || "Too late: the computer shows a new code."), true);
+          else toast(yes ? t("{name} is signed in.", { name: d.label }) : t("Refused."));
           if (yes) { S.sessions = null; }
         });
       }
       openModal(h("div", null,
-        h("header", null, h("h2", { text: "Sign a computer in" }), h("button", { type: "button", "class": "ghost", "aria-label": "Close", text: "×", onclick: function () { closeModal(); } })),
+        h("header", null, h("h2", { text: t("Sign a computer in") }), h("button", { type: "button", "class": "ghost", "aria-label": t("Close"), text: "×", onclick: function () { closeModal(); } })),
         h("div", { "class": "modal-body" },
-          h("p", { text: "Sign in " + d.label + " at " + d.ip + "?" }),
+          h("p", { text: t("Sign in {name} at {ip}?", { name: d.label, ip: d.ip }) }),
           h("div", { "class": "count", text: d.code }),
-          h("p", { "class": "qr-note", text: "Say yes only if the computer in front of you shows this same code. It is signed in for a week (a day unused); System → Signed in signs it out." })),
+          h("p", { "class": "qr-note", text: t("Say yes only if the computer in front of you shows this same code. It is signed in for a week (a day unused); System → Signed in signs it out.") })),
         h("div", { "class": "modal-foot" },
-          h("button", { type: "button", "class": "btn", text: "Refuse", onclick: function () { answer(false); } }),
-          h("button", { type: "button", "class": "primary", text: "Sign it in", onclick: function () { answer(true); } }))));
+          h("button", { type: "button", "class": "btn", text: t("Refuse"), onclick: function () { answer(false); } }),
+          h("button", { type: "button", "class": "primary", text: t("Sign it in"), onclick: function () { answer(true); } }))));
     });
   }
 
@@ -258,11 +284,14 @@
   function startApp() {
     $("gate").hidden = true; $("app").hidden = false;
     dots($("side-logo"), "ZB", 9); dots($("bar-logo"), "ZB", 6);
+    var bl = $("bar-lang"); if (bl && !bl.firstChild) bl.appendChild(I.picker());
     document.querySelectorAll("[data-ico]").forEach(function (n) { if (!n.firstChild) n.appendChild(ico(n.getAttribute("data-ico")).firstChild); });
     showVersion($("side-version"), S.session.version);
     loadState().then(function () {
       route();
       if (S.unwritable) toast(WRITE_MSG, true);
+      // the language chosen at the first visit becomes the Pi's default, for the browsers that choose none (0.47.0)
+      if (!S.cfg.CONSOLE_LANG && I.saved() && S.catalog["console-lang"]) run("console-lang", { value: I.lang() }, { quiet: true, confirmed: true });
       if (S.approveId) { var aid = S.approveId; S.approveId = null; approveComputer(aid); }
       else if (!S.session.wizard_done) wizard();
     });
@@ -296,7 +325,7 @@
     S.sections.forEach(function (sec) {
       var id = sec[0], busy = Object.keys(S.pending).some(function (k) { return S.catalog[k] && S.catalog[k].section === id; });
       [navEl, tabs].forEach(function (where) {
-        var short = where === tabs ? (sec[1] === "Reliability" ? "Reliable" : sec[1]) : sec[1];
+        var short = where === tabs && id === "reliability" ? t("Reliable") : t(sec[1]);
         where.appendChild(h("a", { href: "#" + id, "class": id === S.section ? "on" : "", "aria-current": id === S.section ? "page" : null },
           ico(SECTION_ICON[id]), h("span", { text: short }), busy ? h("i", { "class": "dot" }) : null));
       });
@@ -308,9 +337,9 @@
     nav();
     var view = $("view"), focused = document.activeElement;
     if (!scrollTop && focused && view.contains(focused) && /INPUT|SELECT/.test(focused.tagName)) return;   // never under the typing finger
-    var title = (S.sections.filter(function (s) { return s[0] === S.section; })[0] || [0, "Overview"])[1];
+    var title = t((S.sections.filter(function (s) { return s[0] === S.section; })[0] || [0, "Overview"])[1]);
     $("title").textContent = title;
-    document.title = title + " · ZenithBoard console";
+    document.title = t("{title} · ZenithBoard console", { title: title });
     var y = window.scrollY;
     view.innerHTML = "";
     add(view, sectionView(S.section));
@@ -325,23 +354,23 @@
         h("header", null, h("h2", { text: title })),
         h("div", { "class": "modal-body" }, (Array.isArray(text) ? text : [text]).map(function (p) { return h("p", { text: p }); })),
         h("div", { "class": "modal-foot" },
-          h("button", { type: "button", "class": "btn", text: "Cancel", onclick: function () { closeModal(); resolve(false); } }),
-          h("button", { type: "button", "class": danger ? "danger" : "primary", text: okLabel || "Go on", onclick: function () { closeModal(); resolve(true); } }))));
+          h("button", { type: "button", "class": "btn", text: t("Cancel"), onclick: function () { closeModal(); resolve(false); } }),
+          h("button", { type: "button", "class": danger ? "danger" : "primary", text: okLabel || t("Go on"), onclick: function () { closeModal(); resolve(true); } }))));
     });
   }
   var ASK = {
-    location: ["Change the antenna position?", "It is written everywhere it is stored on this Pi (the wall, and the feeders that can be set from here); the ones that cannot are named in the output. The position is never shown on the wall or in a post."],
-    graphs: ["graphs1090", "Turning it on runs its author's installer: collectd and rrdtool from apt (signed), its files from GitHub, a few minutes. Turning it off puts back what was there before and keeps its history."],
-    "gain-step": ["Move the gain one step?", "The decoder restarts with the new gain: a few seconds without aircraft. Go one step at a time, and check again after a day."],
-    social: ["Social sharing", "Switching it on starts posting the aircraft worth it to Bluesky, as set in the terminal (radius, rules, gap). Off stops the service; the account stays."],
-    watchdog: ["Hardware watchdog", "If the Pi freezes completely, its own chip restarts it after about 10 seconds. Off takes the setting away again."],
-    "update-quick": ["Update ZenithBoard and the wall?", "Seconds. The wall restarts, so this page reconnects by itself. The feeders are left as they are."],
-    update: ["Update everything?", "ZenithBoard, the decoder and every feeder, one after the other: several minutes. The wall restarts during it; this page follows. A new GitHub signing key is never accepted from here: the update says so, and it is answered over SSH."],
-    "phone-signin": ["Sign computers in with a phone", "When on, a computer's sign-in page shows a QR code. A phone already signed in scans it, sees the computer, its address and a four-digit code, and says yes: the computer is signed in, no password. Off again: computers use the password."],
-    "backup-delete": ["Delete the console's backup?", "Only the copy kept here for download: the files you already downloaded, and the Pi itself, are not touched."],
-    tailscale: ["Tailscale", "Switching it on installs Tailscale the first time (from its own repository, a few minutes), then prints a sign-in link in this card: open it, sign in to YOUR Tailscale account, approve the Pi. The wall then answers your Tailscale devices too. Off disconnects the Pi from your Tailscale network; it stays installed. The wall restarts either way: this page reconnects by itself."],
-    "tailscale-console": ["The console over Tailscale", "On: the devices signed in to your Tailscale account can open this console too (encrypted by Tailscale; the password still applies). Off: your home network only. The wall restarts: this page reconnects by itself."],
-    "console-off": ["Turn the console off?", "Its pages stop answering at once, this one included. Turn it on again over SSH: sudo zenithboard console on"]
+    location: [t("Change the antenna position?"), t("It is written everywhere it is stored on this Pi (the wall, and the feeders that can be set from here); the ones that cannot are named in the output. The position is never shown on the wall or in a post.")],
+    graphs: ["graphs1090", t("Turning it on runs its author's installer: collectd and rrdtool from apt (signed), its files from GitHub, a few minutes. Turning it off puts back what was there before and keeps its history.")],
+    "gain-step": [t("Move the gain one step?"), t("The decoder restarts with the new gain: a few seconds without aircraft. Go one step at a time, and check again after a day.")],
+    social: [t("Social sharing"), t("Switching it on starts posting the aircraft worth it to Bluesky, as set in the terminal (radius, rules, gap). Off stops the service; the account stays.")],
+    watchdog: [t("Hardware watchdog"), t("If the Pi freezes completely, its own chip restarts it after about 10 seconds. Off takes the setting away again.")],
+    "update-quick": [t("Update ZenithBoard and the wall?"), t("Seconds. The wall restarts, so this page reconnects by itself. The feeders are left as they are.")],
+    update: [t("Update everything?"), t("ZenithBoard, the decoder and every feeder, one after the other: several minutes. The wall restarts during it; this page follows. A new GitHub signing key is never accepted from here: the update says so, and it is answered over SSH.")],
+    "phone-signin": [t("Sign computers in with a phone"), t("When on, a computer's sign-in page shows a QR code. A phone already signed in scans it, sees the computer, its address and a four-digit code, and says yes: the computer is signed in, no password. Off again: computers use the password.")],
+    "backup-delete": [t("Delete the console's backup?"), t("Only the copy kept here for download: the files you already downloaded, and the Pi itself, are not touched.")],
+    tailscale: [t("Tailscale"), t("Switching it on installs Tailscale the first time (from its own repository, a few minutes), then prints a sign-in link in this card: open it, sign in to YOUR Tailscale account, approve the Pi. The wall then answers your Tailscale devices too. Off disconnects the Pi from your Tailscale network; it stays installed. The wall restarts either way: this page reconnects by itself.")],
+    "tailscale-console": [t("The console over Tailscale"), t("On: the devices signed in to your Tailscale account can open this console too (encrypted by Tailscale; the password still applies). Off: your home network only. The wall restarts: this page reconnects by itself.")],
+    "console-off": [t("Turn the console off?"), t("Its pages stop answering at once, this one included. Turn it on again over SSH: sudo zenithboard console on")]
   };
   function run(action, params, opts) {
     opts = opts || {};
@@ -351,9 +380,9 @@
     S.lastCard = null;
     var go = Promise.resolve(true);
     if (flags.indexOf("ask") >= 0 && !opts.confirmed) {
-      var a = ASK[action] || [spec.label, "Go on?"];
+      var a = ASK[action] || [t(spec.label), t("Go on?")];
       var off = params && params.value === "off";
-      go = confirmBox(a[0], off && action !== "graphs" ? "Switch it off?" : a[1], off ? "Switch off" : "Go on", action === "console-off");
+      go = confirmBox(a[0], off && action !== "graphs" ? t("Switch it off?") : a[1], off ? t("Switch off") : t("Go on"), action === "console-off");
     }
     return go.then(function (yes) {
       if (!yes) return null;
@@ -362,10 +391,10 @@
       return api("run", { body: { action: action, params: params || {} } }).then(function (r) {
         if (!r.ok) {
           delete S.pending[key]; draw();
-          toast(r.data.error || "Refused.", true); return null;
+          toast(t(r.data.error || "Refused."), true); return null;
         }
         var id = r.data.job;
-        S.jobs[id] = { id: id, action: action, label: opts.label || spec.label, params: params || {}, state: "queued", log: "", next: 0, key: key, quiet: opts.quiet };
+        S.jobs[id] = { id: id, action: action, label: opts.label || t(spec.label), params: params || {}, state: "queued", log: "", next: 0, key: key, quiet: opts.quiet };
         // 0.40.2: what a button shows appears in the card it was clicked in (the owner: "I click, but where do I look?");
         // 0.40.3: every action does, switches, choices and long ones included ("valable pour toute l'interface");
         // only one started outside a card (the wizard runs quietly) opens the Activity drawer
@@ -374,7 +403,7 @@
         return follow(id);
       }).catch(function () {
         delete S.pending[key]; draw();
-        toast("The Pi does not answer.", true); return null;
+        toast(t("The Pi does not answer."), true); return null;
       });
     });
   }
@@ -395,10 +424,10 @@
             var now_ = Date.now();
             if (d.behind && now_ - (S.lastQueueNote || 0) > 15000) {
               S.lastQueueNote = now_;
-              toast("Queued: " + ((S.catalog[d.behind] || {}).label || d.behind) + " runs first, then this. The Pi does one change at a time.");
+              toast(t("Queued: {job} runs first, then this. The Pi does one change at a time.", { job: t((S.catalog[d.behind] || {}).label || d.behind) }));
             } else if (!d.behind && now_ - (S.lastQueueNote || 0) > 15000) {
               S.lastQueueNote = now_;
-              toast("The console's helper has not taken the job. Over SSH: sudo zenithboard console on", true);
+              toast(t("The console's helper has not taken the job. Over SSH: sudo zenithboard console on"), true);
             }
           }
           if (S.drawerJob === id) drawTerm();
@@ -409,7 +438,7 @@
             // 0.45.1: Tailscale's sign-in link, as a button, as soon as it is printed (the job waits for that sign-in)
             if (j.action === "tailscale" && !it.querySelector(".ts-signin")) {
               var tsl = /https:\/\/login\.tailscale\.com\/a\/[A-Za-z0-9]+/.exec(j.log || "");
-              if (tsl) it.appendChild(h("div", { "class": "actions ts-signin" }, h("a", { "class": "primary", href: tsl[0], target: "_blank", rel: "noopener noreferrer", text: "Sign in to Tailscale ↗" })));
+              if (tsl) it.appendChild(h("div", { "class": "actions ts-signin" }, h("a", { "class": "primary", href: tsl[0], target: "_blank", rel: "noopener noreferrer", text: t("Sign in to Tailscale ↗") })));
             } }
           if (j.state === "done" || j.state === "refused") return finish();
           setTimeout(tick, j.state === "running" ? 700 : 1000);
@@ -418,10 +447,10 @@
       function finish() {
         delete S.pending[j.key]; delete S.wanted[j.key];
         var spec = S.catalog[j.action] || { flags: [] }, ok = j.state === "done" && j.rc === 0;
-        if (j.action === "refresh" && !j.quiet) toast("Read again.");
+        if (j.action === "refresh" && !j.quiet) toast(t("Read again."));
         if (!j.quiet && spec.flags.indexOf("read") < 0) {
-          if (ok) toast(j.label + ": done.");
-          else toast(j.label + (j.error ? ": refused (" + j.error + ")" : ": it did not work. See Activity."), true);
+          if (ok) toast(t("{job}: done.", { job: j.label }));
+          else toast(j.error ? t("{job}: refused ({why})", { job: j.label, why: t(j.error) }) : t("{job}: it did not work. See Activity.", { job: j.label }), true);
         }
         setTimeout(loadState, 1200); setTimeout(loadState, 5000);      // the helper reads the Pi's facts again after a job
         if (S.activityOpen) loadActivity();
@@ -446,7 +475,7 @@
   function sw(action, isOn, extra, key, label) {
     key = key || action;
     var waiting = S.pending[key];
-    return h("button", { type: "button", role: "switch", "aria-checked": isOn ? "true" : "false", "aria-label": label || (S.catalog[action] || {}).label,
+    return h("button", { type: "button", role: "switch", "aria-checked": isOn ? "true" : "false", "aria-label": label || t((S.catalog[action] || {}).label || action),
       "class": "sw" + (isOn ? " on" : "") + (waiting ? " wait" : ""), disabled: waiting ? true : null,
       onclick: function () { var p = Object.assign({}, extra || {}, { value: isOn ? "off" : "on" }); run(action, p, { key: key }); } });
   }
@@ -469,15 +498,15 @@
   function inlineTerm(j) {
     var pre = h("pre", { text: termText(j) }), st = pillOf(j);
     var links = j.state === "done" && (j.action === "social-test" || j.action === "summary-test") ? h("div", { "class": "actions" },
-      h("a", { "class": "btn", href: "/social/preview", target: "_blank", rel: "noopener", text: "The picture ↗" }),
-      j.action === "summary-test" ? ["2", "3", "4"].map(function (n) { return h("a", { "class": "btn", href: "/social/preview" + n, target: "_blank", rel: "noopener", text: "Post " + n + " ↗" }); }) : null) : null;
+      h("a", { "class": "btn", href: "/social/preview", target: "_blank", rel: "noopener", text: t("The picture ↗") }),
+      j.action === "summary-test" ? ["2", "3", "4"].map(function (n) { return h("a", { "class": "btn", href: "/social/preview" + n, target: "_blank", rel: "noopener", text: t("Post {n} ↗", { n: n }) }); }) : null) : null;
     // 0.45.1: Tailscale's sign-in link, as a button, while it waits for it (only its own address is taken)
     var tsl = j.action === "tailscale" && j.state !== "done" && /https:\/\/login\.tailscale\.com\/a\/[A-Za-z0-9]+/.exec(j.log || "");
-    if (tsl && !links) links = h("div", { "class": "actions ts-signin" }, h("a", { "class": "primary", href: tsl[0], target: "_blank", rel: "noopener noreferrer", text: "Sign in to Tailscale ↗" }));
+    if (tsl && !links) links = h("div", { "class": "actions ts-signin" }, h("a", { "class": "primary", href: tsl[0], target: "_blank", rel: "noopener noreferrer", text: t("Sign in to Tailscale ↗") }));
     var box = h("div", { "class": "term inline", id: "iterm-" + j.id },
-      h("div", { "class": "th" }, ico("terminal"), h("b", { text: j.label + (j.params && j.params.value ? ": " + j.params.value : "") }), h("span", { "class": "pill " + st[0], text: st[1] }),
-        h("button", { type: "button", "class": "ghost", title: "Open in Activity", text: "⤢", onclick: function () { openDrawer(j.id); } }),
-        h("button", { type: "button", "class": "ghost", "aria-label": "Close", text: "×", onclick: function () { S.inline.delete(S.section); draw(); } })),
+      h("div", { "class": "th" }, ico("terminal"), h("b", { text: j.params && j.params.value ? t("{job}: {value}", { job: j.label, value: word(j.params.value) }) : j.label }), h("span", { "class": "pill " + st[0], text: st[1] }),
+        h("button", { type: "button", "class": "ghost", title: t("Open in Activity"), text: "⤢", onclick: function () { openDrawer(j.id); } }),
+        h("button", { type: "button", "class": "ghost", "aria-label": t("Close"), text: "×", onclick: function () { S.inline.delete(S.section); draw(); } })),
       pre, links);
     setTimeout(function () { pre.scrollTop = pre.scrollHeight; }, 0);
     return box;
@@ -488,13 +517,13 @@
   }
   document.addEventListener("click", noteCard, true);
   document.addEventListener("change", noteCard, true);     // a list chosen with the keyboard
-  function stateWord(v) { return on(v) ? "on" : "off"; }
+  function stateWord(v) { return word(on(v) ? "on" : "off"); }
 
   // ---- the sections
   var SVC_NAMES = [
-    ["readsb", "Decoder (readsb)"], ["dump1090_fa", "Decoder (dump1090-fa)"], ["dump978_fa", "978 MHz UAT"],
-    ["adsbexchange_feed", "ADSB Exchange"], ["piaware", "FlightAware"], ["fr24feed", "Flightradar24"], ["pfclient", "Plane Finder"],
-    ["zenithboard_flightinfo", "The wall"], ["zenithboard_social", "Bluesky posts"], ["graphs1090", "graphs1090"], ["lighttpd", "Receiver map's web server"]
+    ["readsb", t("Decoder (readsb)")], ["dump1090_fa", t("Decoder (dump1090-fa)")], ["dump978_fa", t("978 MHz UAT")],
+    ["adsbexchange_feed", t("ADSB Exchange")], ["piaware", t("FlightAware")], ["fr24feed", t("Flightradar24")], ["pfclient", t("Plane Finder")],
+    ["zenithboard_flightinfo", t("The wall")], ["zenithboard_social", t("Bluesky posts")], ["graphs1090", "graphs1090"], ["lighttpd", t("Receiver map's web server")]
   ];
   function go(section) { return function () { location.hash = "#" + section; }; }
 
@@ -502,81 +531,82 @@
     overview: function () {
       var f = S.facts, c = S.cfg, out = [];
       var mem = f.mem_avail_mb ? size(f.mem_avail_mb) : "–", card_ = f.disk_free_mb ? size(f.disk_free_mb) : "–";
-      var thr = f.throttled && f.throttled !== "0x0" ? "power warnings: see Health" : (f.throttled ? "power: no warning" : "");
+      var thr = f.throttled && f.throttled !== "0x0" ? t("power warnings: see Health") : (f.throttled ? t("power: no warning") : "");
       out.push(h("div", { "class": "tiles" },
-        tile("Up for", f.uptime_s ? dur(f.uptime_s) : "–", f.model || ""),
-        tile("Temperature", f.temp_c ? f.temp_c + " °C" : "–", thr || (f.load ? "load " + f.load : "")),
-        tile("Memory free", mem, f.mem_total_mb ? "of " + size(f.mem_total_mb) : ""),
-        tile("Card free", card_, f.disk_total_mb ? "of " + size(f.disk_total_mb) : "")));
+        tile(t("Up for"), f.uptime_s ? dur(f.uptime_s) : "–", f.model || ""),
+        tile(t("Temperature"), f.temp_c ? f.temp_c + " °C" : "–", thr || (f.load ? t("load {n}", { n: f.load }) : "")),
+        tile(t("Memory free"), mem, f.mem_total_mb ? t("of {size}", { size: size(f.mem_total_mb) }) : ""),
+        tile(t("Card free"), card_, f.disk_total_mb ? t("of {size}", { size: size(f.disk_total_mb) }) : "")));
       var svcs = SVC_NAMES.filter(function (s) { return f["svc_" + s[0]] !== undefined; }).map(function (s) {
         var st = f["svc_" + s[0]], quiet = (s[0] === "zenithboard_social" && !on(c.SOCIAL));
         return h("div", { "class": "svc" }, h("i", { "class": st === "active" ? "ok" : (quiet ? "" : "bad") }), h("span", { text: s[1] }),
-          h("em", { text: st === "active" ? "running" : (quiet ? "off" : st) }));
+          h("em", { text: st === "active" ? word("running") : (quiet ? word("off") : st) }));
       });
-      out.push(card("Services", "antenna", S.factsAt ? "Read on the Pi " + ago(S.factsAt) + "." : "Reading the Pi…",
-        [svcs.length ? svcs : h("p", { "class": "note", text: "Nothing read yet." }),
-          h("div", { "class": "actions" }, btn("Read again", "refresh", {}, "btn", { noDrawer: true }), btn("Status", "status"), btn("Health", "health"))], "w6"));
-      out.push(card("At a glance", "overview", null, h("div", { "class": "glance" },
-        chip("Wall: " + (c.DISPLAY_MODE === "flap" ? "split-flap" : "dots") + ", " + (c.THEME || "amber") + ", " + c.RADIUS + (c.UNITS === "imperial" ? " mi" : " km"), "wall"),
-        chip("Statistics " + stateWord(c.STATS), "receiver", on(c.STATS)),
-        chip("graphs1090 " + (f.graphs || "?"), "receiver", f.graphs === "on"),
-        chip("Bluesky " + (on(c.SOCIAL) ? "posting" : "off"), "sharing", on(c.SOCIAL)),
-        chip("Summaries: " + (["DAILY", "WEEKLY", "MONTHLY"].filter(function (p) { return on(c["SOCIAL_" + p]); }).map(function (p) { return p.toLowerCase(); }).join(", ") || "off"), "sharing"),
-        chip("Watchdog " + (f.watchdog || "?"), "reliability", f.watchdog === "on"),
-        chip("Network watchdog " + (f.netwatch || "?"), "reliability", f.netwatch === "on"),
-        f.tailscale && f.tailscale !== "not installed" ? chip("Tailscale " + f.tailscale, "system", f.tailscale === "on") : null,
-        chip("Security fixes " + (f.patches || "?"), "reliability", f.patches === "on"),
-        f.wifi ? chip("Wi-Fi: " + f.wifi, "system") : null), "w6"));
+      out.push(card(t("Services"), "antenna", S.factsAt ? t("Read on the Pi {time}.", { time: ago(S.factsAt) }) : t("Reading the Pi…"),
+        [svcs.length ? svcs : h("p", { "class": "note", text: t("Nothing read yet.") }),
+          h("div", { "class": "actions" }, btn(t("Read again"), "refresh", {}, "btn", { noDrawer: true }), btn(t("Status"), "status"), btn(t("Health"), "health"))], "w6"));
+      out.push(card(t("At a glance"), "overview", null, h("div", { "class": "glance" },
+        chip(t("Wall: {look}, {colour}, {radius}", { look: word(c.DISPLAY_MODE === "flap" ? "flap" : "dots"), colour: word(c.THEME || "amber"),
+          radius: c.RADIUS + (c.UNITS === "imperial" ? " mi" : " km") }), "wall"),
+        chip(t("Statistics {state}", { state: stateWord(c.STATS) }), "receiver", on(c.STATS)),
+        chip(t("graphs1090 {state}", { state: word(f.graphs) }), "receiver", f.graphs === "on"),
+        chip(t("Bluesky {state}", { state: word(on(c.SOCIAL) ? "posting" : "off") }), "sharing", on(c.SOCIAL)),
+        chip(t("Summaries: {list}", { list: ["DAILY", "WEEKLY", "MONTHLY"].filter(function (p) { return on(c["SOCIAL_" + p]); }).map(function (p) { return word(p.toLowerCase()); }).join(", ") || word("off") }), "sharing"),
+        chip(t("Watchdog {state}", { state: word(f.watchdog) }), "reliability", f.watchdog === "on"),
+        chip(t("Network watchdog {state}", { state: word(f.netwatch) }), "reliability", f.netwatch === "on"),
+        f.tailscale && f.tailscale !== "not installed" ? chip(t("Tailscale {state}", { state: word(f.tailscale) }), "system", f.tailscale === "on") : null,
+        chip(t("Security fixes {state}", { state: word(f.patches) }), "reliability", f.patches === "on"),
+        f.wifi ? chip(t("Wi-Fi: {state}", { state: f.wifi }), "system") : null), "w6"));
       var gaps = setupGaps();
-      if (gaps.length) out.push(card("Finish setting up", "gear", null, [h("ul", { "class": "ticks no" }, gaps.map(function (g) { return h("li", { text: g }); })),
-        h("div", { "class": "actions" }, h("button", { type: "button", "class": "primary", text: "Open the first steps", onclick: function () { S.openWizard(); } }))], "w12"));
-      out.push(card("Pages", "link", "What this Pi shows, and what it can show once switched on.", h("div", { "class": "pages" }, pages()), "w12"));
+      if (gaps.length) out.push(card(t("Finish setting up"), "gear", null, [h("ul", { "class": "ticks no" }, gaps.map(function (g) { return h("li", { text: g }); })),
+        h("div", { "class": "actions" }, h("button", { type: "button", "class": "primary", text: t("Open the first steps"), onclick: function () { S.openWizard(); } }))], "w12"));
+      out.push(card(t("Pages"), "link", t("What this Pi shows, and what it can show once switched on."), h("div", { "class": "pages" }, pages()), "w12"));
       return out;
     },
 
     wall: function () {
       var c = S.cfg, unit = c.UNITS === "imperial" ? "mi" : "km";
       return [
-        card("Look", "wall", "The default of every screen. A tablet that chose its own with its gear keeps it until Reset in its gear panel.", [
-          row("Look", "Dot matrix, or the split-flap airport board", seg("mode", ["dots", "flap"], c.DISPLAY_MODE || "dots", ["Dot matrix", "Split-flap"])),
-          row("Colour", null, swatches()),
-          row("Units", "Distances, speeds and heights", seg("units", ["metric", "imperial"], c.UNITS, ["km · m", "mi · ft"])),
-          row("Detection radius", "Aircraft inside it are on the wall, in " + unit, seg("radius", ["1", "2", "5", "10", "15", "30", "50"], String(Number(c.RADIUS)))),
-          row("Seconds per aircraft", "2 to 60", numberApply("cycle", c.CYCLE_SECONDS, 2, 60)),
-          h("div", { "class": "actions" }, h("a", { "class": "btn", href: "/", target: "_blank", rel: "noopener", text: "Open the wall ↗" }))
+        card(t("Look"), "wall", t("The default of every screen. A tablet that chose its own with its gear keeps it until Reset in its gear panel."), [
+          row(t("Look"), t("Dot matrix, or the split-flap airport board"), seg("mode", ["dots", "flap"], c.DISPLAY_MODE || "dots", [t("Dot matrix"), t("Split-flap")])),
+          row(t("Colour"), null, swatches()),
+          row(t("Units"), t("Distances, speeds and heights"), seg("units", ["metric", "imperial"], c.UNITS, [t("km · m"), t("mi · ft")])),
+          row(t("Detection radius"), t("Aircraft inside it are on the wall, in {unit}", { unit: unit }), seg("radius", ["1", "2", "5", "10", "15", "30", "50"], String(Number(c.RADIUS)))),
+          row(t("Seconds per aircraft"), t("2 to 60"), numberApply("cycle", c.CYCLE_SECONDS, 2, 60)),
+          h("div", { "class": "actions" }, h("a", { "class": "btn", href: "/", target: "_blank", rel: "noopener", text: t("Open the wall ↗") }))
         ], "w6"),
-        card("What it shows", "plane", null, [
-          row("Aircraft photos", "From Planespotters, with their credit; needs internet", sw("photos", on(c.SHOW_PHOTOS))),
-          row("Where flights come from and go to", "The callsign is looked up on adsbdb.com", sw("routes", on(c.SHOW_ROUTES))),
-          row("The receiver map's aircraft database", "Registrations and models read on the card (tar1090); nothing downloaded", sw("localdb", on(c.LOCAL_DB))),
-          row("Monthly refresh of the model names", "A free list from GitHub, once a month", sw("data-auto", on(c.AUTO_DATA_REFRESH))),
-          h("div", { "class": "actions" }, btn("Refresh the model names now", "data-update"), btn("Aircraft data", "data-status"), btn("Presets", "presets"))
+        card(t("What it shows"), "plane", null, [
+          row(t("Aircraft photos"), t("From Planespotters, with their credit; needs internet"), sw("photos", on(c.SHOW_PHOTOS))),
+          row(t("Where flights come from and go to"), t("The callsign is looked up on adsbdb.com"), sw("routes", on(c.SHOW_ROUTES))),
+          row(t("The receiver map's aircraft database"), t("Registrations and models read on the card (tar1090); nothing downloaded"), sw("localdb", on(c.LOCAL_DB))),
+          row(t("Monthly refresh of the model names"), t("A free list from GitHub, once a month"), sw("data-auto", on(c.AUTO_DATA_REFRESH))),
+          h("div", { "class": "actions" }, btn(t("Refresh the model names now"), "data-update"), btn(t("Aircraft data"), "data-status"), btn(t("Presets"), "presets"))
         ], "w6")
       ];
     },
 
     receiver: function () {
       var c = S.cfg, f = S.facts;
-      var lat = h("input", { type: "text", inputmode: "decimal", value: c.LAT || "", "aria-label": "Latitude", size: 10 });
-      var lon = h("input", { type: "text", inputmode: "decimal", value: c.LON || "", "aria-label": "Longitude", size: 10 });
-      var alt = h("input", { type: "number", value: c.ALT_M || "0", "aria-label": "Altitude in metres", min: -500, max: 9000 });
+      var lat = h("input", { type: "text", inputmode: "decimal", value: c.LAT || "", "aria-label": t("Latitude"), size: 10 });
+      var lon = h("input", { type: "text", inputmode: "decimal", value: c.LON || "", "aria-label": t("Longitude"), size: 10 });
+      var alt = h("input", { type: "number", value: c.ALT_M || "0", "aria-label": t("Altitude in metres"), min: -500, max: 9000 });
       return [
-        card("Antenna", "antenna", null, [
-          row("Region", "The United States adds the optional 978 MHz UAT step (menu 1)", seg("region", ["world", "us"], c.REGION || "world", ["World", "United States"])),
-          h("div", { "class": "row" }, h("div", { "class": "what" }, h("b", { text: "Position" }), h("span", { text: "Decimal degrees, altitude in metres. Written everywhere it is stored; never shown on the wall or in a post." })),
-            h("div", { "class": "fields" }, field("Latitude", lat), field("Longitude", lon), field("Alt. m", alt),
-              h("button", { type: "button", "class": "btn", text: S.pending.location ? "Applying…" : "Apply", disabled: S.pending.location ? true : null,
+        card(t("Antenna"), "antenna", null, [
+          row(t("Region"), t("The United States adds the optional 978 MHz UAT step (menu 1)"), seg("region", ["world", "us"], c.REGION || "world", [t("World"), t("United States")])),
+          h("div", { "class": "row" }, h("div", { "class": "what" }, h("b", { text: t("Position") }), h("span", { text: t("Decimal degrees, altitude in metres. Written everywhere it is stored; never shown on the wall or in a post.") })),
+            h("div", { "class": "fields" }, field(t("Latitude"), lat), field(t("Longitude"), lon), field(t("Alt. m"), alt),
+              h("button", { type: "button", "class": "btn", text: S.pending.location ? t("Applying…") : t("Apply"), disabled: S.pending.location ? true : null,
                 onclick: function () { run("location", { lat: lat.value.trim(), lon: lon.value.trim(), alt: alt.value.trim() }); } })))
         ], "w6"),
-        card("Measure", "chart", null, [
-          row("Statistics", "A sample every 15 minutes, 30 days kept, about 30 KB a day", [sw("stats", on(c.STATS)), on(c.STATS) ? h("a", { href: "/stats", target: "_blank", rel: "noopener", text: "Open ↗" }) : null]),
-          row("graphs1090", "Years of the decoder's graphs on port 8542; installed by its author's script", [sw("graphs", f.graphs === "on"), f.graphs === "on" ? h("a", { href: "http://" + host() + ":8542/", target: "_blank", rel: "noopener", text: "Open ↗" }) : null]),
-          f.graphs === "on" ? row("graphs1090 in ZenithBoard's look", "A black page in the wall's colour, its graphs drawn to match; off: graphs1090's own", sw("graphs-look", S.cfg.GRAPHS_LOOK !== "original")) : null,
-          row("Gain", "Check it first; then one step at a time", [btn("Check", "gain-check"), btn("− Down", "gain-step", { value: "down" }, "btn", { key: "gain-step" }), btn("Up +", "gain-step", { value: "up" }, "btn", { key: "gain-step" })]),
-          row("Gain log, 24 hours", "One measurement every 15 minutes, as a table", sw("gain-log", on(c.GAINLOG)))
+        card(t("Measure"), "chart", null, [
+          row(t("Statistics"), t("A sample every 15 minutes, 30 days kept, about 30 KB a day"), [sw("stats", on(c.STATS)), on(c.STATS) ? h("a", { href: "/stats", target: "_blank", rel: "noopener", text: t("Open ↗") }) : null]),
+          row("graphs1090", t("Years of the decoder's graphs on port 8542; installed by its author's script"), [sw("graphs", f.graphs === "on"), f.graphs === "on" ? h("a", { href: "http://" + host() + ":8542/" + langQ(), target: "_blank", rel: "noopener", text: t("Open ↗") }) : null]),
+          f.graphs === "on" ? row(t("graphs1090 in ZenithBoard's look"), t("A black page in the wall's colour, its graphs drawn to match; off: graphs1090's own"), sw("graphs-look", S.cfg.GRAPHS_LOOK !== "original")) : null,
+          row(t("Gain"), t("Check it first; then one step at a time"), [btn(t("Check"), "gain-check"), btn(t("− Down"), "gain-step", { value: "down" }, "btn", { key: "gain-step" }), btn(t("Up +"), "gain-step", { value: "up" }, "btn", { key: "gain-step" })]),
+          row(t("Gain log, 24 hours"), t("One measurement every 15 minutes, as a table"), sw("gain-log", on(c.GAINLOG)))
         ], "w6"),
-        card("Look at it", "terminal", null, h("div", { "class": "actions" },
-          btn("Status", "status"), btn("Statistics in the terminal", "stats-show"), btn("Unknown callsigns and types", "stats-gaps"), btn("One MLAT client only", "mlat-guard")), "w12")
+        card(t("Look at it"), "terminal", null, h("div", { "class": "actions" },
+          btn(t("Status"), "status"), btn(t("Statistics in the terminal"), "stats-show"), btn(t("Unknown callsigns and types"), "stats-gaps"), btn(t("One MLAT client only"), "mlat-guard")), "w12")
       ];
     },
 
@@ -584,46 +614,46 @@
       var c = S.cfg, f = S.facts, acct = f.bluesky;
       var col = c.SOCIAL_THEME || "wall", units = c.SOCIAL_UNITS || "wall";
       return [
-        card("Bluesky", "share", acct ? "Account @" + acct + ". The account itself is set up over SSH (it asks for an app password): sudo zenithboard social setup" :
-          "No Bluesky account yet. Set it up over SSH, it asks for an app password: sudo zenithboard social setup", [
-          row("Post the aircraft overhead", "As set in the terminal: radius, rules, gap. Never a distance or a direction.", acct ? sw("social", on(c.SOCIAL)) : h("span", { "class": "state", text: "needs an account" })),
-          row("Least time between posts", "Minutes; 0 = every crossing posted once", numberApply("social-gap", c.SOCIAL_GAP_MIN, 0, 1440)),
-          h("div", { "class": "actions" }, btn("Try a post (posts nothing)", "social-test"), h("a", { "class": "btn", href: "/social/preview", target: "_blank", rel: "noopener", text: "Last picture ↗" }), btn("Status", "social-status"))
+        card(t("Bluesky"), "share", acct ? t("Account @{account}. The account itself is set up over SSH (it asks for an app password): sudo zenithboard social setup", { account: acct }) :
+          t("No Bluesky account yet. Set it up over SSH, it asks for an app password: sudo zenithboard social setup"), [
+          row(t("Post the aircraft overhead"), t("As set in the terminal: radius, rules, gap. Never a distance or a direction."), acct ? sw("social", on(c.SOCIAL)) : h("span", { "class": "state", text: t("needs an account") })),
+          row(t("Least time between posts"), t("Minutes; 0 = every crossing posted once"), numberApply("social-gap", c.SOCIAL_GAP_MIN, 0, 1440)),
+          h("div", { "class": "actions" }, btn(t("Try a post (posts nothing)"), "social-test"), h("a", { "class": "btn", href: "/social/preview", target: "_blank", rel: "noopener", text: t("Last picture ↗") }), btn(t("Status"), "social-status"))
         ], "w6"),
-        card("The picture and the words", "picture", null, [
-          row("Picture", null, seg("social-look", ["dotmap", "flap", "alternate"], c.SOCIAL_STYLE || "dotmap", ["Dots + map", "Split-flap", "In turn"])),
-          row("Colour", "The wall's own, one of the five, or in turn", select("social-colour", ["wall", "amber", "green", "red", "white", "turquoise", "rotate"], col,
-            ["The wall's (" + (c.THEME || "amber") + ")", "Amber", "Green", "Red", "White", "Turquoise", "In turn"])),
-          row("Map", null, select("social-map", ["normal", "night", "satellite", "terrain", "none", "rotate"], c.SOCIAL_MAP || "normal",
-            ["Normal", "Night", "Satellite", "Terrain", "None", "In turn"])),
-          row("Units", null, seg("social-units", ["wall", "metric", "imperial"], units, ["The wall's", "Metric", "Imperial"])),
-          row("Link to the photo page", "Planespotters, at the end of each post", sw("social-photolink", on(c.SOCIAL_PHOTOLINK))),
-          row("Words of a post", "One or more; with several, one is drawn at each post", sentenceChips(c.SOCIAL_SENTENCE || "factual"))
+        card(t("The picture and the words"), "picture", null, [
+          row(t("Picture"), null, seg("social-look", ["dotmap", "flap", "alternate"], c.SOCIAL_STYLE || "dotmap", [t("Dots + map"), t("Split-flap"), t("In turn")])),
+          row(t("Colour"), t("The wall's own, one of the five, or in turn"), select("social-colour", ["wall", "amber", "green", "red", "white", "turquoise", "rotate"], col,
+            [t("The wall's ({colour})", { colour: word(c.THEME || "amber") }), t("Amber"), t("Green"), t("Red"), t("White"), t("Turquoise"), t("In turn")])),
+          row(t("Map"), null, select("social-map", ["normal", "night", "satellite", "terrain", "none", "rotate"], c.SOCIAL_MAP || "normal",
+            [t("Normal"), t("Night"), t("Satellite"), t("Terrain"), t("None"), t("In turn")])),
+          row(t("Units"), null, seg("social-units", ["wall", "metric", "imperial"], units, [t("The wall's"), t("Metric"), t("Imperial")])),
+          row(t("Link to the photo page"), t("Planespotters, at the end of each post"), sw("social-photolink", on(c.SOCIAL_PHOTOLINK))),
+          row(t("Words of a post"), t("One or more; with several, one is drawn at each post"), sentenceChips(c.SOCIAL_SENTENCE || "factual"))
         ], "w6"),
-        card("Summaries", "chart", "From the statistics, at their time on the Pi's clock; the posts go in one queue, two minutes apart. Posts: 1 the period, 2 cargo and business jets, 3 military, 4 general aviation.",
-          [summaryRow("daily", "24 hours"), summaryRow("weekly", "The week"), summaryRow("monthly", "30 days"),
-            on(c.STATS) ? null : h("p", { "class": "note", text: "Statistics are off: no summary can be made until they are on (Receiver)." }),
-            h("div", { "class": "actions" }, btn("All summaries", "summaries"),
-              ["2", "3", "4"].map(function (n) { return h("a", { "class": "btn", href: "/social/preview" + n, target: "_blank", rel: "noopener", text: "Post " + n + " ↗" }); })),
-            h("p", { "class": "note", text: "Posting one now stays in the terminal, where you see it first: sudo zenithboard social summary weekly post" })], "w12")
+        card(t("Summaries"), "chart", t("From the statistics, at their time on the Pi's clock; the posts go in one queue, two minutes apart. Posts: 1 the period, 2 cargo and business jets, 3 military, 4 general aviation."),
+          [summaryRow("daily", t("24 hours")), summaryRow("weekly", t("The week")), summaryRow("monthly", t("30 days")),
+            on(c.STATS) ? null : h("p", { "class": "note", text: t("Statistics are off: no summary can be made until they are on (Receiver).") }),
+            h("div", { "class": "actions" }, btn(t("All summaries"), "summaries"),
+              ["2", "3", "4"].map(function (n) { return h("a", { "class": "btn", href: "/social/preview" + n, target: "_blank", rel: "noopener", text: t("Post {n} ↗", { n: n }) }); })),
+            h("p", { "class": "note", text: t("Posting one now stays in the terminal, where you see it first: sudo zenithboard social summary weekly post") })], "w12")
       ];
     },
 
     reliability: function () {
-      var f = S.facts, logsSel = h("select", { "aria-label": "Which log" },
-        [["flightinfo", "The wall"], ["decoder", "The decoder"], ["social", "Bluesky posts"], ["uat", "978 MHz UAT"]].map(function (o) { return h("option", { value: o[0], text: o[1] }); }));
+      var f = S.facts, logsSel = h("select", { "aria-label": t("Which log") },
+        [["flightinfo", t("The wall")], ["decoder", t("The decoder")], ["social", t("Bluesky posts")], ["uat", t("978 MHz UAT")]].map(function (o) { return h("option", { value: o[0], text: o[1] }); }));
       return [
-        card("Keep it running", "shield", "All off by default; each one off again puts back what it found.", [
-          row("Hardware watchdog", "The Pi's own chip restarts it after a complete freeze", sw("watchdog", f.watchdog === "on")),
-          row("Network watchdog", "No router for 6 minutes: the network restarts; 12 minutes: the Pi", sw("netwatch", f.netwatch === "on")),
-          row("Logs kept after a restart", "Up to 50 MB: what happened just before a freeze", sw("keeplogs", f.keeplogs === "on")),
-          row("Wi-Fi hardening", "Retry without end after a loss; no radio power saving", sw("wifi-harden", f.wifi_harden === "on")),
-          row("Daily security fixes", "Debian's security channel only; feeders untouched, no reboot", sw("patches", f.patches === "on")),
-          row("Daily log clean-up", "Keeps the last 7 days", sw("logs-auto", f.logs_auto === "on"))
+        card(t("Keep it running"), "shield", t("All off by default; each one off again puts back what it found."), [
+          row(t("Hardware watchdog"), t("The Pi's own chip restarts it after a complete freeze"), sw("watchdog", f.watchdog === "on")),
+          row(t("Network watchdog"), t("No router for 6 minutes: the network restarts; 12 minutes: the Pi"), sw("netwatch", f.netwatch === "on")),
+          row(t("Logs kept after a restart"), t("Up to 50 MB: what happened just before a freeze"), sw("keeplogs", f.keeplogs === "on")),
+          row(t("Wi-Fi hardening"), t("Retry without end after a loss; no radio power saving"), sw("wifi-harden", f.wifi_harden === "on")),
+          row(t("Daily security fixes"), t("Debian's security channel only; feeders untouched, no reboot"), sw("patches", f.patches === "on")),
+          row(t("Daily log clean-up"), t("Keeps the last 7 days"), sw("logs-auto", f.logs_auto === "on"))
         ], "w6"),
-        card("Look at it", "terminal", null, [
-          h("div", { "class": "actions" }, btn("Health", "health"), btn("Memory", "memory"), btn("Log size and warnings", "logs-review")),
-          row("The last 100 lines of", null, [logsSel, h("button", { type: "button", "class": "btn", text: "Show", onclick: function () { run("logs", { value: logsSel.value }, { key: "logs", card: S.lastCard }); } })])
+        card(t("Look at it"), "terminal", null, [
+          h("div", { "class": "actions" }, btn(t("Health"), "health"), btn(t("Memory"), "memory"), btn(t("Log size and warnings"), "logs-review")),
+          row(t("The last 100 lines of"), null, [logsSel, h("button", { type: "button", "class": "btn", text: t("Show"), onclick: function () { run("logs", { value: logsSel.value }, { key: "logs", card: S.lastCard }); } })])
         ], "w6")
       ];
     },
@@ -631,60 +661,66 @@
     system: function () {
       var f = S.facts;
       return [
-        card("Updates", "power", "From GitHub, checked against its signature before anything runs; your settings are never changed by an update.", [
-          h("div", { "class": "actions" }, btn("Update ZenithBoard and the wall", "update-quick", {}, "primary"), btn("Update everything", "update"), btn("Installed components", "update-list"),
-            h("button", { type: "button", "class": "btn", text: "First steps again", onclick: function () { S.openWizard(); } })),
-          h("p", { "class": "note", text: "ZenithBoard " + (S.session.version || "") + " runs here. The release notes: " }, h("a", { href: "https://github.com/regis57/ZenithBoard/releases", target: "_blank", rel: "noopener noreferrer", text: "GitHub ↗" }))
+        card(t("Updates"), "power", t("From GitHub, checked against its signature before anything runs; your settings are never changed by an update."), [
+          h("div", { "class": "actions" }, btn(t("Update ZenithBoard and the wall"), "update-quick", {}, "primary"), btn(t("Update everything"), "update"), btn(t("Installed components"), "update-list"),
+            h("button", { type: "button", "class": "btn", text: t("First steps again"), onclick: function () { S.openWizard(); } })),
+          h("p", { "class": "note", text: t("ZenithBoard {version} runs here. The release notes: ", { version: S.session.version || "" }) }, h("a", { href: "https://github.com/regis57/ZenithBoard/releases", target: "_blank", rel: "noopener noreferrer", text: t("GitHub ↗") }))
         ], "w6"),
-        card("Backup", "out", "One file with the settings, the features that are on, the statistics, what was posted, graphs1090's history and the kept logs: to keep, or to start a new card where this one stopped.", [
-          h("div", { "class": "actions" }, btn("Make a backup", "backup", {}, "primary"),
-            S.backup ? h("a", { "class": "btn", href: "/console/api/backup", download: "", text: "Download it" }) : null,
-            S.backup ? btn("Delete it", "backup-delete", {}, "danger") : null),
-          S.backup ? h("p", { "class": "note", text: "Made " + new Date(S.backup.at * 1000).toLocaleString([], { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) +
-            " (" + ago(S.backup.at) + "), " + (S.backup.bytes / 1048576).toFixed(1) + " MB on the card. One copy is kept here, replaced by the next; its name says the Pi and the date, so downloads sort in time order." }) : null,
-          h("p", { "class": "sub", text: "Putting a backup back (the import)" }),
+        card(t("Backup"), "out", t("One file with the settings, the features that are on, the statistics, what was posted, graphs1090's history and the kept logs: to keep, or to start a new card where this one stopped."), [
+          h("div", { "class": "actions" }, btn(t("Make a backup"), "backup", {}, "primary"),
+            S.backup ? h("a", { "class": "btn", href: "/console/api/backup", download: "", text: t("Download it") }) : null,
+            S.backup ? btn(t("Delete it"), "backup-delete", {}, "danger") : null),
+          S.backup ? h("p", { "class": "note", text: t("Made {when} ({ago}), {size} on the card. One copy is kept here, replaced by the next; its name says the Pi and the date, so downloads sort in time order.", {
+            when: new Date(S.backup.at * 1000).toLocaleString(I.locale(), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }),
+            ago: ago(S.backup.at), size: t("{n} MB", { n: num(S.backup.bytes / 1048576, 1) }) }) }) : null,
+          h("p", { "class": "sub", text: t("Putting a backup back (the import)") }),
           h("ul", { "class": "ticks" },
-            h("li", { text: "In the terminal of the Pi that receives it: sudo zenithboard backup restore FILE (or the menu: 6 Backup → 2 Put a backup back). It shows what the file holds, asks you to type RESTORE, and keeps what it replaces." }),
-            h("li", { text: "Not from this page, on purpose: a restore replaces data and runs installers as root, like the other steps that ask for a typed word." }),
-            h("li", { text: "This copy leaves the networks' identities out (keys never travel through this page). To move to a new card, make the full one in the terminal: sudo zenithboard backup make." })),
-          h("p", { "class": "note" }, "Step by step, and why the MAC address does not get in the way: ", h("a", { href: "https://github.com/regis57/ZenithBoard/wiki/Backup-and-restore", target: "_blank", rel: "noopener noreferrer", text: "Backup and restore ↗" }))
+            h("li", { text: t("In the terminal of the Pi that receives it: sudo zenithboard backup restore FILE (or the menu: 6 Backup → 2 Put a backup back). It shows what the file holds, asks you to type RESTORE, and keeps what it replaces.") }),
+            h("li", { text: t("Not from this page, on purpose: a restore replaces data and runs installers as root, like the other steps that ask for a typed word.") }),
+            h("li", { text: t("This copy leaves the networks' identities out (keys never travel through this page). To move to a new card, make the full one in the terminal: sudo zenithboard backup make.") })),
+          h("p", { "class": "note" }, t("Step by step, and why the MAC address does not get in the way: "), h("a", { href: "https://github.com/regis57/ZenithBoard/wiki/Backup-and-restore", target: "_blank", rel: "noopener noreferrer", text: t("Backup and restore ↗") }))
         ], "w6"),
-        card("Network", "link", f.ip ? "This Pi: " + f.ip + (f.ddns ? " · " + f.ddns : "") : null, [
-          h("div", { "class": "actions" }, btn("Network", "net-status"), btn("Wi-Fi", "wifi-status"), btn("Domain name", "ddns-status"),
-            S.cfg.DDNS_PROVIDER && S.cfg.DDNS_PROVIDER !== "none" ? btn("Refresh the domain name", "ddns-update") : null),
-          h("p", { "class": "note", text: "Wi-Fi networks, fixed addresses and the domain name's key stay in the terminal (sudo zenithboard menu → 3 Connectivity): one mistake there cuts the Pi off the network this page comes through." })
+        card(t("Network"), "link", f.ip ? t("This Pi: {address}", { address: f.ip + (f.ddns ? " · " + f.ddns : "") }) : null, [
+          h("div", { "class": "actions" }, btn(t("Network"), "net-status"), btn(t("Wi-Fi"), "wifi-status"), btn(t("Domain name"), "ddns-status"),
+            S.cfg.DDNS_PROVIDER && S.cfg.DDNS_PROVIDER !== "none" ? btn(t("Refresh the domain name"), "ddns-update") : null),
+          h("p", { "class": "note", text: t("Wi-Fi networks, fixed addresses and the domain name's key stay in the terminal (sudo zenithboard menu → 3 Connectivity): one mistake there cuts the Pi off the network this page comes through.") })
         ], "w6"),
-        card("Tailscale", "link", f.tailscale === "on" ? "On: reachable from anywhere by the devices of your Tailscale account, no port opened." :
-            "Off. The wall, the statistics and graphs1090 from anywhere, with no port opened: your phone or computer joins your own Tailscale network (a free account on tailscale.com, its app on the phone).", [
-          row("Connected", f.tailscale === "on" ? "Off: the Pi leaves your Tailscale network; it stays installed and signed in" :
-            "The first time it installs Tailscale (minutes), then its sign-in link appears below: open it, sign in to your account, approve the Pi", sw("tailscale", f.tailscale === "on")),
-          f.tailscale === "on" ? row("The console over Tailscale too", "Only your Tailscale devices; its password still applies. Off: home network only", sw("tailscale-console", on(S.cfg.CONSOLE_TAILSCALE))) : null,
+        card(t("Tailscale"), "link", f.tailscale === "on" ? t("On: reachable from anywhere by the devices of your Tailscale account, no port opened.") :
+            t("Off. The wall, the statistics and graphs1090 from anywhere, with no port opened: your phone or computer joins your own Tailscale network (a free account on tailscale.com, its app on the phone)."), [
+          row(t("Connected"), f.tailscale === "on" ? t("Off: the Pi leaves your Tailscale network; it stays installed and signed in") :
+            t("The first time it installs Tailscale (minutes), then its sign-in link appears below: open it, sign in to your account, approve the Pi"), sw("tailscale", f.tailscale === "on")),
+          f.tailscale === "on" ? row(t("The console over Tailscale too"), t("Only your Tailscale devices; its password still applies. Off: home network only"), sw("tailscale-console", on(S.cfg.CONSOLE_TAILSCALE))) : null,
           f.tailscale === "on" && f.tailscale_ip ? h("div", { "class": "actions" },
-            h("a", { "class": "btn", href: "http://" + f.tailscale_ip + ":" + (S.cfg.PORT || "8080") + "/", target: "_blank", rel: "noopener", text: "The wall over Tailscale ↗" }),
-            h("a", { "class": "btn", href: "http://" + f.tailscale_ip + ":" + (S.cfg.PORT || "8080") + "/stats", target: "_blank", rel: "noopener", text: "Statistics ↗" })) : null,
-          f.tailscale === "on" ? h("p", { "class": "note", text: "Its address: " + (f.tailscale_ip || "?") + (f.tailscale_name ? " · " + f.tailscale_name : "") + ". Open these from a device with the Tailscale app on." }) : null,
-          h("div", { "class": "actions" }, btn("Status", "tailscale-status")),
-          h("p", { "class": "note" }, "Removing it completely (sign-out, uninstall) asks for a typed word: in the terminal, sudo zenithboard tailscale remove. Step by step: ",
-            h("a", { href: "https://github.com/regis57/ZenithBoard/wiki/The-menu#tailscale", target: "_blank", rel: "noopener noreferrer", text: "Tailscale ↗" }))
+            h("a", { "class": "btn", href: "http://" + f.tailscale_ip + ":" + (S.cfg.PORT || "8080") + "/", target: "_blank", rel: "noopener", text: t("The wall over Tailscale ↗") }),
+            h("a", { "class": "btn", href: "http://" + f.tailscale_ip + ":" + (S.cfg.PORT || "8080") + "/stats", target: "_blank", rel: "noopener", text: t("Statistics ↗") })) : null,
+          f.tailscale === "on" ? h("p", { "class": "note", text: t("Its address: {address}. Open these from a device with the Tailscale app on.", { address: (f.tailscale_ip || "?") + (f.tailscale_name ? " · " + f.tailscale_name : "") }) }) : null,
+          h("div", { "class": "actions" }, btn(t("Status"), "tailscale-status")),
+          h("p", { "class": "note" }, t("Removing it completely (sign-out, uninstall) asks for a typed word: in the terminal, sudo zenithboard tailscale remove. Step by step: "),
+            h("a", { href: "https://github.com/regis57/ZenithBoard/wiki/The-menu#tailscale", target: "_blank", rel: "noopener noreferrer", text: t("Tailscale ↗") }))
         ], "w6"),
-        card("Signed in", "phone", "Browsers and phones signed in to this console. Signed in with the password: a week (a day unused). A paired phone: as long as it opens the console once a month.", [
+        card(t("Language"), "globe", t("The language of these pages, the statistics and graphs1090 for every browser that did not choose its own. The flag at the top chooses for this browser only. What the Pi prints (the terminal, the cards' output) stays in English."), [
+          row(t("For every browser"), t("Its own name; a language with no translation yet is not listed"), select("console-lang", I.langs(), S.cfg.CONSOLE_LANG || "en", I.langs().map(I.name))),
+          h("p", { "class": "note" }, t("A word that reads wrong? Every language has its review sheet, the English beside it: "),
+            h("a", { href: "https://github.com/regis57/ZenithBoard/wiki/Translating", target: "_blank", rel: "noopener noreferrer", text: t("Translating ↗") }))
+        ], "w6"),
+        card(t("Signed in"), "phone", t("Browsers and phones signed in to this console. Signed in with the password: a week (a day unused). A paired phone: as long as it opens the console once a month."), [
           sessionsList(),
-          row("Sign computers in with a phone", "A computer's sign-in page shows a QR code; a phone signed in here scans it and says yes", sw("phone-signin", on(S.cfg.CONSOLE_PHONE_SIGNIN))),
-          h("div", { "class": "actions" }, h("button", { type: "button", "class": "primary", text: "Pair a phone", onclick: function () { pairPhone(); } }),
-            h("button", { type: "button", "class": "btn", text: "Sign out the others", onclick: function () {
-              api("sessions/revoke", { body: { id: "others" } }).then(function (r) { toast((r.data.count || 0) + " signed out."); loadSessions(); });
+          row(t("Sign computers in with a phone"), t("A computer's sign-in page shows a QR code; a phone signed in here scans it and says yes"), sw("phone-signin", on(S.cfg.CONSOLE_PHONE_SIGNIN))),
+          h("div", { "class": "actions" }, h("button", { type: "button", "class": "primary", text: t("Pair a phone"), onclick: function () { pairPhone(); } }),
+            h("button", { type: "button", "class": "btn", text: t("Sign out the others"), onclick: function () {
+              api("sessions/revoke", { body: { id: "others" } }).then(function (r) { toast(t("{n} signed out.", { n: r.data.count || 0 })); loadSessions(); });
             } }))
         ], "w6"),
-        card("Security", "shield", null, [
-          h("div", { "class": "actions" }, btn("Security check", "security")),
-          h("p", { "class": "sub", text: "Only in the terminal, on purpose" }),
+        card(t("Security"), "shield", null, [
+          h("div", { "class": "actions" }, btn(t("Security check"), "security")),
+          h("p", { "class": "sub", text: t("Only in the terminal, on purpose") }),
           h("ul", { "class": "ticks no" },
-            h("li", { text: "Uninstalling, and anything that asks for a typed word" }),
-            h("li", { text: "Wi-Fi, fixed addresses (they can cut this page off)" }),
-            h("li", { text: "Passwords, tokens and keys: Bluesky, the domain name, this console's own" }),
-            h("li", { text: "Posting to Bluesky, emptying statistics or logs, importing settings, restoring a backup" })),
-          h("p", { "class": "note", text: "This page travels unencrypted on your home network (plain HTTP), like the wall. It answers home addresses only." }),
-          h("div", { "class": "actions" }, btn("Turn the console off", "console-off", {}, "danger"))
+            h("li", { text: t("Uninstalling, and anything that asks for a typed word") }),
+            h("li", { text: t("Wi-Fi, fixed addresses (they can cut this page off)") }),
+            h("li", { text: t("Passwords, tokens and keys: Bluesky, the domain name, this console's own") }),
+            h("li", { text: t("Posting to Bluesky, emptying statistics or logs, importing settings, restoring a backup") })),
+          h("p", { "class": "note", text: t("This page travels unencrypted on your home network (plain HTTP), like the wall. It answers home addresses only.") }),
+          h("div", { "class": "actions" }, btn(t("Turn the console off"), "console-off", {}, "danger"))
         ], "w6")
       ];
     }
@@ -710,7 +746,7 @@
   function field(label, input) { return h("div", { "class": "field" }, h("label", { text: label }), input); }
   function numberApply(action, value, min, max) {
     var inp = h("input", { type: "number", value: value, min: min, max: max, "aria-label": (S.catalog[action] || {}).label });
-    return [inp, h("button", { type: "button", "class": "btn", text: S.pending[action] ? "…" : "Apply", disabled: S.pending[action] ? true : null,
+    return [inp, h("button", { type: "button", "class": "btn", text: S.pending[action] ? "…" : t("Apply"), disabled: S.pending[action] ? true : null,
       onclick: function () { if (String(inp.value) !== String(value)) run(action, { value: String(inp.value) }); } })];
   }
   function select(action, values, current, labels) {
@@ -722,11 +758,11 @@
   }
   function swatches() {
     var cur = S.cfg.THEME || "amber", w = waitingFor("color");
-    return h("div", { "class": "swatches", role: "group", "aria-label": "Colour" }, Object.keys(THEME_HEX).map(function (t) {
-      var b = h("button", { type: "button", "class": "swatch" + (w !== undefined ? (t === w ? " wait" : "") : (t === cur ? " on" : "")),
-        title: t, "aria-label": t, "aria-pressed": t === cur ? "true" : "false", disabled: S.pending.color ? true : null,
-        onclick: function () { if (t !== cur) run("color", { value: t }); } });
-      b.style.background = THEME_HEX[t];
+    return h("div", { "class": "swatches", role: "group", "aria-label": t("Colour") }, Object.keys(THEME_HEX).map(function (col) {
+      var b = h("button", { type: "button", "class": "swatch" + (w !== undefined ? (col === w ? " wait" : "") : (col === cur ? " on" : "")),
+        title: word(col), "aria-label": word(col), "aria-pressed": col === cur ? "true" : "false", disabled: S.pending.color ? true : null,
+        onclick: function () { if (col !== cur) run("color", { value: col }); } });
+      b.style.background = THEME_HEX[col];
       return b;
     }));
   }
@@ -735,10 +771,10 @@
     var waiting = S.pending["social-sentence"];
     return h("div", { "class": "chips" }, all.map(function (w) {
       var lit = picked.indexOf(w) >= 0;
-      return h("button", { type: "button", "class": "chip" + (lit ? " on" : ""), "aria-pressed": lit ? "true" : "false", text: w, disabled: waiting ? true : null,
+      return h("button", { type: "button", "class": "chip" + (lit ? " on" : ""), "aria-pressed": lit ? "true" : "false", text: word(w), disabled: waiting ? true : null,
         onclick: function () {
           var next = lit ? picked.filter(function (x) { return x !== w; }) : picked.concat([w]);
-          if (!next.length) return toast("At least one.");
+          if (!next.length) return toast(t("At least one."));
           next = all.filter(function (x) { return next.indexOf(x) >= 0; });
           run("social-sentence", { value: next.length === all.length ? "random" : next.join(",") });
         } });
@@ -747,46 +783,46 @@
   function summaryRow(p, title) {
     var c = S.cfg, k = "SOCIAL_" + p.toUpperCase(), at = c[k + "_AT"] || "", parts = (c[k + "_PARTS"] || "1").split(","), lit = on(c[k]);
     var bits = at.split(" "), time = bits[bits.length - 1], day = bits.length > 1 ? bits[0] : "";
-    var tIn = h("input", { type: "time", value: time, "aria-label": title + ": time" }), dIn = null;
-    if (p === "weekly") dIn = h("select", { "aria-label": "Day" }, ["mon", "tue", "wed", "thu", "fri", "sat", "sun"].map(function (d) {
-      return h("option", { value: d, text: d, selected: d === day ? true : null }); }));
-    if (p === "monthly") dIn = h("input", { type: "number", "class": "day", min: 1, max: 28, value: day || "1", "aria-label": "Day of the month" });
+    var tIn = h("input", { type: "time", value: time, "aria-label": t("{what}: time", { what: title }) }), dIn = null;
+    if (p === "weekly") dIn = h("select", { "aria-label": t("Day") }, ["mon", "tue", "wed", "thu", "fri", "sat", "sun"].map(function (d) {
+      return h("option", { value: d, text: dayName(d), selected: d === day ? true : null }); }));
+    if (p === "monthly") dIn = h("input", { type: "number", "class": "day", min: 1, max: 28, value: day || "1", "aria-label": t("Day of the month") });
     var keyAt = "at-" + p, keyParts = "parts-" + p;
     return h("div", { "class": "row" },
-      h("div", { "class": "what" }, h("b", { text: title }), h("span", { text: lit ? "On: " + at + ", posts " + parts.join(", ") : "Off" })),
+      h("div", { "class": "what" }, h("b", { text: title }), h("span", { text: lit ? t("On: {when}, posts {posts}", { when: day && p === "weekly" ? dayName(day) + " " + time : at, posts: parts.join(", ") }) : t("Off") })),
       h("div", { "class": "ctl" },
         sw("summary", lit, { period: p }, "summary-" + p, title),
         dIn, tIn,
-        h("button", { type: "button", "class": "btn", text: S.pending[keyAt] ? "…" : "Set", disabled: S.pending[keyAt] ? true : null, onclick: function () {
+        h("button", { type: "button", "class": "btn", text: S.pending[keyAt] ? "…" : t("Set"), disabled: S.pending[keyAt] ? true : null, onclick: function () {
           var when = (dIn ? String(dIn.value).trim() + " " : "") + tIn.value;
           if (when !== at) run("summary-at", { period: p, when: when }, { key: keyAt });
         } }),
         h("div", { "class": "chips" }, ["1", "2", "3", "4"].map(function (n) {
           var has = parts.indexOf(n) >= 0;
-          return h("button", { type: "button", "class": "chip" + (has ? " on" : "") + (n === "1" ? " static" : ""), text: n, title: n === "1" ? "The first always goes" : null,
+          return h("button", { type: "button", "class": "chip" + (has ? " on" : "") + (n === "1" ? " static" : ""), text: n, title: n === "1" ? t("The first always goes") : null,
             "aria-pressed": has ? "true" : "false", disabled: (n === "1" || S.pending[keyParts]) ? true : null, onclick: function () {
               var next = has ? parts.filter(function (x) { return x !== n; }) : parts.concat([n]);
               run("summary-parts", { period: p, value: next.sort().join(",") }, { key: keyParts });
             } });
         })),
-        h("button", { type: "button", "class": "btn", text: "Try", onclick: function () { run("summary-test", { period: p }, { key: "test-" + p, card: S.lastCard }); } })));
+        h("button", { type: "button", "class": "btn", text: t("Try"), onclick: function () { run("summary-test", { period: p }, { key: "test-" + p, card: S.lastCard }); } })));
   }
   function pages() {
     var f = S.facts, c = S.cfg, hh = host(), list = [];
     function page(icon, title, sub, href) { return h("a", { "class": "page", href: href, target: "_blank", rel: "noopener" }, ico(icon), h("div", null, h("b", { text: title }), h("span", { text: sub }))); }
     function later(icon, title, sub, section) { return h("button", { type: "button", "class": "page later", onclick: go(section) }, ico(icon), h("div", null, h("b", { text: title }), h("span", { text: sub }))); }
-    list.push(page("wall", "The wall", (c.DISPLAY_MODE === "flap" ? "Split-flap" : "Dot matrix") + ", " + (c.THEME || "amber"), "/"));
-    list.push(on(c.STATS) ? page("chart", "Statistics", "24 h, 7 days, 30 days", "/stats") : later("chart", "Statistics", "Off · switch on in Receiver", "receiver"));
-    if (f.map) list.push(page("map", "Receiver map", "tar1090, on port 80", "http://" + hh + "/tar1090/"));
-    if (f.skyaware) list.push(page("map", "SkyAware", "FlightAware's map", "http://" + hh + "/skyaware/"));
-    list.push(f.graphs === "on" ? page("graph", "graphs1090", "The decoder's graphs, port 8542", "http://" + hh + ":8542/") : later("graph", "graphs1090", "Off · switch on in Receiver", "receiver"));
-    if (f.svc_pfclient !== undefined) list.push(page("plane", "Plane Finder", "Its own page, port 30053", "http://" + hh + ":30053/"));
-    if (f.svc_fr24feed !== undefined) list.push(page("plane", "Flightradar24", "Its feeder's page, port 8754", "http://" + hh + ":8754/"));
-    if (f.svc_adsbexchange_feed !== undefined) list.push(h("a", { "class": "page", href: "https://www.adsbexchange.com/myip/", target: "_blank", rel: "noopener noreferrer" }, ico("link"), h("div", null, h("b", { text: "ADSB Exchange" }), h("span", { text: "Your feed, on their site" }))));
+    list.push(page("wall", t("The wall"), (c.DISPLAY_MODE === "flap" ? t("Split-flap") : t("Dot matrix")) + ", " + word(c.THEME || "amber"), "/"));
+    list.push(on(c.STATS) ? page("chart", t("Statistics"), t("24 h, 7 days, 30 days"), "/stats") : later("chart", t("Statistics"), t("Off · switch on in Receiver"), "receiver"));
+    if (f.map) list.push(page("map", t("Receiver map"), t("tar1090, on port 80"), "http://" + hh + "/tar1090/"));
+    if (f.skyaware) list.push(page("map", t("SkyAware"), t("FlightAware's map"), "http://" + hh + "/skyaware/"));
+    list.push(f.graphs === "on" ? page("graph", "graphs1090", t("The decoder's graphs, port 8542"), "http://" + hh + ":8542/" + langQ()) : later("graph", "graphs1090", t("Off · switch on in Receiver"), "receiver"));
+    if (f.svc_pfclient !== undefined) list.push(page("plane", t("Plane Finder"), t("Its own page, port 30053"), "http://" + hh + ":30053/"));
+    if (f.svc_fr24feed !== undefined) list.push(page("plane", t("Flightradar24"), t("Its feeder's page, port 8754"), "http://" + hh + ":8754/"));
+    if (f.svc_adsbexchange_feed !== undefined) list.push(h("a", { "class": "page", href: "https://www.adsbexchange.com/myip/", target: "_blank", rel: "noopener noreferrer" }, ico("link"), h("div", null, h("b", { text: t("ADSB Exchange") }), h("span", { text: t("Your feed, on their site") }))));
     if (f.bluesky) {
-      list.push(page("picture", "Last post's picture", "What 'Try a post' drew", "/social/preview"));
-      ["2", "3", "4"].forEach(function (n) { list.push(page("picture", "Weekly post " + n, ["", "", "Cargo and business jets", "Military", "General aviation"][Number(n)], "/social/preview" + n)); });
-    } else list.push(later("share", "Bluesky posts", "No account yet · see Sharing", "sharing"));
+      list.push(page("picture", t("Last post's picture"), t("What 'Try a post' drew"), "/social/preview"));
+      ["2", "3", "4"].forEach(function (n) { list.push(page("picture", t("Weekly post {n}", { n: n }), ["", "", t("Cargo and business jets"), t("Military"), t("General aviation")][Number(n)], "/social/preview" + n)); });
+    } else list.push(later("share", t("Bluesky posts"), t("No account yet · see Sharing"), "sharing"));
     return list;
   }
 
@@ -795,12 +831,12 @@
     return api("sessions").then(function (r) { if (r.ok) { S.sessions = r.data; if (S.section === "system") draw(); } });
   }
   function sessionsList() {
-    if (!S.sessions) { loadSessions(); return h("p", { "class": "note", text: "Reading…" }); }
+    if (!S.sessions) { loadSessions(); return h("p", { "class": "note", text: t("Reading…") }); }
     return h("div", { "class": "list" }, S.sessions.sessions.map(function (s) {
       var me = s.id === S.sessions.you;
-      return h("div", { "class": "li" }, h("div", null, h("b", { text: s.label + (me ? " · this one" : "") }),
-        h("small", { text: (s.kind === "paired" ? "paired" : "password") + " · since " + ago(s.created) + " · seen " + ago(s.seen) })),
-        me ? h("span", { "class": "pill ok", text: "you" }) : h("button", { type: "button", "class": "btn", text: "Sign out", onclick: function () {
+      return h("div", { "class": "li" }, h("div", null, h("b", { text: s.label + (me ? " · " + t("this one") : "") }),
+        h("small", { text: t("{how} · since {since} · seen {seen}", { how: s.kind === "paired" ? t("paired") : t("password"), since: ago(s.created), seen: ago(s.seen) }) })),
+        me ? h("span", { "class": "pill ok", text: t("you") }) : h("button", { type: "button", "class": "btn", text: t("Sign out"), onclick: function () {
           api("sessions/revoke", { body: { id: s.id } }).then(function () { loadSessions(); });
         } }));
     }));
@@ -821,26 +857,26 @@
   function pairPhone(after) {
     var local = /^(localhost|127\.|\[?::1)/.test(location.hostname);
     api("pair", { body: {} }).then(function (r) {
-      if (!r.ok) return toast(r.data.error || "Could not make a pairing code.", true);
+      if (!r.ok) return toast(t(r.data.error || "Could not make a pairing code."), true);
       var url = location.protocol + "//" + location.host + "/console/#pair=" + r.data.token, until = Date.now() + r.data.seconds * 1000;
-      var count = h("div", { "class": "count" }), status = h("p", { "class": "qr-note", text: "Scan it with the phone's camera, then open the link." });
+      var count = h("div", { "class": "count" }), status = h("p", { "class": "qr-note", text: t("Scan it with the phone's camera, then open the link.") });
       var box = h("div", { "class": "qr" }, qrSvg(url));
       openModal(h("div", null,
-        h("header", null, h("h2", { text: "Pair a phone" }), h("button", { type: "button", "class": "ghost", "aria-label": "Close", text: "×", onclick: stop })),
-        h("div", { "class": "modal-body" }, local ? h("p", { "class": "err", text: "This page was opened as " + location.hostname + ": a phone cannot reach that. Open the console at the Pi's address to pair one." }) : null,
+        h("header", null, h("h2", { text: t("Pair a phone") }), h("button", { type: "button", "class": "ghost", "aria-label": t("Close"), text: "×", onclick: stop })),
+        h("div", { "class": "modal-body" }, local ? h("p", { "class": "err", text: t("This page was opened as {host}: a phone cannot reach that. Open the console at the Pi's address to pair one.", { host: location.hostname }) }) : null,
           box, count, status,
-          h("p", { "class": "qr-note", text: "It works once, within five minutes. The phone then stays signed in as long as it opens the console once a month. Add it to the home screen from Safari's Share menu to open it in one tap." }))));
+          h("p", { "class": "qr-note", text: t("It works once, within five minutes. The phone then stays signed in as long as it opens the console once a month. Add it to the home screen from Safari's Share menu to open it in one tap.") }))));
       var timer = setInterval(tickPair, 1000), poll = setInterval(checkPair, 2000);
       function tickPair() {
         var left = Math.max(0, Math.round((until - Date.now()) / 1000));
         count.textContent = Math.floor(left / 60) + ":" + ("0" + left % 60).slice(-2);
-        if (!left) { box.hidden = true; status.textContent = "Out of date. Close this and make a new one."; clearInterval(timer); clearInterval(poll); }
+        if (!left) { box.hidden = true; status.textContent = t("Out of date. Close this and make a new one."); clearInterval(timer); clearInterval(poll); }
       }
       function checkPair() {
         api("pair?id=" + r.data.id).then(function (p) {
           if (p.ok && p.data.used_by) {
             clearInterval(timer); clearInterval(poll);
-            box.hidden = true; count.hidden = true; status.className = "qr-ok"; status.textContent = "✓ " + p.data.used_by + " signed in.";
+            box.hidden = true; count.hidden = true; status.className = "qr-ok"; status.textContent = "✓ " + t("{name} signed in.", { name: p.data.used_by });
             S.sessions = null; loadSessions();
           }
         });
@@ -859,10 +895,14 @@
   function closeDrawer() { $("drawer").hidden = true; S.activityOpen = false; document.body.style.overflow = ""; }
   function loadActivity() { api("activity").then(function (r) { if (r.ok) { S.activity = r.data; drawDrawer(); } }); }
   function termText(j) {
-    return j.log || (j.state === "queued" ? (j.behind ? "Waiting: " + ((S.catalog[j.behind] || {}).label || j.behind) + " runs first" + (j.ahead ? " (" + j.ahead + " before this one)" : "") + ". The Pi does one change at a time." : "Waiting for the Pi's helper…") : "");
+    if (j.log || j.state !== "queued") return j.log || "";
+    if (!j.behind) return t("Waiting for the Pi's helper…");
+    var job = t((S.catalog[j.behind] || {}).label || j.behind);
+    return j.ahead ? t("Waiting: {job} runs first ({n} before this one). The Pi does one change at a time.", { job: job, n: j.ahead })
+      : t("Waiting: {job} runs first. The Pi does one change at a time.", { job: job });
   }
   function pillOf(j) {
-    return j.state === "done" ? (j.rc === 0 ? ["ok", "done"] : ["bad", "exit " + j.rc]) : j.state === "refused" ? ["bad", "refused"] : [j.state === "running" ? "run" : "queued", j.state || "queued"];
+    return j.state === "done" ? (j.rc === 0 ? ["ok", word("done")] : ["bad", t("exit {rc}", { rc: j.rc })]) : j.state === "refused" ? ["bad", word("refused")] : [j.state === "running" ? "run" : "queued", word(j.state || "queued")];
   }
   var termPre = null, termPill = null;
   function drawTerm() {
@@ -882,24 +922,24 @@
       body.appendChild(h("div", { "class": "term" }, h("div", { "class": "th" }, ico("terminal"), h("b", { text: j.label }), termPill), termPre));
       drawTerm();
       if (j.state === "done" && (j.action === "social-test" || j.action === "summary-test")) {
-        body.appendChild(h("div", { "class": "actions" }, h("a", { "class": "btn", href: "/social/preview", target: "_blank", rel: "noopener", text: "The picture ↗" }),
-          j.action === "summary-test" ? ["2", "3", "4"].map(function (n) { return h("a", { "class": "btn", href: "/social/preview" + n, target: "_blank", rel: "noopener", text: "Post " + n + " ↗" }); }) : null));
+        body.appendChild(h("div", { "class": "actions" }, h("a", { "class": "btn", href: "/social/preview", target: "_blank", rel: "noopener", text: t("The picture ↗") }),
+          j.action === "summary-test" ? ["2", "3", "4"].map(function (n) { return h("a", { "class": "btn", href: "/social/preview" + n, target: "_blank", rel: "noopener", text: t("Post {n} ↗", { n: n }) }); }) : null));
       }
     }
     var a = S.activity;
-    if (!a) { body.appendChild(h("p", { "class": "note", text: "Reading…" })); return; }
-    body.appendChild(h("div", null, h("p", { "class": "sub", text: "The last jobs" }), h("div", { "class": "list" }, a.jobs.filter(function (x) { return x.action !== "refresh"; }).length ? a.jobs.filter(function (x) { return x.action !== "refresh"; }).slice(0, 12).map(function (x) {
-      var spec = S.catalog[x.action] || { label: x.action }, ok = x.state === "done" && x.rc === 0;
+    if (!a) { body.appendChild(h("p", { "class": "note", text: t("Reading…") })); return; }
+    body.appendChild(h("div", null, h("p", { "class": "sub", text: t("The last jobs") }), h("div", { "class": "list" }, a.jobs.filter(function (x) { return x.action !== "refresh"; }).length ? a.jobs.filter(function (x) { return x.action !== "refresh"; }).slice(0, 12).map(function (x) {
+      var spec = S.catalog[x.action] || { label: x.action }, ok = x.state === "done" && x.rc === 0, lbl = t(spec.label);
       var params = x.params && typeof x.params === "object" ? Object.keys(x.params).map(function (k) { return x.params[k]; }).filter(Boolean).join(" ") : "";
       return h("button", { type: "button", "class": "li" + (x.id === S.drawerJob ? " sel" : ""), "aria-current": x.id === S.drawerJob ? "true" : null, onclick: function () { showOld(x); } },
-        h("div", null, h("b", { text: spec.label + (params ? ": " + params : "") }), h("small", { text: clock(x.started || 0) + " · " + (x.by || "") })),
-        h("span", { "class": "pill " + (x.state === "running" ? "run" : ok ? "ok" : x.state === "done" || x.state === "refused" ? "bad" : "queued"), text: x.state === "done" ? (ok ? "ok" : "exit " + x.rc) : x.state }));
-    }) : h("p", { "class": "note", text: "Nothing run from the console yet." }))));
-    body.appendChild(h("div", null, h("p", { "class": "sub", text: "Changes (the root helper's journal)" }), h("pre", { "class": "mono-list", text: a.journal.join("\n") || "None yet." })));
-    body.appendChild(h("div", null, h("p", { "class": "sub", text: "Sign-ins" }), h("pre", { "class": "mono-list", text: a.audit.join("\n") || "None yet." })));
+        h("div", null, h("b", { text: params ? t("{job}: {value}", { job: lbl, value: word(params) }) : lbl }), h("small", { text: clock(x.started || 0) + " · " + (x.by || "") })),
+        h("span", { "class": "pill " + (x.state === "running" ? "run" : ok ? "ok" : x.state === "done" || x.state === "refused" ? "bad" : "queued"), text: x.state === "done" ? (ok ? t("ok") : t("exit {rc}", { rc: x.rc })) : word(x.state) }));
+    }) : h("p", { "class": "note", text: t("Nothing run from the console yet.") }))));
+    body.appendChild(h("div", null, h("p", { "class": "sub", text: t("Changes (the root helper's journal)") }), h("pre", { "class": "mono-list", text: a.journal.join("\n") || t("None yet.") })));
+    body.appendChild(h("div", null, h("p", { "class": "sub", text: t("Sign-ins") }), h("pre", { "class": "mono-list", text: a.audit.join("\n") || t("None yet.") })));
   }
   function showOld(x) {
-    if (!S.jobs[x.id]) S.jobs[x.id] = { id: x.id, action: x.action, label: (S.catalog[x.action] || {}).label || x.action, params: x.params, state: x.state, log: "", next: 0, key: "old-" + x.id, quiet: true };
+    if (!S.jobs[x.id]) S.jobs[x.id] = { id: x.id, action: x.action, label: t((S.catalog[x.action] || {}).label || x.action), params: x.params, state: x.state, log: "", next: 0, key: "old-" + x.id, quiet: true };
     var j = S.jobs[x.id];
     S.drawerJob = x.id; drawDrawer();
     $("drawer-body").scrollTop = 0;     // its output is at the top of the drawer: show it (0.39.3, it opened out of sight)
@@ -921,14 +961,14 @@
   // ---- the wizard: the first time, five short steps; only what differs from the Pi's settings is applied
   // ---- the first steps (0.39.0; 0.41.0: the antenna, the feeders, sharing, the phone; open again at any time from
   // System or the overview). Only what differs from the Pi's settings is applied, in the review's order.
-  var FEEDERS = [["adsbexchange_feed", "ADSB Exchange", "https://www.adsbexchange.com/myip/"], ["piaware", "FlightAware", "https://www.flightaware.com/adsb/piaware/claim"],
-    ["fr24feed", "Flightradar24", ":8754"], ["pfclient", "Plane Finder", ":30053"]];
+  var FEEDERS = [["adsbexchange_feed", t("ADSB Exchange"), "https://www.adsbexchange.com/myip/"], ["piaware", t("FlightAware"), "https://www.flightaware.com/adsb/piaware/claim"],
+    ["fr24feed", t("Flightradar24"), ":8754"], ["pfclient", t("Plane Finder"), ":30053"]];
   function setupGaps() {
     var c = S.cfg, f = S.facts, out = [];
-    if (!(Number(c.LAT) || Number(c.LON))) out.push("The antenna's position is not set");
-    if (!f.decoder) out.push("No decoder yet: sudo zenithboard menu → 1 ADSB");
-    if (!on(c.STATS)) out.push("Statistics are off");
-    if (f.watchdog !== "on" || f.netwatch !== "on") out.push("The watchdogs are not both on");
+    if (!(Number(c.LAT) || Number(c.LON))) out.push(t("The antenna's position is not set"));
+    if (!f.decoder) out.push(t("No decoder yet: sudo zenithboard menu → 1 ADSB"));
+    if (!on(c.STATS)) out.push(t("Statistics are off"));
+    if (f.watchdog !== "on" || f.netwatch !== "on") out.push(t("The watchdogs are not both on"));
     return out;
   }
   function wizard() {
@@ -947,100 +987,100 @@
     var STEPS = [
       function () {
         var feeders = FEEDERS.filter(function (x) { return f["svc_" + x[0]] !== undefined; }).map(function (x) { return x[1]; });
-        return [h("h3", { text: "Welcome to the console" }),
-          h("p", { "class": "lead", text: "ZenithBoard's settings from this browser. The menu and the zenithboard command stay as they are; each change here runs the same command, and you see what it prints." }),
+        return [h("h3", { text: t("Welcome to the console") }),
+          h("p", { "class": "lead", text: t("ZenithBoard's settings from this browser. The menu and the zenithboard command stay as they are; each change here runs the same command, and you see what it prints.") }),
           h("ul", { "class": "ticks" },
-            h("li", { text: "This Pi: " + (f.model || "Raspberry Pi") + ", ZenithBoard " + (S.session.version || "") }),
-            h("li", { text: "Decoder: " + (f.decoder || "none yet (sudo zenithboard menu → 1 ADSB)") }),
-            h("li", { text: "Feeding: " + (feeders.join(", ") || "nobody yet") }),
-            h("li", { text: "Answers your home network only; uninstalling, Wi-Fi and passwords stay in the terminal" })),
-          h("p", { "class": "note", text: "Seven short steps, then a review: nothing changes before you apply it. Open them again at any time: System → First steps again." }),
-          h("p", { "class": "note", text: "Moving from an old card? Restore its backup first, in the terminal (sudo zenithboard backup restore FILE): the settings, what was on, the statistics and the networks' identities come back, and these steps are then only a check." })];
+            h("li", { text: t("This Pi: {model}, ZenithBoard {version}", { model: f.model || "Raspberry Pi", version: S.session.version || "" }) }),
+            h("li", { text: t("Decoder: {name}", { name: f.decoder || t("none yet (sudo zenithboard menu → 1 ADSB)") }) }),
+            h("li", { text: t("Feeding: {list}", { list: feeders.join(", ") || t("nobody yet") }) }),
+            h("li", { text: t("Answers your home network only; uninstalling, Wi-Fi and passwords stay in the terminal") })),
+          h("p", { "class": "note", text: t("Seven short steps, then a review: nothing changes before you apply it. Open them again at any time: System → First steps again.") }),
+          h("p", { "class": "note", text: t("Moving from an old card? Restore its backup first, in the terminal (sudo zenithboard backup restore FILE): the settings, what was on, the statistics and the networks' identities come back, and these steps are then only a check.") })];
       },
       function () {
-        var lat = h("input", { type: "text", inputmode: "decimal", value: W.lat, "aria-label": "Latitude", oninput: function () { W.lat = lat.value.trim(); } });
-        var lon = h("input", { type: "text", inputmode: "decimal", value: W.lon, "aria-label": "Longitude", oninput: function () { W.lon = lon.value.trim(); } });
-        var alt = h("input", { type: "number", value: W.alt, "aria-label": "Altitude in metres", oninput: function () { W.alt = alt.value.trim(); } });
-        return [h("h3", { text: "Where the antenna is" }),
-          h("p", { "class": "lead", text: "The decoder, MLAT and the wall's distances need it; it is never shown on the wall or in a post. A right-click on your roof in a map gives the two numbers." }),
-          wrow("Region", wseg("region", ["world", "us"], ["World", "United States"])),
-          wrow("Units", wseg("units", ["metric", "imperial"], ["km · m", "mi · ft"])),
-          h("div", { "class": "fields" }, field("Latitude", lat), field("Longitude", lon), field("Alt. m", alt)),
+        var lat = h("input", { type: "text", inputmode: "decimal", value: W.lat, "aria-label": t("Latitude"), oninput: function () { W.lat = lat.value.trim(); } });
+        var lon = h("input", { type: "text", inputmode: "decimal", value: W.lon, "aria-label": t("Longitude"), oninput: function () { W.lon = lon.value.trim(); } });
+        var alt = h("input", { type: "number", value: W.alt, "aria-label": t("Altitude in metres"), oninput: function () { W.alt = alt.value.trim(); } });
+        return [h("h3", { text: t("Where the antenna is") }),
+          h("p", { "class": "lead", text: t("The decoder, MLAT and the wall's distances need it; it is never shown on the wall or in a post. A right-click on your roof in a map gives the two numbers.") }),
+          wrow(t("Region"), wseg("region", ["world", "us"], [t("World"), t("United States")])),
+          wrow(t("Units"), wseg("units", ["metric", "imperial"], [t("km · m"), t("mi · ft")])),
+          h("div", { "class": "fields" }, field(t("Latitude"), lat), field(t("Longitude"), lon), field(t("Alt. m"), alt)),
           err ? h("p", { "class": "err", text: err }) : null];
       },
       function () {
-        return [h("h3", { text: "The wall" }), h("p", { "class": "lead", text: "The default of every screen; a tablet can still pick its own with its gear." }),
-          wrow("Look", wseg("mode", ["dots", "flap"], ["Dot matrix", "Split-flap"])),
-          wrow("Colour", h("div", { "class": "swatches" }, Object.keys(THEME_HEX).map(function (t) {
-            var b = h("button", { type: "button", "class": "swatch" + (W.color === t ? " on" : ""), "aria-label": t, onclick: function () { W.color = t; theme(t); redraw(); } });
-            b.style.background = THEME_HEX[t]; return b;
+        return [h("h3", { text: t("The wall") }), h("p", { "class": "lead", text: t("The default of every screen; a tablet can still pick its own with its gear.") }),
+          wrow(t("Look"), wseg("mode", ["dots", "flap"], [t("Dot matrix"), t("Split-flap")])),
+          wrow(t("Colour"), h("div", { "class": "swatches" }, Object.keys(THEME_HEX).map(function (col) {
+            var b = h("button", { type: "button", "class": "swatch" + (W.color === col ? " on" : ""), "aria-label": word(col), onclick: function () { W.color = col; theme(col); redraw(); } });
+            b.style.background = THEME_HEX[col]; return b;
           }))),
-          wrow("Radius", wseg("radius", ["1", "2", "5", "10", "15", "30", "50"]))];
+          wrow(t("Radius"), wseg("radius", ["1", "2", "5", "10", "15", "30", "50"]))];
       },
       function () {
         var hh = host();
-        return [h("h3", { text: "Feeding the networks" }),
-          h("p", { "class": "lead", text: "Each network is added in the terminal: sudo zenithboard menu → 1 ADSB. Their own installers ask questions as they go (a station name, an e-mail, a sharing key) and give a claim link or code to keep: the console runs commands that ask nothing, and keeps no key." }),
-          h("div", { "class": "list" }, [["readsb", "Decoder (readsb)"], ["dump1090_fa", "Decoder (dump1090-fa)"]].filter(function (x) { return f["svc_" + x[0]] !== undefined; }).concat(FEEDERS).map(function (x) {
+        return [h("h3", { text: t("Feeding the networks") }),
+          h("p", { "class": "lead", text: t("Each network is added in the terminal: sudo zenithboard menu → 1 ADSB. Their own installers ask questions as they go (a station name, an e-mail, a sharing key) and give a claim link or code to keep: the console runs commands that ask nothing, and keeps no key.") }),
+          h("div", { "class": "list" }, [["readsb", t("Decoder (readsb)")], ["dump1090_fa", t("Decoder (dump1090-fa)")]].filter(function (x) { return f["svc_" + x[0]] !== undefined; }).concat(FEEDERS).map(function (x) {
             var st = svcWord(x[0]), url = x[2] ? (x[2][0] === ":" ? "http://" + hh + x[2] + "/" : x[2]) : null;
-            return h("div", { "class": "li" }, h("div", null, h("b", { text: x[1] }), h("small", { text: st })),
-              st !== "not installed" && url ? h("a", { href: url, target: "_blank", rel: "noopener noreferrer", text: "Its page ↗" }) : h("span", { "class": "pill " + (st === "running" ? "ok" : "queued"), text: st === "running" ? "ok" : st === "not installed" ? "terminal" : st }));
+            return h("div", { "class": "li" }, h("div", null, h("b", { text: x[1] }), h("small", { text: word(st) })),
+              st !== "not installed" && url ? h("a", { href: url, target: "_blank", rel: "noopener noreferrer", text: t("Its page ↗") }) : h("span", { "class": "pill " + (st === "running" ? "ok" : "queued"), text: st === "running" ? t("ok") : st === "not installed" ? t("terminal") : word(st) }));
           })),
-          h("p", { "class": "note", text: "ADSB Exchange comes first and is always on; FlightAware, Flightradar24 and Plane Finder only if you want them. Their state is also on the overview." })];
+          h("p", { "class": "note", text: t("ADSB Exchange comes first and is always on; FlightAware, Flightradar24 and Plane Finder only if you want them. Their state is also on the overview.") })];
       },
       function () {
-        return [h("h3", { text: "What to collect" }), h("p", { "class": "lead", text: "All of it stays on the card; nothing is sent anywhere." }),
-          wrow("Statistics", wsw("stats"), "A sample every 15 minutes, 30 days kept: the /stats page and the summaries' figures."),
-          wrow("graphs1090", wsw("graphs"), "Years of the decoder's graphs on port 8542; its author's installer, a few minutes."),
-          wrow("The receiver map's aircraft database", wsw("localdb"), f.map ? "Registrations and models read on the card (tar1090)." : "Needs the receiver map (tar1090), not seen on this Pi.")];
+        return [h("h3", { text: t("What to collect") }), h("p", { "class": "lead", text: t("All of it stays on the card; nothing is sent anywhere.") }),
+          wrow(t("Statistics"), wsw("stats"), t("A sample every 15 minutes, 30 days kept: the /stats page and the summaries' figures.")),
+          wrow("graphs1090", wsw("graphs"), t("Years of the decoder's graphs on port 8542; its author's installer, a few minutes.")),
+          wrow(t("The receiver map's aircraft database"), wsw("localdb"), f.map ? t("Registrations and models read on the card (tar1090).") : t("Needs the receiver map (tar1090), not seen on this Pi."))];
       },
       function () {
-        return [h("h3", { text: "What keeps it running" }), h("p", { "class": "lead", text: "Recommended for a Pi left alone. Each one off again puts back what it found." }),
-          wrow("Hardware watchdog", wsw("watchdog"), "The chip restarts a frozen Pi after about 10 seconds."),
-          wrow("Network watchdog", wsw("netwatch"), "No router for 6 minutes: the network restarts; 12: the Pi."),
-          wrow("Logs kept after a restart", wsw("keeplogs"), "Up to 50 MB, to read what happened before a freeze."),
-          wrow("Daily security fixes", wsw("patches"), "Debian's security channel only; feeders untouched, no reboot."),
-          f.wifi ? wrow("Wi-Fi hardening", wsw("wifi-harden"), "Retry without end after a loss; no radio power saving.") : null];
+        return [h("h3", { text: t("What keeps it running") }), h("p", { "class": "lead", text: t("Recommended for a Pi left alone. Each one off again puts back what it found.") }),
+          wrow(t("Hardware watchdog"), wsw("watchdog"), t("The chip restarts a frozen Pi after about 10 seconds.")),
+          wrow(t("Network watchdog"), wsw("netwatch"), t("No router for 6 minutes: the network restarts; 12: the Pi.")),
+          wrow(t("Logs kept after a restart"), wsw("keeplogs"), t("Up to 50 MB, to read what happened before a freeze.")),
+          wrow(t("Daily security fixes"), wsw("patches"), t("Debian's security channel only; feeders untouched, no reboot.")),
+          f.wifi ? wrow(t("Wi-Fi hardening"), wsw("wifi-harden"), t("Retry without end after a loss; no radio power saving.")) : null];
       },
       function () {
         var acct = f.bluesky;
-        return [h("h3", { text: "Sharing on Bluesky" }),
-          h("p", { "class": "lead", text: acct ? "Account @" + acct + ". Posting each crossing is switched in Sharing; the summaries here." :
-            "No Bluesky account on this Pi: it is set up in the terminal (it asks for an app password): sudo zenithboard social setup. Skip this step until then." }),
-          wrow("Summary of the last 24 hours", wsw("sum_daily"), "Every day at its time (21:00 unless changed in Sharing), from the statistics."),
-          wrow("Summary of the week", wsw("sum_weekly"), "Sunday 19:00 unless changed; four posts, two minutes apart."),
-          W.stats !== "on" && (W.sum_daily === "on" || W.sum_weekly === "on") ? h("p", { "class": "note", text: "They need the statistics: switch them on in step 5." }) : null];
+        return [h("h3", { text: t("Sharing on Bluesky") }),
+          h("p", { "class": "lead", text: acct ? t("Account @{account}. Posting each crossing is switched in Sharing; the summaries here.", { account: acct }) :
+            t("No Bluesky account on this Pi: it is set up in the terminal (it asks for an app password): sudo zenithboard social setup. Skip this step until then.") }),
+          wrow(t("Summary of the last 24 hours"), wsw("sum_daily"), t("Every day at its time (21:00 unless changed in Sharing), from the statistics.")),
+          wrow(t("Summary of the week"), wsw("sum_weekly"), t("Sunday 19:00 unless changed; four posts, two minutes apart.")),
+          W.stats !== "on" && (W.sum_daily === "on" || W.sum_weekly === "on") ? h("p", { "class": "note", text: t("They need the statistics: switch them on in step 5.") }) : null];
       },
       function () {
-        return [h("h3", { text: "Your phone, and this computer" }),
-          h("p", { "class": "lead", text: "Scan a QR code once and the phone stays signed in, no password typed, as long as it opens the console once a month. Face ID and passkeys need HTTPS under a domain name, which a Pi at a home address does not have." }),
-          h("div", { "class": "actions" }, h("button", { type: "button", "class": "btn", text: "Pair a phone now", onclick: function () { S.wizardOpen = false; pairPhone(reopen); } })),
-          wrow("Sign computers in with the phone", wsw("phone-signin"), "A computer's sign-in page then shows a QR code; the phone says yes, no password.")];
+        return [h("h3", { text: t("Your phone, and this computer") }),
+          h("p", { "class": "lead", text: t("Scan a QR code once and the phone stays signed in, no password typed, as long as it opens the console once a month. Face ID and passkeys need HTTPS under a domain name, which a Pi at a home address does not have.") }),
+          h("div", { "class": "actions" }, h("button", { type: "button", "class": "btn", text: t("Pair a phone now"), onclick: function () { S.wizardOpen = false; pairPhone(reopen); } })),
+          wrow(t("Sign computers in with the phone"), wsw("phone-signin"), t("A computer's sign-in page then shows a QR code; the phone says yes, no password."))];
       },
       function () {
         var plan = changes();
-        return [h("h3", { text: plan.length ? "Ready" : "Nothing to change" }),
-          h("p", { "class": "lead", text: plan.length ? "Applied one after the other; each is the zenithboard command you can read in Activity." : "Everything is already as you chose." }),
+        return [h("h3", { text: plan.length ? t("Ready") : t("Nothing to change") }),
+          h("p", { "class": "lead", text: plan.length ? t("Applied one after the other; each is the zenithboard command you can read in Activity.") : t("Everything is already as you chose.") }),
           h("ul", { "class": "ticks plan", id: "wiz-plan" }, plan.map(function (p) { return h("li", { "data-k": p.k, text: p.words }); })),
-          setupGaps().length && !plan.length ? h("p", { "class": "note", text: "Still to do: " + setupGaps().join("; ") + "." }) : null];
+          setupGaps().length && !plan.length ? h("p", { "class": "note", text: t("Still to do: {list}.", { list: setupGaps().join("; ") }) }) : null];
       }
     ];
-    var WORDS = { region: "Region", units: "Units", mode: "Look", color: "Colour", radius: "Radius", stats: "Statistics", graphs: "graphs1090", localdb: "Receiver map's database",
-      watchdog: "Hardware watchdog", netwatch: "Network watchdog", keeplogs: "Logs kept after a restart", patches: "Daily security fixes", "wifi-harden": "Wi-Fi hardening",
-      sum_daily: "Summary of the last 24 hours", sum_weekly: "Summary of the week", "phone-signin": "Computers signed in by the phone" };
+    var WORDS = { region: t("Region"), units: t("Units"), mode: t("Look"), color: t("Colour"), radius: t("Radius"), stats: t("Statistics"), graphs: "graphs1090", localdb: t("Receiver map's database"),
+      watchdog: t("Hardware watchdog"), netwatch: t("Network watchdog"), keeplogs: t("Logs kept after a restart"), patches: t("Daily security fixes"), "wifi-harden": t("Wi-Fi hardening"),
+      sum_daily: t("Summary of the last 24 hours"), sum_weekly: t("Summary of the week"), "phone-signin": t("Computers signed in by the phone") };
     var ORDER = ["region", "units", "mode", "color", "radius", "stats", "localdb", "watchdog", "netwatch", "keeplogs", "patches", "wifi-harden", "sum_daily", "sum_weekly", "phone-signin", "graphs"];
     function changes() {
       var out = [];
-      if (W.lat !== start.lat || W.lon !== start.lon || W.alt !== start.alt) out.push({ k: "location", action: "location", params: { lat: W.lat, lon: W.lon, alt: W.alt }, words: "Antenna position: " + W.lat + ", " + W.lon + ", " + W.alt + " m" });
+      if (W.lat !== start.lat || W.lon !== start.lon || W.alt !== start.alt) out.push({ k: "location", action: "location", params: { lat: W.lat, lon: W.lon, alt: W.alt }, words: t("Antenna position: {lat}, {lon}, {alt} m", { lat: W.lat, lon: W.lon, alt: W.alt }) });
       ORDER.forEach(function (k) {
         if (W[k] === start[k]) return;
         var action = k, params = { value: W[k] };
         if (k === "sum_daily" || k === "sum_weekly") { action = "summary"; params = { period: k === "sum_daily" ? "daily" : "weekly", value: W[k] }; }
-        out.push({ k: k, action: action, params: params, words: WORDS[k] + ": " + W[k] });
+        out.push({ k: k, action: action, params: params, words: WORDS[k] + ": " + word(W[k]) });
       });
       return out;
     }
-    function wrow(title, ctl, hint) { var t = ctl && ctl.classList && ctl.classList.contains("sw"); return h("div", { "class": "row" + (t ? " tight" : "") }, h("div", { "class": "what" }, h("b", { text: title }), hint ? h("span", { text: hint }) : null), h("div", { "class": "ctl" + (t ? " end" : "") }, ctl)); }
+    function wrow(title, ctl, hint) { var tight = ctl && ctl.classList && ctl.classList.contains("sw"); return h("div", { "class": "row" + (tight ? " tight" : "") }, h("div", { "class": "what" }, h("b", { text: title }), hint ? h("span", { text: hint }) : null), h("div", { "class": "ctl" + (tight ? " end" : "") }, ctl)); }
     function wseg(k, choices, labels) {
       return h("div", { "class": "seg" }, choices.map(function (c, i) {
         return h("button", { type: "button", "class": W[k] === c ? "on" : "", text: labels ? labels[i] : c, onclick: function () { W[k] = c; redraw(); } });
@@ -1052,9 +1092,9 @@
       var la = Number(W.lat), lo = Number(W.lon), al = Number(W.alt);
       var changed = W.lat !== start.lat || W.lon !== start.lon || W.alt !== start.alt;
       if (!changed) return true;
-      err = (W.lat === "" || isNaN(la) || la < -90 || la > 90) ? "Latitude: a number between -90 and 90, e.g. 49.1193" :
-        (W.lon === "" || isNaN(lo) || lo < -180 || lo > 180) ? "Longitude: a number between -180 and 180, e.g. 6.1757" :
-        (isNaN(al) || al < -500 || al > 9000) ? "Altitude: metres above the sea, e.g. 180" : null;
+      err = (W.lat === "" || isNaN(la) || la < -90 || la > 90) ? t("Latitude: a number between -90 and 90, e.g. 49.1193") :
+        (W.lon === "" || isNaN(lo) || lo < -180 || lo > 180) ? t("Longitude: a number between -180 and 180, e.g. 6.1757") :
+        (isNaN(al) || al < -500 || al > 9000) ? t("Altitude: metres above the sea, e.g. 180") : null;
       return !err;
     }
     function done() { api("wizard", { body: { done: true } }); S.session.wizard_done = true; theme(S.cfg.THEME); closeModal(); }
@@ -1064,7 +1104,7 @@
       function next() {
         if (i >= plan.length) {
           api("wizard", { body: { done: true } }); S.session.wizard_done = true;
-          if (foot) foot.appendChild(h("button", { type: "button", "class": "primary", text: ok ? "Done" : "Close (see Activity)", onclick: function () { closeModal(); loadState(); } }));
+          if (foot) foot.appendChild(h("button", { type: "button", "class": "primary", text: ok ? t("Done") : t("Close (see Activity)"), onclick: function () { closeModal(); loadState(); } }));
           return;
         }
         var p = plan[i], li = document.querySelector('#wiz-plan li[data-k="' + p.k + '"]');
@@ -1084,12 +1124,12 @@
       var body = h("div", { "class": "modal-body wiz" }, STEPS[step]());
       var dotsRow = h("div", { "class": "steps" }, STEPS.map(function (_, i) { return h("i", { "class": i === step ? "on" : i < step ? "done" : "" }); }));
       openModal(h("div", null,
-        h("header", null, h("h2", { text: "First steps · " + (step + 1) + " of " + STEPS.length }), h("button", { type: "button", "class": "ghost", "aria-label": "Close", text: "×", onclick: done })),
+        h("header", null, h("h2", { text: t("First steps · {n} of {total}", { n: step + 1, total: STEPS.length }) }), h("button", { type: "button", "class": "ghost", "aria-label": t("Close"), text: "×", onclick: done })),
         dotsRow, body,
         h("div", { "class": "modal-foot" },
-          step === 0 ? h("button", { type: "button", "class": "ghost", text: "Skip, I'll look around", onclick: done }) : h("button", { type: "button", "class": "btn", text: "Back", onclick: function () { err = null; step--; redraw(); } }),
-          last ? h("button", { type: "button", "class": "primary", text: changes().length ? "Apply " + changes().length + " change" + (changes().length > 1 ? "s" : "") : "Finish", onclick: function () { if (changes().length) apply(); else done(); } })
-            : h("button", { type: "button", "class": "primary", text: "Next", onclick: function () { if (!valid()) return redraw(); err = null; step++; redraw(); } }))), true);
+          step === 0 ? h("button", { type: "button", "class": "ghost", text: t("Skip, I'll look around"), onclick: done }) : h("button", { type: "button", "class": "btn", text: t("Back"), onclick: function () { err = null; step--; redraw(); } }),
+          last ? h("button", { type: "button", "class": "primary", text: changes().length ? tn(changes().length, "Apply {n} change", "Apply {n} changes") : t("Finish"), onclick: function () { if (changes().length) apply(); else done(); } })
+            : h("button", { type: "button", "class": "primary", text: t("Next"), onclick: function () { if (!valid()) return redraw(); err = null; step++; redraw(); } }))), true);
       S.wizardOpen = true;
     }
     S.wizardOpen = true;
@@ -1098,4 +1138,4 @@
   S.openWizard = function () { if (S.session) wizard(); };
 
   boot();
-})();
+});

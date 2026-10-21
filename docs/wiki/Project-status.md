@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **21 October 2026**, version **0.46.0**.
+Last updated: **21 October 2026**, version **0.47.0**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -63,6 +63,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 21 October 2026, 23:06 | The owner's answers to the translation plan: both Chinese scripts, English's flag the UK's and the US's merged, no *unreviewed* mark but a review document per language with the English as reference (corrections he puts back), the terminal output in English, and Italian too. 0.47.0: the framework and French on the console, `/stats` and graphs1090's page, previewed at desk and phone width with a stand-in |
 | 21 October 2026, 22:25 | Tailscale works on the reference Pi ("ça marche"). The owner asked for it in the console too, and opened the next project, translations, starting with an analysis: [Translation plan](Translation-plan), measured on 0.45.0 (about 1 000 strings, 8 000 words per language; Noto CJK +91 MB on the card and +4.4 MB while a card is drawn). 0.46.0: *System → Tailscale* in the console, previewed with a stand-in |
 | 21 October 2026, 21:42 | The owner asked for Tailscale in the menu, with how to use it and how to take it away. 0.45.0: *3 Connectivity → 4 Tailscale* and `zenithboard tailscale on\|off\|status\|remove\|console`, the install steps of Tailscale's own page (pkgs.tailscale.com, read the same evening), tested against stand-ins; not yet run on the Pi |
 | 21 October 2026, 21:02 | On the reference Pi 3B (0.43.0): graphs1090 in ZenithBoard's look, all services running (212 MB for all of them, 518 MB available, 44 MB of swap), health OK, both watchdogs and the kept logs on. The owner moved the data to another card and it followed; the networks' identities were not tried yet; the position, the altitude and the units "did not follow" a restore (imported, not applied: fixed). He asked for graphs1090's look by default, a simpler move written for non-specialists with WinSCP, and a menu by use case: ten-entry menus, and the console switched on before ADS-B and the wall "because it is obvious to you, not to everyone". His /stats screenshot still carried the 0.42 caption of the sky by hour: a page loaded before the update. Asked why the console turned black and white: it follows the wall's colour, set to white. 0.44.0 |

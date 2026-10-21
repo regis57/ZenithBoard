@@ -27,7 +27,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.46.0"
+VERSION = "0.47.0"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -1839,11 +1839,22 @@ def farthest_answer(cfg):
 
 
 # --------------------------------------------------------------------------- HTTP
+I18N_DIR = os.path.join(STATIC_DIR, "i18n")
+
+
+def web_langs():
+    """0.47.0: the languages the web pages can be shown in: English, and those this copy carries a catalogue for."""
+    # in the order of the one list (console_actions.LANGS, the same as lib/common.sh and i18n.js)
+    return ["en"] + [c for c in console.actions.LANGS
+                     if c != "en" and os.path.isfile(os.path.join(I18N_DIR, c, "console.json"))]
+
+
 def public_config(cfg):
     units = cfg.get("UNITS", "metric")
     if units not in ("metric", "imperial"):
         units = "metric"
     theme = cfg.get("THEME", "amber")
+    langs, lang = web_langs(), str(cfg.get("CONSOLE_LANG", ""))
     return {
         "version": VERSION,
         "server_id": SERVER_ID,
@@ -1858,6 +1869,8 @@ def public_config(cfg):
         "display_mode": "flap" if str(cfg.get("DISPLAY_MODE", "dots")).lower() == "flap" else "dots",
         "demo": cfg_bool(cfg, "DEMO"),
         "presets": presets_of(cfg),                # ?p=NAME on a tablet applies one (0.21.0)
+        "lang": lang if lang in langs else "",      # 0.47.0: the web pages' default language (CONSOLE_LANG), "" = not chosen
+        "langs": langs,
     }
 
 

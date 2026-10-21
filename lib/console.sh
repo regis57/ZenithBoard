@@ -199,6 +199,33 @@ console_state_lines() {
   [ "$(cfg_get DDNS_PROVIDER none)" = none ] || printf 'ddns=%s\n' "$(ddns_summary)"
 }
 
+# 0.47.0: the language of the web pages (the console, the statistics, graphs1090's page) for every browser that has
+# not chosen its own with the flag at the top. Empty until chosen: the console then asks at its first visit.
+console_lang_menu() {
+  local c args=() names="en:English fr:Français de:Deutsch nl:Nederlands it:Italiano es:Español pt-BR:Português_(Brasil) id:Bahasa_Indonesia ru:Русский uk:Українська ja:日本語 ko:한국어 zh-Hans:简体中文 zh-Hant:繁體中文" n
+  for c in $(zb_langs); do
+    for n in $names; do [ "${n%%:*}" = "$c" ] && args+=("$c" "${n#*:}"); done
+  done
+  args=("${args[@]//_/ }")
+  c=$(wt_menu "Language of the web pages (the console, the statistics, graphs1090's page) for every browser that has not chosen its own with the flag at the top. This menu and what the Pi prints stay in English.\n\nNow: $(cfg_get CONSOLE_LANG en)" "${args[@]}" back "Return to the previous menu") || return 0
+  [ "$c" = back ] && return 0
+  wt_msg "$(console_lang "$c" 2>&1)" 10
+}
+console_lang() {   # console_lang [CODE]
+  local want=${1:-} c ok=""
+  if [ -z "$want" ]; then
+    echo "Language of the web pages: $(cfg_get CONSOLE_LANG en)$( [ -z "$(cfg_get CONSOLE_LANG)" ] && echo ' (not chosen yet: the console asks at its first visit)')"
+    echo "Available on this Pi: $(zb_langs)"
+    echo "Each browser can still choose its own with the flag at the top of the page. What the Pi prints stays in English."
+    return 0
+  fi
+  for c in $(zb_langs); do [ "$c" = "$want" ] && ok=1; done
+  [ -n "$ok" ] || { err "Not a language this Pi has: $want   (available: $(zb_langs))"; return 1; }
+  cfg_set CONSOLE_LANG "$want"
+  graphs_look_keep 2>/dev/null || true            # graphs1090's page reads it from its own copy
+  echo "Language of the web pages: $want. A browser that chose its own with the flag keeps it; reload the page."
+}
+
 console_menu() {
   local c
   while true; do
@@ -209,6 +236,7 @@ console_menu() {
       signout "4  Sign every browser and phone out" \
       status "5  Status" \
       phone "6  Sign computers in with a phone (a QR code on the computer): $( [ "$(cfg_get CONSOLE_PHONE_SIGNIN 0)" = 1 ] && echo ON || echo OFF )" \
+      lang "7  Language of the web pages: $(cfg_get CONSOLE_LANG en)" \
       back "Return to the previous menu") || return 0
     case "$c" in
       toggle) clear; if [ "$(console_state)" = on ]; then console_off; else console_on; fi; read -rp "Press Enter to continue..." _ ;;
@@ -218,6 +246,7 @@ console_menu() {
       status) clear; console_status; read -rp "Press Enter to continue..." _ ;;
       phone) if [ "$(cfg_get CONSOLE_PHONE_SIGNIN 0)" = 1 ]; then console_phone_signin off >/dev/null; else console_phone_signin on >/dev/null; fi
              wt_msg "$(console_phone_signin)" 8 ;;
+      lang) console_lang_menu ;;
       *) return 0 ;;
     esac
   done

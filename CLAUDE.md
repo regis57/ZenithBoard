@@ -45,7 +45,7 @@ on Wi-Fi, near Trémery (Moselle). The owner tests on it; a session never reache
    ```
    for t in tests/*.sh; do bash $t; done
    python3 -m unittest discover -s tests
-   for j in format shapes scene flap layout flags scroll statsjs; do node tests/test_$j.js; done
+   for j in format shapes scene flap layout flags scroll statsjs i18n; do node tests/test_$j.js; done
    shellcheck -x -S warning install.sh bin/zenithboard bin/zenithboard-demo lib/*.sh tests/*.sh tools/*.sh
    ```
 5. Commit as the owner: `git -c user.name=regis57 -c user.email=regis.hennequin@gmail.com commit`.
@@ -87,3 +87,6 @@ on Wi-Fi, near Trémery (Moselle). The owner tests on it; a session never reache
 - Menus: every menu has exactly one way out (`tests/test_menus.sh`). Destructive steps are never the last
   entry before Exit.
 - Posts and the wall never give the receiver's position away.
+- The web pages are translated (0.47.0): a word shown goes through `t("…")` (static HTML: `data-t`), the English is the
+  key. A new or changed English string: `python3 tools/i18n.py sync LANG`, translate it, `review LANG`, for every
+  shipped language, in the same commit (`tests/test_i18n.sh`). The terminal, the menu and what the Pi prints stay English.

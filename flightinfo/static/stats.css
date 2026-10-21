@@ -122,3 +122,5 @@ th { font: 400 11px ui-monospace, Menlo, Consolas, monospace; letter-spacing: .1
 #dash[hidden] { display: none; }
 .mil .row .bw { display: block; min-width: 0; }
 .mil .row .b { display: block; }
+/* 0.47.0: the period and the language side by side, top right */
+.top-r { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }

@@ -531,7 +531,8 @@ case "${1:-}" in
       forget)   root_or_die; console_forget ;;
       phone-signin) [ -z "${3:-}" ] || root_or_die; console_phone_signin "${3:-}" ;;
       state)    root_or_die; console_state_lines ;;
-      *) die "Usage: zenithboard console on|off|status|password|pair|signout|forget" ;;
+      lang)     [ -z "${3:-}" ] || root_or_die; console_lang "${3:-}" ;;
+      *) die "Usage: zenithboard console on|off|status|password|pair|signout|forget|lang [CODE]" ;;
     esac ;;
   menu) root_or_die; exec "$HERE/../install.sh" ;;
   version|--version) echo "ZenithBoard $ZB_VERSION" ;;
