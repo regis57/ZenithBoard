@@ -4,6 +4,9 @@
 * [Roadmap](Roadmap)
 * [Project status](Project-status)
 
+*Getting started*
+* [Fresh install, step by step](Fresh-install)
+
 *How it works*
 * [Architecture](Architecture)
 * [Configuration reference](Configuration-reference)

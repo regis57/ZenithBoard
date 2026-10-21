@@ -16,8 +16,14 @@ sudo zenithboard console password     # choose its password (asked twice, never 
 sudo zenithboard console on           # prints the address: http://192.168.x.x:8080/console
 ```
 
-Or the menu: *Settings → 7 Web console*. The first time you sign in, five short steps (the wall's look, statistics,
-what keeps the Pi running, your phone, then a review) apply what you chose; *Skip* leaves everything as it is.
+Or the menu: *3 Settings → 7 Web console*. On a new card, the whole way from the SD card to here: [Fresh install](Fresh-install).
+
+**The first steps** open the first time you sign in, nine short screens (0.41.0): what this Pi is and feeds, where
+the antenna is (checked as you type), the wall, the networks (read only, each with its page), what to collect, what
+keeps it running, the Bluesky summaries, your phone, then a review that applies only what you changed, one command
+after the other. *Skip* leaves everything as it is. **They open again** from *System → First steps again*, from the
+*Finish setting up* card the overview shows while something is missing (no position, no decoder, statistics off, a
+watchdog off), or at the address `…/console#first-steps`.
 
 Off again: `sudo zenithboard console off` (the password is kept). Gone for good: `sudo zenithboard console forget`
 (the password, the signed-in phones and the record of what it ran are deleted). Nothing else on the Pi depends on it.
@@ -152,7 +158,7 @@ when you do not need it. `zenithboard security` says it is on and checks the pas
 | **Jobs piling up, or you want none to run** | 1. `sudo zenithboard console off` (the helper stops; nothing more runs). 2. Drop what waits: `sudo rm -f /var/lib/zenithboard/console/state/spool/*.job`. 3. `sudo zenithboard console on` when you want it back |
 | **A setting made from the console broke something** | 1. *Activity → Changes*, or `sudo zenithboard console status` (the last five), or `sudo cat /var/lib/zenithboard/console/out/journal.log`: each line is the command run, with its value. 2. Run the opposite yourself (`sudo zenithboard radius 10`, `sudo zenithboard watchdog off`…) or use the menu. Nothing the console does is beyond what those commands undo |
 | **The page does not load at all** | 1. `systemctl status zenithboard-flightinfo` and `zenithboard logs flightinfo` (the console lives in the wall's server). 2. `sudo systemctl restart zenithboard-flightinfo`. 3. The wall itself (`/`) loads but not `/console`: `sudo zenithboard console status` |
-| **The wizard should come back** | `sudo rm /var/lib/zenithboard/console/state/wizard-done`, then reload the page |
+| **The first steps should come back** | *System → First steps again*, or `…/console#first-steps`; to have them open by themselves at the next sign-in: `sudo rm /var/lib/zenithboard/console/state/wizard-done` |
 | **No SSH either** (Pi not on the network) | Not caused by the console, which cannot change the network. Keyboard and screen on the Pi, or the card in another computer: [Reliability and diagnostics](Reliability-and-diagnostics) |
 
 ### Start again from zero

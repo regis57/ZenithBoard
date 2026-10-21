@@ -87,6 +87,8 @@ The installer detects the board and its memory and tells you once what it is goo
 
 ## Install — step by step
 
+The same steps, with what to check after each, how to keep your feeders' identities when you replace a card, and the setup finished from the web console: wiki **[Fresh install](https://github.com/regis57/ZenithBoard/wiki/Fresh-install)**.
+
 ### 1. Prepare the SD card
 1. Install **Raspberry Pi Imager** from <https://www.raspberrypi.com/software/>.
 2. Choose your board (*Raspberry Pi 3*, *4* or *5*), then **Raspberry Pi OS Lite (64-bit)** (under "Raspberry Pi OS (other)"), then your SD card.
@@ -581,7 +583,8 @@ sudo zenithboard console on           # prints the address; off again: sudo zeni
 sudo zenithboard console pair         # a QR code that signs a phone in, once, within 5 minutes
 ```
 
-* **Off by default**, and it answers home networks only. A first-run wizard sets the wall, the statistics and the watchdogs in five short steps.
+* **Off by default**, and it answers home networks only. Nine first steps (the antenna, the wall, the networks, statistics, the watchdogs, the summaries, your phone) open the first time, and again from *System*.
+* **A new card, step by step, finished in the console**: [Fresh install](https://github.com/regis57/ZenithBoard/wiki/Fresh-install).
 * **A phone signs in by QR code** (dark on its own white square, so it scans on a black screen) and stays signed in as long as it opens the console once a month; no password is needed for it. The terminal is for setting up, once, not for every visit. Face ID and passkeys need HTTPS under a domain name, which a Pi at a home address does not have.
 * **The wall's server still changes nothing itself**: it hands one action from a fixed list to a small root helper, which checks it again and runs that one command. Uninstalling, Wi-Fi, fixed addresses, passwords and posting stay in the terminal.
 * **A computer can be signed in by your phone** (off by default: `sudo zenithboard console phone-signin on`): its sign-in page shows a QR code, the phone shows the same four-digit code, you say yes.

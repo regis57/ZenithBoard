@@ -37,4 +37,8 @@ check "release notes: no heading, no blank edges"      '! printf "%s" "$n" | gre
 check "release notes: unknown version prints nothing"  '[ -z "$(bash tools/release-notes.sh 9.9.9)" ]'
 check "release workflow reads ZB_VERSION and tags v<version>" 'grep -q "ZB_VERSION" .github/workflows/release.yml && grep -q "gh release create \"v\$V\"" .github/workflows/release.yml'
 
+# ---- 0.41.0: the fresh install page, a 1.0 proof, is reachable from the README, the wiki's sidebar and home page
+check "Fresh-install: the page exists, with its checklist"   'grep -q "^## The 1.0 checklist" docs/wiki/Fresh-install.md'
+check "Fresh-install: linked from README, sidebar and home" 'grep -q "wiki/Fresh-install" README.md && grep -q "(Fresh-install)" docs/wiki/_Sidebar.md && grep -q "(Fresh-install)" docs/wiki/Home.md'
+
 [ "$fail" = 0 ] && echo "ALL OK" || { echo "SOME FAILED"; exit 1; }

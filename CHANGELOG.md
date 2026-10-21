@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.41.0
+- **A fresh install, step by step, is a 1.0 proof** (the owner, 21 October): the new wiki page [Fresh install](https://github.com/regis57/ZenithBoard/wiki/Fresh-install) goes from a blank micro-SD card written with Raspberry Pi Imager to a ZenithBoard finished in the web console, in 21 steps, each with what you should see; how to keep the feeders' identities when a card is replaced (ADSB Exchange UUID, FlightAware feeder ID, Flightradar24 key, Plane Finder share code, the settings export); why the networks are added in the terminal; a checklist. Linked from the README, the wiki's home page and its sidebar; the Roadmap's 1.0 proof now names it.
+- **The console's first steps: nine screens instead of five.** New: *Welcome* (the Pi's model, version, decoder and networks), *Where the antenna is* (region, units and position, checked as you type), *Feeding the networks* (each one running or not, with a link to its own page; read only), *Sharing on Bluesky* (the daily and weekly summaries). The review applies only what changed, the position first.
+- **They open again**: *System → First steps again*, the address `…/console#first-steps`, and a *Finish setting up* card on the overview while something is missing (no position, no decoder, statistics off, a watchdog off).
+- The console cannot add a network: its installers ask questions, keys and claims as they go and some run their own scripts as root, while the console runs fixed commands with no input. Said on the networks' screen and in the wiki.
+
 ## 0.40.5
 - **The summaries' cards say their period in words**, top right: *LAST 24 HOURS*, *LAST 7 DAYS*, *LAST 30 DAYS*; *21 OCTOBER* there read as that day (the owner). The exact span goes to the foot (*20 October, 09:20 – 21 October, 09:20*), with *lists counted since* when it applies; the first card is titled *Aircraft above Trémery* like the others.
 - **General aviation with flags**: each helicopter, light aircraft, glider, drone or balloon row starts with the flag of the country its aircraft are registered in (by their address), a row per model and country, all columns aligned as on the business jets' countries. Asked for by the owner.
