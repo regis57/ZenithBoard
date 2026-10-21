@@ -9,7 +9,7 @@
   var $ = function (id) { return document.getElementById(id); };
   var S = {
     session: null, cfg: {}, facts: {}, factsAt: 0, catalog: {}, sections: [], section: "overview",
-    jobs: {}, pending: {}, wanted: {}, drawerJob: null, activity: null, sessions: null, warnedQueue: {}
+    jobs: {}, pending: {}, wanted: {}, inline: new Map(), drawerJob: null, activity: null, sessions: null, warnedQueue: {}
   };
   var SECTION_ICON = { overview: "overview", wall: "wall", receiver: "antenna", sharing: "share", reliability: "shield", system: "gear" };
   var THEME_HEX = { amber: "#ffb000", green: "#39ff6a", red: "#ff3b30", white: "#e8e8e8", turquoise: "#00d6d7" };
@@ -359,7 +359,10 @@
         }
         var id = r.data.job;
         S.jobs[id] = { id: id, action: action, label: opts.label || spec.label, params: params || {}, state: "queued", log: "", next: 0, key: key, quiet: opts.quiet };
-        if (!opts.quiet && !opts.noDrawer && (flags.indexOf("read") >= 0 || flags.indexOf("long") >= 0 || opts.show)) openDrawer(id);
+        // 0.40.2: what a button shows appears in the card it was clicked in (the owner: "I click, but where do I look?");
+        // a change that takes minutes, or a button outside a card, opens the Activity drawer as before
+        if (!opts.quiet && !opts.noDrawer && flags.indexOf("read") >= 0 && opts.card) { S.inline.set(S.section, { id: id, card: opts.card }); draw(); }
+        else if (!opts.quiet && !opts.noDrawer && (flags.indexOf("read") >= 0 || flags.indexOf("long") >= 0 || opts.show)) openDrawer(id);
         return follow(id);
       }).catch(function () {
         delete S.pending[key]; draw();
@@ -391,6 +394,10 @@
             }
           }
           if (S.drawerJob === id) drawTerm();
+          var it = document.getElementById("iterm-" + id);
+          if (it) { var pre = it.querySelector("pre"), atEnd = pre.scrollHeight - pre.scrollTop - pre.clientHeight < 40;
+            pre.textContent = termText(j); if (atEnd) pre.scrollTop = pre.scrollHeight;
+            var pl = it.querySelector(".pill"), st = pillOf(j); pl.className = "pill " + st[0]; pl.textContent = st[1]; }
           if (j.state === "done" || j.state === "refused") return finish();
           setTimeout(tick, j.state === "running" ? 700 : 1000);
         }).catch(function () { setTimeout(tick, 1500); });            // the wall restarting after the change
@@ -433,7 +440,7 @@
   function btn(label, action, params, cls, opts) {
     var busy = S.pending[(opts && opts.key) || action];
     return h("button", { type: "button", "class": cls || "btn", disabled: busy ? true : null, text: busy ? label + "…" : label,
-      onclick: function () { run(action, params || {}, opts); } });
+      onclick: function () { run(action, params || {}, Object.assign({ card: S.lastCard }, opts || {})); } });
   }
   function row(title, hint, ctl, end) {
     if (ctl && ctl.classList && ctl.classList.contains("sw")) end = true;   // a lone switch stays beside its words on a phone
@@ -441,9 +448,28 @@
       h("div", { "class": "ctl" + (end ? " end" : "") }, ctl));
   }
   function card(title, icon, lead, body, width) {
-    return h("section", { "class": "card" + (width ? " " + width : "") }, h("h2", null, icon ? ico(icon) : null, title),
-      lead ? h("p", { "class": "lead", text: lead }) : null, body);
+    var shown = S.inline.get(S.section), j = shown && shown.card === title && S.jobs[shown.id];
+    return h("section", { "class": "card" + (width ? " " + width : ""), "data-title": title }, h("h2", null, icon ? ico(icon) : null, title),
+      lead ? h("p", { "class": "lead", text: lead }) : null, body, j ? inlineTerm(j) : null);
   }
+  // the output of a button, under it in its own card, as it comes
+  function inlineTerm(j) {
+    var pre = h("pre", { text: termText(j) }), st = pillOf(j);
+    var links = j.state === "done" && (j.action === "social-test" || j.action === "summary-test") ? h("div", { "class": "actions" },
+      h("a", { "class": "btn", href: "/social/preview", target: "_blank", rel: "noopener", text: "The picture ↗" }),
+      j.action === "summary-test" ? ["2", "3", "4"].map(function (n) { return h("a", { "class": "btn", href: "/social/preview" + n, target: "_blank", rel: "noopener", text: "Post " + n + " ↗" }); }) : null) : null;
+    var box = h("div", { "class": "term inline", id: "iterm-" + j.id },
+      h("div", { "class": "th" }, ico("terminal"), h("b", { text: j.label + (j.params && j.params.value ? ": " + j.params.value : "") }), h("span", { "class": "pill " + st[0], text: st[1] }),
+        h("button", { type: "button", "class": "ghost", title: "Open in Activity", text: "⤢", onclick: function () { openDrawer(j.id); } }),
+        h("button", { type: "button", "class": "ghost", "aria-label": "Close", text: "×", onclick: function () { S.inline.delete(S.section); draw(); } })),
+      pre, links);
+    setTimeout(function () { pre.scrollTop = pre.scrollHeight; }, 0);
+    return box;
+  }
+  document.addEventListener("click", function (e) {          // which card a button sits in, for the run() it calls
+    var c = e.target && e.target.closest ? e.target.closest(".card[data-title]") : null;
+    S.lastCard = c ? c.getAttribute("data-title") : null;
+  }, true);
   function stateWord(v) { return on(v) ? "on" : "off"; }
 
   // ---- the sections
@@ -574,7 +600,7 @@
         ], "w6"),
         card("Look at it", "terminal", null, [
           h("div", { "class": "actions" }, btn("Health", "health"), btn("Memory", "memory"), btn("Log size and warnings", "logs-review")),
-          row("The last 100 lines of", null, [logsSel, h("button", { type: "button", "class": "btn", text: "Show", onclick: function () { run("logs", { value: logsSel.value }, { key: "logs" }); } })])
+          row("The last 100 lines of", null, [logsSel, h("button", { type: "button", "class": "btn", text: "Show", onclick: function () { run("logs", { value: logsSel.value }, { key: "logs", card: S.lastCard }); } })])
         ], "w6")
       ];
     },
@@ -693,7 +719,7 @@
               run("summary-parts", { period: p, value: next.sort().join(",") }, { key: keyParts });
             } });
         })),
-        h("button", { type: "button", "class": "btn", text: "Try", onclick: function () { run("summary-test", { period: p }, { key: "test-" + p }); } })));
+        h("button", { type: "button", "class": "btn", text: "Try", onclick: function () { run("summary-test", { period: p }, { key: "test-" + p, card: S.lastCard }); } })));
   }
   function pages() {
     var f = S.facts, c = S.cfg, hh = host(), list = [];
@@ -782,14 +808,20 @@
   }
   function closeDrawer() { $("drawer").hidden = true; S.activityOpen = false; document.body.style.overflow = ""; }
   function loadActivity() { api("activity").then(function (r) { if (r.ok) { S.activity = r.data; drawDrawer(); } }); }
+  function termText(j) {
+    return j.log || (j.state === "queued" ? (j.behind ? "Waiting: " + ((S.catalog[j.behind] || {}).label || j.behind) + " runs first" + (j.ahead ? " (" + j.ahead + " before this one)" : "") + ". The Pi does one change at a time." : "Waiting for the Pi's helper…") : "");
+  }
+  function pillOf(j) {
+    return j.state === "done" ? (j.rc === 0 ? ["ok", "done"] : ["bad", "exit " + j.rc]) : j.state === "refused" ? ["bad", "refused"] : [j.state === "running" ? "run" : "queued", j.state || "queued"];
+  }
   var termPre = null, termPill = null;
   function drawTerm() {
     var j = S.jobs[S.drawerJob];
     if (!j || !termPre) return;
     var atEnd = termPre.scrollHeight - termPre.scrollTop - termPre.clientHeight < 40;
-    termPre.textContent = j.log || (j.state === "queued" ? (j.behind ? "Waiting: " + ((S.catalog[j.behind] || {}).label || j.behind) + " runs first" + (j.ahead ? " (" + j.ahead + " before this one)" : "") + ". The Pi does one change at a time." : "Waiting for the Pi's helper…") : "");
+    termPre.textContent = termText(j);
     if (atEnd) termPre.scrollTop = termPre.scrollHeight;
-    var st = j.state === "done" ? (j.rc === 0 ? ["ok", "done"] : ["bad", "exit " + j.rc]) : j.state === "refused" ? ["bad", "refused"] : [j.state === "running" ? "run" : "queued", j.state];
+    var st = pillOf(j);
     termPill.className = "pill " + st[0]; termPill.textContent = st[1];
   }
   function drawDrawer() {

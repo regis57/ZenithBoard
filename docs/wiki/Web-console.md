@@ -74,7 +74,9 @@ One section on screen at a time: a side bar on a computer, tabs at the bottom of
 | Reliability | Hardware and network watchdogs, logs kept after a restart, Wi-Fi hardening, daily security fixes, daily log clean-up; health, memory, logs |
 | System | Update ZenithBoard and the wall, update everything; network, Wi-Fi and domain name status; who is signed in, pairing a phone; the security check; turning the console off |
 
-**Activity** (top right) shows the job running as it prints, the last jobs, the journal of changes and the sign-ins.
+**What a button shows** (Health, Memory, Status, a log, a try of a post…) **appears under it, in its own card**, as it
+prints, with *done* or *exit N* when it ends; ⤢ opens it in *Activity*, × closes it. A change that takes minutes (an
+update, graphs1090) opens *Activity* instead. **Activity** (top right) shows the job running as it prints, the last jobs, the journal of changes and the sign-ins.
 Click one of the last jobs to read what it printed: it opens at the top of the drawer.
 
 ### How it behaves, by design
