@@ -1163,7 +1163,7 @@ def publish(p, trace, why, c, sec, dry=False, keep=None):
             try:
                 os.rmdir(d)
             except OSError:
-                pass
+                pass                             # not empty, or gone already: left as it is
 
 
 def publish_week(c, sec, now, state=None, dry=False, keep=None, second=False, part=None, period="weekly"):
@@ -1509,7 +1509,7 @@ def cmd_week(post=False, second=False, part=None, period="weekly"):
             try:                                 # no picture of an older test shown for a post that has none (0.36.1)
                 os.unlink(os.path.join(STATE_DIR, "preview%d.png" % n))
             except OSError:
-                pass
+                pass                             # there was none to remove
         else:
             print("  Picture: %s (%s bytes)   See it:  http://%s:%d/social/preview%s" % (
                 r.get("preview") or r.get("preview_error"), r.get("bytes"), local_ip(), port, "" if n == 1 else n))

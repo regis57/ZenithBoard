@@ -26,7 +26,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.40.0"
+VERSION = "0.40.1"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -396,12 +396,12 @@ def _load_blocks():
                     _icao_blocks.append((lo, hi - 1) + hit[2:])
             _icao_starts.extend(blk[0] for blk in _icao_blocks)
         except (OSError, ValueError, KeyError, TypeError):
-            pass
+            pass                                 # no table: countries are left unknown, the lists go on without them
         try:
             with open(os.path.join(DATA_DIR, "military_ranges.json"), encoding="utf-8") as fh:
                 _mil_ranges.extend((int(a, 16), int(b, 16)) for a, b in json.load(fh)["military"])
         except (OSError, ValueError, KeyError, TypeError):
-            pass
+            pass                                 # no table: only the decoder's own mark says military
 
 
 def icao_country(hex_code):
@@ -461,7 +461,7 @@ def load_cargo():
             with open(os.path.join(DATA_DIR, "cargo_airlines.json"), encoding="utf-8") as fh:
                 _cargo.update({k: v["name"] for k, v in json.load(fh).items() if not k.startswith("_")})
         except (OSError, ValueError, KeyError, TypeError, AttributeError):
-            pass
+            pass                                 # no list, or a broken one: no airline is called cargo, nothing fails
     return _cargo
 _fleet_cache = {}                     # key -> answer of read_fleet (0.37.0: one per range)
 
@@ -586,7 +586,7 @@ def read_fleet(cfg, stats_dir=None, now=None, since=None, rng=None):
             if int(alt) > 0:
                 alts.append(int(alt))
         except ValueError:
-            pass
+            pass                                 # "ground" or garbled: not a height, not counted
     imperial = public_config(cfg)["units"] == "imperial"
     step = 5000 if imperial else 1000 / 0.3048                   # bands of 5 000 ft, or of 1 km
     top_band = 9 if imperial else 13
@@ -1855,8 +1855,7 @@ class Handler(BaseHTTPRequestHandler):
         if not client_allowed(self.client_address[0], cfg.get("ALLOW_FROM", "private")):
             return self._send(403, b"This wall answers its own network only (ALLOW_FROM).", "text/plain")
         if path == "/console" or path.startswith("/console/"):
-            self._console(cfg, url)
-            return
+            return self._console(cfg, url)
         if path.startswith("/static/console") or path.startswith("/static/vendor/"):
             return self._static(path, console.SECURITY_HEADERS)
         if path == "/api/config":

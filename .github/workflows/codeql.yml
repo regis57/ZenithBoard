@@ -26,6 +26,11 @@ jobs:
         with:
           languages: ${{ matrix.language }}
           queries: security-and-quality
+          # Third-party code kept unchanged on purpose (flightinfo/static/vendor/README.txt: qrcode-generator 1.4.4,
+          # MIT, with its checksum): its style notes (a missing semicolon) are not ours to change. 0.40.1.
+          config: |
+            paths-ignore:
+              - flightinfo/static/vendor
       - uses: github/codeql-action/analyze@24c54180a607b1449ed407dd24f251e4e9147c8d   # v4.38.3
         with:
           category: /language:${{ matrix.language }}

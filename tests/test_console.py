@@ -300,6 +300,9 @@ class HandleTest(TempDirs):
         console.SPOOL_DIR = os.path.join(self.root, "missing")
         self.assertFalse(self.req("GET", "/console/api/session").body["writable"])
 
+    def test_the_sign_in_page_learns_the_running_version(self):
+        self.assertEqual(self.req("GET", "/console/api/session").body["version"], "0.39.0", "before signing in, for its footer")
+
     def test_off_says_so_and_does_nothing(self):
         off = {"CONSOLE": "0"}
         self.assertFalse(self.req("GET", "/console/api/session", cfg=off).body["enabled"])

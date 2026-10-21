@@ -72,6 +72,7 @@ label { font: 600 11px var(--mono); letter-spacing: .12em; text-transform: upper
 .err { color: var(--bad); margin: 0; font-size: 14px; }
 .fine { color: var(--faint); font-size: 12px; }
 .fine a { color: var(--muted); }
+.fine a.version, .side-foot a.version { color: var(--faint); font-family: var(--mono); font-size: 12px; }
 .busy::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--on); margin-right: 10px;
   animation: pulse .6s infinite alternate; }
 details summary { cursor: pointer; font: 600 12px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
@@ -254,3 +255,4 @@ input.day { width: 4.5em; }
   .modal-panel { border-radius: 14px 14px 0 0; max-height: 92vh; }
 }
 @media (max-width: 380px) { .seg button { padding: 8px 8px; } }
+.gate-card .fine + .fine { margin-top: -12px; }

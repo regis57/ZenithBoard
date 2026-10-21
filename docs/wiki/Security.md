@@ -146,7 +146,7 @@ What is left is the GitHub Actions used by CI. They are **pinned to a commit, no
 | The download-address check | the 1st of each month, or by hand | Opens one issue when a pinned address stops answering (`tools/check-links.sh`) |
 | Dependabot | monthly | Pull requests for the pinned actions |
 
-**How CodeQL findings are handled:** a real finding is fixed and gets a test. A finding that describes something deliberate is dismissed in the *Security* tab as *Won't fix*, **with the reason written in the dismissal** — the rule is never switched off, because it should still catch the next mistake. Two are dismissed this way today, and a third, an *Empty except* note raised on the statistics reader the same day, was fixed rather than dismissed:
+**How CodeQL findings are handled:** a real finding is fixed and gets a test. A finding that describes something deliberate is dismissed in the *Security* tab as *Won't fix*, **with the reason written in the dismissal** — the rule is never switched off, because it should still catch the next mistake. Two are dismissed this way today, and a third, an *Empty except* note raised on the statistics reader the same day, was fixed rather than dismissed. The notes open on 21 October 2026 (eight *Empty except*, one *mixed returns*) were fixed in 0.40.1, with two more of the same kind: each empty `except` now says in a comment why nothing is to be done there. **Third-party code is not analysed**: `flightinfo/static/vendor/` (the QR code generator, kept unchanged and checked by its checksum, see its README) is listed in `paths-ignore` in `.github/workflows/codeql.yml`, with the reason; its one note, a missing semicolon in its own style, is not ours to change:
 
 | Alert | Why it stays |
 |---|---|

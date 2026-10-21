@@ -156,6 +156,14 @@
   });
 
   var WRITE_MSG = "The wall cannot write its console folder yet: pairing and changes will fail. Over SSH: sudo systemctl restart zenithboard-flightinfo";
+  // 0.40.1: the version running on this Pi, linked to its release notes on GitHub (the releases page when unknown)
+  function showVersion(a, v) {
+    if (!a) return;
+    var ok = /^\d+\.\d+\.\d+$/.test(String(v || ""));
+    a.textContent = "ZenithBoard " + (ok ? v : "");
+    a.href = "https://github.com/regis57/ZenithBoard/releases" + (ok ? "/tag/v" + v : "");
+    a.title = ok ? "What changed in " + v : "ZenithBoard's releases";
+  }
   function boot() {
     dots($("gate-logo"), "ZENITHBOARD", 10); dots($("gate-sub"), "CONSOLE", 10);
     var m = /[#&]pair=([A-Za-z0-9_-]{16,64})/.exec(location.hash), pairTok = m && m[1];
@@ -164,6 +172,7 @@
     if (pairTok || ma) history.replaceState(null, "", location.pathname);   // a used link is not kept in the history
     return api("session").then(function (r) {
       var s = r.data;
+      showVersion($("gate-version"), s.version);
       if (s.enabled === false) return gate("off");
       S.unwritable = s.writable === false;
       if (pairTok) {
@@ -250,7 +259,7 @@
     $("gate").hidden = true; $("app").hidden = false;
     dots($("side-logo"), "ZB", 9); dots($("bar-logo"), "ZB", 6);
     document.querySelectorAll("[data-ico]").forEach(function (n) { if (!n.firstChild) n.appendChild(ico(n.getAttribute("data-ico")).firstChild); });
-    $("side-version").textContent = "ZenithBoard " + (S.session.version || "");
+    showVersion($("side-version"), S.session.version);
     loadState().then(function () {
       route();
       if (S.unwritable) toast(WRITE_MSG, true);
