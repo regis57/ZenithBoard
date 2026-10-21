@@ -75,7 +75,7 @@ SHOWN_KEYS = {
     "SOCIAL_DAILY": "0", "SOCIAL_DAILY_AT": "21:00", "SOCIAL_DAILY_PARTS": "1",
     "SOCIAL_WEEKLY": "0", "SOCIAL_WEEKLY_AT": "sun 19:00", "SOCIAL_WEEKLY_PARTS": "1,2,3,4",
     "SOCIAL_MONTHLY": "0", "SOCIAL_MONTHLY_AT": "1 09:00", "SOCIAL_MONTHLY_PARTS": "1,2,3,4",
-    "NETWATCH": "0", "WIFI_HARDEN": "0", "LOG_AUTOCLEAN": "0",
+    "NETWATCH": "0", "WIFI_HARDEN": "0", "LOG_AUTOCLEAN": "0", "CONSOLE_PHONE_SIGNIN": "0",
 }
 
 
@@ -373,6 +373,72 @@ class Pairs(object):
         return True
 
 
+# --------------------------------------------------------------------------- a computer signed in by a phone
+class Approvals(object):
+    """0.40.0, asked for by the owner: pairing the other way round. The sign-in page of a computer shows a QR code; a
+    phone already signed in scans it, sees the computer, its address and a four-digit code also shown on the computer,
+    and says yes; the computer is then signed in, no password typed. Off unless CONSOLE_PHONE_SIGNIN=1.
+
+    The QR code carries the request's name only. The computer keeps a secret of its own and asks with it: a photo of
+    its screen signs nobody in. A request is answered once, within two minutes, and turns into a session once."""
+
+    LIFE_S = 120
+    PER_ADDRESS = 20                # requests per address per ten minutes; an open page asks one every two minutes
+
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.reqs = {}              # id -> {"secret": sha256, "code", "label", "ip", "until", "state", "by"}
+        self.made = {}              # address -> [times]
+
+    def request(self, label, ip):
+        t = now()
+        with self.lock:
+            self.reqs = {k: v for k, v in self.reqs.items() if v["until"] > t - 600}
+            times = [x for x in self.made.get(ip, []) if t - x < 600]
+            if len(times) >= self.PER_ADDRESS:
+                return None
+            self.made[ip] = times + [t]
+            rid, secret = secrets.token_urlsafe(12), secrets.token_urlsafe(24)
+            code = "%04d" % secrets.randbelow(10000)
+            self.reqs[rid] = {"secret": _sha(secret), "code": code, "label": label, "ip": ip, "until": t + self.LIFE_S,
+                              "state": "waiting", "by": None}
+            return {"id": rid, "secret": secret, "code": code, "seconds": self.LIFE_S}
+
+    def info(self, rid):
+        with self.lock:
+            v = self.reqs.get(str(rid))
+            if v is None:
+                return None
+            expired = v["state"] == "waiting" and v["until"] < now()
+            return {"label": v["label"], "ip": v["ip"], "code": v["code"], "state": "expired" if expired else v["state"],
+                    "seconds": max(0, int(v["until"] - now()))}
+
+    def answer(self, rid, yes, by):
+        with self.lock:
+            v = self.reqs.get(str(rid))
+            if v is None or v["state"] != "waiting" or v["until"] < now():
+                return False
+            v["state"], v["by"] = ("approved" if yes else "refused"), by
+            return True
+
+    def poll(self, rid, secret):
+        """-> (state, request) for the computer that made it; "approved" is answered once, then "used"."""
+        with self.lock:
+            v = self.reqs.get(str(rid))
+            if v is None or not isinstance(secret, str) or not hmac.compare_digest(v["secret"], _sha(secret)):
+                return "unknown", None
+            if v["state"] == "waiting" and v["until"] < now():
+                return "expired", v
+            if v["state"] == "approved":
+                v["state"] = "used"
+                return "approved", v
+            return v["state"], v
+
+
+def phone_signin(cfg):
+    return str(cfg.get("CONSOLE_PHONE_SIGNIN", "0")).lower() in ("1", "on", "yes", "true")
+
+
 # --------------------------------------------------------------------------- jobs for the root helper
 def submit(name, params, by):
     actions.build(name, params)                  # raises Refused; the helper checks it again as root
@@ -542,6 +608,7 @@ class Console(object):
         self.sessions = Sessions()
         self.limiter = Limiter()
         self.pairs = Pairs()
+        self.approvals = Approvals()
 
     def enabled(self, cfg):
         return str(cfg.get("CONSOLE", "0")).lower() in ("1", "on", "yes", "true")
@@ -566,7 +633,7 @@ class Console(object):
             return Reply(200, {"enabled": on, "signed_in": bool(sess), "has_password": has_password(),
                                "kind": sess and sess["kind"], "label": sess and sess["label"], "id": sess and sess["id"],
                                "csrf": sess and sess["csrf"], "wizard_done": wizard_done(), "version": req.cfg.get("_VERSION"),
-                               "writable": state_writable() if on else None})
+                               "writable": state_writable() if on else None, "phone_signin": on and phone_signin(req.cfg)})
         if not on:
             return Reply(404, {"error": "off"})
         if req.method == "POST":
@@ -579,6 +646,18 @@ class Console(object):
                 return self._login(req, body)
             if api == "pair/redeem":
                 return self._redeem(req, body)
+            if api in ("approve/request", "approve/poll"):
+                if not phone_signin(req.cfg):
+                    return Reply(404, {"error": "Signing in with a phone is off: sudo zenithboard console phone-signin on"})
+                if api == "approve/request":
+                    got = self.approvals.request(device_label(req.headers.get("user-agent")), req.client)
+                    return Reply(200, got) if got else Reply(429, {"error": "Too many sign-in codes from this address. Wait a few minutes."})
+                state, v = self.approvals.poll(body.get("id"), body.get("secret"))
+                if state != "approved":
+                    return Reply(200, {"state": state})
+                token, rec = self.sessions.create("approved", v["label"])
+                audit("signed in by a phone (%s): %s %s from %s" % (v["by"], v["label"], rec["id"], req.client))
+                return Reply(200, {"state": "approved"}, cookie=_cookie(token, PASSWORD_LIFE_S))
             if sess is None:
                 return Reply(401, {"error": "signed out"})
             if not hmac.compare_digest(str(req.headers.get("x-zb-csrf", "")), sess["csrf"]):
@@ -639,6 +718,9 @@ class Console(object):
                                "audit": tail(os.path.join(STATE_DIR, "audit.log"), 40)[::-1]})
         if api == "sessions":
             return Reply(200, {"sessions": sorted(self.sessions.listing(), key=lambda r: -r["seen"]), "you": sess["id"]})
+        if api == "approve":
+            st = self.approvals.info(req.q("id")) if phone_signin(req.cfg) else None
+            return Reply(200, st) if st else Reply(404, {"error": "This sign-in code is out of date: the computer shows a new one."})
         if api == "pair":
             st = self.pairs.status(req.q("id"))
             return Reply(200, st) if st else Reply(404, {"error": "no such pairing"})
@@ -662,6 +744,12 @@ class Console(object):
             ptoken, pid = self.pairs.make(who)
             audit("pairing code made by %s" % who)
             return Reply(200, {"token": ptoken, "id": pid, "seconds": PAIR_S})
+        if api == "approve":
+            yes = body.get("yes") is True
+            if not phone_signin(req.cfg) or not self.approvals.answer(body.get("id"), yes, who):
+                return Reply(410, {"error": "This sign-in code is out of date or already answered: the computer shows a new one."})
+            audit("%s a computer's sign-in: %s" % ("approved" if yes else "refused", who))
+            return Reply(200, {"ok": True})
         if api == "sessions/revoke":
             sid = body.get("id")
             n = self.sessions.revoke(keep=sess["id"]) if sid == "others" else self.sessions.revoke(sid=str(sid))

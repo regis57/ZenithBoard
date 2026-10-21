@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.40.0
+- **A computer signed in by your phone**, asked for by the owner. Off by default: `sudo zenithboard console phone-signin on` (also in the console, *System → Signed in*, and the menu, *Web console → 6*). The computer's sign-in page shows, under the password, a QR code and a four-digit code; a phone already signed in to the console scans it and shows *Sign in Windows at 192.168.1.237?* with the same code; *Sign it in*, and the computer is signed in for a week (a day unused), no password typed.
+- How it is kept safe: only a signed-in phone can say yes, after seeing the computer's name, address and code; the QR code carries the request's name only, the computer collecting its sign-in with a secret of its own (a photo of the screen signs nobody in); a request lasts two minutes and is answered once, then turns into one session; twenty requests per address per ten minutes; each yes or no in *Activity → Sign-ins*. Previewed with a computer and a phone side by side.
+
 ## 0.39.3
 - **Console: a change waiting behind a long one says so.** The Pi runs the console's commands one at a time; while graphs1090 installed, the changes made meanwhile were reported as *the console's helper has not taken the job … console on*, again and again (the owner's recording). Now: *Queued: graphs1090 runs first, then this*, once, and the drawer says how many are before it; the helper is blamed only when a change waits with nothing running.
 - *Activity*: clicking one of the last jobs shows its output at the top of the drawer, scrolled into view (it opened out of sight), and marks the job; the background *Refresh* jobs are no longer listed among the last jobs.

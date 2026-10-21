@@ -70,6 +70,7 @@ The dynamic-DNS **token is not stored here.** It is asked for interactively and 
 | `STATS` | `0` | `zenithboard stats on\|off` | A sample every 15 minutes for the `/stats` page and `zenithboard stats`. See [Statistics](Statistics) |
 | `GRAPHS1090` | `0` | `zenithboard graphs on\|off` | Whether graphs1090 was turned on (0.32.0). What `on` found, to put it back, is in `/etc/zenithboard/graphs1090.state`. See [Statistics](Statistics#graphs1090-years-of-the-decoders-graphs-optional) |
 | `CONSOLE` | `0` | `zenithboard console on\|off` | The web console at `/console` (0.39.0). Its password's hash is in `console.env`, never here. See [Web console](Web-console) |
+| `CONSOLE_PHONE_SIGNIN` | `0` | `zenithboard console phone-signin on\|off` | A computer's console sign-in page shows a QR code that a phone already signed in approves (0.40.0) |
 | `CONSOLE_HOSTS` | — | `zenithboard config-set CONSOLE_HOSTS name1,name2` | Names, besides an address, `*.local`, `*.lan`, `*.home.arpa` and the Pi's own name, that the console may be opened by (a guard against DNS rebinding) |
 | `SOCIAL` | `0` | `zenithboard social on\|off` | Post the aircraft overhead to Bluesky. See [Social sharing](Social-sharing). The account's secret is in `social.env`, not here |
 | `SOCIAL_RADIUS_KM` | `15` | `zenithboard social words` | An aircraft is a candidate while inside it. Separate from `RADIUS` |

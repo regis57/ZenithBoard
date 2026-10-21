@@ -196,6 +196,66 @@ class QueueTest(TempDirs):
         self.assertIsNone(st["behind"])
 
 
+class PhoneSigninTest(TempDirs):
+    """0.40.0: a computer's sign-in page shows a QR code; a phone already signed in approves it."""
+    CFG = {"CONSOLE": "1", "CONSOLE_PHONE_SIGNIN": "1"}
+
+    def setUp(self):
+        super().setUp()
+        self.c = console.Console()
+        self.phone, rec = self.c.sessions.create("paired", "iPhone")
+        self.csrf = rec["csrf"]
+
+    def req(self, method, path, body=None, cookie=None, csrf=None, cfg=None, query=None, ua="Mozilla/5.0 (Windows NT 10.0)"):
+        hd = {"Host": "192.168.1.196:8080", "User-Agent": ua}
+        if body is not None:
+            hd["Content-Type"] = "application/json"
+        if cookie:
+            hd["Cookie"] = "zbc=" + cookie
+        if csrf:
+            hd["X-ZB-CSRF"] = csrf
+        return self.c.handle(console.Request(method, path, query, hd, "192.168.1.237",
+                                             json.dumps(body).encode() if body is not None else b"", cfg or self.CFG))
+
+    def test_off_by_default(self):
+        off = {"CONSOLE": "1"}
+        self.assertEqual(self.req("POST", "/console/api/approve/request", {}, cfg=off).code, 404)
+        self.assertFalse(self.req("GET", "/console/api/session", cfg=off).body["phone_signin"])
+
+    def test_the_phone_says_yes_and_the_computer_is_signed_in_once(self):
+        d = self.req("POST", "/console/api/approve/request", {}).body
+        self.assertTrue(len(d["code"]) == 4 and d["code"].isdigit())
+        self.assertEqual(self.req("POST", "/console/api/approve/poll", {"id": d["id"], "secret": d["secret"]}).body["state"], "waiting")
+        self.assertEqual(self.req("GET", "/console/api/approve", query={"id": [d["id"]]}).code, 401, "only a signed-in phone sees it")
+        info = self.req("GET", "/console/api/approve", cookie=self.phone, query={"id": [d["id"]]}).body
+        self.assertEqual((info["label"], info["ip"], info["code"], info["state"]), ("Windows", "192.168.1.237", d["code"], "waiting"))
+        self.assertNotIn("secret", json.dumps(info))
+        self.assertEqual(self.req("POST", "/console/api/approve", {"id": d["id"], "yes": True}, cookie=self.phone).code, 403, "its CSRF token")
+        self.assertEqual(self.req("POST", "/console/api/approve", {"id": d["id"], "yes": True}, cookie=self.phone, csrf=self.csrf).code, 200)
+        self.assertEqual(self.req("POST", "/console/api/approve", {"id": d["id"], "yes": True}, cookie=self.phone, csrf=self.csrf).code, 410, "answered once")
+        self.assertEqual(self.req("POST", "/console/api/approve/poll", {"id": d["id"], "secret": "x" * 32}).body["state"], "unknown",
+                         "the QR code's name alone signs nobody in")
+        r = self.req("POST", "/console/api/approve/poll", {"id": d["id"], "secret": d["secret"]})
+        self.assertEqual(r.body["state"], "approved")
+        tok = r.headers["Set-Cookie"].split(";")[0].split("=", 1)[1]
+        s = self.req("GET", "/console/api/session", cookie=tok).body
+        self.assertEqual((s["signed_in"], s["kind"], s["label"]), (True, "approved", "Windows"))
+        self.assertEqual(self.req("POST", "/console/api/approve/poll", {"id": d["id"], "secret": d["secret"]}).body["state"], "used")
+
+    def test_refused_and_out_of_date(self):
+        d = self.req("POST", "/console/api/approve/request", {}).body
+        self.req("POST", "/console/api/approve", {"id": d["id"], "yes": False}, cookie=self.phone, csrf=self.csrf)
+        self.assertEqual(self.req("POST", "/console/api/approve/poll", {"id": d["id"], "secret": d["secret"]}).body["state"], "refused")
+        d = self.req("POST", "/console/api/approve/request", {}).body
+        self.c.approvals.reqs[d["id"]]["until"] = time.time() - 1
+        self.assertEqual(self.req("POST", "/console/api/approve", {"id": d["id"], "yes": True}, cookie=self.phone, csrf=self.csrf).code, 410)
+        self.assertEqual(self.req("POST", "/console/api/approve/poll", {"id": d["id"], "secret": d["secret"]}).body["state"], "expired")
+
+    def test_a_page_cannot_ask_without_end(self):
+        codes = [self.req("POST", "/console/api/approve/request", {}).code for _ in range(console.Approvals.PER_ADDRESS + 1)]
+        self.assertEqual(codes[-1], 429)
+
+
 class HandleTest(TempDirs):
     CFG = {"CONSOLE": "1", "_VERSION": "0.39.0"}
 

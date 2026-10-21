@@ -102,6 +102,7 @@ ACTIONS = {
     "ddns-status":  ("system", "Domain name", ["ddns", "status"], [], "read"),
     "ddns-update":  ("system", "Refresh the domain name", ["ddns", "update"], [], ""),
     "console-off":  ("system", "Turn the console off", ["console", "off"], [], "ask"),
+    "phone-signin": ("system", "Sign computers in with a phone", ["console", "phone-signin", "{value}"], [("value", "enum", ON_OFF)], "ask"),
     "refresh":      ("overview", "Refresh", None, [], "read"),       # nothing to run: the helper only reads the state again
 }
 

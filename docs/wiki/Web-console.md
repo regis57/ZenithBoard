@@ -32,6 +32,7 @@ for setting up, not for every visit: once a browser or a phone is signed in, it 
 | Password only | Once: `console password`, `console on` | Any browser on the home network signs in with it; it stays signed in a week (a day unused). Phones can then be paired from that browser, no terminal |
 | QR code only, no password | Once per phone: `console on`, `console pair` | The phone stays signed in as long as it opens the console once a month (a year at most). Another phone, or this one after that: `console pair` again, or from a browser already signed in |
 | Both (recommended) | Once | The password for computers, the QR code for phones; the terminal only when a phone was away more than a month and no browser is signed in |
+| Phone sign-in on (0.40.0) | Once: `console phone-signin on` (or from the console) | A computer is signed in by a phone already signed in: QR code on the computer, yes on the phone, no password |
 
 * **A password**, chosen over SSH. Kept as a scrypt hash in `/etc/zenithboard/console.env` (root:zenithboard, 0640),
   never in `config.env`, never in a log. The password field is a normal one, so the phone's or the browser's password
@@ -41,6 +42,14 @@ for setting up, not for every visit: once a browser or a phone is signed in, it 
   keeps the phone signed in as long as it opens the console once a month (a year at most). No password is needed. The code is drawn dark on its own white square with its
   margin, on the page and in the terminal (`qrencode`, when installed, is told both colours), so it scans on a black
   background. Add the page to the home screen from Safari's *Share* menu to open it in one tap.
+* **A computer, signed in by a phone** (0.40.0, off by default, asked for by the owner):
+  `sudo zenithboard console phone-signin on`, or *System → Signed in* in the console, or the menu. The computer's
+  sign-in page then shows, under the password, a QR code and a four-digit code. Scan the QR code with a phone already
+  signed in to the console: the phone shows *Sign in Windows at 192.168.1.237?* and the same four digits; check them
+  and say yes, and the computer is signed in, for a week (a day unused), no password typed. The QR code carries only
+  the request's name; the computer keeps a secret of its own to collect its sign-in, so a photo of its screen signs
+  nobody in. A request is answered once and lasts two minutes; the page renews it a few times, then waits for a click.
+  Refused on the phone: nothing happens. Every one is in *Activity → Sign-ins*.
 * **Signing out**: *Sign out* on the page; *System → Signed in* lists every browser and phone and signs any of them
   out; `sudo zenithboard console signout` signs everyone out, and so does choosing a new password.
 
@@ -80,9 +89,7 @@ Click one of the last jobs to read what it printed: it opens at the top of the d
 * **A QR code signs in the phone that scans it, and only that one, once.** It does not sign in the computer that
   showed it (that one is already signed in), nor another device later. Each browser has its own sign-in: the password,
   or its own QR code.
-* **Signing a computer in with the phone instead of the password** (scan a code on the computer's screen with a phone
-  already signed in, say yes on the phone) is a possible next step, not built: it is a new way in, so it waits for the
-  owner's decision. See the [Roadmap](Roadmap).
+* **A computer can be signed in by a phone** (0.40.0, off by default): see below.
 
 **Only in the terminal, on purpose:** uninstalling and anything that asks for a typed word; Wi-Fi on, off, networks,
 country, and fixed addresses (one mistake cuts the Pi off the network the page comes through); passwords, tokens and
@@ -102,18 +109,21 @@ console does not give it that right:
 2. **The session**: a random cookie, `HttpOnly`, `SameSite=Strict`, limited to `/console`, kept on the Pi only as its
    SHA-256 (`/var/lib/zenithboard/console/state/sessions.json`, 0600). Every change also carries a second token in a
    header and must come from the page's own origin, so another site cannot make the browser change anything.
-3. **Failed sign-ins**: five from an address, then a wait that doubles (30 s up to an hour); thirty in a quarter of an
+3. **A computer signed in by a phone** (off by default): only a phone already signed in can say yes, after seeing the
+   computer's name, address and four-digit code; the QR code holds no secret; a request is answered once, within two
+   minutes; twenty requests per address per ten minutes at most.
+4. **Failed sign-ins**: five from an address, then a wait that doubles (30 s up to an hour); thirty in a quarter of an
    hour from anywhere, and everyone waits five minutes. Each is noted in *Activity* and in the wall's journal.
-4. **A fixed list of actions** (`flightinfo/console_actions.py`): each is one `zenithboard` command whose values must
+5. **A fixed list of actions** (`flightinfo/console_actions.py`): each is one `zenithboard` command whose values must
    be one of those listed, a number in its range or text matching its pattern. The server checks the request against
    it and writes a small job file into the one folder it may write
    (`ReadWritePaths=/var/lib/zenithboard/console/state`).
-5. **A root helper** (`tools/console_run.py`), started by `zenithboard-console.path` when a job appears: it opens the
+6. **A root helper** (`tools/console_run.py`), started by `zenithboard-console.path` when a job appears: it opens the
    file without following links, requires a plain file of the wall's user under 4 KB, checks it against the same list
    (root's own copy in `/opt`), and runs the one command as an argument list — never through a shell — with its input
    closed and a time limit. What it prints goes to `/var/lib/zenithboard/console/out/` (root's, read by the wall), with
    a journal line per change.
-6. **The page**: strict security headers (`Content-Security-Policy` with no inline code, `frame-ancestors 'none'`,
+7. **The page**: strict security headers (`Content-Security-Policy` with no inline code, `frame-ancestors 'none'`,
    `nosniff`, no referrer), no file from the internet: the fonts, the dots and the QR code generator (MIT,
    `flightinfo/static/vendor/`) are on the Pi.
 

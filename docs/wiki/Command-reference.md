@@ -167,6 +167,7 @@ A test since 0.39.0, off by default: the settings from a browser or a phone on y
 | `zenithboard console on` · `off` · `status` | yes for on and off | `on` makes its folders, installs its root helper (`zenithboard-console.path` and `.service`) and prints the address; `off` removes the helper and the pages stop answering at once, the password is kept. Menu: *Settings → 7 Web console* |
 | `zenithboard console password` | yes | Choose the console's password (asked twice, 10 characters at least, never on the command line). Kept as a scrypt hash in `/etc/zenithboard/console.env` (root:zenithboard 0640). Signs every browser and phone out |
 | `zenithboard console pair` | yes | A QR code (drawn by `qrencode` when installed, dark on a white square) and its link: a phone that opens it within five minutes is signed in for 30 days. Works once |
+| `zenithboard console phone-signin on` · `off` | yes for on and off | Off by default (0.40.0). On: a computer's sign-in page shows a QR code and a four-digit code; a phone already signed in to the console scans it, checks the code and says yes, and the computer is signed in without the password. Also in the console (*System → Signed in*) and the menu |
 | `zenithboard console signout` | yes | Sign every browser and phone out now |
 | `zenithboard console forget` | yes | `off`, then delete the password, the sessions and the record of what the console ran |
 

@@ -32,6 +32,13 @@
         <button type="submit" class="primary wide" id="login-go">Sign in</button>
         <p class="err" id="login-err" role="alert" hidden></p>
       </form>
+      <div id="gate-phone" class="gate-phone" hidden>
+        <p class="sub">Or sign in with your phone</p>
+        <div id="gate-qr" class="qr small" role="img" aria-label="QR code to scan with a phone signed in to the console"></div>
+        <div class="count" id="gate-code"></div>
+        <p class="qr-note" id="gate-phone-note"></p>
+        <p class="qr-note" id="gate-count"></p>
+      </div>
       <div id="gate-nopw" class="muted" hidden>
         <p>No console password yet. Choose one over SSH on the Pi:</p>
         <pre>sudo zenithboard console password</pre>
@@ -42,7 +49,7 @@
         <p>On a computer already signed in: <b>System &rarr; Signed in &rarr; Pair a phone</b>, or over SSH:</p>
         <pre>sudo zenithboard console pair</pre>
         <p>Then scan the QR code with the phone's camera. It works once, within five minutes; the phone then stays signed in as long as it opens the console once a month. No password is needed for it.</p>
-        <p>The QR code is never shown on this page, on purpose: here it would sign in anyone on your network who scans it.</p>
+        <p>That QR code is never shown on this page, on purpose: here it would sign in anyone on your network who scans it. (With <i>phone sign-in</i> on, this page shows another one: it signs <b>this computer</b> in, once a phone already signed in says yes.)</p>
       </details>
       <p class="fine">Your home network only. <a href="/">Wall</a> &middot; <a href="/stats">Statistics</a></p>
     </div>

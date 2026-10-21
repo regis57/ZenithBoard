@@ -139,8 +139,20 @@ console_pair() {
   echo "The phone stays signed in as long as it opens the console once a month (a year at most). See or sign out phones: in the console, System -> Signed in."
 }
 
+# 0.40.0: a computer's sign-in page shows a QR code, a phone already signed in approves it (off by default)
+console_phone_signin() {
+  case "${1:-}" in
+    on)  cfg_set CONSOLE_PHONE_SIGNIN 1
+         echo "Signing in with a phone is ON: a computer's sign-in page shows a QR code; scan it with a phone already signed in to the console, check the four-digit code, say yes." ;;
+    off) cfg_set CONSOLE_PHONE_SIGNIN 0; echo "Signing in with a phone is OFF: computers sign in with the password." ;;
+    "")  echo "Signing computers in with a phone: $( [ "$(cfg_get CONSOLE_PHONE_SIGNIN 0)" = 1 ] && echo ON || echo OFF )" ;;
+    *)   echo "Usage: zenithboard console phone-signin on|off"; return 1 ;;
+  esac
+}
+
 console_status() {
   echo "Web console: $(console_state)$( [ "$(console_state)" = on ] && echo "   $(console_url)")"
+  echo "  Computers signed in by a phone: $( [ "$(cfg_get CONSOLE_PHONE_SIGNIN 0)" = 1 ] && echo ON || echo "OFF (sudo zenithboard console phone-signin on)" )"
   echo "  Password: $(console_has_password && echo "set (as a hash in $CONSOLE_ENV)" || echo "none (sudo zenithboard console password)")"
   if [ -f "$CONSOLE_UNIT_DIR/$CONSOLE_UNIT.path" ]; then echo "  Helper: $(systemctl is-active "$CONSOLE_UNIT.path" 2>/dev/null || echo unknown)"
   elif [ "$(console_state)" = on ]; then echo "  Helper: not installed (run: sudo zenithboard console on)"; fi
@@ -185,6 +197,7 @@ console_menu() {
       pair "3  Pair a phone: a QR code to scan, valid once for 5 minutes" \
       signout "4  Sign every browser and phone out" \
       status "5  Status" \
+      phone "6  Sign computers in with a phone (a QR code on the computer): $( [ "$(cfg_get CONSOLE_PHONE_SIGNIN 0)" = 1 ] && echo ON || echo OFF )" \
       back "Return to the previous menu") || return 0
     case "$c" in
       toggle) clear; if [ "$(console_state)" = on ]; then console_off; else console_on; fi; read -rp "Press Enter to continue..." _ ;;
@@ -192,6 +205,8 @@ console_menu() {
       pair) clear; console_pair || true; read -rp "Press Enter when the phone is signed in..." _ ;;
       signout) clear; console_signout || true; read -rp "Press Enter to continue..." _ ;;
       status) clear; console_status; read -rp "Press Enter to continue..." _ ;;
+      phone) if [ "$(cfg_get CONSOLE_PHONE_SIGNIN 0)" = 1 ]; then console_phone_signin off >/dev/null; else console_phone_signin on >/dev/null; fi
+             wt_msg "$(console_phone_signin)" 8 ;;
       *) return 0 ;;
     esac
   done

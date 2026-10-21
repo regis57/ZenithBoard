@@ -127,6 +127,7 @@ ZenithBoard $ZB_VERSION - ADSB Flight Info
   zenithboard console password          set its password (asked, never on the command line; signs everyone out)
   zenithboard console pair              a QR code that signs a phone in, once, within 5 minutes
   zenithboard console signout|forget    sign every browser out / turn it off and delete its password and records
+  zenithboard console phone-signin on|off   a computer's sign-in page shows a QR code, a phone already signed in says yes (off by default)
   zenithboard menu                      open the installer menu (add / remove components)
 USAGE
 }
@@ -492,6 +493,7 @@ case "${1:-}" in
       pair)     root_or_die; console_pair ;;
       signout)  root_or_die; console_signout ;;
       forget)   root_or_die; console_forget ;;
+      phone-signin) [ -z "${3:-}" ] || root_or_die; console_phone_signin "${3:-}" ;;
       state)    root_or_die; console_state_lines ;;
       *) die "Usage: zenithboard console on|off|status|password|pair|signout|forget" ;;
     esac ;;
