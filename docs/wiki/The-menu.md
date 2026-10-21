@@ -110,6 +110,11 @@ What it changes on the Pi: the Tailscale package, its repository and its key; th
 
 ![How it works, in the menu](https://raw.githubusercontent.com/regis57/ZenithBoard/main/docs/images/menu-tailscale-how.png)
 
+**From the web console** (0.46.0): *System → Tailscale*. Its switch connects (installing Tailscale the first time); the
+sign-in link appears in the card as a *Sign in to Tailscale* button while it waits; then the card gives the addresses,
+links to the wall and the statistics over Tailscale, and the switch for the console over it. The overview's *At a
+glance* says *Tailscale on*. Removing it completely asks for a typed word, so it stays in the terminal.
+
 **How to take it away:**
 
 * **Disconnect for a while**: *4 Disconnect* (`sudo zenithboard tailscale off`). The Pi leaves your Tailscale network,

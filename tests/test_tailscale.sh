@@ -79,6 +79,12 @@ import sys; sys.path.insert(0, \"flightinfo\"); import console as c
 assert not c.client_ok(\"100.101.2.3\") and c.client_ok(\"100.101.2.3\", True) and not c.client_ok(\"8.8.8.8\", True)
 assert not c.host_ok(\"zb.tail1234.ts.net\") and c.host_ok(\"zb.tail1234.ts.net\", \"\", True)
 assert c.tailscale_ok({\"CONSOLE_TAILSCALE\": \"1\"}) and not c.tailscale_ok({})"'
+check "console: connect, disconnect and the console over it; remove stays in the terminal" 'python3 -c "
+import sys; sys.path.insert(0, \"flightinfo\"); import console_actions as a
+assert a.build(\"tailscale\", {\"value\": \"on\"}) == [\"tailscale\", \"on\"] and \"long\" in a.flags(\"tailscale\") and \"ask\" in a.flags(\"tailscale\")
+assert a.build(\"tailscale-console\", {\"value\": \"off\"}) == [\"tailscale\", \"console\", \"off\"]
+assert not any(\"remove\" in (s[2] or []) and \"tailscale\" in (s[2] or []) for s in a.ACTIONS.values())"'
+check "console: its overview reads Tailscale's state" 'grep -q "tailscale=%s" lib/console.sh && grep -q "Tailscale \" + f.tailscale" flightinfo/static/console.js && grep -q "Sign in to Tailscale" flightinfo/static/console.js'
 check "menu: 3 Connectivity, 4 Tailscale, with how and remove" 'grep -q "tailscale \"4  Tailscale" lib/menus.sh && grep -q "how \"1  How it works" lib/tailscale.sh && grep -q "remove \"5  Remove it completely" lib/tailscale.sh'
 
 [ "$fail" = 0 ] && echo "ALL OK"

@@ -339,6 +339,8 @@
     update: ["Update everything?", "ZenithBoard, the decoder and every feeder, one after the other: several minutes. The wall restarts during it; this page follows. A new GitHub signing key is never accepted from here: the update says so, and it is answered over SSH."],
     "phone-signin": ["Sign computers in with a phone", "When on, a computer's sign-in page shows a QR code. A phone already signed in scans it, sees the computer, its address and a four-digit code, and says yes: the computer is signed in, no password. Off again: computers use the password."],
     "backup-delete": ["Delete the console's backup?", "Only the copy kept here for download: the files you already downloaded, and the Pi itself, are not touched."],
+    tailscale: ["Tailscale", "Switching it on installs Tailscale the first time (from its own repository, a few minutes), then prints a sign-in link in this card: open it, sign in to YOUR Tailscale account, approve the Pi. The wall then answers your Tailscale devices too. Off disconnects the Pi from your Tailscale network; it stays installed. The wall restarts either way: this page reconnects by itself."],
+    "tailscale-console": ["The console over Tailscale", "On: the devices signed in to your Tailscale account can open this console too (encrypted by Tailscale; the password still applies). Off: your home network only. The wall restarts: this page reconnects by itself."],
     "console-off": ["Turn the console off?", "Its pages stop answering at once, this one included. Turn it on again over SSH: sudo zenithboard console on"]
   };
   function run(action, params, opts) {
@@ -403,7 +405,12 @@
           var it = document.getElementById("iterm-" + id);
           if (it) { var pre = it.querySelector("pre"), atEnd = pre.scrollHeight - pre.scrollTop - pre.clientHeight < 40;
             pre.textContent = termText(j); if (atEnd) pre.scrollTop = pre.scrollHeight;
-            var pl = it.querySelector(".pill"), st = pillOf(j); pl.className = "pill " + st[0]; pl.textContent = st[1]; }
+            var pl = it.querySelector(".pill"), st = pillOf(j); pl.className = "pill " + st[0]; pl.textContent = st[1];
+            // 0.45.1: Tailscale's sign-in link, as a button, as soon as it is printed (the job waits for that sign-in)
+            if (j.action === "tailscale" && !it.querySelector(".ts-signin")) {
+              var tsl = /https:\/\/login\.tailscale\.com\/a\/[A-Za-z0-9]+/.exec(j.log || "");
+              if (tsl) it.appendChild(h("div", { "class": "actions ts-signin" }, h("a", { "class": "primary", href: tsl[0], target: "_blank", rel: "noopener noreferrer", text: "Sign in to Tailscale ↗" })));
+            } }
           if (j.state === "done" || j.state === "refused") return finish();
           setTimeout(tick, j.state === "running" ? 700 : 1000);
         }).catch(function () { setTimeout(tick, 1500); });            // the wall restarting after the change
@@ -464,6 +471,9 @@
     var links = j.state === "done" && (j.action === "social-test" || j.action === "summary-test") ? h("div", { "class": "actions" },
       h("a", { "class": "btn", href: "/social/preview", target: "_blank", rel: "noopener", text: "The picture ↗" }),
       j.action === "summary-test" ? ["2", "3", "4"].map(function (n) { return h("a", { "class": "btn", href: "/social/preview" + n, target: "_blank", rel: "noopener", text: "Post " + n + " ↗" }); }) : null) : null;
+    // 0.45.1: Tailscale's sign-in link, as a button, while it waits for it (only its own address is taken)
+    var tsl = j.action === "tailscale" && j.state !== "done" && /https:\/\/login\.tailscale\.com\/a\/[A-Za-z0-9]+/.exec(j.log || "");
+    if (tsl && !links) links = h("div", { "class": "actions ts-signin" }, h("a", { "class": "primary", href: tsl[0], target: "_blank", rel: "noopener noreferrer", text: "Sign in to Tailscale ↗" }));
     var box = h("div", { "class": "term inline", id: "iterm-" + j.id },
       h("div", { "class": "th" }, ico("terminal"), h("b", { text: j.label + (j.params && j.params.value ? ": " + j.params.value : "") }), h("span", { "class": "pill " + st[0], text: st[1] }),
         h("button", { type: "button", "class": "ghost", title: "Open in Activity", text: "⤢", onclick: function () { openDrawer(j.id); } }),
@@ -514,6 +524,7 @@
         chip("Summaries: " + (["DAILY", "WEEKLY", "MONTHLY"].filter(function (p) { return on(c["SOCIAL_" + p]); }).map(function (p) { return p.toLowerCase(); }).join(", ") || "off"), "sharing"),
         chip("Watchdog " + (f.watchdog || "?"), "reliability", f.watchdog === "on"),
         chip("Network watchdog " + (f.netwatch || "?"), "reliability", f.netwatch === "on"),
+        f.tailscale && f.tailscale !== "not installed" ? chip("Tailscale " + f.tailscale, "system", f.tailscale === "on") : null,
         chip("Security fixes " + (f.patches || "?"), "reliability", f.patches === "on"),
         f.wifi ? chip("Wi-Fi: " + f.wifi, "system") : null), "w6"));
       var gaps = setupGaps();
@@ -639,9 +650,22 @@
           h("p", { "class": "note" }, "Step by step, and why the MAC address does not get in the way: ", h("a", { href: "https://github.com/regis57/ZenithBoard/wiki/Backup-and-restore", target: "_blank", rel: "noopener noreferrer", text: "Backup and restore ↗" }))
         ], "w6"),
         card("Network", "link", f.ip ? "This Pi: " + f.ip + (f.ddns ? " · " + f.ddns : "") : null, [
-          h("div", { "class": "actions" }, btn("Network", "net-status"), btn("Wi-Fi", "wifi-status"), btn("Domain name", "ddns-status"), btn("Tailscale", "tailscale-status"),
+          h("div", { "class": "actions" }, btn("Network", "net-status"), btn("Wi-Fi", "wifi-status"), btn("Domain name", "ddns-status"),
             S.cfg.DDNS_PROVIDER && S.cfg.DDNS_PROVIDER !== "none" ? btn("Refresh the domain name", "ddns-update") : null),
-          h("p", { "class": "note", text: "Wi-Fi networks, fixed addresses, the domain name's key and Tailscale (its sign-in) stay in the terminal (sudo zenithboard menu → 3 Connectivity): one mistake there cuts the Pi off the network this page comes through." })
+          h("p", { "class": "note", text: "Wi-Fi networks, fixed addresses and the domain name's key stay in the terminal (sudo zenithboard menu → 3 Connectivity): one mistake there cuts the Pi off the network this page comes through." })
+        ], "w6"),
+        card("Tailscale", "link", f.tailscale === "on" ? "On: reachable from anywhere by the devices of your Tailscale account, no port opened." :
+            "Off. The wall, the statistics and graphs1090 from anywhere, with no port opened: your phone or computer joins your own Tailscale network (a free account on tailscale.com, its app on the phone).", [
+          row("Connected", f.tailscale === "on" ? "Off: the Pi leaves your Tailscale network; it stays installed and signed in" :
+            "The first time it installs Tailscale (minutes), then its sign-in link appears below: open it, sign in to your account, approve the Pi", sw("tailscale", f.tailscale === "on")),
+          f.tailscale === "on" ? row("The console over Tailscale too", "Only your Tailscale devices; its password still applies. Off: home network only", sw("tailscale-console", on(S.cfg.CONSOLE_TAILSCALE))) : null,
+          f.tailscale === "on" && f.tailscale_ip ? h("div", { "class": "actions" },
+            h("a", { "class": "btn", href: "http://" + f.tailscale_ip + ":" + (S.cfg.PORT || "8080") + "/", target: "_blank", rel: "noopener", text: "The wall over Tailscale ↗" }),
+            h("a", { "class": "btn", href: "http://" + f.tailscale_ip + ":" + (S.cfg.PORT || "8080") + "/stats", target: "_blank", rel: "noopener", text: "Statistics ↗" })) : null,
+          f.tailscale === "on" ? h("p", { "class": "note", text: "Its address: " + (f.tailscale_ip || "?") + (f.tailscale_name ? " · " + f.tailscale_name : "") + ". Open these from a device with the Tailscale app on." }) : null,
+          h("div", { "class": "actions" }, btn("Status", "tailscale-status")),
+          h("p", { "class": "note" }, "Removing it completely (sign-out, uninstall) asks for a typed word: in the terminal, sudo zenithboard tailscale remove. Step by step: ",
+            h("a", { href: "https://github.com/regis57/ZenithBoard/wiki/The-menu#tailscale", target: "_blank", rel: "noopener noreferrer", text: "Tailscale ↗" }))
         ], "w6"),
         card("Signed in", "phone", "Browsers and phones signed in to this console. Signed in with the password: a week (a day unused). A paired phone: as long as it opens the console once a month.", [
           sessionsList(),

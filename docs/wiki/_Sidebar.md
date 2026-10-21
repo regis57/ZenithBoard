@@ -2,6 +2,7 @@
 
 *Direction*
 * [Roadmap](Roadmap)
+* [Translation plan](Translation-plan)
 * [Project status](Project-status)
 
 *Getting started*

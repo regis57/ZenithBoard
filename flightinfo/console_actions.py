@@ -102,6 +102,11 @@ ACTIONS = {
     "update":       ("system", "Update everything", ["update"], [], "ask long wall"),
     "net-status":   ("system", "Network", ["net", "status"], [], "read"),
     "tailscale-status": ("system", "Tailscale", ["tailscale", "status"], [], "read"),
+    # 0.45.1 (the owner: "make Tailscale appear in the console"): connect (it installs Tailscale the first time, and
+    # prints the sign-in link the page shows), disconnect, the console over Tailscale. Removing it asks for a typed
+    # word: in the terminal, like every such step.
+    "tailscale":    ("system", "Tailscale", ["tailscale", "{value}"], [("value", "enum", ON_OFF)], "ask long wall"),
+    "tailscale-console": ("system", "The console over Tailscale", ["tailscale", "console", "{value}"], [("value", "enum", ON_OFF)], "ask wall"),
     "wifi-status":  ("system", "Wi-Fi", ["wifi", "status"], [], "read"),
     "ddns-status":  ("system", "Domain name", ["ddns", "status"], [], "read"),
     "ddns-update":  ("system", "Refresh the domain name", ["ddns", "update"], [], ""),
