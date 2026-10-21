@@ -57,13 +57,16 @@ sudo zenithboard graphs off
 
 ## The page
 
-In ZenithBoard's own look since 0.37.0: the name in the wall's dots, numbers and bars in the wall's colour (amber, or the colour the wall is set to) on black, grey for what explains them. Top right, **the period: 24 h, 7 days or 30 days**. Everything on the page follows it, except the sky by hour and the two farthest-aircraft lines; the choice stays in the address (`/stats#7d`) and, when the browser allows it, for the next visit.
+In ZenithBoard's own look since 0.37.0: the name in the wall's dots, numbers and bars in the wall's colour (amber, or the colour the wall is set to) on black, grey for what explains them. Top right, **the period: 24 h, 7 days or 30 days**. **Everything on the page follows it** (0.43.0: the sky by hour, the fourth box and the farthest aircraft did not); the choice stays in the address (`/stats#7d`) and, when the browser allows it, for the next visit. From the top, in the order of the [summary's posts](Social-sharing#the-weeks-summary-0330-optional) (the owner, 21 October 2026):
 
-* **Four numbers for the period**: distinct aircraft (a floor), messages with the busiest hour, the farthest aircraft and when, and the best distance of the thirty days. Then the two lines naming the farthest aircraft of today and of the thirty days.
-* **Messages, the farthest aircraft and aircraft**: by hour for 24 hours (aircraft then being those with a position, on average over the hour), by day for 7 or 30 (distinct aircraft each day). An hour or a day with no sample is a gap in the line, never a zero.
-* **The sky by hour**, fixed at thirty days whatever the period (fourteen before 0.37.0): a lit dot per hour, brighter where more aircraft had a position, as on the weekly card.
-* **Airlines and models most seen**, and **how high** (bands of 1 km or 5 000 ft), for the period.
-* **Cargo and business jets**: each cargo airline with the model it flew most, the business jets by make and model, and the countries they are most registered in, with their flags and how many countries (0.38.0: the column lines up with the other two). **Military aircraft**: by country with its flag, the most represented first, then the makes and models with bars. **General aviation**: helicopters, light aircraft, gliders, drones and balloons. The same lists, read the same way, as the [weekly posts](Social-sharing#the-weeks-summary-0330-optional).
+* **Four boxes**: distinct aircraft (a floor), messages with the busiest hour, the farthest distance and when, and the **busiest day** (7 and 30 days: the most distinct aircraft) or **busiest hour** (24 hours: the most aircraft with a position, on average).
+* **The farthest aircraft of the period**, in words, its airline's flag first. One aircraft is written down a day, the day's farthest (since 0.22.0): for 24 hours, yesterday's counts when it was seen inside them. When the box above says more, the line says why.
+* **Aircraft** (the first post): the sky by hour for the period — one row of the 24 hours, or a row a day for 7 or 30 — then the **airlines** and the **models** most seen side by side.
+* **Cargo and business jets** (the second post): each cargo airline with the model it flew most, the business jets by make and model, the countries they are most registered in.
+* **Military aircraft** (the third post): by country, then make and model. **General aviation** (the fourth): helicopters, light aircraft, gliders, drones and balloons, a row per model and country.
+* Then **how high** (bands of 1 km or 5 000 ft), **the messages**, and the rest: the farthest aircraft and the aircraft by hour or by day, and the table. An hour or a day with no sample is a gap in the line, never a zero.
+
+**Every airline starts with its flag** (0.43.0), passenger or cargo, the column of flags aligned: the country the airline is **based in**, from the airline and cargo lists ZenithBoard carries (each code checked against a published source: `flightinfo/data`), or the one adsbdb gave when it named an airline those lists do not know; else the country most of its aircraft heard are registered in (their address). A name made of several prefixes takes the most heard: *DHL* (EAT Leipzig, DHL Air UK, DHL Air Austria…) shows Germany on the reference Pi. The same flags on the summary's first and second cards.
 
 A tooltip on each bar, dot and point, and the period's numbers as a table underneath. Readable on a phone: the drawings are sized to the screen and the military rows fold. Nothing is asked of the internet; the flags are files on the Pi, served at `/flags/XX.png`.
 
@@ -76,6 +79,19 @@ A tooltip on each bar, dot and point, and the period's numbers as a table undern
 The line leaves out what is not known rather than guess it: no airline, no route, no city each drop their part. A city within 50 km reads *near Lyon, FR (12 km)*; farther, over the sea or open country, *85 km from Brugge, BE*. Altitude follows the wall's units; distances are in km, like the rest of the page.
 
 With statistics off, the page says so and how to turn them on. `/api/stats?range=24h|7d|30d` answers the same numbers as JSON (30 days when the range is left out), `{"enabled": false}` when off. `/api/farthest` is what the sample asks: the records the wall holds in memory for today and yesterday.
+
+## graphs1090 in ZenithBoard's look (0.43.0, optional)
+
+```
+sudo zenithboard graphs look zenithboard     # or menu 3 → 2 Receiver → 7, or the console's Receiver section
+sudo zenithboard graphs look original        # graphs1090's own look again
+```
+
+graphs1090's page on port 8542 in the statistics page's look: black, the wall's colour, the name in the wall's dots with links to the wall and `/stats`, the period buttons and panels styled like the statistics page; on a phone, one graph a row, the width of the screen. **The graphs themselves are drawn in the same colours**: graphs1090 draws them with rrdtool and reads its colours from `/etc/default/graphs1090` after its own colour schemes, so ZenithBoard writes a marked block at the end of that file — a black canvas, light grey text and grid, the wall's colour for the main series (messages received, aircraft with a position), its shades and the wall's turquoise, green and red where a graph needs more series told apart. Checked against every graph of the reference Pi's own history (its backup of 21 October 2026): each line and its legend still read.
+
+What it changes, and `original` takes away: the block in `/etc/default/graphs1090`; two lines in graphs1090's `index.html` (a stylesheet and a script); three files beside it (`zenithboard.css`, `zenithboard.js`, `font5x7.js`). graphs1090's own files are otherwise left alone, its credit and version at the foot included. Its updates write its page again: `zenithboard update` puts the look back after them, and so does a new wall colour. Off by default; graphs1090 must be on first.
+
+![graphs1090 in ZenithBoard's look (the reference Pi's own graphs, 21 October 2026)](https://raw.githubusercontent.com/regis57/ZenithBoard/main/docs/images/graphs1090-look.png)
 
 ## The terminal
 

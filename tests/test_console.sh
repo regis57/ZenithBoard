@@ -10,7 +10,7 @@ cd "$(dirname "$0")/.." || exit 1
 t=$(mktemp -d); trap 'rm -rf "$t"' EXIT
 export ZENITHBOARD_ETC="$t/etc"; mkdir -p "$ZENITHBOARD_ETC" "$t/bin" "$t/sysd"; touch "$ZENITHBOARD_ETC/config.env"
 export ZB_SYSTEMD_DIR="$t/sysd" ZB_CONSOLE_DIR="$t/console"
-printf '#!/bin/bash\necho "systemctl $*" >> "%s/systemctl.log"\n[ "$1" = is-active ] && echo active\nexit 0\n' "$t" > "$t/bin/systemctl"
+printf '#!/bin/bash\necho "systemctl $*" >> "%s/systemctl.log"\n[ "$1" = is-active ] && echo active\n[ "$1" = list-unit-files ] && [ ! -e "%s/nowall" ] && echo "$2 enabled"\nexit 0\n' "$t" "$t" > "$t/bin/systemctl"
 printf '#!/bin/bash\necho 192.168.1.50\n' > "$t/bin/hostname"
 chmod +x "$t"/bin/*; export PATH="$t/bin:$PATH"
 # shellcheck source=lib/common.sh
@@ -40,6 +40,8 @@ check "never in config.env"                           '! grep -q "CONSOLE_PASSWO
 h=$(console_secret_get CONSOLE_PASSWORD_HASH)
 check "the wall's side accepts it"                    'python3 -c "import sys; sys.path.insert(0, \"flightinfo\"); import console; sys.exit(0 if console.check_password(\"a long password\", sys.argv[1]) else 1)" "$h"'
 
+touch "$t/nowall"; out=$(console_on); rc=$?; rm -f "$t/nowall"
+check "on: refused before the wall, said why (0.43.0)" '[ "$rc" = 1 ] && echo "$out" | grep -q "install it first" && [ "$(cfg_get CONSOLE 0)" = 0 ]'
 out=$(console_on)
 check "on: the setting, the address"                  '[ "$(cfg_get CONSOLE)" = 1 ] && printf "%s" "$out" | grep -q "http://192.168.1.50:8080/console"'
 check "on: the wall restarted, so its sandbox opens the new folder" 'grep -q "try-restart zenithboard-flightinfo" "$t/systemctl.log"'

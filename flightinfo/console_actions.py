@@ -58,6 +58,7 @@ ACTIONS = {
     "stats-show":   ("receiver", "Statistics", ["stats"], [], "read"),
     "stats-gaps":   ("receiver", "Unknown callsigns and types", ["stats", "gaps"], [], "read"),
     "graphs":       ("receiver", "graphs1090", ["graphs", "{value}"], [("value", "enum", ON_OFF)], "long ask"),
+    "graphs-look":  ("receiver", "graphs1090 in ZenithBoard's look", ["graphs", "look", "{value}"], [("value", "enum", ON_OFF)], ""),
     "gain-check":   ("receiver", "Gain check", ["gain", "check"], [], "read"),
     "gain-step":    ("receiver", "Gain one step", ["gain", "{value}"], [("value", "enum", ("up", "down"))], "ask"),
     "gain-log":     ("receiver", "Gain log, 24 h", ["gain", "log", "{value}"], [("value", "enum", ON_OFF)], ""),

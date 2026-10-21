@@ -202,14 +202,14 @@ class LearnedAirlineTests(unittest.TestCase):
             server._learned["data"].clear()
 
     def test_the_real_answer_names_the_airline(self):
-        self.assertEqual(server.parse_airline(ADSBDB_EASYJET), {"icao": "EZY", "name": "easyJet", "iata": "U2"})
+        self.assertEqual(server.parse_airline(ADSBDB_EASYJET), {"icao": "EZY", "name": "easyJet", "iata": "U2", "cc": "GB"})
         self.assertEqual(server.parse_route(ADSBDB_EASYJET)["to"]["iata"], "BSL")     # the route still comes out of the same answer
 
     def test_learned_name_shows_for_every_callsign_of_that_prefix(self):
         self.assertEqual(server.airline_for("EZY52AB", {}), ("EZY", None))            # not in the built-in list: bare
         server.learn_airline(ADSBDB_EASYJET)
-        self.assertEqual(server.airline_for("EZY52AB", {}), ("EZY", {"name": "easyJet", "iata": "U2", "learned": True}))
-        self.assertEqual(server.airline_for("EZY1", {}), ("EZY", {"name": "easyJet", "iata": "U2", "learned": True}))
+        self.assertEqual(server.airline_for("EZY52AB", {}), ("EZY", {"name": "easyJet", "iata": "U2", "cc": "GB", "learned": True}))
+        self.assertEqual(server.airline_for("EZY1", {}), ("EZY", {"name": "easyJet", "iata": "U2", "cc": "GB", "learned": True}))
         self.assertEqual(server.airline_for("RYR1", {}), ("RYR", None))              # another prefix learns nothing from it
 
     def test_builtin_list_wins_over_what_was_learned(self):
@@ -799,6 +799,50 @@ class StatsTest(unittest.TestCase):
         self.assertEqual(server.read_fleet(cfg, d, now, rng="24h")["types"][0][0], "Boeing 737-800", "as the posts write it")
         self.assertEqual(server.nice_name("AIRBUS A-320neo"), "Airbus A320neo")
         self.assertEqual(server.nice_name("DE HAVILLAND CANADA DHC-8-400"), "De Havilland Canada DHC-8-400")
+
+    def test_everything_follows_the_period(self):
+        # 0.43.0: the sky by hour, the fourth box and the farthest aircraft follow the toggle; every airline has a flag
+        import datetime, json as js
+        d = self._dir()
+        now = datetime.datetime(2026, 10, 20, 22, 10)
+        lines = ["when,messages,farthest_km,aircraft_pos,aircraft_seen", "2026-10-20 21:00,500,300,20,100",
+                 "2026-10-20 09:00,100,200,40,50", "2026-10-15 12:00,1000,350,30,800"]
+        with open(os.path.join(d, "stats.csv"), "w") as fh:
+            fh.write("\n".join(lines) + "\n")
+        for day, n in (("2026-10-20", 3), ("2026-10-15", 9)):
+            with open(os.path.join(d, "seen-" + day), "w") as fh:
+                fh.write("\n".join("a%05d" % i for i in range(n)) + "\n")
+        for day, rec in (("2026-10-20", {"km": 300, "time": "21:00", "flight": "RYR1", "hex": "4ca001"}),
+                         ("2026-10-19", {"km": 320, "time": "20:00", "flight": "", "hex": "3c6444"}),
+                         ("2026-10-15", {"km": 350, "time": "12:00", "flight": "BAW1", "hex": "400001"})):
+            with open(os.path.join(d, "farthest-" + day), "w") as fh:
+                js.dump(rec, fh)
+        s = server.read_stats(d, now, "24h")
+        w = s["window"]
+        self.assertEqual(len(w["heat"]), 1, "one row: the 24 hours")
+        self.assertEqual(w["heat"][0]["labels"][-1], "22h")
+        self.assertEqual(w["heat"][0]["hours"][w["labels"].index("09h")], 40.0)
+        self.assertIsNone(w["heat"][0]["hours"][w["labels"].index("10h")], "an hour with no sample is no dot")
+        self.assertEqual(w["busiest"], {"label": "09h", "aircraft": 40.0, "per": "hour"})
+        self.assertNotIn("_counts", w)
+        self.assertEqual(s["farthest"]["period"]["km"], 300, "yesterday's 20:00 is outside the 24 hours")
+        self.assertEqual(s["farthest"]["period"]["cc"], "IE", "Ryanair: Ireland, where it is based")
+        s = server.read_stats(d, now, "7d")
+        self.assertEqual(len(s["window"]["heat"]), 7)
+        self.assertEqual(s["window"]["busiest"], {"label": "15/10", "aircraft": 9, "per": "day"})
+        self.assertEqual(s["farthest"]["period"]["km"], 350)
+        self.assertEqual(s["farthest"]["period"]["cc"], "GB")
+        self.assertEqual(len(server.read_stats(d, now, "30d")["window"]["heat"]), 30)
+        self.assertEqual(server.read_farthest(d, now, "24h")["best"]["km"], 350, "the thirty days' best is kept too")
+        # an airline's flag: where it is based (the lists), else where its aircraft are registered
+        with open(os.path.join(d, "fleet-2026-10-20"), "w") as fh:
+            fh.write("4ca001\tRYR1\t30000\tB738\n3c0001\tBCS1\t30000\tB752\n4b1801\tXYZ12\t30000\tA320\n")
+        f = server.read_fleet({"UNITS": "metric"}, d, now, rng="7d")
+        self.assertEqual(f["airline_cc"].get("Ryanair"), "IE")
+        self.assertEqual(f["airline_cc"].get("DHL"), "DE", "EAT Leipzig, counted as DHL")
+        self.assertEqual(f["airline_cc"].get("XYZ"), "CH", "an airline no list knows: its aircraft's registration")
+        self.assertEqual(server.airline_cc("ABR"), "IE")
+        self.assertEqual(server.parse_airline({"response": {"flightroute": {"airline": {"icao": "RYR", "name": "Ryanair", "country_iso": "IE"}}}})["cc"], "IE")
 
     def test_the_fleet_of_thirty_days(self):
         # 0.31.0: airlines by callsign prefix, types from the file (the sample looked them up), altitudes in bands;

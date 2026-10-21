@@ -85,6 +85,7 @@ ZenithBoard $ZB_VERSION - ADSB Flight Info
   zenithboard stats csv|clear           the raw samples / empty them
   zenithboard stats gaps                callsigns shown without an airline, types drawn with the generic silhouette (30 days)
   zenithboard graphs on|off|status      graphs1090: years of the decoder's graphs on port 8542 (off by default)
+  zenithboard graphs look zenithboard|original   graphs1090's page and graphs in ZenithBoard's look, or its own (default)
   zenithboard backup make [FILE]        everything to move to a new card: settings, features on, statistics, graphs,
                                         kept logs, the networks' identities (keep the file private)
   zenithboard backup show FILE          what a backup holds and the span of each part, read back as a restore would
@@ -247,6 +248,7 @@ case "${1:-}" in
   color|colour)
     root_or_die; valid_theme "${2:-}" || die "Usage: zenithboard color amber|green|red|white|turquoise   (blue was taken out in 0.23.0)"
     cfg_set THEME "$2"; restart_flightinfo
+    graphs_look_keep                                # 0.43.0: graphs1090 in ZenithBoard's look takes the new colour too
     echo "Wall colour is now $2 (tablets that picked their own colour with the gear keep it: use the gear's Reset)." ;;
   data)
     case "${2:-status}" in
@@ -319,7 +321,8 @@ case "${1:-}" in
       on)     root_or_die; graphs_on ;;
       off)    root_or_die; graphs_off ;;
       status) graphs_status ;;
-      *) die "Usage: zenithboard graphs on|off|status" ;;
+      look)   [ "${3:-status}" = status ] || root_or_die; graphs_look "${3:-status}" ;;
+      *) die "Usage: zenithboard graphs on|off|status|look zenithboard|original" ;;
     esac ;;
   social)
     case "${2:-status}" in

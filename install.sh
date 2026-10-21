@@ -160,6 +160,7 @@ settings_receiver_menu() {
       gain "4  Gain: check it and tune the dongle's sensitivity" \
       stats "5  Statistics: messages per hour, farthest aircraft, aircraft per day ($(stats_state))" \
       graphs "6  graphs1090: years of the decoder's graphs, on port 8542 ($(graphs_state))" \
+      glook "7  graphs1090's look: ZenithBoard's colours and logo, or its own ($(graphs_look_state))" \
       back "Return to the previous menu") || return 0
     case "$c" in
       region) settings_region && wt_msg "Region saved: $(cfg_get REGION world).\n\nIn menu 1 ADSB the 978 MHz UAT option appears for the United States." 10 ;;
@@ -176,6 +177,13 @@ settings_receiver_menu() {
           if wt_yesno "graphs1090 is ON: http://$(local_ip):$GRAPHS_PORT/\n\nTurn it OFF? Its packages that were not there before go; its history stays on the card for a later 'on'." 12; then clear; graphs_off; read -rp "Press Enter to continue..." _; fi
         else
           if wt_yesno "Install graphs1090?\n\nwiedehopf's graphs of the receiver: messages, range, signal, aircraft, CPU and temperature, kept for years, on port $GRAPHS_PORT (and /graphs1090 on the map's port 80). Installed by its author's script: collectd and rrdtool from apt, its files from GitHub. Needs the receiver map's lighttpd.\n\nIts graphs live in memory and go to the card once a day and at shutdown. Off again at any time." 17; then clear; graphs_on; read -rp "Press Enter to continue..." _; fi
+        fi ;;
+      glook)
+        if ! is_graphs; then wt_msg "graphs1090 is not installed: item 6 first." 8
+        elif [ "$(graphs_look_state)" = zenithboard ]; then
+          wt_yesno "graphs1090 is in ZenithBoard's look.\n\nBack to its own look (its light page and colours)?" 10 && { clear; graphs_look original; read -rp "Press Enter to continue..." _; }
+        else
+          wt_yesno "Give graphs1090 ZenithBoard's look?\n\nA black page with the wall's colour and the name in dots, links to the wall and the statistics; the graphs drawn in the same colours, every line still told apart. Its own look comes back with this item again." 12 && { clear; graphs_look zenithboard; read -rp "Press Enter to continue..." _; }
         fi ;;
       location)
         if settings_location; then

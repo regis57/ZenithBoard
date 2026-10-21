@@ -1,374 +1,467 @@
 {
 "AAL": {
 "iata": "AA",
-"name": "American"
+"name": "American",
+"cc": "US"
 },
 "AAR": {
 "iata": "OZ",
-"name": "Asiana"
+"name": "Asiana",
+"cc": "KR"
 },
 "ACA": {
 "iata": "AC",
-"name": "Air Canada"
+"name": "Air Canada",
+"cc": "CA"
 },
 "AEE": {
 "iata": "A3",
-"name": "Aegean"
+"name": "Aegean",
+"cc": "GR"
 },
 "AFL": {
 "iata": "SU",
-"name": "Aeroflot"
+"name": "Aeroflot",
+"cc": "RU"
 },
 "AFR": {
 "iata": "AF",
-"name": "Air France"
+"name": "Air France",
+"cc": "FR"
 },
 "AIC": {
 "iata": "AI",
-"name": "Air India"
+"name": "Air India",
+"cc": "IN"
 },
 "AMX": {
 "iata": "AM",
-"name": "Aeromexico"
+"name": "Aeromexico",
+"cc": "MX"
 },
 "ANA": {
 "iata": "NH",
-"name": "All Nippon"
+"name": "All Nippon",
+"cc": "JP"
 },
 "ANZ": {
 "iata": "NZ",
-"name": "Air New Zealand"
+"name": "Air New Zealand",
+"cc": "NZ"
 },
 "ARG": {
 "iata": "AR",
-"name": "Aerolineas Argentinas"
+"name": "Aerolineas Argentinas",
+"cc": "AR"
 },
 "ASA": {
 "iata": "AS",
-"name": "Alaska"
+"name": "Alaska",
+"cc": "US"
 },
 "AUA": {
 "iata": "OS",
-"name": "Austrian"
+"name": "Austrian",
+"cc": "AT"
 },
 "AVA": {
 "iata": "AV",
-"name": "Avianca"
+"name": "Avianca",
+"cc": "CO"
 },
 "AZU": {
 "iata": "AD",
-"name": "Azul"
+"name": "Azul",
+"cc": "BR"
 },
 "BAW": {
 "iata": "BA",
-"name": "British Airways"
+"name": "British Airways",
+"cc": "GB"
 },
 "BCS": {
 "iata": "QY",
-"name": "European Air Transport"
+"name": "European Air Transport",
+"cc": "DE"
 },
 "BEL": {
 "iata": "SN",
-"name": "Brussels Airlines"
+"name": "Brussels Airlines",
+"cc": "BE"
 },
 "BTI": {
 "iata": "BT",
-"name": "Air Baltic"
+"name": "Air Baltic",
+"cc": "LV"
 },
 "CCA": {
 "iata": "CA",
-"name": "Air China"
+"name": "Air China",
+"cc": "CN"
 },
 "CES": {
 "iata": "MU",
-"name": "China Eastern"
+"name": "China Eastern",
+"cc": "CN"
 },
 "CFG": {
 "iata": "DE",
-"name": "Condor"
+"name": "Condor",
+"cc": "DE"
 },
 "CLX": {
 "iata": "CV",
-"name": "Cargolux"
+"name": "Cargolux",
+"cc": "LU"
 },
 "CPA": {
 "iata": "CX",
-"name": "Cathay Pacific"
+"name": "Cathay Pacific",
+"cc": "HK"
 },
 "CSN": {
 "iata": "CZ",
-"name": "China Southern"
+"name": "China Southern",
+"cc": "CN"
 },
 "CTN": {
 "iata": "OU",
-"name": "Croatia Airlines"
+"name": "Croatia Airlines",
+"cc": "HR"
 },
 "DAH": {
 "iata": "AH",
-"name": "Air Algerie"
+"name": "Air Algerie",
+"cc": "DZ"
 },
 "DAL": {
 "iata": "DL",
-"name": "Delta"
+"name": "Delta",
+"cc": "US"
 },
 "DHL": {
 "iata": "D0",
-"name": "DHL Aviation"
+"name": "DHL Aviation",
+"cc": "US"
 },
 "DLH": {
 "iata": "LH",
-"name": "Lufthansa"
+"name": "Lufthansa",
+"cc": "DE"
 },
 "EIN": {
 "iata": "EI",
-"name": "Aer Lingus"
+"name": "Aer Lingus",
+"cc": "IE"
 },
 "EJA": {
 "iata": "1I",
-"name": "NetJets"
+"name": "NetJets",
+"cc": "US"
 },
 "EJU": {
 "iata": "EC",
-"name": "easyJet Europe"
+"name": "easyJet Europe",
+"cc": "AT"
 },
 "ETD": {
 "iata": "EY",
-"name": "Etihad"
+"name": "Etihad",
+"cc": "AE"
 },
 "ETH": {
 "iata": "ET",
-"name": "Ethiopian"
+"name": "Ethiopian",
+"cc": "ET"
 },
 "EWG": {
 "iata": "EW",
-"name": "Eurowings"
+"name": "Eurowings",
+"cc": "DE"
 },
 "EXS": {
 "iata": "LS",
-"name": "Jet2"
+"name": "Jet2",
+"cc": "GB"
 },
 "EZS": {
 "iata": "DS",
-"name": "easyJet Switzerland"
+"name": "easyJet Switzerland",
+"cc": "CH"
 },
 "EZY": {
 "iata": "U2",
-"name": "easyJet"
+"name": "easyJet",
+"cc": "GB"
 },
 "FDX": {
 "iata": "FX",
-"name": "FedEx"
+"name": "FedEx",
+"cc": "US"
 },
 "FFT": {
 "iata": "F9",
-"name": "Frontier"
+"name": "Frontier",
+"cc": "US"
 },
 "FIN": {
 "iata": "AY",
-"name": "Finnair"
+"name": "Finnair",
+"cc": "FI"
 },
 "GIA": {
 "iata": "GA",
-"name": "Garuda"
+"name": "Garuda",
+"cc": "ID"
 },
 "GLO": {
 "iata": "G3",
-"name": "Gol"
+"name": "Gol",
+"cc": "BR"
 },
 "GTI": {
 "iata": "5Y",
-"name": "Atlas Air"
+"name": "Atlas Air",
+"cc": "US"
 },
 "HAL": {
 "iata": "HA",
-"name": "Hawaiian"
+"name": "Hawaiian",
+"cc": "US"
 },
 "HOP": {
 "iata": "A5",
-"name": "Air France Hop"
+"name": "Air France Hop",
+"cc": "FR"
 },
 "IBE": {
 "iata": "IB",
-"name": "Iberia"
+"name": "Iberia",
+"cc": "ES"
 },
 "ICE": {
 "iata": "FI",
-"name": "Icelandair"
+"name": "Icelandair",
+"cc": "IS"
 },
 "IGO": {
 "iata": "6E",
-"name": "IndiGo"
+"name": "IndiGo",
+"cc": "IN"
 },
 "ITY": {
 "iata": "AZ",
-"name": "ITA Airways"
+"name": "ITA Airways",
+"cc": "IT"
 },
 "JAL": {
 "iata": "JL",
-"name": "Japan Airlines"
+"name": "Japan Airlines",
+"cc": "JP"
 },
 "JBU": {
 "iata": "B6",
-"name": "JetBlue"
+"name": "JetBlue",
+"cc": "US"
 },
 "KAL": {
 "iata": "KE",
-"name": "Korean Air"
+"name": "Korean Air",
+"cc": "KR"
 },
 "KLM": {
 "iata": "KL",
-"name": "KLM"
+"name": "KLM",
+"cc": "NL"
 },
 "KQA": {
 "iata": "KQ",
-"name": "Kenya Airways"
+"name": "Kenya Airways",
+"cc": "KE"
 },
 "LAN": {
 "iata": "LA",
-"name": "LATAM"
+"name": "LATAM",
+"cc": "CL"
 },
 "LGL": {
 "iata": "LG",
-"name": "Luxair"
+"name": "Luxair",
+"cc": "LU"
 },
 "LOT": {
 "iata": "LO",
-"name": "LOT Polish"
+"name": "LOT Polish",
+"cc": "PL"
 },
 "MAS": {
 "iata": "MH",
-"name": "Malaysia Airlines"
+"name": "Malaysia Airlines",
+"cc": "MY"
 },
 "MSR": {
 "iata": "MS",
-"name": "EgyptAir"
+"name": "EgyptAir",
+"cc": "EG"
 },
 "NAX": {
 "iata": "DY",
-"name": "Norwegian"
+"name": "Norwegian",
+"cc": "NO"
 },
 "NJE": {
 "iata": "EU",
-"name": "NetJets Europe"
+"name": "NetJets Europe",
+"cc": "PT"
 },
 "NKS": {
 "iata": "NK",
-"name": "Spirit"
+"name": "Spirit",
+"cc": "US"
 },
 "PAL": {
 "iata": "PR",
-"name": "Philippine Airlines"
+"name": "Philippine Airlines",
+"cc": "PH"
 },
 "PGT": {
 "iata": "PC",
-"name": "Pegasus"
+"name": "Pegasus",
+"cc": "TR"
 },
 "QFA": {
 "iata": "QF",
-"name": "Qantas"
+"name": "Qantas",
+"cc": "AU"
 },
 "QTR": {
 "iata": "QR",
-"name": "Qatar Airways"
+"name": "Qatar Airways",
+"cc": "QA"
 },
 "RAM": {
 "iata": "AT",
-"name": "Royal Air Maroc"
+"name": "Royal Air Maroc",
+"cc": "MA"
 },
 "ROT": {
 "iata": "RO",
-"name": "Tarom"
+"name": "Tarom",
+"cc": "RO"
 },
 "RYR": {
 "iata": "FR",
-"name": "Ryanair"
+"name": "Ryanair",
+"cc": "IE"
 },
 "SAA": {
 "iata": "SA",
-"name": "South African"
+"name": "South African",
+"cc": "ZA"
 },
 "SAS": {
 "iata": "SK",
-"name": "Scandinavian"
+"name": "Scandinavian",
+"cc": "SE"
 },
 "SIA": {
 "iata": "SQ",
-"name": "Singapore Airlines"
+"name": "Singapore Airlines",
+"cc": "SG"
 },
 "SWA": {
 "iata": "WN",
-"name": "Southwest"
+"name": "Southwest",
+"cc": "US"
 },
 "SWR": {
 "iata": "LX",
-"name": "Swiss"
+"name": "Swiss",
+"cc": "CH"
 },
 "SXS": {
 "iata": "XQ",
-"name": "SunExpress"
+"name": "SunExpress",
+"cc": "TR"
 },
 "TAM": {
 "iata": "JJ",
-"name": "LATAM Brasil"
+"name": "LATAM Brasil",
+"cc": "BR"
 },
 "TAP": {
 "iata": "TP",
-"name": "TAP Air Portugal"
+"name": "TAP Air Portugal",
+"cc": "PT"
 },
 "TAR": {
 "iata": "TU",
-"name": "Tunisair"
+"name": "Tunisair",
+"cc": "TN"
 },
 "THA": {
 "iata": "TG",
-"name": "Thai Airways"
+"name": "Thai Airways",
+"cc": "TH"
 },
 "THY": {
 "iata": "TK",
-"name": "Turkish Airlines"
+"name": "Turkish Airlines",
+"cc": "TR"
 },
 "TOM": {
 "iata": "BY",
-"name": "TUI Airways"
+"name": "TUI Airways",
+"cc": "GB"
 },
 "TRA": {
 "iata": "HV",
-"name": "Transavia"
+"name": "Transavia",
+"cc": "NL"
 },
 "TVF": {
 "iata": "TO",
-"name": "Transavia France"
+"name": "Transavia France",
+"cc": "FR"
 },
 "UAE": {
 "iata": "EK",
-"name": "Emirates"
+"name": "Emirates",
+"cc": "AE"
 },
 "UAL": {
 "iata": "UA",
-"name": "United"
+"name": "United",
+"cc": "US"
 },
 "UPS": {
 "iata": "5X",
-"name": "UPS"
+"name": "UPS",
+"cc": "US"
 },
 "VIR": {
 "iata": "VS",
-"name": "Virgin Atlantic"
+"name": "Virgin Atlantic",
+"cc": "GB"
 },
 "VLG": {
 "iata": "VY",
-"name": "Vueling"
+"name": "Vueling",
+"cc": "ES"
 },
 "VOZ": {
 "iata": "VA",
-"name": "Virgin Australia"
+"name": "Virgin Australia",
+"cc": "AU"
 },
 "WJA": {
 "iata": "WS",
-"name": "WestJet"
+"name": "WestJet",
+"cc": "CA"
 },
 "WZZ": {
 "iata": "W6",
-"name": "Wizz Air"
+"name": "Wizz Air",
+"cc": "HU"
 }
 }

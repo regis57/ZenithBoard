@@ -68,6 +68,7 @@ The dynamic-DNS **token is not stored here.** It is asked for interactively and 
 | `WIFI_HARDEN` | `0` | `zenithboard wifi harden on\|off` | The two Wi-Fi profile settings above are applied. `WIFI_HARDEN_PREV` keeps what they were, for `off` |
 | `PRESET_NAME` | — | `zenithboard preset add\|del` | A tablet preset, e.g. `PRESET_KITCHEN="theme=green mode=flap"`; `?p=kitchen` applies it. Comes along in `settings export` |
 | `STATS` | `0` | `zenithboard stats on\|off` | A sample every 15 minutes for the `/stats` page and `zenithboard stats`. See [Statistics](Statistics) |
+| `GRAPHS_LOOK` | `original` | `zenithboard graphs look zenithboard\|original` | graphs1090 in ZenithBoard's look (0.43.0). The look itself is a marked block at the end of `/etc/default/graphs1090` and three files beside graphs1090's page; this keeps the choice for after an update or a new `graphs on` |
 | `GRAPHS1090` | `0` | `zenithboard graphs on\|off` | Whether graphs1090 was turned on (0.32.0). What `on` found, to put it back, is in `/etc/zenithboard/graphs1090.state`. See [Statistics](Statistics#graphs1090-years-of-the-decoders-graphs-optional) |
 | `CONSOLE` | `0` | `zenithboard console on\|off` | The web console at `/console` (0.39.0). Its password's hash is in `console.env`, never here. See [Web console](Web-console) |
 | `CONSOLE_PHONE_SIGNIN` | `0` | `zenithboard console phone-signin on\|off` | A computer's console sign-in page shows a QR code that a phone already signed in approves (0.40.0) |

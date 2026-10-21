@@ -43,6 +43,7 @@ console_env_write() {   # console_env_write KEY=VALUE...  (the whole file)
 # wall's sandbox may write); out/ belongs to root and is only read by the wall (what the helper ran and said).
 console_prepare_dirs() {
   local own=1; [ "$(id -u)" -eq 0 ] || own=0
+  [ "$own" = 0 ] || ensure_zb_user || return 1
   install -d -m 750 "$CONSOLE_DIR" "$CONSOLE_DIR/out" || return 1
   install -d -m 700 "$CONSOLE_DIR/state" "$CONSOLE_DIR/state/spool" || return 1
   if [ "$own" = 1 ]; then
@@ -71,6 +72,12 @@ console_remove_units() {
 }
 
 console_on() {
+  # 0.43.0: the console is a page of the wall's server: without the wall there is nothing to answer it
+  if ! is_flightinfo; then
+    echo "The web console is a page of the wall, which is not installed yet: install it first (sudo zenithboard menu, then"
+    echo "2 FlightInfo), then switch the console on. Its password can be set already: sudo zenithboard console password"
+    return 1
+  fi
   console_prepare_dirs || { echo "Could not make $CONSOLE_DIR"; return 1; }
   cfg_set CONSOLE 1; console_install_units
   # 0.39.2: the wall may write its console folder only if the folder existed when it started (its sandbox's

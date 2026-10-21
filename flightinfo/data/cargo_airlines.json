@@ -2,166 +2,207 @@
  "_comment": [
   "Dedicated cargo airlines by ICAO designator, the callsign prefix: the weekly post's cargo list (0.35.0).",
   "Each code checked on 20 October 2026 against the source given. DHL's airlines (EAT Leipzig, DHL Air UK, DHL International Aviation ME, DHL Aero Expreso, DHL Air Austria) are counted together as DHL.",
-  "Left out: airlines that fly cargo under their passenger prefix (THY, QTR, UAE, AFR, CPA, KAL, ETH, ETD), which a callsign cannot tell apart; mixed passenger and cargo operators (FPO, ABD); and airlines no longer flying (ABW, BBD, FAH, RUN, WGN, PAC)."
+  "Left out: airlines that fly cargo under their passenger prefix (THY, QTR, UAE, AFR, CPA, KAL, ETH, ETD), which a callsign cannot tell apart; mixed passenger and cargo operators (FPO, ABD); and airlines no longer flying (ABW, BBD, FAH, RUN, WGN, PAC).",
+  "0.43.0: cc, the country the airline is based in (its flag on the statistics page and the cards), from each source above."
  ],
  "FDX": {
   "name": "FedEx",
-  "source": "https://en.wikipedia.org/wiki/FedEx_Express"
+  "source": "https://en.wikipedia.org/wiki/FedEx_Express",
+  "cc": "US"
  },
  "UPS": {
   "name": "UPS",
-  "source": "https://en.wikipedia.org/wiki/UPS_Airlines"
+  "source": "https://en.wikipedia.org/wiki/UPS_Airlines",
+  "cc": "US"
  },
  "BCS": {
   "name": "DHL",
-  "source": "https://en.wikipedia.org/wiki/European_Air_Transport_Leipzig"
+  "source": "https://en.wikipedia.org/wiki/European_Air_Transport_Leipzig",
+  "cc": "DE"
  },
  "DHK": {
   "name": "DHL",
-  "source": "https://en.wikipedia.org/wiki/DHL_Air_UK"
+  "source": "https://en.wikipedia.org/wiki/DHL_Air_UK",
+  "cc": "GB"
  },
  "DHX": {
   "name": "DHL",
-  "source": "https://en.wikipedia.org/wiki/DHL_International_Aviation_ME"
+  "source": "https://en.wikipedia.org/wiki/DHL_International_Aviation_ME",
+  "cc": "BH"
  },
  "DAE": {
   "name": "DHL",
-  "source": "https://en.wikipedia.org/wiki/DHL_Aero_Expreso"
+  "source": "https://en.wikipedia.org/wiki/DHL_Aero_Expreso",
+  "cc": "PA"
  },
  "DHA": {
   "name": "DHL",
-  "source": "https://airplanes.live/airline/dha/"
+  "source": "https://airplanes.live/airline/dha/",
+  "cc": "AT"
  },
  "BOX": {
   "name": "AeroLogic",
-  "source": "https://en.wikipedia.org/wiki/AeroLogic"
+  "source": "https://en.wikipedia.org/wiki/AeroLogic",
+  "cc": "DE"
  },
  "GEC": {
   "name": "Lufthansa Cargo",
-  "source": "https://en.wikipedia.org/wiki/Lufthansa_Cargo"
+  "source": "https://en.wikipedia.org/wiki/Lufthansa_Cargo",
+  "cc": "DE"
  },
  "CLX": {
   "name": "Cargolux",
-  "source": "https://en.wikipedia.org/wiki/Cargolux"
+  "source": "https://en.wikipedia.org/wiki/Cargolux",
+  "cc": "LU"
  },
  "ICV": {
   "name": "Cargolux Italia",
-  "source": "https://en.wikipedia.org/wiki/Cargolux_Italia"
+  "source": "https://en.wikipedia.org/wiki/Cargolux_Italia",
+  "cc": "IT"
  },
  "ABR": {
   "name": "ASL Airlines Ireland",
-  "source": "https://en.wikipedia.org/wiki/ASL_Airlines_Ireland"
+  "source": "https://en.wikipedia.org/wiki/ASL_Airlines_Ireland",
+  "cc": "IE"
  },
  "TAY": {
   "name": "ASL Airlines Belgium",
-  "source": "https://en.wikipedia.org/wiki/ASL_Airlines_Belgium"
+  "source": "https://en.wikipedia.org/wiki/ASL_Airlines_Belgium",
+  "cc": "BE"
  },
  "GTI": {
   "name": "Atlas Air",
-  "source": "https://en.wikipedia.org/wiki/Atlas_Air"
+  "source": "https://en.wikipedia.org/wiki/Atlas_Air",
+  "cc": "US"
  },
  "CKS": {
   "name": "Kalitta Air",
-  "source": "https://en.wikipedia.org/wiki/Kalitta_Air"
+  "source": "https://en.wikipedia.org/wiki/Kalitta_Air",
+  "cc": "US"
  },
  "MPH": {
   "name": "Martinair Cargo",
-  "source": "https://en.wikipedia.org/wiki/Martinair"
+  "source": "https://en.wikipedia.org/wiki/Martinair",
+  "cc": "NL"
  },
  "CKK": {
   "name": "China Cargo Airlines",
-  "source": "https://en.wikipedia.org/wiki/China_Cargo_Airlines"
+  "source": "https://en.wikipedia.org/wiki/China_Cargo_Airlines",
+  "cc": "CN"
  },
  "CAO": {
   "name": "Air China Cargo",
-  "source": "https://en.wikipedia.org/wiki/Air_China_Cargo"
+  "source": "https://en.wikipedia.org/wiki/Air_China_Cargo",
+  "cc": "CN"
  },
  "CSS": {
   "name": "SF Airlines",
-  "source": "https://en.wikipedia.org/wiki/SF_Airlines"
+  "source": "https://en.wikipedia.org/wiki/SF_Airlines",
+  "cc": "CN"
  },
  "NCA": {
   "name": "Nippon Cargo Airlines",
-  "source": "https://en.wikipedia.org/wiki/Nippon_Cargo_Airlines"
+  "source": "https://en.wikipedia.org/wiki/Nippon_Cargo_Airlines",
+  "cc": "JP"
  },
  "AZG": {
   "name": "Silk Way West",
-  "source": "https://en.wikipedia.org/wiki/Silk_Way_West_Airlines"
+  "source": "https://en.wikipedia.org/wiki/Silk_Way_West_Airlines",
+  "cc": "AZ"
  },
  "AZQ": {
   "name": "Silk Way",
-  "source": "https://en.wikipedia.org/wiki/Silk_Way_Airlines"
+  "source": "https://en.wikipedia.org/wiki/Silk_Way_Airlines",
+  "cc": "AZ"
  },
  "NPT": {
   "name": "West Atlantic",
-  "source": "https://en.wikipedia.org/wiki/West_Atlantic_UK"
+  "source": "https://en.wikipedia.org/wiki/West_Atlantic_UK",
+  "cc": "GB"
  },
  "SWN": {
   "name": "West Atlantic",
-  "source": "https://en.wikipedia.org/wiki/West_Atlantic"
+  "source": "https://en.wikipedia.org/wiki/West_Atlantic",
+  "cc": "SE"
  },
  "MNB": {
   "name": "MNG Airlines",
-  "source": "https://en.wikipedia.org/wiki/MNG_Airlines"
+  "source": "https://en.wikipedia.org/wiki/MNG_Airlines",
+  "cc": "TR"
  },
  "ICL": {
   "name": "Challenge Airlines",
-  "source": "https://airhex.com/airlines/challenge-airlines-il/"
+  "source": "https://airhex.com/airlines/challenge-airlines-il/",
+  "cc": "IL"
  },
  "CHG": {
   "name": "Challenge Airlines",
-  "source": "https://airhex.com/airlines/challenge-airlines-be/"
+  "source": "https://airhex.com/airlines/challenge-airlines-be/",
+  "cc": "BE"
  },
  "CHZ": {
   "name": "Challenge Airlines",
-  "source": "https://airhex.com/airlines/challenge-airlines-mt/"
+  "source": "https://airhex.com/airlines/challenge-airlines-mt/",
+  "cc": "MT"
  },
  "SWT": {
   "name": "Swiftair",
-  "source": "https://en.wikipedia.org/wiki/Swiftair"
+  "source": "https://en.wikipedia.org/wiki/Swiftair",
+  "cc": "ES"
  },
  "SQC": {
   "name": "Singapore Airlines Cargo",
-  "source": "https://planefinder.net/data/flight/SQ7859"
+  "source": "https://planefinder.net/data/flight/SQ7859",
+  "cc": "SG"
  },
  "SRR": {
   "name": "Maersk Air Cargo",
-  "source": "https://en.wikipedia.org/wiki/Maersk_Air_Cargo"
+  "source": "https://en.wikipedia.org/wiki/Maersk_Air_Cargo",
+  "cc": "DK"
  },
  "EXN": {
   "name": "Exin",
-  "source": "https://sprinkle.com/airline/EXN"
+  "source": "https://sprinkle.com/airline/EXN",
+  "cc": "PL"
  },
  "CGF": {
   "name": "Cargoair",
-  "source": "https://en.wikipedia.org/wiki/Cargoair"
+  "source": "https://en.wikipedia.org/wiki/Cargoair",
+  "cc": "BG"
  },
  "KZU": {
   "name": "ULS Airlines Cargo",
-  "source": "https://en.wikipedia.org/wiki/ULS_Airlines_Cargo"
+  "source": "https://en.wikipedia.org/wiki/ULS_Airlines_Cargo",
+  "cc": "TR"
  },
  "CMA": {
   "name": "CMA CGM Air Cargo",
-  "source": "https://en.wikipedia.org/wiki/CMA_CGM_Air_Cargo"
+  "source": "https://en.wikipedia.org/wiki/CMA_CGM_Air_Cargo",
+  "cc": "FR"
  },
  "ATG": {
   "name": "Aerotranscargo",
-  "source": "https://en.wikipedia.org/wiki/Aerotranscargo"
+  "source": "https://en.wikipedia.org/wiki/Aerotranscargo",
+  "cc": "MD"
  },
  "HGO": {
   "name": "One Air",
-  "source": "https://en.wikipedia.org/wiki/One_Air"
+  "source": "https://en.wikipedia.org/wiki/One_Air",
+  "cc": "GB"
  },
  "AIH": {
   "name": "AirZeta",
-  "source": "https://en.wikipedia.org/wiki/AirZeta"
+  "source": "https://en.wikipedia.org/wiki/AirZeta",
+  "cc": "KR"
  },
  "LCO": {
   "name": "LATAM Cargo",
-  "source": "https://en.wikipedia.org/wiki/LATAM_Cargo_Chile"
+  "source": "https://en.wikipedia.org/wiki/LATAM_Cargo_Chile",
+  "cc": "CL"
  },
  "CJT": {
   "name": "Cargojet",
-  "source": "https://en.wikipedia.org/wiki/Cargojet"
+  "source": "https://en.wikipedia.org/wiki/Cargojet",
+  "cc": "CA"
  }
 }

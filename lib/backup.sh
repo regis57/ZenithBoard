@@ -327,6 +327,7 @@ backup_restore() {
     read -r -p "Type RESTORE to go on: " w || w=""
     [ "$w" = RESTORE ] || { echo "Nothing was changed."; rm -rf "$st"; return 1; }
   fi
+  ensure_zb_user                                    # 0.43.0: restored before menu 2, the files still go to the wall's user
   before="$BK_DATA/before-restore-$(date +%Y%m%d-%H%M%S)"; install -d -m 700 "$before"
   [ ! -f "$ZB_CONFIG" ] || cp -p "$ZB_CONFIG" "$before/config.env"
   [ ! -d "$STATS_DIR" ] || cp -a "$STATS_DIR" "$before/stats"

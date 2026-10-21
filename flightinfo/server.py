@@ -27,7 +27,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.42.1"
+VERSION = "0.43.0"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -221,7 +221,7 @@ def read_stats(stats_dir=None, now=None, rng="30d"):
             c[1] += 1
     heat = [{"day": d, "hours": [round(cells[(d, h)][0] / float(cells[(d, h)][1]), 1) if (d, h) in cells else None
                                  for h in range(24)]} for d in heat_days]
-    far = read_farthest(stats_dir, now)
+    far = read_farthest(stats_dir, now, rng)
     if best:                              # the box's best day: were its details written down? (not before 0.22.0)
         far["best_box_detailed"] = os.path.exists(os.path.join(stats_dir, "farthest-" + best["day"]))
     return {
@@ -236,8 +236,26 @@ def read_stats(stats_dir=None, now=None, rng="30d"):
         "days": day_list,
         "farthest": far,
         "heat": heat,
-        "window": stats_window(rows, stats_dir, now, rng),
+        "window": _with_heat(stats_window(rows, stats_dir, now, rng), heat),
     }
+
+
+def _with_heat(w, heat):
+    """0.43.0: the sky by hour follows the toggle too (the owner: every chart and list): the 24 hours as one row of the
+    window's own hours, 7 or 30 days as that many rows of the thirty kept. And the busiest slot, for the fourth box."""
+    if w.get("range") == "24h":
+        hours = [v if c else None for v, c in zip(w["aircraft"], w.pop("_counts"))]
+        w["heat"] = [{"day": None, "hours": hours, "labels": w["labels"]}]
+    else:
+        w.pop("_counts", None)
+        w["heat"] = heat[-RANGES[w["range"]][0]:]
+    series = w.get("aircraft") or []
+    if series and max(series) > 0:
+        i = max(range(len(series)), key=lambda k: (series[k], k))
+        w["busiest"] = {"label": w["labels"][i], "aircraft": series[i], "per": "hour" if w["range"] == "24h" else "day"}
+    else:
+        w["busiest"] = None
+    return w
 
 
 # 0.37.0: the page's toggle. Each range: its totals and one series for the three charts, by hour for 24 hours and by
@@ -300,7 +318,7 @@ def stats_window(rows, stats_dir, now, rng):
     # a slot with no sample (the hour not yet reached, the receiver off) has no farthest: a gap in the line, not a 0
     far_series = [far[i] if cnt[i] else None for i in range(len(keys))]
     return {"range": rng, "label": RANGES[rng][1], "labels": labels, "messages": msgs, "farthest": far_series,
-            "aircraft": aircraft, "aircraft_note": note,
+            "aircraft": aircraft, "aircraft_note": note, "_counts": cnt,
             "totals": {"aircraft": total, "messages": sum(msgs), "farthest_km": max(far) if far else 0,
                        "farthest_when": best_when.strftime("%Y-%m-%d %H:%M") if best_when else None,
                        "busiest_hour": bh, "busiest_messages": by_hour[bh] if bh is not None else 0,
@@ -460,10 +478,23 @@ def load_cargo():
     if not _cargo:
         try:
             with open(os.path.join(DATA_DIR, "cargo_airlines.json"), encoding="utf-8") as fh:
-                _cargo.update({k: v["name"] for k, v in json.load(fh).items() if not k.startswith("_")})
+                got = {k: v for k, v in json.load(fh).items() if not k.startswith("_")}
+            _cargo.update({k: v["name"] for k, v in got.items()})
+            _cargo_cc.update({k: v["cc"] for k, v in got.items() if re.match(r"^[A-Z]{2}$", str(v.get("cc") or ""))})
         except (OSError, ValueError, KeyError, TypeError, AttributeError):
             pass                                 # no list, or a broken one: no airline is called cargo, nothing fails
     return _cargo
+
+
+_cargo_cc = {}
+
+
+def airline_cc(icao, info=None):
+    """0.43.0: the country an airline is based in, for its flag: the cargo list's, then the airline list's (both checked
+    against a source, flightinfo/data), then what adsbdb said when it named it (a learned airline). None otherwise."""
+    load_cargo()
+    cc = _cargo_cc.get(icao) or (info or {}).get("cc")
+    return cc if re.match(r"^[A-Z]{2}$", str(cc or "")) else None
 _fleet_cache = {}                     # key -> answer of read_fleet (0.37.0: one per range)
 
 
@@ -547,7 +578,7 @@ def read_fleet(cfg, stats_dir=None, now=None, since=None, rng=None):
     airlines, types, cargo = load_airlines(cfg), load_types(cfg), load_cargo()
     by_airline, by_type, by_cargo, by_biz, alts, typed = {}, {}, {}, {}, [], 0
     cargo_models, biz_countries, mil, misc = {}, {}, {}, {g: {} for g in MISC_GROUPS}
-    misc_cc, mil_unknown = {g: {} for g in MISC_GROUPS}, {}
+    misc_cc, mil_unknown, airline_ccs = {g: {} for g in MISC_GROUPS}, {}, {}
     for h in sorted(fleet):
         flight, alt, code, cat, milmark = fleet[h]
         icao, info = airline_for(flight, airlines)
@@ -555,6 +586,12 @@ def read_fleet(cfg, stats_dir=None, now=None, since=None, rng=None):
             # 0.36.1: a cargo airline the airline list does not name gets its cargo list name (TAY was shown bare)
             name = (info or {}).get("name") or cargo.get(icao) or icao
             by_airline[name] = by_airline.get(name, 0) + 1
+            # 0.43.0: an airline's flag: the country it is based in (airline_cc), else the one its aircraft are
+            # registered in (their address). A name made of several prefixes (DHL, easyJet) takes the most heard
+            cc_ = airline_cc(icao, info) or icao_country(h)
+            if cc_:
+                ac = airline_ccs.setdefault(name, {})
+                ac[cc_] = ac.get(cc_, 0) + 1
         if code in NOT_AIRCRAFT:                  # tar1090's database lists airport vehicles and towers too: not counted
             continue
         d = describe_type({"t": code, "category": cat}, types) if (code or cat) else {}
@@ -564,6 +601,10 @@ def read_fleet(cfg, stats_dir=None, now=None, since=None, rng=None):
         if m and m.group(1) in cargo:             # 0.35.0: the cargo airlines, by their own callsign prefix
             name = cargo[m.group(1)]
             by_cargo[name] = by_cargo.get(name, 0) + 1
+            cc_ = airline_cc(m.group(1)) or icao_country(h)
+            if cc_:
+                ac = airline_ccs.setdefault(name, {})
+                ac[cc_] = ac.get(cc_, 0) + 1
             if label:                             # 0.36.0: and the model each flies most
                 cm = cargo_models.setdefault(name, {})
                 cm[label] = cm.get(label, 0) + 1
@@ -616,7 +657,12 @@ def read_fleet(cfg, stats_dir=None, now=None, since=None, rng=None):
             "misc": {g: {"total": sum(v.values()), "models": _top(v),
                          "rows": [(n, c, k) for (n, c), k in sorted(misc_cc[g].items(), key=lambda kv: (-kv[1], kv[0][0], kv[0][1] or ""))[:FLEET_TOP]]}
                      for g, v in misc.items()},
-            "altitudes": {"labels": labels, "counts": bands}}
+            "altitudes": {"labels": labels, "counts": bands},
+            "airline_cc": {n: max(v.items(), key=lambda kv: (kv[1], kv[0]))[0] for n, v in airline_ccs.items()}}
+    for n in list(data["airline_cc"]):           # the listed ones only: the page and the cards need no more
+        if n not in dict(data["airlines"]) and n not in dict(data["cargo"]):
+            del data["airline_cc"][n]
+    data["country_names"].update({c: country_name(c) for c in data["airline_cc"].values()})
     if len(_fleet_cache) >= 6:                    # three ranges and the weekly posts: a few answers, never a pile
         _fleet_cache.clear()
     _fleet_cache[key] = data
@@ -627,9 +673,11 @@ FARTHEST_SHOWN = ("day", "time", "hex", "flight", "flight_iata", "airline", "reg
                   "alt_ft", "km", "route", "near")
 
 
-def read_farthest(stats_dir, now):
-    """{"today": record or None, "best": the farthest record of the thirty days or None}, from the farthest-DAY files
-    the timer writes (0.22.0). Only the fields the page shows are passed on, whatever else a file holds."""
+def read_farthest(stats_dir, now, rng=None):
+    """{"today": record or None, "best": the farthest record of the thirty days or None, "period": the farthest of the
+    page's period (0.43.0), or None}, from the farthest-DAY files the timer writes (0.22.0), one record a day: the
+    day's farthest. For 24 hours, yesterday's counts only when it was seen inside the window. Only the fields the page
+    shows are passed on, whatever else a file holds."""
     cut = (now - datetime.timedelta(days=30)).strftime("%Y-%m-%d")
     recs = []
     try:
@@ -646,10 +694,22 @@ def read_farthest(stats_dir, now):
         except (TypeError, ValueError):
             continue
         rec["day"] = day
-        recs.append({k: rec.get(k) for k in FARTHEST_SHOWN})
+        r = {k: rec.get(k) for k in FARTHEST_SHOWN}
+        # 0.43.0: the flag the page puts first: the airline's country, else where the aircraft is registered
+        m = CALLSIGN_PREFIX.match(str(r.get("flight") or "").upper())
+        r["cc"] = (airline_cc(m.group(1), load_airlines({}).get(m.group(1))) if m else None) or icao_country(str(r.get("hex") or ""))
+        recs.append(r)
     today = now.strftime("%Y-%m-%d")
+    rng = range_of(rng)
+    if rng == "24h":
+        start = (now - datetime.timedelta(hours=24)).strftime("%Y-%m-%d %H:%M")
+        inside = [r for r in recs if r["day"] == today or "%s %s" % (r["day"], r.get("time") or "00:00") >= start]
+    else:
+        first = (now - datetime.timedelta(days=RANGES[rng][0] - 1)).strftime("%Y-%m-%d")
+        inside = [r for r in recs if r["day"] >= first]
     return {"today": next((r for r in recs if r["day"] == today), None),
-            "best": max(recs, key=lambda r: (r["km"], r["day"])) if recs else None}
+            "best": max(recs, key=lambda r: (r["km"], r["day"])) if recs else None,
+            "period": max(inside, key=lambda r: (r["km"], r["day"])) if inside else None}
 
 
 # --------------------------------------------------------------------------- who may read the wall
@@ -860,7 +920,9 @@ def parse_airline(data):
     icao, name = str(al.get("icao") or "").strip().upper(), clean_airline_name(al.get("name"))
     if not re.match(r"^[A-Z]{3}$", icao) or not name:
         return None
-    return {"icao": icao, "name": name, "iata": str(al.get("iata") or "").strip().upper() or None}
+    cc = str(al.get("country_iso") or "").strip().upper()
+    return {"icao": icao, "name": name, "iata": str(al.get("iata") or "").strip().upper() or None,
+            "cc": cc if re.match(r"^[A-Z]{2}$", cc) else None}
 
 
 def learn_airline(data):
@@ -870,7 +932,7 @@ def learn_airline(data):
         with _learned["lock"]:
             if len(_learned["data"]) > 2000:
                 _learned["data"].clear()
-            _learned["data"][info["icao"]] = {"name": info["name"], "iata": info["iata"], "learned": True}
+            _learned["data"][info["icao"]] = {"name": info["name"], "iata": info["iata"], "cc": info.get("cc"), "learned": True}
     return info
 
 

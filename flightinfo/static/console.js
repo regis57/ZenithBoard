@@ -560,6 +560,7 @@
         card("Measure", "chart", null, [
           row("Statistics", "A sample every 15 minutes, 30 days kept, about 30 KB a day", [sw("stats", on(c.STATS)), on(c.STATS) ? h("a", { href: "/stats", target: "_blank", rel: "noopener", text: "Open ↗" }) : null]),
           row("graphs1090", "Years of the decoder's graphs on port 8542; installed by its author's script", [sw("graphs", f.graphs === "on"), f.graphs === "on" ? h("a", { href: "http://" + host() + ":8542/", target: "_blank", rel: "noopener", text: "Open ↗" }) : null]),
+          f.graphs === "on" ? row("graphs1090 in ZenithBoard's look", "A black page in the wall's colour, its graphs drawn to match; off: graphs1090's own", sw("graphs-look", S.cfg.GRAPHS_LOOK === "zenithboard")) : null,
           row("Gain", "Check it first; then one step at a time", [btn("Check", "gain-check"), btn("− Down", "gain-step", { value: "down" }, "btn", { key: "gain-step" }), btn("Up +", "gain-step", { value: "up" }, "btn", { key: "gain-step" })]),
           row("Gain log, 24 hours", "One measurement every 15 minutes, as a table", sw("gain-log", on(c.GAINLOG)))
         ], "w6"),

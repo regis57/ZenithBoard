@@ -2,15 +2,6 @@
 # shellcheck shell=bash
 # Menu 2 - FlightInfo: the dot-matrix wall for an old tablet.
 
-ensure_zb_user() {
-  id "$ZB_USER" >/dev/null 2>&1 || useradd --system --home-dir "$ZB_DATA" --shell /usr/sbin/nologin "$ZB_USER"
-  # 2751: anyone may walk through to data/ (so `zenithboard status` works without sudo) but only the service
-  # may list the folder, which keeps the statistics and the social state out of sight.
-  install -d -o "$ZB_USER" -g "$ZB_USER" -m 2751 "$ZB_DATA"
-  # the downloaded aircraft-type list is read by the wall server (user zenithboard): world-readable, root-writable
-  install -d -m 755 "$ZB_DATA/data"
-}
-
 # Monthly aircraft-type data refresh (model names for the silhouettes). The timer follows AUTO_DATA_REFRESH.
 data_refresh_apply() {
   if [ "$(cfg_get AUTO_DATA_REFRESH 1)" = 1 ]; then

@@ -16,6 +16,10 @@ sudo zenithboard console password     # choose its password (asked twice, never 
 sudo zenithboard console on           # prints the address: http://192.168.x.x:8080/console
 ```
 
+The console is a page of the wall's server: on a new card, install the wall first (menu 2 FlightInfo). Before it,
+`console on` says so and changes nothing (0.43.0: it used to stop on *chown: invalid user: zenithboard*, the wall's own
+user not existing yet); `console password` works already.
+
 Or the menu: *3 Settings → 7 Web console*. On a new card, the whole way from the SD card to here: [Fresh install](Fresh-install).
 
 **The first steps** open the first time you sign in, nine short screens (0.41.0): what this Pi is and feeds, where

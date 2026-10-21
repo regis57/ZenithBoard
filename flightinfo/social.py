@@ -1207,7 +1207,7 @@ def publish_week(c, sec, now, state=None, dry=False, keep=None, second=False, pa
     results = {}
     try:
         if part == 2:
-            flags = week.load_flags([cc for cc, _ in w.get("bizjet_countries") or []])
+            flags = week.load_flags([cc for cc, _ in w.get("bizjet_countries") or []] + list((w.get("airline_cc") or {}).values()))
             info = week.draw_second(w, theme_of(c), area, out, flags)
             text, alt = week.text_second(w, area, tags, fit_post), week.alt_second(w, area)
         elif part == 3:
@@ -1225,7 +1225,7 @@ def publish_week(c, sec, now, state=None, dry=False, keep=None, second=False, pa
             info = week.draw_misc(w, theme_of(c), area, out, week.load_flags(codes))
             text, alt = week.text_misc(w, area, tags, fit_post), week.alt_misc(w, area)
         else:
-            info = week.draw(w, theme_of(c), area, out)
+            info = week.draw(w, theme_of(c), area, out, week.load_flags(list((w.get("airline_cc") or {}).values())))
             text, alt = week.text(w, c, area, tags, fit_post), week.alt(w, area)
         if keep:
             try:
