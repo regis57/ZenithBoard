@@ -602,6 +602,7 @@ sudo zenithboard console on           # prints the address; off again: sudo zeni
 sudo zenithboard console pair         # a QR code that signs a phone in, once, within 5 minutes
 ```
 
+* **In English or French** (0.47.0; more languages to come): asked at the first visit, a flag at the top to change it; the statistics and graphs1090's pages follow. Each language has a review sheet to correct it: [Translating](https://github.com/regis57/ZenithBoard/wiki/Translating).
 * **Off by default**, and it answers home networks only. Nine first steps (the antenna, the wall, the networks, statistics, the watchdogs, the summaries, your phone) open the first time, and again from *System*.
 * **A new card, step by step, finished in the console**: [Fresh install](https://github.com/regis57/ZenithBoard/wiki/Fresh-install).
 * **A phone signs in by QR code** (dark on its own white square, so it scans on a black screen) and stays signed in as long as it opens the console once a month; no password is needed for it. The terminal is for setting up, once, not for every visit. Face ID and passkeys need HTTPS under a domain name, which a Pi at a home address does not have.

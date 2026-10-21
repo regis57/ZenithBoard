@@ -264,3 +264,7 @@ input.day { width: 4.5em; }
 .term.inline .th .ghost { padding: 0 6px; font-size: 18px; line-height: 1; color: var(--muted); }
 .term.inline .th .ghost:hover { color: var(--on); }
 .term.inline + .actions { margin-top: 10px; }
+/* 0.47.0: the language picker, top right of the sign-in card and of the bar */
+.gate-lang-pick { align-self: flex-end; margin-bottom: -6px; }
+.gate-lang-pick:empty { display: none; }
+.bar-lang { display: inline-flex; align-items: center; margin-right: 4px; }

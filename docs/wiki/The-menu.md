@@ -155,7 +155,7 @@ everything (a typed word), and the settings file alone. [Moving to a new card](M
 ![7 Options](https://raw.githubusercontent.com/regis57/ZenithBoard/main/docs/images/menu-options.png)
 
 Statistics ([Statistics](Statistics)), graphs1090 and its look, Bluesky ([Social sharing](Social-sharing)), the web
-console ([Web console](Web-console)). Each is off until switched on, graphs1090's look excepted: ZenithBoard's by
+console ([Web console](Web-console), its entry *7* the language of the web pages). Each is off until switched on, graphs1090's look excepted: ZenithBoard's by
 default, graphs1090's own with `sudo zenithboard graphs look original`.
 
 ## Where did an entry go? (before 0.44.0)

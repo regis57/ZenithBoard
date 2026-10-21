@@ -126,6 +126,18 @@ ensure_zb_user() {
 
 
 
+# 0.47.0: the web pages' languages. English always; the others when this copy of ZenithBoard carries their catalogue
+# (flightinfo/static/i18n/<code>/console.json), so a language is offered only once it is translated. The same codes
+# as flightinfo/static/i18n.js and flightinfo/console_actions.py (tests/test_i18n.sh holds the three together).
+ZB_LANG_CODES="en fr de nl it es pt-BR id ru uk ja ko zh-Hans zh-Hant"
+zb_langs() {
+  local c out=en
+  for c in $ZB_LANG_CODES; do
+    [ "$c" != en ] && [ -f "$ZB_HOME/flightinfo/static/i18n/$c/console.json" ] && out="$out $c"
+  done
+  echo "$out"
+}
+
 installed_decoder() { if is_readsb; then echo readsb; elif is_dump1090; then echo dump1090-fa; fi; }
 decoder_json()   { echo "/run/$(cfg_get DECODER readsb)/aircraft.json"; }
 

@@ -76,6 +76,17 @@ it only in a *secure context*: HTTPS, or `localhost` on the machine itself. A pl
 domain name the phone trusts — the DuckDNS name with a real certificate, say — which is a project of its own; the QR
 code is what signs a phone in meanwhile.
 
+## Languages
+
+0.47.0: **English and French**, more to come ([Translation plan](Translation-plan)). The first visit asks, by each
+language's own name and flag, before the password; once signed in, that choice becomes the Pi's default
+(`CONSOLE_LANG`) for every browser that did not choose. **The flag at the top** (here, on `/stats` and on graphs1090's
+page) changes it for that browser only. The Pi's default: *System → Language*, `sudo zenithboard console lang fr`, or
+the menu (*7 Options → 4 Web console → 7*). What the Pi prints — the output in the cards, *Activity*, the terminal —
+stays in English, like the menu. A word that reads wrong: [Translating](Translating).
+
+![The console in French](https://raw.githubusercontent.com/regis57/ZenithBoard/main/docs/images/console-overview-fr.png)
+
 ## What it does
 
 One section on screen at a time: a side bar on a computer, tabs at the bottom of a phone.
@@ -87,7 +98,7 @@ One section on screen at a time: a side bar on a computer, tabs at the bottom of
 | Receiver | Region, antenna position, statistics, graphs1090, the gain (check, one step down or up), the gain log, status |
 | Sharing | Bluesky on or off, the gap, the picture (look, colour, map, units, photo link, the words), the three summaries (on or off, day and time, which posts, a try); *Try a post* and the pictures |
 | Reliability | Hardware and network watchdogs, logs kept after a restart, Wi-Fi hardening, daily security fixes, daily log clean-up; health, memory, logs |
-| System | Update ZenithBoard and the wall, update everything; Tailscale (0.46.0: connect, its sign-in link as a button, disconnect, the console over it, its addresses; removing it stays in the terminal); a backup to make, download and delete (0.42.0, without the networks' identities: [Backup and restore](Backup-and-restore#from-the-web-console)); network, Wi-Fi and domain name status; who is signed in, pairing a phone; the security check; turning the console off |
+| System | Update ZenithBoard and the wall, update everything; the pages' language (0.47.0); Tailscale (0.46.0: connect, its sign-in link as a button, disconnect, the console over it, its addresses; removing it stays in the terminal); a backup to make, download and delete (0.42.0, without the networks' identities: [Backup and restore](Backup-and-restore#from-the-web-console)); network, Wi-Fi and domain name status; who is signed in, pairing a phone; the security check; turning the console off |
 
 **What every control does appears in its own card**, under it, as the Pi prints it: a button (Health, Memory, Status, a
 log, a try of a post), a switch, a choice, a field applied, an update or graphs1090 that takes minutes. The command is

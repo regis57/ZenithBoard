@@ -6,6 +6,7 @@
   <meta name="color-scheme" content="dark">
   <title>ZenithBoard statistics</title>
   <link rel="stylesheet" href="/static/stats.css">
+  <link rel="stylesheet" href="/static/i18n.css">
 </head>
 <body>
   <main class="wrap">
@@ -14,85 +15,89 @@
         <div id="logo" class="logo" role="img" aria-label="ZenithBoard"></div>
         <div id="logo-sub" class="logo-sub" role="img" aria-label="Statistics"></div>
       </div>
+      <div class="top-r">
       <nav class="toggle" id="toggle" aria-label="Period" hidden>
-        <button type="button" data-range="24h">24 h</button>
-        <button type="button" data-range="7d">7 days</button>
-        <button type="button" data-range="30d">30 days</button>
+        <button type="button" data-range="24h" data-t>24 h</button>
+        <button type="button" data-range="7d" data-t>7 days</button>
+        <button type="button" data-range="30d" data-t>30 days</button>
       </nav>
+      <div id="lang"></div>
+      </div>
     </header>
-    <p id="sub" class="sub">Loading&hellip;</p>
+    <p id="sub" class="sub" data-t>Loading&hellip;</p>
 
     <section id="off" class="panel" hidden>
-      <p>Statistics are off. They cost about 30 KB a day on the card and are collected every 15 minutes once you turn them on:</p>
+      <p data-t>Statistics are off. They cost about 30 KB a day on the card and are collected every 15 minutes once you turn them on:</p>
       <pre>sudo zenithboard stats on</pre>
-      <p>Then come back here. <a href="/">The wall</a>.</p>
+      <p data-t>Then come back here. <a href="/">The wall</a>.</p>
     </section>
     <section id="empty" class="panel" hidden>
-      <p>Statistics are on, but there is no sample yet: the first one comes on the next quarter hour. <a href="/">The wall</a>.</p>
+      <p data-t>Statistics are on, but there is no sample yet: the first one comes on the next quarter hour. <a href="/">The wall</a>.</p>
     </section>
 
     <section id="dash" hidden>
       <div class="tiles">
-        <div class="tile"><div class="k">Aircraft</div><div class="v" id="t-aircraft">&ndash;</div><div class="d" id="t-aircraft-d">&nbsp;</div></div>
-        <div class="tile"><div class="k">Messages</div><div class="v" id="t-messages">&ndash;</div><div class="d" id="t-busiest">&nbsp;</div></div>
-        <div class="tile"><div class="k">Farthest</div><div class="v" id="t-far">&ndash;</div><div class="d" id="t-far-d">&nbsp;</div></div>
-        <div class="tile"><div class="k" id="t-best-k">Busiest</div><div class="v" id="t-best">&ndash;</div><div class="d" id="t-bestday">&nbsp;</div></div>
+        <div class="tile"><div class="k" data-t>Aircraft</div><div class="v" id="t-aircraft">&ndash;</div><div class="d" id="t-aircraft-d">&nbsp;</div></div>
+        <div class="tile"><div class="k" data-t>Messages</div><div class="v" id="t-messages">&ndash;</div><div class="d" id="t-busiest">&nbsp;</div></div>
+        <div class="tile"><div class="k" data-t>Farthest</div><div class="v" id="t-far">&ndash;</div><div class="d" id="t-far-d">&nbsp;</div></div>
+        <div class="tile"><div class="k" id="t-best-k" data-t>Busiest</div><div class="v" id="t-best">&ndash;</div><div class="d" id="t-bestday">&nbsp;</div></div>
       </div>
 
       <div class="panel records">
-        <div class="rec"><div class="k" id="r-period-k">Farthest</div><p id="r-period" class="withflag">&ndash;</p></div>
+        <div class="rec"><div class="k" id="r-period-k" data-t>Farthest</div><p id="r-period" class="withflag">&ndash;</p></div>
       </div>
 
       <div class="panel">
-        <h2>Aircraft</h2>
-        <figure><figcaption>The sky by hour <span id="c-heat-sub"></span></figcaption><div id="c-heat"></div></figure>
+        <h2 data-t>Aircraft</h2>
+        <figure><figcaption data-t>The sky by hour <span id="c-heat-sub"></span></figcaption><div id="c-heat"></div></figure>
         <div class="grid2">
-          <figure><figcaption>Airlines most seen <span class="per">&middot; distinct aircraft</span></figcaption><div id="c-airlines" class="ranks flags"></div></figure>
-          <figure><figcaption>Models most seen <span class="per">&middot; distinct aircraft</span></figcaption><div id="c-types" class="ranks"></div></figure>
+          <figure><figcaption data-t>Airlines most seen <span class="per">&middot; distinct aircraft</span></figcaption><div id="c-airlines" class="ranks flags"></div></figure>
+          <figure><figcaption data-t>Models most seen <span class="per">&middot; distinct aircraft</span></figcaption><div id="c-types" class="ranks"></div></figure>
         </div>
       </div>
 
       <div class="panel">
-        <h2>Cargo and business jets</h2>
+        <h2 data-t>Cargo and business jets</h2>
         <div class="grid3">
-          <figure><div class="big"><b id="n-cargo">0</b><span>cargo aircraft</span></div><figcaption>Cargo airlines &middot; most seen model</figcaption><div id="c-cargo" class="ranks flags"></div></figure>
-          <figure><div class="big"><b id="n-biz">0</b><span>business jets</span></div><figcaption>Make and model</figcaption><div id="c-biz" class="ranks"></div></figure>
-          <figure><div class="big"><b id="n-bizc">0</b><span>countries</span></div><figcaption>Most registered in</figcaption><div id="c-bizc" class="ranks flags"></div></figure>
+          <figure><div class="big"><b id="n-cargo">0</b><span data-t>cargo aircraft</span></div><figcaption data-t>Cargo airlines &middot; most seen model</figcaption><div id="c-cargo" class="ranks flags"></div></figure>
+          <figure><div class="big"><b id="n-biz">0</b><span data-t>business jets</span></div><figcaption data-t>Make and model</figcaption><div id="c-biz" class="ranks"></div></figure>
+          <figure><div class="big"><b id="n-bizc">0</b><span data-t>countries</span></div><figcaption data-t>Most registered in</figcaption><div id="c-bizc" class="ranks flags"></div></figure>
         </div>
       </div>
 
       <div class="panel">
-        <h2>Military aircraft</h2>
-        <div class="big-row"><div class="big"><b id="n-mil">0</b><span>military aircraft</span></div><div class="big"><b id="n-milc">0</b><span>countries</span></div></div>
-        <figcaption>By country, then make and model</figcaption>
+        <h2 data-t>Military aircraft</h2>
+        <div class="big-row"><div class="big"><b id="n-mil">0</b><span data-t>military aircraft</span></div><div class="big"><b id="n-milc">0</b><span data-t>countries</span></div></div>
+        <figcaption data-t>By country, then make and model</figcaption>
         <div id="c-mil" class="mil"></div>
       </div>
 
       <div class="panel">
-        <h2>General aviation</h2>
+        <h2 data-t>General aviation</h2>
         <div id="c-ga" class="grid4"></div>
       </div>
 
       <div class="panel">
-        <figure><figcaption>How high <span id="c-alt-sub"></span></figcaption><div id="c-alt"></div></figure>
+        <figure><figcaption data-t>How high <span id="c-alt-sub"></span></figcaption><div id="c-alt"></div></figure>
       </div>
 
       <div class="panel">
-        <figure><figcaption>Messages <span id="c-msgs-sub"></span></figcaption><div id="c-msgs"></div></figure>
+        <figure><figcaption data-t>Messages <span id="c-msgs-sub"></span></figcaption><div id="c-msgs"></div></figure>
       </div>
 
       <div class="panel grid2">
-        <figure><figcaption>Farthest aircraft <span id="c-far-sub"></span></figcaption><div id="c-far"></div></figure>
-        <figure><figcaption>Aircraft <span id="c-planes-sub"></span></figcaption><div id="c-planes"></div></figure>
+        <figure><figcaption data-t>Farthest aircraft <span id="c-far-sub"></span></figcaption><div id="c-far"></div></figure>
+        <figure><figcaption data-t>Aircraft <span id="c-planes-sub"></span></figcaption><div id="c-planes"></div></figure>
       </div>
 
-      <details class="panel"><summary>The same numbers as a table</summary><div class="scroller"><table id="table"></table></div></details>
-      <p class="note">A sample every 15 minutes misses an aircraft that crossed in less, so an aircraft count is a floor, never a total. Messages are what the receiver decoded. Everything on this page follows the period chosen at the top. The lists count each aircraft once in the period: airlines by callsign, models from the aircraft database, countries from the aircraft's address. An airline's flag is the country it is based in (cargo and airline lists checked against a published source), else the one its aircraft are registered in. <a href="/">The wall</a> &middot; <code>zenithboard stats</code> prints the same in the terminal. Cities: <a href="https://www.geonames.org/" target="_blank" rel="noopener noreferrer">GeoNames</a>, CC&nbsp;BY&nbsp;4.0. Flags: <a href="https://gitlab.com/catamphetamine/country-flag-icons" target="_blank" rel="noopener noreferrer">country-flag-icons</a>, MIT.</p>
+      <details class="panel"><summary data-t>The same numbers as a table</summary><div class="scroller"><table id="table"></table></div></details>
+      <p class="note" data-t>A sample every 15 minutes misses an aircraft that crossed in less, so an aircraft count is a floor, never a total. Messages are what the receiver decoded. Everything on this page follows the period chosen at the top. The lists count each aircraft once in the period: airlines by callsign, models from the aircraft database, countries from the aircraft's address. An airline's flag is the country it is based in (cargo and airline lists checked against a published source), else the one its aircraft are registered in. <a href="/">The wall</a> &middot; <code>zenithboard stats</code> prints the same in the terminal. Cities: <a href="https://www.geonames.org/" target="_blank" rel="noopener noreferrer">GeoNames</a>, CC&nbsp;BY&nbsp;4.0. Flags: <a href="https://gitlab.com/catamphetamine/country-flag-icons" target="_blank" rel="noopener noreferrer">country-flag-icons</a>, MIT.</p>
       <p class="note version"><a id="s-version" href="https://github.com/regis57/ZenithBoard/releases" target="_blank" rel="noopener noreferrer">ZenithBoard</a></p>
     </section>
   </main>
   <div class="tip" id="tip" hidden></div>
   <script src="/static/font5x7.js"></script>
+  <script src="/static/i18n.js"></script>
   <script src="/static/stats.js"></script>
 </body>
 </html>

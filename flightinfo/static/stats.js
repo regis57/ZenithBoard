@@ -3,9 +3,19 @@
 // 30 days) that every box, chart and list follows (0.43.0: the sky by hour, the fourth box and the farthest aircraft
 // too), in the order of the summary's posts: the aircraft, cargo and business jets, military, general aviation; then
 // how high, the messages, and the rest. Every airline with its flag first. Reads /api/stats?range=...
-(function () {
+// 0.47.0: in the visitor's language (flightinfo/static/i18n.js): started once its catalogue is read.
+window.ZBI18N.start({ part: "stats" }, function () {
   "use strict";
   var $ = function (id) { return document.getElementById(id); };
+  var I = window.ZBI18N, t = I.t;
+  // a country's name in the page's language, from the browser's own (CLDR) data; the Pi's English name otherwise
+  var regionNames = null;
+  try { if (I.lang() !== "en" && window.Intl && Intl.DisplayNames) regionNames = new Intl.DisplayNames([I.locale()], { type: "region" }); } catch (e) { regionNames = null; }
+  function country(cc, english) {
+    if (regionNames && /^[A-Z]{2}$/.test(cc || "")) { try { var n = regionNames.of(cc); if (n && n !== cc) return n; } catch (e) { /* unknown code */ } }
+    return english || cc;
+  }
+  function esc(x) { return String(x).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
   var tip = $("tip");
   function showTip(e, text) { tip.textContent = text; tip.hidden = false; tip.style.left = e.clientX + "px"; tip.style.top = e.clientY + "px"; }
   function hideTip() { tip.hidden = true; }
@@ -126,11 +136,11 @@
     rows.forEach(function (r, i) {
       var y = T + i * ch;
       if (!one && (i % 3 === 0 || i === rows.length - 1)) ax.appendChild(el("text", { x: L - 8, y: y + ch / 2 + 4, "text-anchor": "end" }, shortDay(r.day)));
-      if (one) ax.appendChild(el("text", { x: L - 8, y: y + ch / 2 + 4, "text-anchor": "end" }, "24 h"));
+      if (one) ax.appendChild(el("text", { x: L - 8, y: y + ch / 2 + 4, "text-anchor": "end" }, t("24 h")));
       r.hours.forEach(function (v, hh) {
         var c = el("circle", { "class": "cell" + (v === null ? " none" : ""), cx: L + hh * cw + cw / 2, cy: y + ch / 2, r: rad });
         if (v !== null) c.setAttribute("opacity", (0.1 + 0.9 * (max ? v / max : 0)).toFixed(2));
-        c.addEventListener("mousemove", function (e) { showTip(e, (one ? r.labels[hh] : shortDay(r.day) + " " + (hh < 10 ? "0" : "") + hh + "h") + ": " + (v === null ? "no sample" : fmt(v) + " aircraft")); });
+        c.addEventListener("mousemove", function (e) { showTip(e, (one ? r.labels[hh] : shortDay(r.day) + " " + (hh < 10 ? "0" : "") + hh + "h") + ": " + (v === null ? t("no sample") : t("{n} aircraft", { n: fmt(v) }))); });
         c.addEventListener("mouseleave", hideTip);
         s.appendChild(c);
       });
@@ -166,19 +176,19 @@
     mount.innerHTML = "";
     var rows = [];
     (list || []).forEach(function (e) { e.models.slice(0, 3).forEach(function (m, i) { rows.push([e, m, i]); }); });
-    if (!rows.length) { mount.appendChild(node("p", "empty", "None heard in this period.")); return; }
+    if (!rows.length) { mount.appendChild(node("p", "empty", t("None heard in this period."))); return; }
     var max = Math.max.apply(null, rows.map(function (r) { return r[1][1]; }));
     rows.forEach(function (r) {
       var e = r[0], m = r[1], first = r[2] === 0, row = node("div", "row" + (first && rows[0] !== r ? " next" : ""));
       var fl = first ? flag(e.cc) : node("span"); fl.classList.add("f"); row.appendChild(fl);
-      row.appendChild(node("span", "c", first ? e.country + " · " + fmt(e.total) : ""));
+      row.appendChild(node("span", "c", first ? country(e.cc, e.country) + " · " + fmt(e.total) : ""));
       row.appendChild(node("span", "m", m[0]));
       var b = node("span", "b"); b.style.width = (100 * m[1] / max).toFixed(1) + "%"; var bw = node("span", "bw"); bw.appendChild(b); row.appendChild(bw);
       row.appendChild(node("span", "n", fmt(m[1])));
       mount.appendChild(row);
     });
   }
-  var GA = [["heli", "Helicopters"], ["light", "Light aircraft"], ["glider", "Gliders"], ["other", "Drones and balloons"]];
+  var GA = [["heli", t("Helicopters")], ["light", t("Light aircraft")], ["glider", t("Gliders")], ["other", t("Drones and balloons")]];
   function general(mount, misc) {
     mount.innerHTML = "";
     misc = misc || {};
@@ -190,16 +200,16 @@
     });
     var o = Object.keys(other).map(function (k) { return [k, other[k]]; }).sort(function (a, b) { return b[1] - a[1]; });
     var orr = Object.keys(orows).map(function (k) { var p = k.split("\u0000"); return [p[0], p[1], orows[k]]; }).sort(function (a, b) { return b[2] - a[2]; });
-    misc.other = { total: o.reduce(function (t, kv) { return t + kv[1]; }, 0), models: o, rows: orr };
+    misc.other = { total: o.reduce(function (sum, kv) { return sum + kv[1]; }, 0), models: o, rows: orr };
     GA.forEach(function (g) {
       var e = misc[g[0]] || { total: 0, models: [] }, fig = node("figure"), big = node("div", "big");
       big.appendChild(node("b", "", fmt(e.total))); big.appendChild(node("span", "", g[1]));
-      fig.appendChild(big); fig.appendChild(node("figcaption", "", "Make and model"));
+      fig.appendChild(big); fig.appendChild(node("figcaption", "", t("Make and model")));
       var r = node("div", "ranks flags"); fig.appendChild(r); mount.appendChild(fig);
       // 0.43.0: a row per model and country, the flag first, as on the summary's fourth card
       var rows = (e.rows || []).map(function (x) { return [x[0] + "\u0000" + (x[1] || ""), x[2]]; });
       if (!rows.length) rows = (e.models || []).map(function (kv) { return [kv[0] + "\u0000", kv[1]]; });
-      ranks(r, rows, "None heard in this period.", { top: 6, cc: function (k) { return k.split("\u0000")[1]; }, label: function (k) { return k.split("\u0000")[0]; } });
+      ranks(r, rows, t("None heard in this period."), { top: 6, cc: function (k) { return k.split("\u0000")[1]; }, label: function (k) { return k.split("\u0000")[0]; } });
     });
   }
 
@@ -220,7 +230,7 @@
     var parts = [shortDay(r.day) + (r.time ? " " + r.time : "")];
     var num = r.flight_iata || r.flight, who = r.airline && r.airline !== "MILITARY" ? r.airline + (num ? " " + num : "") : num || "";
     if (r.flight_iata && r.flight && r.flight_iata !== r.flight) who += " (" + r.flight + ")";
-    if (r.airline === "MILITARY") who = (who ? who + " " : "") + "(military)";
+    if (r.airline === "MILITARY") who = (who ? who + " " : "") + t("(military)");
     parts.push(who || r.registration || String(r.hex || "").toUpperCase());
     if (r.route && (r.route.from || r.route.to)) parts.push((place(r.route.from) || "?") + " \u2192 " + (place(r.route.to) || "?"));
     var model = [r.type_name || r.type, who ? r.registration : null].filter(Boolean).join(" ");
@@ -229,7 +239,7 @@
     if (alt) parts.push(alt);
     // "near" up to 50 km; beyond, over the sea or open country, the distance says how near it really was
     var city = r.near && r.near.name ? r.near.name + (r.near.country ? ", " + r.near.country : "") : "";
-    var near = !city ? "" : r.near.km <= 50 ? ", near " + city + " (" + fmt(r.near.km) + " km)" : ", " + fmt(r.near.km) + " km from " + city;
+    var near = !city ? "" : r.near.km <= 50 ? t(", near {city} ({km} km)", { city: city, km: fmt(r.near.km) }) : t(", {km} km from {city}", { city: city, km: fmt(r.near.km) });
     parts.push(fmt(r.km) + " km" + near);
     return parts.join(" \u00b7 ");
   }
@@ -246,47 +256,49 @@
 
 
   function render(d) {
-    var w = d.window || {}, t = w.totals || {}, per = w.label || "the last 30 days", days = w.range !== "24h";
-    $("sub").textContent = d.samples + " samples of 15 minutes since " + d.since + ", 30 days kept · " + per;
+    var w = d.window || {}, tot = w.totals || {}, per = t(w.label || "the last 30 days"), days = w.range !== "24h";
+    $("sub").textContent = t("{n} samples of 15 minutes since {since}, 30 days kept · {period}", { n: fmt(d.samples), since: d.since, period: per });
     // the four boxes: all of them the period's (0.43.0: the fourth was the thirty days' best, whatever the toggle)
-    $("t-aircraft").textContent = fmt(t.aircraft || 0);
-    $("t-aircraft-d").textContent = "distinct aircraft, " + per + ", a floor";
-    $("t-messages").textContent = fmt(t.messages || 0);
-    $("t-busiest").textContent = t.busiest_hour === null || t.busiest_hour === undefined ? "nothing yet" : "busiest hour " + (t.busiest_hour < 10 ? "0" : "") + t.busiest_hour + ":00, " + fmt(t.busiest_messages);
-    $("t-far").textContent = (t.farthest_km || 0) + " km";
-    $("t-far-d").textContent = t.farthest_when ? "on " + shortDay(t.farthest_when.slice(0, 10)) + " at " + t.farthest_when.slice(11) : per;
+    $("t-aircraft").textContent = fmt(tot.aircraft || 0);
+    $("t-aircraft-d").textContent = t("distinct aircraft, {period}, a floor", { period: per });
+    $("t-messages").textContent = fmt(tot.messages || 0);
+    $("t-busiest").textContent = tot.busiest_hour === null || tot.busiest_hour === undefined ? t("nothing yet") :
+      t("busiest hour {hour}:00, {n}", { hour: (tot.busiest_hour < 10 ? "0" : "") + tot.busiest_hour, n: fmt(tot.busiest_messages) });
+    $("t-far").textContent = (tot.farthest_km || 0) + " km";
+    $("t-far-d").textContent = tot.farthest_when ? t("on {day} at {time}", { day: shortDay(tot.farthest_when.slice(0, 10)), time: tot.farthest_when.slice(11) }) : per;
     var b = w.busiest;
-    $("t-best-k").textContent = days ? "Busiest day" : "Busiest hour";
+    $("t-best-k").textContent = days ? t("Busiest day") : t("Busiest hour");
     $("t-best").textContent = b ? (days ? b.label : b.label.replace("h", ":00")) : "–";
-    $("t-bestday").textContent = b ? fmt(b.aircraft) + (days ? " distinct aircraft" : " aircraft with a position, on average") : per;
+    $("t-bestday").textContent = b ? (days ? t("{n} distinct aircraft", { n: fmt(b.aircraft) }) : t("{n} aircraft with a position, on average", { n: fmt(b.aircraft) })) : per;
     // the farthest aircraft of the period, in words, its flag first
     var f = d.farthest || {}, rec = f.period, fline = farthestLine(rec, d.units), rp = $("r-period");
-    $("r-period-k").textContent = "Farthest, " + per;
+    $("r-period-k").textContent = t("Farthest, {period}", { period: per });
     rp.innerHTML = "";
     if (fline) { rp.appendChild(flag(rec.cc)); rp.appendChild(node("span", "", fline)); }
-    else rp.appendChild(node("span", "", "No details written down in this period yet: the next sample, on the quarter hour, does it."));
-    if (rec && t.farthest_km && Math.round(rec.km) < t.farthest_km)
-      rp.appendChild(node("span", "rnote", "The box above says " + t.farthest_km + " km" + (t.farthest_when ? ", on " + shortDay(t.farthest_when.slice(0, 10)) : "") + ": its details were not written down" +
-        (days ? " (they are since ZenithBoard 0.22.0, one aircraft a day: the day's farthest)." : " (one aircraft is written down a day, the day's farthest: yesterday's was outside these 24 hours).")));
+    else rp.appendChild(node("span", "", t("No details written down in this period yet: the next sample, on the quarter hour, does it.")));
+    if (rec && tot.farthest_km && Math.round(rec.km) < tot.farthest_km)
+      rp.appendChild(node("span", "rnote", (tot.farthest_when ? t("The box above says {km} km, on {day}: its details were not written down", { km: tot.farthest_km, day: shortDay(tot.farthest_when.slice(0, 10)) }) :
+        t("The box above says {km} km: its details were not written down", { km: tot.farthest_km })) +
+        (days ? t(" (they are since ZenithBoard 0.22.0, one aircraft a day: the day's farthest).") : t(" (one aircraft is written down a day, the day's farthest: yesterday's was outside these 24 hours)."))));
     var labels = w.labels || [], n = labels.length, every = n > 24 ? 5 : n > 12 ? 3 : 1;
     // drawings sized to the screen, so their text stays the same size on a phone as on a desk (0.37.0)
     var phone = window.innerWidth < 760, wide = phone ? 440 : 980, half = phone ? 440 : 480;
     if (phone) every = n > 24 ? 7 : n > 12 ? 4 : 2;
     // 1 · the aircraft: the sky by hour, the airlines and the models (the summary's first card)
     if (w.heat && w.heat.length) heat($("c-heat"), w.heat, wide); else $("c-heat").innerHTML = "";
-    $("c-heat-sub").textContent = "· aircraft with a position, on average, " + per;
+    $("c-heat-sub").textContent = t("· aircraft with a position, on average, {period}", { period: per });
     var fl = d.fleet || {}, names = fl.country_names || {}, cm = fl.cargo_models || {}, acc = fl.airline_cc || {};
     var ccOf = function (k) { return acc[k]; };
-    Array.prototype.forEach.call(document.querySelectorAll(".per"), function (s) { s.textContent = "· distinct aircraft, " + per; });
-    ranks($("c-airlines"), fl.airlines, "Nothing in this period yet: the lists start with ZenithBoard 0.31.0.", { cc: ccOf });
-    ranks($("c-types"), fl.types, fl.aircraft ? "No model known: the decoder has no aircraft database. Turn on tar1090's, offline: sudo zenithboard data localdb on" : "Nothing in this period yet.");
+    Array.prototype.forEach.call(document.querySelectorAll(".per"), function (s) { s.textContent = t("· distinct aircraft, {period}", { period: per }); });
+    ranks($("c-airlines"), fl.airlines, t("Nothing in this period yet: the lists start with ZenithBoard 0.31.0."), { cc: ccOf });
+    ranks($("c-types"), fl.types, fl.aircraft ? t("No model known: the decoder has no aircraft database. Turn on tar1090's, offline: sudo zenithboard data localdb on") : t("Nothing in this period yet."));
     // 2 · cargo and business jets
     $("n-cargo").textContent = fmt(fl.cargo_total || 0);
     $("n-biz").textContent = fmt(fl.bizjet_total || 0);
     $("n-bizc").textContent = fmt(fl.bizjet_country_total || (fl.bizjet_countries || []).length);
-    ranks($("c-cargo"), fl.cargo, "None heard in this period.", { top: 6, cc: ccOf, extra: function (k) { return cm[k] ? cm[k][0] + " (" + fmt(cm[k][1]) + ")" : ""; } });
-    ranks($("c-biz"), fl.bizjets, "None heard in this period.", { top: 6 });
-    ranks($("c-bizc"), fl.bizjet_countries, "None heard in this period.", { top: 6, flags: true, label: function (cc) { return names[cc] || cc; } });
+    ranks($("c-cargo"), fl.cargo, t("None heard in this period."), { top: 6, cc: ccOf, extra: function (k) { return cm[k] ? cm[k][0] + " (" + fmt(cm[k][1]) + ")" : ""; } });
+    ranks($("c-biz"), fl.bizjets, t("None heard in this period."), { top: 6 });
+    ranks($("c-bizc"), fl.bizjet_countries, t("None heard in this period."), { top: 6, flags: true, label: function (cc) { return country(cc, names[cc]); } });
     // 3 · military, 4 · general aviation
     $("n-mil").textContent = fmt(fl.military_total || 0);
     $("n-milc").textContent = fmt((fl.military || []).length);
@@ -295,16 +307,16 @@
     // then how high, then the messages, then the rest
     if (fl.altitudes && fl.aircraft) {
       bars($("c-alt"), fl.altitudes.labels, fl.altitudes.counts, "", phone ? 2 : 1, fl.altitudes.counts.indexOf(Math.max.apply(null, fl.altitudes.counts)), wide);
-      $("c-alt-sub").textContent = "· distinct aircraft by the altitude last seen, in " + (fl.alt_unit || "km") + ", " + per;
-    } else { $("c-alt").innerHTML = ""; $("c-alt-sub").textContent = "· nothing in this period yet"; }
+      $("c-alt-sub").textContent = t("· distinct aircraft by the altitude last seen, in {unit}, {period}", { unit: fl.alt_unit || "km", period: per });
+    } else { $("c-alt").innerHTML = ""; $("c-alt-sub").textContent = t("· nothing in this period yet"); }
     var mv = w.messages || [], fv = w.farthest || [], av = w.aircraft || [];
-    $("c-msgs-sub").textContent = "· " + (days ? "per day" : "per hour") + ", " + per;
+    $("c-msgs-sub").textContent = days ? t("· per day, {period}", { period: per }) : t("· per hour, {period}", { period: per });
     bars($("c-msgs"), labels, mv, "", every, mv.indexOf(Math.max.apply(null, mv)), wide);
-    $("c-far-sub").textContent = "· km, the farthest " + (days ? "each day" : "each hour") + ", " + per;
-    $("c-planes-sub").textContent = "· " + (w.aircraft_note || "") + ", " + per;
+    $("c-far-sub").textContent = days ? t("· km, the farthest each day, {period}", { period: per }) : t("· km, the farthest each hour, {period}", { period: per });
+    $("c-planes-sub").textContent = "· " + t(w.aircraft_note || "") + ", " + per;
     line($("c-far"), labels, fv, " km", every, fv.indexOf(Math.max.apply(null, fv.filter(function (v) { return v !== null; }).concat([0]))), half);
     bars($("c-planes"), labels, av, "", every, av.indexOf(Math.max.apply(null, av)), half);
-    var rows = "<tr><th>" + (days ? "Day" : "Hour") + "</th><th>" + (days ? "Aircraft" : "With a position") + "</th><th>Messages</th><th>Farthest km</th></tr>";
+    var rows = "<tr><th>" + esc(days ? t("Day") : t("Hour")) + "</th><th>" + esc(days ? t("Aircraft") : t("With a position")) + "</th><th>" + esc(t("Messages")) + "</th><th>" + esc(t("Farthest km")) + "</th></tr>";
     for (var i = n - 1; i >= 0; i--) rows += "<tr><td>" + labels[i] + "</td><td>" + fmt(av[i] || 0) + "</td><td>" + fmt(mv[i] || 0) + "</td><td>" + (fv[i] === null || fv[i] === undefined ? "\u2013" : fv[i]) + "</td></tr>";
     $("table").innerHTML = rows;
   }
@@ -325,10 +337,10 @@
     fetch("/api/stats?range=" + range, { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (d) {
       versionLine(d.version);
       theme(d.theme);
-      if (!d.enabled) { $("sub").textContent = "Off."; $("off").hidden = false; return; }
-      if (!d.samples) { $("sub").textContent = "On, waiting for the first sample."; $("empty").hidden = false; return; }
+      if (!d.enabled) { $("sub").textContent = t("Off."); $("off").hidden = false; return; }
+      if (!d.samples) { $("sub").textContent = t("On, waiting for the first sample."); $("empty").hidden = false; return; }
       $("toggle").hidden = false; $("dash").hidden = false; render(d);
-    }).catch(function (e) { $("sub").textContent = "Could not read /api/stats."; if (window.console) console.error(e); });
+    }).catch(function (e) { $("sub").textContent = t("Could not read /api/stats."); if (window.console) console.error(e); });
   }
   Array.prototype.forEach.call(document.querySelectorAll("#toggle button"), function (b) {
     b.addEventListener("click", function () {
@@ -339,6 +351,8 @@
     });
   });
   dots($("logo"), "ZENITHBOARD", 10);
-  dots($("logo-sub"), "STATISTICS", 5);
+  // the word in the dots in the page's language when the 5 x 7 font has its letters (capitals, no accent yet)
+  var sw = t("STATISTICS"); dots($("logo-sub"), /^[A-Z0-9 ]+$/.test(sw) ? sw : "STATISTICS", 5);
+  var lp = $("lang"); if (lp) lp.appendChild(I.picker());
   load(chosen());
-})();
+});

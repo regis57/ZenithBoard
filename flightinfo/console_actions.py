@@ -20,6 +20,9 @@ HHMM = r"([01]?[0-9]|2[0-3]):[0-5][0-9]"
 ON_OFF = ("on", "off")
 THEMES = ("amber", "green", "red", "white", "turquoise")
 PERIODS = ("daily", "weekly", "monthly")
+# 0.47.0: the web pages' languages, the same codes as lib/common.sh (ZB_LANG_CODES) and flightinfo/static/i18n.js; the
+# command itself refuses one this Pi has no catalogue for
+LANGS = ("en", "fr", "de", "nl", "it", "es", "pt-BR", "id", "ru", "uk", "ja", "ko", "zh-Hans", "zh-Hant")
 
 SECTIONS = (
     ("overview", "Overview"),
@@ -113,6 +116,7 @@ ACTIONS = {
     "backup":       ("system", "Make a backup to download", ["backup", "make", "--console"], [], "long"),
     "backup-delete": ("system", "Delete the console's backup", ["backup", "delete", "--console"], [], "ask"),
     "console-off":  ("system", "Turn the console off", ["console", "off"], [], "ask"),
+    "console-lang": ("system", "Language of the web pages", ["console", "lang", "{value}"], [("value", "enum", LANGS)], ""),
     "phone-signin": ("system", "Sign computers in with a phone", ["console", "phone-signin", "{value}"], [("value", "enum", ON_OFF)], "ask"),
     "refresh":      ("overview", "Refresh", None, [], "read"),       # nothing to run: the helper only reads the state again
 }

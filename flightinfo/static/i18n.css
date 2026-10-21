@@ -1,0 +1,31 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* The language picker (0.47.0): a flag and the language's own name, a list of the others. Shared by the console, the
+   statistics page and graphs1090's page; each page's own colours (--on, --ink, --muted, --line) when it has them. */
+.zb-lang { position: relative; display: inline-flex; }
+.zb-lang[hidden] { display: none; }
+.zb-lang-btn, .zb-lang-item {
+  display: inline-flex; align-items: center; gap: 8px; font: 600 13px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--muted, #8c8c8c); background: transparent; border: 1px solid var(--line, #1b1b1b); border-radius: 8px;
+  padding: 6px 10px; cursor: pointer; line-height: 1;
+}
+.zb-lang-btn:hover, .zb-lang-item:hover { color: var(--ink, #e2e2e2); border-color: var(--muted, #8c8c8c); }
+.zb-lang-btn:focus-visible, .zb-lang-item:focus-visible { outline: 2px solid var(--on, #ffb000); outline-offset: 2px; }
+.zb-lang-menu {
+  position: absolute; right: 0; top: calc(100% + 6px); z-index: 50; display: flex; flex-direction: column; gap: 2px;
+  min-width: 210px; max-height: 70vh; overflow: auto; padding: 6px; background: var(--panel, #0a0a0a);
+  border: 1px solid var(--line2, #262626); border-radius: 10px; box-shadow: 0 12px 32px rgba(0, 0, 0, .6);
+}
+.zb-lang-menu[hidden] { display: none; }
+.zb-lang-menu .zb-lang-item { border-color: transparent; width: 100%; justify-content: flex-start; padding: 8px 10px; }
+.zb-lang-item.on { color: var(--on, #ffb000); border-color: var(--on, #ffb000); }
+.zb-lang-menu .zb-lang-item.on { border-color: transparent; background: rgba(255, 255, 255, .04); }
+/* a flag: 3 by 2, a hairline around it so white flags show on black */
+.zb-flag { position: relative; display: inline-block; width: 24px; height: 16px; flex: none; border-radius: 2px; overflow: hidden;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, .18); }
+.zb-flag img { display: block; width: 24px; height: 16px; object-fit: cover; }
+/* English: the United Kingdom's above the diagonal, the United States' below it */
+.zb-flag.two img + img { position: absolute; left: 0; top: 0; clip-path: polygon(100% 0, 100% 100%, 0 100%); }
+/* the first visit: every language as a large button */
+.zb-lang-first { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; }
+.zb-lang-first .zb-lang-item { padding: 12px; font-size: 15px; justify-content: flex-start; }
+@media (max-width: 560px) { .zb-lang-btn .zb-lang-name { display: none; } }

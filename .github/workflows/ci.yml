@@ -50,3 +50,4 @@ jobs:
           node tests/test_flags.js
           node tests/test_scroll.js
           node tests/test_statsjs.js
+          node tests/test_i18n.js

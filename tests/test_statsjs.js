@@ -62,7 +62,9 @@ console.log("stats version line: ok");
       else if (src[j] === "}" && --d === 0) return src.slice(a, j + 1);
     }
   };
-  const line = new Function(["fmt", "shortDay", "altText", "place", "farthestLine"].map(grab).join("\n") + "return farthestLine;")();
+  // 0.47.0: its words go through t(); English here (the key itself), French below
+  const T = "var t = function (s, v) { var c = (CAT && CAT[s]) || s; return v ? c.replace(/\\{(\\w+)\\}/g, function (m, k) { return v[k]; }) : c; };\n";
+  const line = new Function("CAT", T + ["fmt", "shortDay", "altText", "place", "farthestLine"].map(grab).join("\n") + "return farthestLine;")(null);
   const full = {day: "2026-10-18", time: "14:32", hex: "406a1b", flight: "EZY1234", flight_iata: "U21234", airline: "easyJet",
     registration: "G-EZAB", type: "A319", type_name: "Airbus A319", alt_ft: 37000, km: 318.4,
     route: {from: {city: "Edinburgh", iata: "EDI", name: "Edinburgh Airport"}, to: {city: "Saint-Louis", iata: "BSL"}},
@@ -85,6 +87,12 @@ console.log("stats version line: ok");
   // far from any large city (over the sea, say): the distance to it, not "near"
   assert.ok(/\u00b7 318 km, 85 km from Brugge, BE$/.test(line(Object.assign({}, full, {near: {name: "Brugge", country: "BE", km: 85}}), "metric")));
   assert.strictEqual(line(null, "metric"), null);
+  // the same line in French, from the shipped catalogue: the words translated, the names and numbers as they were
+  const fr = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "flightinfo", "static", "i18n", "fr", "stats.json"), "utf8"));
+  const lineFr = new Function("CAT", T + ["fmt", "shortDay", "altText", "place", "farthestLine"].map(grab).join("\n") + "return farthestLine;")(fr);
+  assert.ok(/318 km, près de Charleroi, BE \(35 km\)$/.test(lineFr(full, "metric")), lineFr(full, "metric"));
+  assert.ok(/RCH123 \(militaire\)/.test(lineFr({day: "2026-10-18", flight: "RCH123", airline: "MILITARY", hex: "ae0001", km: 250}, "metric")));
+  assert.ok(/318 km, à 85 km de Brugge, BE$/.test(lineFr(Object.assign({}, full, {near: {name: "Brugge", country: "BE", km: 85}}), "metric")));
 }
 console.log("stats farthest line: ok");
 

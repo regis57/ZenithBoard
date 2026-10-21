@@ -150,7 +150,7 @@ graphs_update() {
 GRAPHS_DEFAULTS="$GRAPHS_ROOT/etc/default/graphs1090"
 GRAPHS_LOOK_BEGIN="# >>> ZenithBoard look"
 GRAPHS_LOOK_END="# <<< ZenithBoard look"
-GRAPHS_LOOK_FILES="zenithboard.css zenithboard.js font5x7.js"
+GRAPHS_LOOK_FILES="zenithboard.css zenithboard.js font5x7.js i18n.js i18n.css zb-lang.js"   # 0.47.0: and zb-i18n/
 graphs_look_state() { grep -qF "$GRAPHS_LOOK_BEGIN" "$GRAPHS_DEFAULTS" 2>/dev/null && echo zenithboard || echo original; }
 graphs_theme_hex() {
   case "$(wall_theme)" in green) echo 39ff6a ;; red) echo ff3b30 ;; white) echo e8e8e8 ;; turquoise) echo 00d6d7 ;; *) echo ffb000 ;; esac
@@ -193,20 +193,40 @@ graphs_mix() {   # graphs_mix RRGGBB RRGGBB PERCENT_OF_THE_SECOND -> RRGGBB
 graphs_look_strip() {
   [ -f "$GRAPHS_DEFAULTS" ] && sed -i "/^$GRAPHS_LOOK_BEGIN/,/^$GRAPHS_LOOK_END/d" "$GRAPHS_DEFAULTS"
   local html="$GRAPHS_HOME/html/index.html" f
-  [ -f "$html" ] && sed -i -e '/zenithboard\.css/d' -e '/zenithboard\.js/d' -e '/font5x7\.js/d' "$html"
+  [ -f "$html" ] && sed -i -e '/zenithboard\.css/d' -e '/zenithboard\.js/d' -e '/font5x7\.js/d' -e '/i18n\.js/d' -e '/i18n\.css/d' -e '/zb-lang\.js/d' "$html"
   for f in $GRAPHS_LOOK_FILES; do rm -f "$GRAPHS_HOME/html/$f"; done
+  rm -rf "${GRAPHS_HOME:?}/html/zb-i18n"
   return 0
 }
 graphs_look_apply() {
   local html="$GRAPHS_HOME/html/index.html" src="$ZB_HOME/tools/graphs1090-look"
   graphs_look_strip
   graphs_look_block >> "$GRAPHS_DEFAULTS"
-  install -m 644 "$src/zenithboard.js" "$ZB_HOME/flightinfo/static/font5x7.js" "$GRAPHS_HOME/html/"
+  install -m 644 "$src/zenithboard.js" "$ZB_HOME/flightinfo/static/font5x7.js" "$ZB_HOME/flightinfo/static/i18n.js" "$ZB_HOME/flightinfo/static/i18n.css" "$GRAPHS_HOME/html/"
+  graphs_look_langs
   sed "s|--on: #ffb000; /\* ZB_THEME_HEX \*/|--on: #$(graphs_theme_hex);|" "$src/zenithboard.css" > "$GRAPHS_HOME/html/zenithboard.css"
   chmod 644 "$GRAPHS_HOME/html/zenithboard.css"
   sed -i -e 's|\(<link rel="stylesheet" href="portal.css">\)|\1\n\t\t<link rel="stylesheet" href="zenithboard.css">|' \
-         -e 's|\(<script src="graphs.js"></script>\)|\1\n\t\t<script src="font5x7.js"></script>\n\t\t<script src="zenithboard.js"></script>|' "$html"
+         -e 's|\(<link rel="stylesheet" href="zenithboard.css">\)|\1\n\t\t<link rel="stylesheet" href="i18n.css">|' \
+         -e 's|\(<script src="graphs.js"></script>\)|\1\n\t\t<script src="font5x7.js"></script>\n\t\t<script src="zb-lang.js"></script>\n\t\t<script src="i18n.js"></script>\n\t\t<script src="zenithboard.js"></script>|' "$html"
   grep -q 'zenithboard.css' "$html" && grep -q 'zenithboard.js' "$html"
+}
+# 0.47.0: graphs1090's page in the web pages' language: its catalogues beside it, and the Pi's default and the wall's
+# port in zb-lang.js (graphs1090 answers on its own port: the wall's /api/config is another origin, not read from there)
+graphs_look_langs() {
+  local d="$GRAPHS_HOME/html" c list="" port
+  rm -rf "${d:?}/zb-i18n"
+  for c in $(zb_langs); do
+    [ "$c" = en ] && { list='"en"'; continue; }
+    [ -f "$ZB_HOME/flightinfo/static/i18n/$c/graphs.json" ] || continue
+    install -d -m 755 "$d/zb-i18n/$c"
+    install -m 644 "$ZB_HOME/flightinfo/static/i18n/$c/graphs.json" "$d/zb-i18n/$c/"
+    list="$list,\"$c\""
+  done
+  c=$(cfg_get CONSOLE_LANG); case " $(zb_langs) " in *" $c "*) ;; *) c="" ;; esac
+  port=$(cfg_get PORT 8080); case "$port" in ''|*[!0-9]*) port=8080 ;; esac
+  printf '// written by ZenithBoard (graphs_look_langs): the web pages'"'"' language and the wall'"'"'s port\nwindow.ZB_I18N_CONF = { lang: "%s", langs: [%s], wallPort: %s };\n' "$c" "$list" "$port" > "$d/zb-lang.js"
+  chmod 644 "$d/zb-lang.js"
 }
 graphs_look() {   # graphs_look zenithboard|original|status
   case "${1:-status}" in

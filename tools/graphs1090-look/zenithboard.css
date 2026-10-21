@@ -41,3 +41,7 @@ a { color: var(--on); } a:hover { color: #ffd066; }
   .column img { width: 100% !important; height: auto !important; }
   .container { width: auto !important; }
 }
+/* 0.47.0: the language picker beside the links */
+.zb-links { display: flex; align-items: center; flex-wrap: wrap; gap: 0 16px; }
+.zb-links a { margin-left: 0; }
+.zb-links .zb-lang { text-transform: none; letter-spacing: 0; }
