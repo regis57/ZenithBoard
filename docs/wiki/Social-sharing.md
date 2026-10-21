@@ -128,6 +128,8 @@ sudo zenithboard social summary daily post2             # that post of that summ
 
 Or menu *3 Settings → 6 Social sharing → 7 Summaries*. `social weekly …` (0.33.0) still works and means `social summary weekly …`. Defaults: daily at 21:00 with post 1 only; weekly on Sunday at 19:00 and monthly on the 1st at 09:00, with all four. A day of the month stops at 28, which every month has.
 
+Since 0.40.5 every card says its period in words at the top right, *LAST 24 HOURS*, *LAST 7 DAYS* or *LAST 30 DAYS* (a date there read as that day, the owner found), and its exact span at the foot, *20 October, 09:20 – 21 October, 09:20*, raised clear of Bluesky's *ALT* badge; the first card is titled *Aircraft above Trémery* like the others. On the general aviation card each row starts with the flag of the country the aircraft are registered in (by their address), a row per model and country, every column aligned. A military aircraft whose type neither the decoder nor tar1090's database knows is asked of adsbdb, then hexdb, by its address when the summary is made (routes on, a dozen at most, two seconds apart); what they do not know either stays *Unknown type*.
+
 The daily card has the 24 hours as one row of lit dots, the busiest hour by aircraft with a position; the thirty-day card a column of dots a day, as tall as that day had aircraft; the weekly one is unchanged. The airlines, models and the other lists come in once their lists cover half the period at least (0.40.4), as for the week.
 
 ![The daily and thirty-day cards (a preview, made-up figures)](https://raw.githubusercontent.com/regis57/ZenithBoard/main/docs/images/social-summaries.png)

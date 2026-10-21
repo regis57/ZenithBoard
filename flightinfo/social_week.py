@@ -218,6 +218,7 @@ def week_data(c, stats_dir=None, now=None, posts=None, period="weekly"):
                 "cargo_models": fleet.get("cargo_models") or {},
                 "bizjet_countries": [(cc, k) for cc, k in fleet.get("bizjet_countries") or [] if cc][:TOP],
                 "military": fleet.get("military") or [], "military_total": fleet.get("military_total", 0),
+                "military_unknown": fleet.get("military_unknown") or {}, "until": now_dt.strftime("%H:%M"),
                 "misc": fleet.get("misc") or {}, "covered": covered, "shown": shown, "since": since, "posted": posted,
                 "fleet_from": fleet_from,
                 "fleet_week": first_full_week(fleet_from) if period == "weekly" else first_full(fleet_from, n)})
@@ -248,10 +249,11 @@ def fleet_since(stats_dir, day):
 
 
 def first_full(fleet_from, days):
-    """The first day a summary of `days` days ending that day is covered whole by the lists (0.38.0)."""
+    """The first day a summary of `days` days ending that day shows the lists: covered half at least (0.40.4; whole
+    in 0.38.0). The day after they began for the 24 hours, half the period after it otherwise."""
     if not fleet_from:
         return None
-    return (datetime.date.fromisoformat(fleet_from) + datetime.timedelta(days=max(days, 2))).isoformat()
+    return (datetime.date.fromisoformat(fleet_from) + datetime.timedelta(days=max(1, (days + 1) // 2))).isoformat()
 
 
 def fleet_start(stats_dir):
@@ -264,12 +266,11 @@ def fleet_start(stats_dir):
 
 
 def first_full_week(fleet_from):
-    """The Sunday of the first week whose seven days the lists cover entirely: its first day after fleet_from."""
+    """The Sunday of the first week whose lists are shown: covered half at least (0.40.4; whole before)."""
     if not fleet_from:
         return None
-    # the week's first day must come after fleet_from (that day is counted from the update on, not whole): a Sunday
-    # at least seven days after it
-    d = datetime.date.fromisoformat(fleet_from) + datetime.timedelta(days=7)
+    # half a week: the lists must have begun three and a half days before the Sunday evening at least
+    d = datetime.date.fromisoformat(fleet_from) + datetime.timedelta(days=3)
     return (d + datetime.timedelta(days=(6 - d.weekday()) % 7)).isoformat()
 
 
@@ -383,8 +384,47 @@ def misc_lists(w):
     for g in ("drone", "balloon"):
         for name, k in (m.get(g) or {}).get("models") or []:
             other[name] = other.get(name, 0) + k
-    m["other"] = {"total": sum(other.values()), "models": sorted(other.items(), key=lambda kv: (-kv[1], kv[0]))[:TOP]}
+    rows = {}
+    for g in ("drone", "balloon"):
+        for name, cc, k in (m.get(g) or {}).get("rows") or []:
+            rows[(name, cc)] = rows.get((name, cc), 0) + k
+    m["other"] = {"total": sum(other.values()), "models": sorted(other.items(), key=lambda kv: (-kv[1], kv[0]))[:TOP],
+                  "rows": [(n, c, k) for (n, c), k in sorted(rows.items(), key=lambda kv: (-kv[1], kv[0][0], kv[0][1] or ""))[:TOP]]}
     return m
+
+
+def name_unknown_military(w, lookup, limit=12):
+    """0.40.5: military aircraft whose type neither the decoder nor tar1090's database gave (the reference Pi's first
+    daily summary: "Germany: Unknown type (2)"), asked of adsbdb, then hexdb, by their address: what the wall asks
+    for any aircraft when routes are on. A dozen at most, the answers renamed in place; the rest stay unknown.
+    lookup(hex) -> {"icao_type", "type", "manufacturer"} or None."""
+    asked = 0
+    for e in w.get("military") or []:
+        hexes = (w.get("military_unknown") or {}).get(e.get("cc")) or []
+        named = {}
+        for h in hexes:
+            if asked >= limit:
+                break
+            asked += 1
+            try:
+                got = lookup(h)
+            except Exception:
+                got = None                       # unreachable: it stays unknown
+            if not got:
+                continue
+            name = " ".join(x for x in (got.get("manufacturer"), got.get("type")) if x) or got.get("icao_type")
+            if name:
+                named[name] = named.get(name, 0) + 1
+        if not named:
+            continue
+        models = dict(e["models"])
+        left = models.pop("Unknown type", 0) - sum(named.values())
+        for n, k in named.items():
+            models[n] = models.get(n, 0) + k
+        if left > 0:
+            models["Unknown type"] = left
+        e["models"] = sorted(models.items(), key=lambda kv: (kv[0] == "Unknown type", -kv[1], kv[0]))
+    return w
 
 
 def has_part(w, part):
@@ -499,20 +539,30 @@ GREY, FAINT, OFF, INK = (150, 150, 150), (90, 90, 90), (28, 28, 28), (225, 225, 
 M = 48
 
 
+SPAN_TITLES = {"daily": "LAST 24 HOURS", "weekly": "LAST 7 DAYS", "monthly": "LAST 30 DAYS"}
+FOOT_Y = H - 56                     # 0.40.5: above Bluesky's ALT badge, which covered the name in the corner
+
+
+def span_footer(w):
+    """The period exactly, for the foot of a card: "20 October, 10:15 – 21 October, 10:15" for the 24 hours."""
+    if w.get("period") == "daily" and w.get("until"):
+        return "%s, %s – %s, %s" % (short_date(w["dates"][0]), w["until"], short_date(w["dates"][-1]), w["until"])
+    return span_words(w["dates"])
+
+
 def _header(d, f, col, dim, title, w):
-    if w.get("period") == "daily":
-        span = short_date(w["dates"][-1]).upper()
-    else:
-        span = span_words(w["dates"]).upper()
-        if " – " in span:                        # across two months: "22 SEP – 21 OCT", so the title keeps its place
-            span = " – ".join(" ".join((x.split(" ")[0], x.split(" ")[1][:3])) for x in span.split(" – "))
-    room = W - 2 * M - d.textlength(span, font=f["head"]) - 30       # a long place name never runs into the dates
+    # 0.40.5: the period in words at the top right (the owner: "21 OCTOBER" read as that day, not the 24 hours
+    # before it), and its exact span at the foot
+    span = SPAN_TITLES.get(w.get("period") or "weekly", "LAST 7 DAYS")
+    room = W - 2 * M - d.textlength(span, font=f["head"]) - 30       # a long place name never runs into the period
     d.text((M, 34), _fit(d, title.upper(), f["head"], room), font=f["head"], fill=col)
     d.text((W - M, 34), span, font=f["head"], fill=dim, anchor="ra")
     d.line([(M, 86), (W - M, 86)], fill=OFF, width=2)
-    d.text((W - M, H - 34), "ZENITHBOARD", font=f["lbl"], fill=FAINT, anchor="ra")
+    d.text((W - M, FOOT_Y), "ZENITHBOARD", font=f["lbl"], fill=FAINT, anchor="ra")
+    foot = span_footer(w)
     if w.get("since"):                           # 0.40.4: lists shown though they began inside the period
-        d.text((M, H - 34), "Lists counted since " + w["since"], font=f["small"], fill=FAINT)
+        foot += "  \u00b7  lists counted since " + w["since"]
+    d.text((M, FOOT_Y), foot, font=f["small"], fill=FAINT)
 
 
 def _fit(d, text, fnt, width):
@@ -605,8 +655,8 @@ def draw(w, theme, area, out):
     models most seen side by side, on the right (0.35.0: the grid smaller to make room for the models).
     Needs Pillow (social_card). Returns {path, width, height, bytes, mime}."""
     img, d, col, dim, f = _canvas(theme)
-    word = PERIODS[w.get("period") or "weekly"]["word"].upper()
-    _header(d, f, col, dim, (word + " " + area) if area else word, w)
+    # 0.40.5: the period is said at the top right of every card now, so the first one is titled like the others
+    _header(d, f, col, dim, ("AIRCRAFT " + area) if area else "AIRCRAFT", w)
     rows = [(number(w["aircraft"]), "AIRCRAFT HEARD"),
             ((messages_words(w["messages"]).replace(" million", " M")), "MESSAGES DECODED")]
     if w.get("best_day"):
@@ -727,9 +777,27 @@ def draw_military(w, theme, area, out, flags=None):
     return {"path": out, "width": W, "height": H, "bytes": os.path.getsize(out), "mime": "image/png"}
 
 
-def draw_misc(w, theme, area, out):
+def _flag_ranks(img, d, f, col, flags, x, y, width, title, rows, top=TOP, step=44):
+    """0.40.5: a titled list whose rows each start with the flag of the country the aircraft are registered in (by
+    their address), then the name, the count on the right and a bar: every column of the card lines up the same."""
+    d.text((x, y), title, font=f["lbl"], fill=GREY)
+    y += 32
+    best = rows[0][2] if rows else 0
+    for name, cc, k in rows[:top]:
+        _flag_or_code(img, d, f, flags, cc, x, y - 6)
+        num = number(k)
+        nx = x + 58
+        d.text((nx, y), _fit(d, name, f["name"], width - 58 - d.textlength(num, font=f["name"]) - 12), font=f["name"], fill=INK)
+        d.text((x + width, y), num, font=f["name"], fill=GREY, anchor="ra")
+        d.rounded_rectangle([nx, y + 26, nx + max(4, int((width - 58) * k / best)), y + 31], radius=2, fill=col)
+        y += step
+    return y
+
+
+def draw_misc(w, theme, area, out, flags=None):
     """The fourth card (0.36.0): helicopters, light aircraft, gliders, drones and balloons, a column each with its
-    total and its makes and models."""
+    total and its makes and models; since 0.40.5 each row with its country's flag (the owner)."""
+    flags = flags or {}
     img, d, col, dim, f = _canvas(theme)
     _header(d, f, col, dim, ("GENERAL AVIATION " + area) if area else "GENERAL AVIATION", w)
     m = misc_lists(w)
@@ -740,7 +808,9 @@ def draw_misc(w, theme, area, out):
         x = M + i * (width + gap)
         e = m.get(g) or {"total": 0, "models": []}
         _total(d, f, col, x, 108, e["total"], big)
-        if e["models"]:
+        if e.get("rows"):
+            _flag_ranks(img, d, f, col, flags, x, 236, width, "MAKE AND MODEL", e["rows"])
+        elif e["models"]:
             _ranks(d, f, col, x, 236, width, "MAKE AND MODEL", e["models"])
         else:
             d.text((x, 236), "None heard this week.", font=f["name"], fill=FAINT)

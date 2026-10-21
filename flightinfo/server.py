@@ -26,7 +26,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.40.4"
+VERSION = "0.40.5"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -546,6 +546,7 @@ def read_fleet(cfg, stats_dir=None, now=None, since=None, rng=None):
     airlines, types, cargo = load_airlines(cfg), load_types(cfg), load_cargo()
     by_airline, by_type, by_cargo, by_biz, alts, typed = {}, {}, {}, {}, [], 0
     cargo_models, biz_countries, mil, misc = {}, {}, {}, {g: {} for g in MISC_GROUPS}
+    misc_cc, mil_unknown = {g: {} for g in MISC_GROUPS}, {}
     for h in sorted(fleet):
         flight, alt, code, cat, milmark = fleet[h]
         icao, info = airline_for(flight, airlines)
@@ -574,6 +575,8 @@ def read_fleet(cfg, stats_dir=None, now=None, since=None, rng=None):
             e = mil.setdefault(cc, {})
             k = label or "Unknown type"
             e[k] = e.get(k, 0) + 1
+            if not label:                         # 0.40.5: kept, so the summary can ask what they are
+                mil_unknown.setdefault(cc, []).append(h)
         elif shape == "bizjet" and code:          # 0.35.0: the business jets, by make and model (the wall's own classes)
             by_biz[label] = by_biz.get(label, 0) + 1
             biz_countries[cc] = biz_countries.get(cc, 0) + 1          # 0.36.0: and the country they are registered in
@@ -582,6 +585,7 @@ def read_fleet(cfg, stats_dir=None, now=None, since=None, rng=None):
             if g:                                 # 0.36.0: helicopters, light aircraft, gliders, balloons, drones
                 k = label or MISC_UNKNOWN[g]
                 misc[g][k] = misc[g].get(k, 0) + 1
+                misc_cc[g][(k, cc)] = misc_cc[g].get((k, cc), 0) + 1      # 0.40.5: and where each is registered
         try:
             if int(alt) > 0:
                 alts.append(int(alt))
@@ -607,7 +611,10 @@ def read_fleet(cfg, stats_dir=None, now=None, since=None, rng=None):
             "military": sorted(({"cc": c, "country": country_name(c), "total": sum(v.values()), "models": _top(v)}
                                 for c, v in mil.items()), key=lambda e: (-e["total"], e["country"]))[:FLEET_TOP],
             "military_total": sum(sum(v.values()) for v in mil.values()),
-            "misc": {g: {"total": sum(v.values()), "models": _top(v)} for g, v in misc.items()},
+            "military_unknown": {c: v[:10] for c, v in mil_unknown.items()},
+            "misc": {g: {"total": sum(v.values()), "models": _top(v),
+                         "rows": [(n, c, k) for (n, c), k in sorted(misc_cc[g].items(), key=lambda kv: (-kv[1], kv[0][0], kv[0][1] or ""))[:FLEET_TOP]]}
+                     for g, v in misc.items()},
             "altitudes": {"labels": labels, "counts": bands}}
     if len(_fleet_cache) >= 6:                    # three ranges and the weekly posts: a few answers, never a pile
         _fleet_cache.clear()

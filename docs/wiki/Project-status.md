@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **21 October 2026**, version **0.40.4**.
+Last updated: **21 October 2026**, version **0.40.5**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -63,6 +63,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 21 October 2026, 10:40 | With 0.40.4 the four posts of the 24 hours went out (`summary daily post` to `post4`): 1 138 aircraft, 90 cargo, 45 business jets (Germany, Portugal, United States…), 6 military (United States: C-17 ×3, Learjet 35; Germany: *Unknown type* ×2), 1 helicopter, 6 light aircraft. The owner asked for flags on general aviation, the German unknowns named, and the period said plainly on each card (*21 OCTOBER* read as that day). Seen too: Bluesky's *ALT* badge covering *ZENITHBOARD*. 0.40.5 |
 | 21 October 2026, 10:06 | **The first scheduled summary went out** (daily, 09:20, on Bluesky): *933 aircraft, 59.5 million messages, busiest hour 17:00, 42 crossings posted* — but with no airline, no model and none of posts 2 to 4, the lists having begun the day before (the rule of 0.34.1 wanted them to cover the whole period). 0.40.4: shown from half the period, saying since when |
 | 21 October 2026, 09:40 | The owner: what 0.40.2 did for the buttons holds for the whole interface. 0.40.3: every control's output in its own card |
 | 21 October 2026, 09:29 | The owner clicked *Health* in the console and did not know where its answer was (the *Activity* drawer). 0.40.2: a button's output appears under it, in its card |

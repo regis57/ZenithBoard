@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.40.5
+- **The summaries' cards say their period in words**, top right: *LAST 24 HOURS*, *LAST 7 DAYS*, *LAST 30 DAYS*; *21 OCTOBER* there read as that day (the owner). The exact span goes to the foot (*20 October, 09:20 – 21 October, 09:20*), with *lists counted since* when it applies; the first card is titled *Aircraft above Trémery* like the others.
+- **General aviation with flags**: each helicopter, light aircraft, glider, drone or balloon row starts with the flag of the country its aircraft are registered in (by their address), a row per model and country, all columns aligned as on the business jets' countries. Asked for by the owner.
+- **Military aircraft of unknown type are asked by their address** when the summary is made, of adsbdb then hexdb, as the wall asks for every aircraft when routes are on (two seconds apart, a dozen at most): the reference Pi's *Germany: Unknown type (2)*. Off with `routes off`.
+- *ZENITHBOARD* at the foot of the cards is raised clear of Bluesky's *ALT* badge, which covered it. The first summary to show the lists is now said under the half rule of 0.40.4.
+
 ## 0.40.4
 - **Fix: the summaries left their lists out until the lists covered the whole period.** The reference Pi's first daily summary (21 October, 09:20) went out with no airline, no model and none of posts 2 to 4, *Counted since 20 October: shown from the summary of 22 October*, though the statistics page showed cargo, business jets, military and general aviation for those 24 hours: the lists had begun the day before. Now lists that cover **half the period at least** are shown, posts 2 to 4 with them, and every card says since when, bottom left (*Lists counted since 20 October, 19:15*, from the earliest time in the first list, or the day alone for a list older than 0.37.0). Under half, they stay out, as 0.34.1 decided (a week against two hours says something false). `summary test` prints the date too.
 
