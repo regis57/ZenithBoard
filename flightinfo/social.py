@@ -1183,9 +1183,11 @@ def publish_week(c, sec, now, state=None, dry=False, keep=None, second=False, pa
     if part == 3 and str(c.get("SHOW_ROUTES", "1")).lower() in ("1", "on", "yes", "true") and w.get("military_unknown"):
         # 0.40.5: a military aircraft of unknown type is asked of adsbdb, then hexdb, by its address, as the wall asks
         # for every aircraft when routes are on; two seconds apart, a dozen at most
-        def ask(hex_code, _last=[0.0]):
-            time.sleep(max(0.0, week.server.AIRCRAFT_GAP_S - (time.time() - _last[0])))
-            _last[0] = time.time()
+        last = {"t": 0.0}
+
+        def ask(hex_code):
+            time.sleep(max(0.0, week.server.AIRCRAFT_GAP_S - (time.time() - last["t"])))
+            last["t"] = time.time()
             return week.server._aircraft_api(hex_code.upper())[0]
         week.name_unknown_military(w, ask)
     for e in w.get("military") or []:
