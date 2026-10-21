@@ -342,6 +342,9 @@
   function run(action, params, opts) {
     opts = opts || {};
     var spec = S.catalog[action] || { flags: [], label: action }, flags = spec.flags || [];
+    // the card the click came from, read now: a confirmation box clicked next is not a card (0.40.3)
+    var card = opts.card || S.lastCard;
+    S.lastCard = null;
     var go = Promise.resolve(true);
     if (flags.indexOf("ask") >= 0 && !opts.confirmed) {
       var a = ASK[action] || [spec.label, "Go on?"];
@@ -360,8 +363,9 @@
         var id = r.data.job;
         S.jobs[id] = { id: id, action: action, label: opts.label || spec.label, params: params || {}, state: "queued", log: "", next: 0, key: key, quiet: opts.quiet };
         // 0.40.2: what a button shows appears in the card it was clicked in (the owner: "I click, but where do I look?");
-        // a change that takes minutes, or a button outside a card, opens the Activity drawer as before
-        if (!opts.quiet && !opts.noDrawer && flags.indexOf("read") >= 0 && opts.card) { S.inline.set(S.section, { id: id, card: opts.card }); draw(); }
+        // 0.40.3: every action does, switches, choices and long ones included ("valable pour toute l'interface");
+        // only one started outside a card (the wizard runs quietly) opens the Activity drawer
+        if (!opts.quiet && !opts.noDrawer && card) { S.inline.set(S.section, { id: id, card: card }); draw(); }
         else if (!opts.quiet && !opts.noDrawer && (flags.indexOf("read") >= 0 || flags.indexOf("long") >= 0 || opts.show)) openDrawer(id);
         return follow(id);
       }).catch(function () {
@@ -466,10 +470,12 @@
     setTimeout(function () { pre.scrollTop = pre.scrollHeight; }, 0);
     return box;
   }
-  document.addEventListener("click", function (e) {          // which card a button sits in, for the run() it calls
+  function noteCard(e) {                                     // which card a control sits in, for the run() it calls
     var c = e.target && e.target.closest ? e.target.closest(".card[data-title]") : null;
     S.lastCard = c ? c.getAttribute("data-title") : null;
-  }, true);
+  }
+  document.addEventListener("click", noteCard, true);
+  document.addEventListener("change", noteCard, true);     // a list chosen with the keyboard
   function stateWord(v) { return on(v) ? "on" : "off"; }
 
   // ---- the sections

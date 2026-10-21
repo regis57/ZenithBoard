@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.40.3
+- **Console: every control shows what it did in its own card**, as 0.40.2 did for the buttons: switches, choices, colours, fields applied, the summaries' settings, and the long ones (an update, graphs1090), which opened the *Activity* drawer. The command, its answer, *done* or *exit N*; the last one per section, the earlier ones in *Activity*. Asked for by the owner. The card is noted at the click, before a confirmation box.
+
 ## 0.40.2
 - **Console: what a button shows appears in its own card**, under the button, as it prints: Health, Memory, the logs, Status, a try of a post or a summary (with the links to its pictures). 0.39.0 put it in the *Activity* drawer, and the owner, clicking *Health*, did not know where to look. ⤢ opens it in *Activity*, × closes it; a change that takes minutes still opens *Activity*.
 
