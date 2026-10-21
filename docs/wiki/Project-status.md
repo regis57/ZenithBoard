@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **21 October 2026**, version **0.40.2**.
+Last updated: **21 October 2026**, version **0.40.3**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -63,6 +63,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 21 October 2026, 09:40 | The owner: what 0.40.2 did for the buttons holds for the whole interface. 0.40.3: every control's output in its own card |
 | 21 October 2026, 09:29 | The owner clicked *Health* in the console and did not know where its answer was (the *Activity* drawer). 0.40.2: a button's output appears under it, in its card |
 | 21 October 2026, 09:10 | The owner showed the *Security* tab: ten CodeQL notes open (eight *Empty except*, one *mixed returns*, one in the vendored QR code library). Fixed in 0.40.1, the library left out of the analysis with the reason; and the running version shown on the console's sign-in page, linked to its release notes |
 | 21 October 2026, 08:47 | The owner said yes to signing a computer in with the phone: QR code on the computer, the same four-digit code on the iPhone, yes, signed in without the password. 0.40.0, off by default (`console phone-signin on`); previewed with a computer and a phone side by side, not yet on the Pi |
