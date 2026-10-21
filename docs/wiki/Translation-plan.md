@@ -6,9 +6,31 @@ Korean, Japanese and Ukrainian** (and Italian, added with the owner's answers), 
 in English. And, in the posts, **your own message** assembled with ready-made ADS-B tags. This page is the analysis
 asked for first: is it feasible, what can break, what it costs the Pi.
 
-**Where it stands**: phase 1 is out in **0.47.0** — the framework and **French**, on the console, the statistics page
-and graphs1090's page; the language asked at the console's first visit and a flag at the top of every page. How to
-correct a language: [Translating](Translating).
+**Where it stands**: the **web pages are translated** — the console, the statistics page and graphs1090's page:
+French in **0.47.0**, eighteen more in **0.48.0** (Swahili translated, waiting for a native review). The language is asked at the console's first visit and
+chosen from a flag at the top of every page. The **posts** (phase 3 below) are next. How to correct a language:
+[Translating](Translating).
+
+## The owner's answers (22 October 2026, 00:01)
+
+* **Translate everything into all the languages covered**, on the console, the statistics and graphs1090, from now on:
+  every new or changed English string goes into every language in the same release.
+* **The translation reference is corrected when a suggestion from abroad proves inexact**: a reviewer's correction is
+  checked against the English before it is taken (`tools/i18n.py apply --dry`), and one found inexact is not
+  (`--skip`); a translation of ours found wrong is corrected in the catalogue and its sheet.
+* **The console's first page not crowded with countries**: the browser's language and English as two buttons, every
+  other language in one list.
+* **More languages**: Finnish, Estonian, Latvian, Lithuanian and Polish (Latin script: with German and the others), and
+  **Swahili, Arabic, Hausa and Yoruba**, except those whose translation could not reach 90%. **Hausa and Yoruba are not
+  included**: Yoruba is written with tone marks on most vowels, which a machine translation gets wrong too often for a
+  reader to trust, and neither has the settled technical vocabulary (settings, feeders, receiver, decoder) that the
+  pages need; both can come later from a native speaker's sheet. Arabic is in. **Swahili is translated but held
+  back**: its translator could not promise 90% (estimated 85 to 92%), the technical words differing between Tanzania,
+  Kenya and the software glossaries; it is offered once a native speaker has reviewed its sheet.
+* **A picture for a language of many countries**: Swahili shows the map of **Africa**; Arabic, spoken from Morocco to
+  Iraq, shows its letter **ʿayn (ع)** rather than one country's flag. Finnish, Estonian, Latvian, Lithuanian and Polish
+  their countries' flags. **Arabic is right to left**: the console's side bar, drawer and switches mirror; what the Pi
+  prints, commands, numbers and the charts stay left to right; numbers in Western digits, as the Pi writes them.
 
 ## The owner's answers (21 October 2026, 23:06)
 
@@ -137,11 +159,16 @@ with plausible values is refused. Several templates rotate, in order or at rando
 ## The order proposed
 
 1. **The framework and French** — the console, the statistics page, graphs1090's page; the language at first sign-in
-   and in the top bar. French first: the owner reads it, so the framework is judged on a real translation.
-2. **German, Spanish, Dutch, Italian, Portuguese (Brazil), Indonesian** — Latin script, nothing new to draw.
+   and in the top bar. French first: the owner reads it, so the framework is judged on a real translation. *Done,
+   0.47.0.*
+2. **The pages in every other language** — German, Dutch, Italian, Spanish, Portuguese (Brazil), Polish, Finnish,
+   Estonian, Latvian, Lithuanian, Indonesian, Russian, Ukrainian, Arabic (right to left), Japanese, Korean,
+   Chinese (Simplified and Traditional). *Done, 0.48.0.* Swahili translated, offered after a native review.
 3. **The posts**: `SOCIAL_LANG`, the five post styles, the summaries and their cards, in the languages done so far;
    **your own templates and their tags**.
-4. **Russian and Ukrainian** — Cyrillic in the dot font for the pictures.
+4. **The dot font's letters for the pictures**: the accents of the Latin-script languages (Polish ą ę ł ś ż, the Baltic
+   ā č ē ģ ī ķ ļ ņ š ū ž ė į ų, Finnish and Estonian ä ö õ…), then Cyrillic for Russian and Ukrainian. Arabic's
+   pictures keep their labels in English (a 5 × 7 cell cannot join Arabic letters), like Chinese, Japanese and Korean.
 5. **Japanese, Korean, Chinese (Simplified and Traditional)** — Noto CJK for the cards on demand; the dot pictures'
    labels in English.
 

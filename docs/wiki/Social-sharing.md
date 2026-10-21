@@ -141,6 +141,23 @@ The daily card has the 24 hours as one row of lit dots, the busiest hour by airc
 * **Nothing to say is no wait.** A post with nothing to say (no military aircraft this week) is skipped and the next takes its turn at once. A summary whose first post has nothing (no statistics) is skipped whole.
 * **The aircraft posts carry on.** The crossings overhead are posted as before, between the summary posts; the gap you set between posts applies to them, not to the summaries.
 * **Once per cycle, even after a restart.** A summary is marked as scheduled the moment it enters the queue, which is kept in the service's state: a restart in the middle of a queue goes on with what is left and posts nothing twice. A Pi that was off at that time posts the summary if it comes back the same day, never the next day.
+* **One a day, a week, a month: a time moved later after it went out applies from the next one** (0.48.0 says so). On 21 October the owner moved the daily summary from 21:00 to 23:35 after the 21:00 one had gone out, and nothing went out at 23:35: by design, followers get one daily summary a day. Moved *before* it went out, it goes at the new time the same day. To post one anyway: `sudo zenithboard social summary daily post`.
+
+**When each went out, when each goes next, and why one did not** (0.48.0):
+
+```
+sudo zenithboard social summary
+  daily    ON   23:35      posts 1,2,3,4
+           last: 2026-10-21 21:00   next: Thu 2026-10-22 23:35
+  ...
+zenithboard logs social | grep -i summary      # the service's lines: due and queued, posted, nothing to say, could not post
+```
+
+The service writes a line when a summary falls due (*social: daily summary due (every day at 23:35): posts 1,2,3,4
+queued, 2 min apart, the first now*), one per post (*posted the daily summary, post 2*), and why a post was skipped or
+failed. The web console shows the same *last* and *next* under each summary in *Sharing*, and names its posts:
+*Post 1 · The period*, *Post 2 · Cargo & business jets*, *Post 3 · Military*, *Post 4 · General aviation*. Its *Try
+(posts nothing)* draws them without posting.
 * To keep them apart, give them different times: the daily one at 21:00 and the weekly one at 19:00, say.
 
 ### The week (0.33.0)

@@ -7,7 +7,7 @@
 window.ZBI18N.start({ part: "stats" }, function () {
   "use strict";
   var $ = function (id) { return document.getElementById(id); };
-  var I = window.ZBI18N, t = I.t;
+  var I = window.ZBI18N, t = I.t, tn = I.tn;
   // a country's name in the page's language, from the browser's own (CLDR) data; the Pi's English name otherwise
   var regionNames = null;
   try { if (I.lang() !== "en" && window.Intl && Intl.DisplayNames) regionNames = new Intl.DisplayNames([I.locale()], { type: "region" }); } catch (e) { regionNames = null; }
@@ -140,7 +140,7 @@ window.ZBI18N.start({ part: "stats" }, function () {
       r.hours.forEach(function (v, hh) {
         var c = el("circle", { "class": "cell" + (v === null ? " none" : ""), cx: L + hh * cw + cw / 2, cy: y + ch / 2, r: rad });
         if (v !== null) c.setAttribute("opacity", (0.1 + 0.9 * (max ? v / max : 0)).toFixed(2));
-        c.addEventListener("mousemove", function (e) { showTip(e, (one ? r.labels[hh] : shortDay(r.day) + " " + (hh < 10 ? "0" : "") + hh + "h") + ": " + (v === null ? t("no sample") : t("{n} aircraft", { n: fmt(v) }))); });
+        c.addEventListener("mousemove", function (e) { showTip(e, (one ? r.labels[hh] : shortDay(r.day) + " " + (hh < 10 ? "0" : "") + hh + "h") + ": " + (v === null ? t("no sample") : tn(v, "{n} aircraft", "{n} aircraft", { n: fmt(v) }))); });
         c.addEventListener("mouseleave", hideTip);
         s.appendChild(c);
       });
@@ -257,7 +257,7 @@ window.ZBI18N.start({ part: "stats" }, function () {
 
   function render(d) {
     var w = d.window || {}, tot = w.totals || {}, per = t(w.label || "the last 30 days"), days = w.range !== "24h";
-    $("sub").textContent = t("{n} samples of 15 minutes since {since}, 30 days kept · {period}", { n: fmt(d.samples), since: d.since, period: per });
+    $("sub").textContent = tn(d.samples, "{n} sample of 15 minutes since {since}, 30 days kept · {period}", "{n} samples of 15 minutes since {since}, 30 days kept · {period}", { n: fmt(d.samples), since: d.since, period: per });
     // the four boxes: all of them the period's (0.43.0: the fourth was the thirty days' best, whatever the toggle)
     $("t-aircraft").textContent = fmt(tot.aircraft || 0);
     $("t-aircraft-d").textContent = t("distinct aircraft, {period}, a floor", { period: per });
@@ -269,7 +269,7 @@ window.ZBI18N.start({ part: "stats" }, function () {
     var b = w.busiest;
     $("t-best-k").textContent = days ? t("Busiest day") : t("Busiest hour");
     $("t-best").textContent = b ? (days ? b.label : b.label.replace("h", ":00")) : "–";
-    $("t-bestday").textContent = b ? (days ? t("{n} distinct aircraft", { n: fmt(b.aircraft) }) : t("{n} aircraft with a position, on average", { n: fmt(b.aircraft) })) : per;
+    $("t-bestday").textContent = b ? (days ? tn(b.aircraft, "{n} distinct aircraft", "{n} distinct aircraft", { n: fmt(b.aircraft) }) : tn(b.aircraft, "{n} aircraft with a position, on average", "{n} aircraft with a position, on average", { n: fmt(b.aircraft) })) : per;
     // the farthest aircraft of the period, in words, its flag first
     var f = d.farthest || {}, rec = f.period, fline = farthestLine(rec, d.units), rp = $("r-period");
     $("r-period-k").textContent = t("Farthest, {period}", { period: per });

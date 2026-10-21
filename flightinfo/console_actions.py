@@ -22,7 +22,8 @@ THEMES = ("amber", "green", "red", "white", "turquoise")
 PERIODS = ("daily", "weekly", "monthly")
 # 0.47.0: the web pages' languages, the same codes as lib/common.sh (ZB_LANG_CODES) and flightinfo/static/i18n.js; the
 # command itself refuses one this Pi has no catalogue for
-LANGS = ("en", "fr", "de", "nl", "it", "es", "pt-BR", "id", "ru", "uk", "ja", "ko", "zh-Hans", "zh-Hant")
+LANGS = ("en", "fr", "de", "nl", "it", "es", "pt-BR", "pl", "fi", "et", "lv", "lt", "id", "sw", "ru", "uk", "ar", "ja", "ko",
+         "zh-Hans", "zh-Hant")
 
 SECTIONS = (
     ("overview", "Overview"),

@@ -26,6 +26,7 @@ photo, and the account secret (a Bluesky app password), which lives in /etc/zeni
     social.py week-post3     the third: military aircraft (0.36.0)
     social.py week-post4     the fourth: helicopters, light aircraft, gliders, drones and balloons (0.36.0)
     social.py summary-test PERIOD          the four posts of the daily, weekly or monthly summary; posts nothing (0.38.0)
+    social.py summary-when                 each summary: when it last went out, when it goes next; the queue (0.48.0)
     social.py summary-post PERIOD [N]      post N (1 to 4) of that summary now
     social.py status         what it would do right now
 
@@ -1262,9 +1263,15 @@ def schedule_summaries(c, state, now):
             continue
         key = social_week.cycle_key(period, now)
         at = max([now] + [q["at"] + SECOND_AFTER_S for q in queue])
-        for i, part in enumerate(social_week.parts_of(c, period)):
+        parts = social_week.parts_of(c, period)
+        for i, part in enumerate(parts):
             queue.append({"period": period, "part": part, "key": key, "at": at + i * SECOND_AFTER_S})
         done[period] = key
+        state.setdefault("summaries_at", {})[period] = now       # 0.48.0: `social summary` says when it last went
+        # 0.48.0: said in the journal, so "why no summary?" has an answer (the owner, 21 October)
+        print("social: %s summary due (%s): posts %s queued, %d min apart, the first %s" % (
+            period, social_week.at_words(c, period), ",".join(str(p) for p in parts), SECOND_AFTER_S // 60,
+            "now" if at <= now else "at " + time.strftime("%H:%M", time.localtime(at))), flush=True)
     state.pop("weekly2", None)                     # the chain of 0.35.0 to 0.37.0, replaced by the queue
     return queue
 
@@ -1655,6 +1662,28 @@ def main(argv):
         return cmd_week(post=True, part=int(n) if n in ("1", "2", "3", "4") else 1, period=arg)
     if cmd == "status":
         return cmd_status()
+    if cmd == "summary-when":                     # 0.48.0: for `zenithboard social summary`
+        import social_week
+        c, now = cfg(), time.time()
+        state = {} if unreadable(STATE_DIR) or unreadable(os.path.join(STATE_DIR, "state.json")) else load_state()
+        raw = arg == "--facts"                   # for the web console's facts: sum_daily_last=..., sum_daily_next=...
+        for period in ("daily", "weekly", "monthly"):
+            if raw:
+                last_at = (state.get("summaries_at") or {}).get(period)
+                last = time.strftime("%Y-%m-%d %H:%M", time.localtime(last_at)) if isinstance(last_at, (int, float)) \
+                    else (social_week.done_for(state, period) or "")
+                nxt = social_week.next_due(c, state, now, period)
+                print("sum_%s_last=%s\nsum_%s_next=%s" % (period, last, period,
+                                                         "now" if nxt and abs(nxt.timestamp() - now) < 61 else (nxt.strftime("%Y-%m-%d %H:%M") if nxt else "")))
+                continue
+            print("%s %s" % (period, social_week.when_words(c, state, now, period)))
+        if raw:
+            return 0
+        q = state.get("summary_queue") or []
+        if q:
+            print("queue " + ", ".join("%s post %d at %s" % (x["period"], x["part"], time.strftime("%H:%M", time.localtime(x["at"])))
+                                       for x in q[:8]))
+        return 0
     print(__doc__)
     return 2
 

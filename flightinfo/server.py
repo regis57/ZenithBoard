@@ -27,7 +27,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.47.0"
+VERSION = "0.48.0"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -1844,9 +1844,11 @@ I18N_DIR = os.path.join(STATIC_DIR, "i18n")
 
 def web_langs():
     """0.47.0: the languages the web pages can be shown in: English, and those this copy carries a catalogue for."""
-    # in the order of the one list (console_actions.LANGS, the same as lib/common.sh and i18n.js)
+    # in the order of the one list (console_actions.LANGS, the same as lib/common.sh and i18n.js). 0.48.0: a language
+    # whose folder holds a file named "draft.txt" is complete but waits for a native speaker's review: not offered
     return ["en"] + [c for c in console.actions.LANGS
-                     if c != "en" and os.path.isfile(os.path.join(I18N_DIR, c, "console.json"))]
+                     if c != "en" and os.path.isfile(os.path.join(I18N_DIR, c, "console.json"))
+                     and not os.path.exists(os.path.join(I18N_DIR, c, "draft.txt"))]
 
 
 def public_config(cfg):
