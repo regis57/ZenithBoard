@@ -111,7 +111,7 @@ def host_ok(host, extra=""):
         ipaddress.ip_address(host)
         return True
     except ValueError:
-        pass
+        pass                                     # not an address: a name, checked below
     if host == "localhost" or host.endswith(LOCAL_SUFFIXES):
         return True
     names = {socket.gethostname().lower()} | {h.strip().lower() for h in str(extra or "").split(",") if h.strip()}

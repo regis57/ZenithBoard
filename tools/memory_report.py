@@ -99,7 +99,7 @@ def service_dirs():
                         with open(os.path.join(root, "cgroup.procs")) as fh:
                             pids += [int(x) for x in fh.read().split() if x.strip().isdigit()]
                     except OSError:
-                        pass
+                        pass                     # a service that stopped while it was read: left out
             if pids:
                 out[unit[:-len(".service")]] = sorted(set(pids))
         if out:
@@ -115,7 +115,7 @@ def meminfo():
                 k, _, v = line.partition(":")
                 m[k] = kb(v)
     except OSError:
-        pass
+        pass                                     # no /proc/meminfo (not Linux): the totals stay empty
     return m
 
 
@@ -140,7 +140,7 @@ def report(out=sys.stdout):
         w("Threads:  %s in all. Load: %s %s %s (over 1, 5 and 15 minutes; %d cores)\n" % (
             threads, la[0], la[1], la[2], os.cpu_count() or 1))
     except (OSError, IndexError):
-        pass
+        pass                                     # no load figures: the line is left out
     services = service_dirs()
     if not services:
         w("\nNo service could be read (no cgroup tree at %s): the processes alone.\n" % CGROUP)

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.40.1
+- **The console's sign-in page shows the version running on the Pi**, at the bottom, linked to that version's release notes on GitHub (the releases page when it is unknown); the side bar's version is a link too. Asked for by the owner.
+- **CodeQL's ten open notes dealt with**: the eight *Empty except*, and two more found alongside, (the statistics, the flags, the cargo list, the memory report, the console's host check, the social service) now say why nothing is to be done; the wall's `do_GET` no longer mixes a bare `return` with returned values. The vendored QR code generator, kept unchanged, is no longer analysed (`paths-ignore`, reason in the workflow): its note was its own missing semicolon. Seen on the *Security* tab by the owner.
+
 ## 0.40.0
 - **A computer signed in by your phone**, asked for by the owner. Off by default: `sudo zenithboard console phone-signin on` (also in the console, *System → Signed in*, and the menu, *Web console → 6*). The computer's sign-in page shows, under the password, a QR code and a four-digit code; a phone already signed in to the console scans it and shows *Sign in Windows at 192.168.1.237?* with the same code; *Sign it in*, and the computer is signed in for a week (a day unused), no password typed.
 - How it is kept safe: only a signed-in phone can say yes, after seeing the computer's name, address and code; the QR code carries the request's name only, the computer collecting its sign-in with a secret of its own (a photo of the screen signs nobody in); a request lasts two minutes and is answered once, then turns into one session; twenty requests per address per ten minutes; each yes or no in *Activity → Sign-ins*. Previewed with a computer and a phone side by side.
