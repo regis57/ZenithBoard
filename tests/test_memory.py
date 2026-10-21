@@ -106,5 +106,12 @@ class MemoryReportTest(unittest.TestCase):
         self.assertIn("python3", out.getvalue())
 
 
+class NamesTest(unittest.TestCase):
+    def test_every_name_fits_its_column(self):
+        import memory_report as mr
+        long = {k: v for k, v in mr.NAMES.items() if len(v) > 24}
+        self.assertEqual(long, {}, "cut in the WHAT column (0.39.1: 'name on the network (mDN')")
+
+
 if __name__ == "__main__":
     unittest.main()
