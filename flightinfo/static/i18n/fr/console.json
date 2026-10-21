@@ -61,7 +61,7 @@
  "story": "récit",
  "board": "tableau",
  "spotter": "spotter",
- "lookup": "fiche",
+ "lookup": "levez les yeux",
  "Post 1 · The period ↗": "Publication 1 · La période ↗",
  "Post 2 · Cargo & business jets ↗": "Publication 2 · Cargos et jets d'affaires ↗",
  "Post 3 · Military ↗": "Publication 3 · Militaires ↗",
@@ -336,7 +336,11 @@
  "A computer's sign-in page shows a QR code; a phone signed in here scans it and says yes": "La page de connexion d'un ordinateur affiche un QR code ; un téléphone connecté ici le scanne et dit oui",
  "Pair a phone": "Appairer un téléphone",
  "Sign out the others": "Déconnecter les autres",
- "{n} signed out.": "Déconnectés : {n}.",
+ "{n} signed out.": {
+  "one": "{n} appareil déconnecté.",
+  "many": "{n} appareils déconnectés.",
+  "other": "{n} appareils déconnectés."
+ },
  "Security": "Sécurité",
  "Security check": "Contrôle de sécurité",
  "Only in the terminal, on purpose": "Uniquement dans le terminal, exprès",
@@ -388,7 +392,11 @@
  "Out of date. Close this and make a new one.": "Expiré. Fermez ceci et créez-en un nouveau.",
  "{name} signed in.": "{name} connecté.",
  "Waiting for the Pi's helper…": "En attente de l'assistant du Pi…",
- "Waiting: {job} runs first ({n} before this one). The Pi does one change at a time.": "En attente : {job} passe d'abord ({n} avant celle-ci). Le Pi fait un changement à la fois.",
+ "Waiting: {job} runs first ({n} before this one). The Pi does one change at a time.": {
+  "one": "En attente : {job} passe d'abord ({n} tâche avant celle-ci). Le Pi fait un changement à la fois.",
+  "many": "En attente : {job} passe d'abord ({n} tâches avant celle-ci). Le Pi fait un changement à la fois.",
+  "other": "En attente : {job} passe d'abord ({n} tâches avant celle-ci). Le Pi fait un changement à la fois."
+ },
  "Waiting: {job} runs first. The Pi does one change at a time.": "En attente : {job} passe d'abord. Le Pi fait un changement à la fois.",
  "exit {rc}": "code {rc}",
  "The last jobs": "Les dernières tâches",

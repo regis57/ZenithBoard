@@ -35,7 +35,7 @@
  "Messages <span></span>": "訊息 <span></span>",
  "Farthest aircraft <span></span>": "最遠的飛機 <span></span>",
  "Aircraft <span></span>": "飛機 <span></span>",
- "The same numbers as a table": "以表格顯示相同數據",
+ "The same numbers as a table": "以表格呈現相同數字",
  "A sample every 15 minutes misses an aircraft that crossed in less, so an aircraft count is a floor, never a total. Messages are what the receiver decoded. Everything on this page follows the period chosen at the top. The lists count each aircraft once in the period: airlines by callsign, models from the aircraft database, countries from the aircraft's address. An airline's flag is the country it is based in (cargo and airline lists checked against a published source), else the one its aircraft are registered in. <a>The wall</a> · <code>zenithboard stats</code> prints the same in the terminal. Cities: <a>GeoNames</a>, CC BY 4.0. Flags: <a>country-flag-icons</a>, MIT.": "每 15 分鐘取樣一次，會漏掉在更短時間內飛越的飛機，因此飛機數量只是下限，絕非總數。訊息是接收器解碼的內容。本頁所有內容都依上方所選的期間顯示。清單中每架飛機在該期間只計算一次：航空公司依呼號，機型依飛機資料庫，國家依飛機的 ICAO 位址。航空公司的國旗代表其所在國家（貨運與航空公司清單已對照公開資料核對），否則為其飛機的註冊國。<a>看板</a> · <code>zenithboard stats</code> 會在終端機中顯示相同內容。城市：<a>GeoNames</a>，CC BY 4.0。國旗：<a>country-flag-icons</a>，MIT。",
  "no sample": "無取樣",
  "{n} aircraft": "{n} 架飛機",

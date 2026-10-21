@@ -714,7 +714,7 @@ window.ZBI18N.start({ part: "console" }, function () {
           row(t("Sign computers in with a phone"), t("A computer's sign-in page shows a QR code; a phone signed in here scans it and says yes"), sw("phone-signin", on(S.cfg.CONSOLE_PHONE_SIGNIN))),
           h("div", { "class": "actions" }, h("button", { type: "button", "class": "primary", text: t("Pair a phone"), onclick: function () { pairPhone(); } }),
             h("button", { type: "button", "class": "btn", text: t("Sign out the others"), onclick: function () {
-              api("sessions/revoke", { body: { id: "others" } }).then(function (r) { toast(t("{n} signed out.", { n: r.data.count || 0 })); loadSessions(); });
+              api("sessions/revoke", { body: { id: "others" } }).then(function (r) { toast(tn(r.data.count || 0, "{n} signed out.", "{n} signed out.")); loadSessions(); });
             } }))
         ], "w6"),
         card(t("Security"), "shield", null, [
@@ -918,7 +918,7 @@ window.ZBI18N.start({ part: "console" }, function () {
     if (j.log || j.state !== "queued") return j.log || "";
     if (!j.behind) return t("Waiting for the Pi's helper…");
     var job = t((S.catalog[j.behind] || {}).label || j.behind);
-    return j.ahead ? t("Waiting: {job} runs first ({n} before this one). The Pi does one change at a time.", { job: job, n: j.ahead })
+    return j.ahead ? tn(j.ahead, "Waiting: {job} runs first ({n} before this one). The Pi does one change at a time.", "Waiting: {job} runs first ({n} before this one). The Pi does one change at a time.", { job: job })
       : t("Waiting: {job} runs first. The Pi does one change at a time.", { job: job });
   }
   function pillOf(j) {
