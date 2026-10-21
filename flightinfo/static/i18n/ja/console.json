@@ -268,7 +268,7 @@
  "30 days": "30日間",
  "Statistics are off: no summary can be made until they are on (Receiver).": "統計がオフです。オンにするまでサマリーは作成できません（受信機）。",
  "All summaries": "すべてのサマリー",
- "One summary a day, a week, a month: a time moved later after that one went out applies from the next. Why one did not go out: zenithboard logs social | grep -i summary": "サマリーは日次・週次・月次でそれぞれ1回だけ投稿されます。投稿後に時刻を遅らせた場合は、次回から適用されます。投稿されなかった理由の確認：zenithboard logs social | grep -i summary",
+ "Each summary goes once at its time: moved to later today, it goes today; set to a time already past, from the next one. Why one did not go out: sudo zenithboard social summary why": "各サマリーは設定した時刻に1回だけ投稿されます。同じ日のもっと遅い時刻に変更すると今日投稿され、すでに過ぎた時刻に設定すると次回からになります。投稿されなかった理由：sudo zenithboard social summary why",
  "Posting one now stays in the terminal, where you see it first: sudo zenithboard social summary weekly post": "今すぐ投稿する場合は、先に内容を確認できるターミナルで行います：sudo zenithboard social summary weekly post",
  "Which log": "ログの種類",
  "The decoder": "デコーダー",

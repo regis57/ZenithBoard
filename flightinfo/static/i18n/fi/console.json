@@ -268,7 +268,7 @@
  "30 days": "30 päivää",
  "Statistics are off: no summary can be made until they are on (Receiver).": "Tilastot ovat pois päältä: koosteita ei voi tehdä, ennen kuin tilastot otetaan käyttöön (Vastaanotin).",
  "All summaries": "Kaikki koosteet",
- "One summary a day, a week, a month: a time moved later after that one went out applies from the next. Why one did not go out: zenithboard logs social | grep -i summary": "Yksi kooste päivässä, viikossa ja kuukaudessa: jos aikaa siirretään myöhemmäksi sen jälkeen, kun kooste on jo lähtenyt, uusi aika koskee vasta seuraavaa. Miksi kooste ei lähtenyt: zenithboard logs social | grep -i summary",
+ "Each summary goes once at its time: moved to later today, it goes today; set to a time already past, from the next one. Why one did not go out: sudo zenithboard social summary why": "Jokainen kooste julkaistaan kerran omaan aikaansa: myöhemmäksi samalle päivälle siirretty julkaistaan tänään, jo menneeseen aikaan asetettu vasta seuraavalla kerralla. Miksi jokin jäi julkaisematta: sudo zenithboard social summary why",
  "Posting one now stays in the terminal, where you see it first: sudo zenithboard social summary weekly post": "Koosteen voi julkaista heti vain terminaalissa, jossa näet sen ensin: sudo zenithboard social summary weekly post",
  "Which log": "Mikä loki",
  "The decoder": "Dekooderi",

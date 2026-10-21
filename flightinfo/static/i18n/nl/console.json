@@ -268,7 +268,7 @@
  "30 days": "30 dagen",
  "Statistics are off: no summary can be made until they are on (Receiver).": "De statistieken staan uit: er kan geen samenvatting worden gemaakt tot ze aanstaan (Ontvanger).",
  "All summaries": "Alle samenvattingen",
- "One summary a day, a week, a month: a time moved later after that one went out applies from the next. Why one did not go out: zenithboard logs social | grep -i summary": "Eén samenvatting per dag, per week, per maand: een tijdstip dat later is gezet nadat de samenvatting al is geplaatst, geldt vanaf de volgende. Waarom er een niet is geplaatst: zenithboard logs social | grep -i summary",
+ "Each summary goes once at its time: moved to later today, it goes today; set to a time already past, from the next one. Why one did not go out: sudo zenithboard social summary why": "Elke samenvatting gaat één keer op haar tijdstip: verschoven naar later vandaag, gaat ze vandaag; ingesteld op een tijd die al voorbij is, vanaf de volgende. Waarom er een niet is geplaatst: sudo zenithboard social summary why",
  "Posting one now stays in the terminal, where you see it first: sudo zenithboard social summary weekly post": "Nu meteen een samenvatting plaatsen kan alleen in de terminal, waar je die eerst te zien krijgt: sudo zenithboard social summary weekly post",
  "Which log": "Welke log",
  "The decoder": "De decoder",

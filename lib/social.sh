@@ -284,6 +284,31 @@ summary_when() {   # summary_when [PERIOD] -> "last: ...   next: ..." (all three
   out=$(python3 "$SOCIAL_PY" summary-when 2>/dev/null) || return 0
   if [ -n "${1:-}" ]; then printf '%s\n' "$out" | sed -n "s/^$1 //p"; else printf '%s\n' "$out"; fi
 }
+# 0.49.0: why a summary did not go out, in one place (the owner, 22 October: `logs social` shows the last hundred
+# lines only, and nothing there said anything about the summaries): each summary as set, when it last went and goes
+# next, what it needs (statistics on, sharing on, an account), the service and the code it runs, and its journal lines
+# about the summaries and any error, the last two days
+summary_why() {
+  local p v since
+  echo "Summaries, as set and as the service sees them:"
+  for p in $SUMMARY_PERIODS; do
+    echo "  $(summary_line "$p")"
+    v=$(summary_when "$p"); [ -z "$v" ] || echo "           $v"
+  done
+  v=$(summary_when | sed -n 's/^queue //p'); echo "  In the queue: ${v:-nothing}"
+  [ "$(cfg_get STATS 0)" = 1 ] && echo "  Statistics: on" || echo "  Statistics: OFF: no summary can be made (sudo zenithboard stats on)"
+  [ "$(social_state)" = on ] && echo "  Social sharing: on" || echo "  Social sharing: OFF: nothing is posted (sudo zenithboard social on)"
+  [ -n "$(social_account)" ] && echo "  Bluesky: @$(social_account)" || echo "  Bluesky: no account (sudo zenithboard social setup)"
+  since=$(systemctl show -p ActiveEnterTimestamp --value "$SOCIAL_UNIT" 2>/dev/null || true)
+  echo "  Service: $(systemctl is-active "$SOCIAL_UNIT" 2>/dev/null || echo unknown)${since:+, since $since}"
+  v=$(journalctl -u "$SOCIAL_UNIT" --since "-2 days" --no-pager 2>/dev/null | grep -o 'running ZenithBoard [0-9.]*' | tail -1)
+  [ -z "$v" ] || echo "  It runs: ${v#running }   (this copy: $ZB_VERSION)"
+  echo
+  echo "The service's lines about the summaries and its errors, the last two days:"
+  journalctl -u "$SOCIAL_UNIT" --since "-2 days" --no-pager 2>/dev/null \
+    | grep -iE 'summar|Traceback|Error|could not|running ZenithBoard' | tail -40 | sed 's/^/  /' || true
+  [ "$(id -u)" -eq 0 ] || echo "(with sudo: the service's state and its whole journal)"
+}
 summary_line() {   # one line: the summary, on or off, when and which posts
   local p=$1 k; k=$(summary_key "$p")
   if [ "$(cfg_get "$k" 0)" = 1 ]; then
@@ -302,11 +327,12 @@ social_summary() {   # social_summary [PERIOD [on|off|at VALUE|parts LIST]]
     done
     v=$(summary_when | sed -n 's/^queue //p'); [ -z "$v" ] || echo "  In the queue: $v"
     [ "$(id -u)" -eq 0 ] || echo "  (with sudo: when each last went out and when it goes next)"
-    echo "One summary a day, a week or a month: a time moved later on a day whose summary already went out applies from the next."
-    echo "Why one did not go out:  zenithboard logs social | grep -i summary"
+    echo "Each goes once at its time: moved to later today, it goes today; set to a time already past, from the next one."
+    echo "Why one did not go out:  sudo zenithboard social summary why"
     echo "Change:  sudo zenithboard social summary daily|weekly|monthly on|off|at TIME|parts LIST|test|post"
     return 0
   fi
+  [ "$p" = why ] && { summary_why; return; }
   k=$(summary_key "$p"); [ -n "$k" ] || { echo "A summary is daily, weekly or monthly."; return 1; }
   case "$what" in
     on)  cfg_set "$k" 1 ;;
@@ -326,9 +352,6 @@ social_summary() {   # social_summary [PERIOD [on|off|at VALUE|parts LIST]]
   esac
   echo "Summary of $(summary_word "$p"): $(summary_line "$p")"
   v=$(summary_when "$p"); [ -z "$v" ] || echo "  $v"
-  if [ "$what" = at ] && [ "$(cfg_get "$k" 0)" = 1 ] && [[ "$v" == *"last: $(date +%Y-%m-%d)"* ]] && [ "$p" = daily ]; then
-    echo "Today's already went out: one a day, so the new time applies from tomorrow. To post one now: sudo zenithboard social summary daily post"
-  fi
   if [ "$(cfg_get "$k" 0)" = 1 ]; then
     [ "$(cfg_get STATS 0)" = 1 ] || echo "It is made from the statistics, which are OFF: nothing will be posted until  sudo zenithboard stats on"
     [ "$(social_state)" = on ] || echo "Social sharing itself is OFF: the service that posts it starts with  sudo zenithboard social on"

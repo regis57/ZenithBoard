@@ -268,7 +268,7 @@
  "30 days": "30 päeva",
  "Statistics are off: no summary can be made until they are on (Receiver).": "Statistika on väljas: kokkuvõtteid ei saa teha enne, kui see on sisse lülitatud (Vastuvõtja).",
  "All summaries": "Kõik kokkuvõtted",
- "One summary a day, a week, a month: a time moved later after that one went out applies from the next. Why one did not go out: zenithboard logs social | grep -i summary": "Üks kokkuvõte päevas, nädalas ja kuus: kui aeg nihutatakse hilisemaks pärast seda, kui selle perioodi kokkuvõte on juba välja läinud, kehtib uus aeg alates järgmisest. Miks mõni kokkuvõte välja ei läinud: zenithboard logs social | grep -i summary",
+ "Each summary goes once at its time: moved to later today, it goes today; set to a time already past, from the next one. Why one did not go out: sudo zenithboard social summary why": "Iga kokkuvõte postitatakse üks kord oma kellaajal: hilisemaks samaks päevaks nihutatud läheb täna välja, juba möödunud kellaajale seatud alates järgmisest korrast. Miks mõni välja ei läinud: sudo zenithboard social summary why",
  "Posting one now stays in the terminal, where you see it first: sudo zenithboard social summary weekly post": "Kokkuvõtte kohe postitamine käib ainult terminalis, kus näete seda enne avaldamist: sudo zenithboard social summary weekly post",
  "Which log": "Milline logi",
  "The decoder": "Dekooder",

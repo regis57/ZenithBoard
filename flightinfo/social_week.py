@@ -121,26 +121,65 @@ def week_key(now):
     return cycle_key("weekly", now)
 
 
-def due(c, state, now, period="weekly"):
-    """On, on its day, from its time to the end of that day, and not yet done this cycle. A Pi switched off at that
-    time posts nothing the next day: a summary a day late is not what the account promises."""
-    if not is_on(c, period):
-        return False
+def at_norm(c, period):
+    """The time as set, in one spelling: "21:00", "sun 19:00", "1 09:00"."""
+    day, hour, minute = at_of(c, period)
+    clock = "%02d:%02d" % (hour, minute)
+    return clock if period == "daily" else ("%s %s" % (WEEKDAYS[day], clock) if period == "weekly" else "%d %s" % (day, clock))
+
+
+def slot_key(c, period, now):
+    """0.49.0: one summary per scheduled slot, the cycle and the time it is set for ("2026-10-22@23:35"), no longer
+    one per cycle: the owner (22 October) moved the daily one to a later time and wanted it to go at that time; the
+    schedule itself keeps a summary from going twice (a slot goes once)."""
+    return "%s@%s" % (cycle_key(period, now), at_norm(c, period))
+
+
+def setting_of(c, period):
+    return ("on " + at_norm(c, period)) if is_on(c, period) else "off"
+
+
+def changed(c, state, period):
+    """The time or the switch was changed since the service last looked (None: never looked, 0.49.0's first start)."""
+    seen = (state.get("summary_seen") or {}).get(period)
+    return seen is not None and seen != setting_of(c, period)
+
+
+def slot_passed(c, period, now):
+    """Its day in this cycle, and its time reached: the moment it is due from, until the end of that day."""
     day, hour, minute = at_of(c, period)
     lt = datetime.datetime.fromtimestamp(now)
     if period == "weekly" and lt.weekday() != day:
         return False
     if period == "monthly" and lt.day != day:
         return False
-    if (lt.hour, lt.minute) < (hour, minute):
+    return (lt.hour, lt.minute) >= (hour, minute)
+
+
+def slot_done(c, state, period, now):
+    done = done_for(state, period)
+    if not done:
         return False
-    return done_for(state, period) != cycle_key(period, now)     # 0.33.0 to 0.37.0 kept the weekly key as "weekly"
+    if "@" not in done:                          # 0.38.0 to 0.48.0 kept the cycle alone: done for the time as set now
+        return done == cycle_key(period, now)
+    return done == slot_key(c, period, now)
+
+
+def due(c, state, now, period="weekly"):
+    """On, its slot reached (its day, from its time to the end of that day), and that slot not gone yet. A Pi switched
+    off at that time posts it when it comes back the same day, never the next day. 0.49.0: a time moved later the same
+    day is a new slot, which goes at its time; a time set (or a summary switched on) after its time has passed today
+    does not go at once: the service marks that slot as gone when it sees the change."""
+    if not is_on(c, period) or not slot_passed(c, period, now):
+        return False
+    if changed(c, state, period):
+        return False
+    return not slot_done(c, state, period, now)
 
 
 def next_due(c, state, now, period):
-    """0.48.0: when that summary goes out next, as a datetime; now when it is due now; None when it is off. One per
-    cycle (day, week, month): a time moved later on a day whose summary already went out applies from the next one (the
-    owner, 21 October: daily moved from 21:00 to 23:35 after the 21:00 one had gone, and nothing went out at 23:35)."""
+    """0.48.0: when that summary goes out next, as a datetime; now when it is due now; None when it is off. 0.49.0: a
+    time moved to later today goes today; a time set after it has passed today goes from the next cycle."""
     if not is_on(c, period):
         return None
     if due(c, state, now, period):
@@ -153,9 +192,9 @@ def next_due(c, state, now, period):
             continue
         if period == "monthly" and d.day != day:
             continue
-        if d.timestamp() < now:
+        if d.timestamp() < now:                  # passed today: set after it, or gone already
             continue
-        if done_for(state, period) == cycle_key(period, d.timestamp()):
+        if slot_done(c, state, period, d.timestamp()):
             continue
         return d
     return None
