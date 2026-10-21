@@ -7,7 +7,7 @@ in English. And, in the posts, **your own message** assembled with ready-made AD
 asked for first: is it feasible, what can break, what it costs the Pi.
 
 **Where it stands**: the **web pages are translated** — the console, the statistics page and graphs1090's page:
-French in **0.47.0**, the twenty other languages in **0.48.0**. The language is asked at the console's first visit and
+French in **0.47.0**, eighteen more in **0.48.0** (Swahili translated, waiting for a native review). The language is asked at the console's first visit and
 chosen from a flag at the top of every page. The **posts** (phase 3 below) are next. How to correct a language:
 [Translating](Translating).
 
@@ -24,7 +24,9 @@ chosen from a flag at the top of every page. The **posts** (phase 3 below) are n
   **Swahili, Arabic, Hausa and Yoruba**, except those whose translation could not reach 90%. **Hausa and Yoruba are not
   included**: Yoruba is written with tone marks on most vowels, which a machine translation gets wrong too often for a
   reader to trust, and neither has the settled technical vocabulary (settings, feeders, receiver, decoder) that the
-  pages need; both can come later from a native speaker's sheet. Swahili and Arabic are in.
+  pages need; both can come later from a native speaker's sheet. Arabic is in. **Swahili is translated but held
+  back**: its translator could not promise 90% (estimated 85 to 92%), the technical words differing between Tanzania,
+  Kenya and the software glossaries; it is offered once a native speaker has reviewed its sheet.
 * **A picture for a language of many countries**: Swahili shows the map of **Africa**; Arabic, spoken from Morocco to
   Iraq, shows its letter **ʿayn (ع)** rather than one country's flag. Finnish, Estonian, Latvian, Lithuanian and Polish
   their countries' flags. **Arabic is right to left**: the console's side bar, drawer and switches mirror; what the Pi
@@ -160,8 +162,8 @@ with plausible values is refused. Several templates rotate, in order or at rando
    and in the top bar. French first: the owner reads it, so the framework is judged on a real translation. *Done,
    0.47.0.*
 2. **The pages in every other language** — German, Dutch, Italian, Spanish, Portuguese (Brazil), Polish, Finnish,
-   Estonian, Latvian, Lithuanian, Indonesian, Swahili, Russian, Ukrainian, Arabic (right to left), Japanese, Korean,
-   Chinese (Simplified and Traditional). *Done, 0.48.0.*
+   Estonian, Latvian, Lithuanian, Indonesian, Russian, Ukrainian, Arabic (right to left), Japanese, Korean,
+   Chinese (Simplified and Traditional). *Done, 0.48.0.* Swahili translated, offered after a native review.
 3. **The posts**: `SOCIAL_LANG`, the five post styles, the summaries and their cards, in the languages done so far;
    **your own templates and their tags**.
 4. **The dot font's letters for the pictures**: the accents of the Latin-script languages (Polish ą ę ł ś ż, the Baltic

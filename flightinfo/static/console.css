@@ -290,3 +290,4 @@ input.day { width: 4.5em; }
   [dir="rtl"] .row .ctl.end { margin-left: 0; margin-right: auto; }
   [dir="rtl"] .drawer-panel { border-right: 0; }
 }
+[dir="rtl"] .tile .v { unicode-bidi: plaintext; text-align: right; }   /* "52 °C", "21.3 GB": the number before its unit; an Arabic duration in its own order */

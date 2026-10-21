@@ -23,7 +23,7 @@ translation, with a column for your correction. No account, no tool to install, 
 | Latviešu | Latvia | 0.48.0 | [lv.csv](https://github.com/regis57/ZenithBoard/blob/main/docs/translations/lv.csv) |
 | Lietuvių | Lithuania | 0.48.0 | [lt.csv](https://github.com/regis57/ZenithBoard/blob/main/docs/translations/lt.csv) |
 | Bahasa Indonesia | Indonesia | 0.48.0 | [id.csv](https://github.com/regis57/ZenithBoard/blob/main/docs/translations/id.csv) |
-| Kiswahili | the map of Africa (spoken in many countries) | 0.48.0 | [sw.csv](https://github.com/regis57/ZenithBoard/blob/main/docs/translations/sw.csv) |
+| Kiswahili | the map of Africa (spoken in many countries) | translated, **not offered yet**: waiting for a native speaker's review | [sw.csv](https://github.com/regis57/ZenithBoard/blob/main/docs/translations/sw.csv) |
 | Русский | Russia | 0.48.0 | [ru.csv](https://github.com/regis57/ZenithBoard/blob/main/docs/translations/ru.csv) |
 | Українська | Ukraine | 0.48.0 | [uk.csv](https://github.com/regis57/ZenithBoard/blob/main/docs/translations/uk.csv) |
 | العربية | its letter ʿayn, ع (spoken in many countries); right to left | 0.48.0 | [ar.csv](https://github.com/regis57/ZenithBoard/blob/main/docs/translations/ar.csv) |
@@ -31,6 +31,12 @@ translation, with a column for your correction. No account, no tool to install, 
 | 한국어 | South Korea | 0.48.0 | [ko.csv](https://github.com/regis57/ZenithBoard/blob/main/docs/translations/ko.csv) |
 | 简体中文 | China | 0.48.0 | [zh-Hans.csv](https://github.com/regis57/ZenithBoard/blob/main/docs/translations/zh-Hans.csv) |
 | 繁體中文 | Taiwan | 0.48.0 | [zh-Hant.csv](https://github.com/regis57/ZenithBoard/blob/main/docs/translations/zh-Hant.csv) |
+
+**Swahili** is translated in full but not offered: 90% (the owner's bar) could not be promised, its technical words
+differing between Tanzania, Kenya and the software glossaries. A Swahili speaker who reviews `sw.csv` brings it in: the
+owner applies the sheet and deletes `flightinfo/static/i18n/sw/draft.txt`.
+
+![The console in Arabic, right to left](https://raw.githubusercontent.com/regis57/ZenithBoard/main/docs/images/console-ar.png)
 
 A language appears in the list at the top of the pages once it is translated; the first visit offers the browser's own
 language and English as two buttons, the others in one list. **Hausa and Yoruba are not included** (the owner asked for
@@ -95,6 +101,7 @@ release: the change, its tests, a version, the PR. On the Pi: `cd ~/ZenithBoard 
 * `python3 tools/i18n.py keys` lists every key; `sync LANG` adds the new ones and drops the old; `check` says what is
   missing or broken; `review LANG` writes the sheet. A change to an English string means its translations and its
   sheet in the same commit: `tests/test_i18n.sh` fails otherwise.
+* A language whose folder holds `draft.txt` is complete but not offered (Swahili, waiting for a native review).
 * The language codes are listed in four places that the tests hold together: `lib/common.sh`, `console_actions.py`,
   `i18n.js`, `tools/i18n.py`.
 

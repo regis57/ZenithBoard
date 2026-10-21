@@ -30,7 +30,7 @@
  "{n} s": "{n} s",
  "{n} min": "{n} min",
  "{n} h": "{n} godz.",
- "{d} d {h} h": "{d} dni {h} godz.",
+ "{d} d {h} h": "{d} dn. {h} godz.",
  "{time} ago": "{time} temu",
  "never": "nigdy",
  "{n} GB": "{n} GB",

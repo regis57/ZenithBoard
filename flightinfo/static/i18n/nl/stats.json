@@ -38,7 +38,10 @@
  "The same numbers as a table": "Dezelfde cijfers als tabel",
  "A sample every 15 minutes misses an aircraft that crossed in less, so an aircraft count is a floor, never a total. Messages are what the receiver decoded. Everything on this page follows the period chosen at the top. The lists count each aircraft once in the period: airlines by callsign, models from the aircraft database, countries from the aircraft's address. An airline's flag is the country it is based in (cargo and airline lists checked against a published source), else the one its aircraft are registered in. <a>The wall</a> · <code>zenithboard stats</code> prints the same in the terminal. Cities: <a>GeoNames</a>, CC BY 4.0. Flags: <a>country-flag-icons</a>, MIT.": "Een meting per 15 minuten mist een vliegtuig dat in kortere tijd voorbijkwam, dus een aantal vliegtuigen is een ondergrens, nooit een totaal. Berichten zijn wat de ontvanger heeft gedecodeerd. Alles op deze pagina volgt de bovenaan gekozen periode. De lijsten tellen elk vliegtuig één keer per periode: luchtvaartmaatschappijen op basis van de callsign, types uit de vliegtuigdatabase, landen op basis van het adres van het vliegtuig. De vlag van een luchtvaartmaatschappij is die van het land waar ze gevestigd is (vracht- en maatschappijlijsten gecontroleerd aan de hand van een gepubliceerde bron), anders die van het land waar haar vliegtuigen geregistreerd zijn. <a>Het bord</a> · <code>zenithboard stats</code> toont hetzelfde in de terminal. Steden: <a>GeoNames</a>, CC BY 4.0. Vlaggen: <a>country-flag-icons</a>, MIT.",
  "no sample": "geen meting",
- "{n} aircraft": "{n} vliegtuigen",
+ "{n} aircraft": {
+  "one": "{n} vliegtuig",
+  "other": "{n} vliegtuigen"
+ },
  "None heard in this period.": "Geen ontvangen in deze periode.",
  "Helicopters": "Helikopters",
  "Light aircraft": "Lichte vliegtuigen",
@@ -48,15 +51,24 @@
  ", near {city} ({km} km)": ", bij {city} ({km} km)",
  ", {km} km from {city}": ", {km} km van {city}",
  "the last 30 days": "de afgelopen 30 dagen",
- "{n} samples of 15 minutes since {since}, 30 days kept · {period}": "{n} metingen van 15 minuten sinds {since}, 30 dagen bewaard · {period}",
+ "{n} samples of 15 minutes since {since}, 30 days kept · {period}": {
+  "one": "{n} meting van 15 minuten sinds {since}, 30 dagen bewaard · {period}",
+  "other": "{n} metingen van 15 minuten sinds {since}, 30 dagen bewaard · {period}"
+ },
  "distinct aircraft, {period}, a floor": "unieke vliegtuigen, {period}, een ondergrens",
  "nothing yet": "nog niets",
  "busiest hour {hour}:00, {n}": "drukste uur {hour}:00, {n}",
  "on {day} at {time}": "op {day} om {time}",
  "Busiest day": "Drukste dag",
  "Busiest hour": "Drukste uur",
- "{n} distinct aircraft": "{n} unieke vliegtuigen",
- "{n} aircraft with a position, on average": "gemiddeld {n} vliegtuigen met positie",
+ "{n} distinct aircraft": {
+  "one": "{n} uniek vliegtuig",
+  "other": "{n} unieke vliegtuigen"
+ },
+ "{n} aircraft with a position, on average": {
+  "one": "gemiddeld {n} vliegtuig met positie",
+  "other": "gemiddeld {n} vliegtuigen met positie"
+ },
  "Farthest, {period}": "Verst weg, {period}",
  "No details written down in this period yet: the next sample, on the quarter hour, does it.": "Nog geen details vastgelegd in deze periode: de volgende meting, op het kwartier, doet dat.",
  "The box above says {km} km, on {day}: its details were not written down": "Het vak hierboven toont {km} km, op {day}: de details daarvan zijn niet vastgelegd",

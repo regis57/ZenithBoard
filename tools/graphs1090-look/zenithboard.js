@@ -46,6 +46,7 @@
       brand.appendChild(name); brand.appendChild(sub); brand.appendChild(links);
       h1.parentNode.insertBefore(brand, h1);
       h1.textContent = t("graphs1090 · the receiver, the decoder and the Pi, over time");
+      if (I && I.rtl()) h1.dir = "rtl";
     }
     // graphs1090's own period buttons and panel titles, by their English text (the graphs themselves are pictures
     // its script draws: they stay in English)
@@ -72,7 +73,7 @@
     };
     Array.prototype.forEach.call(document.querySelectorAll(".btn-group .btn, .panel-heading"), function (el) {
       var k = el.textContent.trim();
-      if (Object.prototype.hasOwnProperty.call(THEIRS, k) && THEIRS[k] !== k) el.textContent = THEIRS[k];
+      if (Object.prototype.hasOwnProperty.call(THEIRS, k) && THEIRS[k] !== k) { el.textContent = THEIRS[k]; if (I && I.rtl()) el.dir = "auto"; }
     });
     document.title = t("ZenithBoard graphs");
   }

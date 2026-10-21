@@ -38,7 +38,11 @@
  "The same numbers as a table": "Os mesmos números em tabela",
  "A sample every 15 minutes misses an aircraft that crossed in less, so an aircraft count is a floor, never a total. Messages are what the receiver decoded. Everything on this page follows the period chosen at the top. The lists count each aircraft once in the period: airlines by callsign, models from the aircraft database, countries from the aircraft's address. An airline's flag is the country it is based in (cargo and airline lists checked against a published source), else the one its aircraft are registered in. <a>The wall</a> · <code>zenithboard stats</code> prints the same in the terminal. Cities: <a>GeoNames</a>, CC BY 4.0. Flags: <a>country-flag-icons</a>, MIT.": "Uma amostra a cada 15 minutos deixa escapar uma aeronave que passou em menos tempo, então uma contagem de aeronaves é um mínimo, nunca um total. As mensagens são o que o receptor decodificou. Tudo nesta página segue o período escolhido no topo. As listas contam cada aeronave uma vez no período: as companhias aéreas pelo indicativo de chamada, os modelos pelo banco de dados de aeronaves, os países pelo endereço da aeronave. A bandeira de uma companhia aérea é a do país onde ela tem sede (listas de carga e de companhias aéreas conferidas com uma fonte publicada); caso contrário, a do país onde as aeronaves dela estão matriculadas. <a>O mural</a> · <code>zenithboard stats</code> mostra o mesmo no terminal. Cidades: <a>GeoNames</a>, CC BY 4.0. Bandeiras: <a>country-flag-icons</a>, MIT.",
  "no sample": "sem amostra",
- "{n} aircraft": "{n} aeronave(s)",
+ "{n} aircraft": {
+  "one": "{n} aeronave",
+  "many": "{n} aeronaves",
+  "other": "{n} aeronaves"
+ },
  "None heard in this period.": "Nenhuma aeronave captada neste período.",
  "Helicopters": "Helicópteros",
  "Light aircraft": "Aeronaves leves",
@@ -48,15 +52,27 @@
  ", near {city} ({km} km)": ", perto de {city} ({km} km)",
  ", {km} km from {city}": ", a {km} km de {city}",
  "the last 30 days": "últimos 30 dias",
- "{n} samples of 15 minutes since {since}, 30 days kept · {period}": "{n} amostras de 15 minutos desde {since}, 30 dias guardados · {period}",
+ "{n} samples of 15 minutes since {since}, 30 days kept · {period}": {
+  "one": "{n} amostra de 15 minutos desde {since}, 30 dias guardados · {period}",
+  "many": "{n} amostras de 15 minutos desde {since}, 30 dias guardados · {period}",
+  "other": "{n} amostras de 15 minutos desde {since}, 30 dias guardados · {period}"
+ },
  "distinct aircraft, {period}, a floor": "aeronaves distintas, {period}, no mínimo",
  "nothing yet": "nada ainda",
  "busiest hour {hour}:00, {n}": "horário de pico {hour}:00, {n}",
  "on {day} at {time}": "em {day} às {time}",
  "Busiest day": "Dia mais movimentado",
  "Busiest hour": "Horário de pico",
- "{n} distinct aircraft": "{n} aeronaves distintas",
- "{n} aircraft with a position, on average": "{n} aeronaves com posição, em média",
+ "{n} distinct aircraft": {
+  "one": "{n} aeronave distinta",
+  "many": "{n} aeronaves distintas",
+  "other": "{n} aeronaves distintas"
+ },
+ "{n} aircraft with a position, on average": {
+  "one": "{n} aeronave com posição, em média",
+  "many": "{n} aeronaves com posição, em média",
+  "other": "{n} aeronaves com posição, em média"
+ },
  "Farthest, {period}": "Mais distante, {period}",
  "No details written down in this period yet: the next sample, on the quarter hour, does it.": "Nenhum detalhe registrado neste período ainda: a próxima amostra, no quarto de hora, fará isso.",
  "The box above says {km} km, on {day}: its details were not written down": "O quadro acima indica {km} km, em {day}: os detalhes dessa aeronave não foram registrados",

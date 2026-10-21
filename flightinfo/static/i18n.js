@@ -46,9 +46,15 @@
   function save(code) { try { localStorage.setItem(KEY, code); } catch (e) { /* a private window: this page only */ } }
   function param() { var m = /[?&]lang=([A-Za-z-]{2,8})/.exec(location.search); return m ? m[1] : ""; }
 
+  // a value put in a right-to-left sentence (an address, a name, a command, "@handle") keeps its own left-to-right
+  // order: it is isolated (U+2066 … U+2069), its "@" with it (0.48.0, Arabic)
   function fill(s, v) {
     if (!v) return s;
-    return String(s).replace(/\{(\w+)\}/g, function (m, k) { return Object.prototype.hasOwnProperty.call(v, k) ? String(v[k]) : m; });
+    var rtl = RTL.indexOf(cur) >= 0;
+    return String(s).replace(/(@?)\{(\w+)\}/g, function (m, at, k) {
+      if (!Object.prototype.hasOwnProperty.call(v, k)) return m;
+      return rtl ? "\u2066" + at + String(v[k]) + "\u2069" : at + String(v[k]);
+    });
   }
   function t(key, v) {
     if (typeof key !== "string") return key;

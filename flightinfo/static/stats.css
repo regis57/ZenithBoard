@@ -129,3 +129,4 @@ th { font: 400 11px ui-monospace, Menlo, Consolas, monospace; letter-spacing: .1
 [dir="rtl"] .mil .row .n { text-align: left; }
 [dir="rtl"] th, [dir="rtl"] td { text-align: right; padding: 5px 0 5px 10px; }
 [dir="rtl"] svg, [dir="rtl"] pre, [dir="rtl"] code { direction: ltr; }
+[dir="rtl"] .tile .v { unicode-bidi: plaintext; text-align: right; }   /* "354 km": the number before its unit */
