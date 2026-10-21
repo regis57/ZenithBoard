@@ -78,7 +78,7 @@ One section on screen at a time: a side bar on a computer, tabs at the bottom of
 | Receiver | Region, antenna position, statistics, graphs1090, the gain (check, one step down or up), the gain log, status |
 | Sharing | Bluesky on or off, the gap, the picture (look, colour, map, units, photo link, the words), the three summaries (on or off, day and time, which posts, a try); *Try a post* and the pictures |
 | Reliability | Hardware and network watchdogs, logs kept after a restart, Wi-Fi hardening, daily security fixes, daily log clean-up; health, memory, logs |
-| System | Update ZenithBoard and the wall, update everything; a backup to make and download (0.42.0, without the networks' identities: [Backup and restore](Backup-and-restore#from-the-web-console)); network, Wi-Fi and domain name status; who is signed in, pairing a phone; the security check; turning the console off |
+| System | Update ZenithBoard and the wall, update everything; a backup to make, download and delete (0.42.0, without the networks' identities: [Backup and restore](Backup-and-restore#from-the-web-console)); network, Wi-Fi and domain name status; who is signed in, pairing a phone; the security check; turning the console off |
 
 **What every control does appears in its own card**, under it, as the Pi prints it: a button (Health, Memory, Status, a
 log, a try of a post), a switch, a choice, a field applied, an update or graphs1090 that takes minutes. The command is

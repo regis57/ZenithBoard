@@ -737,7 +737,9 @@ class Console(object):
             if not info:
                 return Reply(404, {"error": "No backup yet: System, Make a backup to download."})
             audit("backup downloaded by %s %s" % (sess["label"], sess["id"]))
-            name = "zenithboard-backup-%s.tar.gz" % time.strftime("%Y%m%d-%H%M", time.localtime(info["at"]))
+            # 0.42.1: named like the terminal's (host, then the date: they sort in time order), marked as the console's
+            host = re.sub(r"[^A-Za-z0-9-]", "", socket.gethostname())[:32] or "pi"
+            name = "zenithboard-backup-%s-%s-console.tar.gz" % (host, time.strftime("%Y%m%d-%H%M", time.localtime(info["at"])))
             return Reply(200, None, "application/gzip", stream=BACKUP, download=name)
         if api == "pair":
             st = self.pairs.status(req.q("id"))

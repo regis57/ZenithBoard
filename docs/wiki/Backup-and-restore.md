@@ -6,8 +6,10 @@ logs, and the features that were on switched on again. Since 0.42.0.
 
 ```
 sudo zenithboard backup make                 # on the old card: zenithboard-backup-HOST-DATE.tar.gz, in the current folder
-zenithboard backup show FILE                 # what a backup holds, changing nothing
-sudo zenithboard backup restore FILE         # on the new card: asks you to type RESTORE
+zenithboard backup show FILE                 # what it holds, each part read back with the span it covers
+sudo zenithboard backup restore FILE         # on the new card (the "import"): asks you to type RESTORE
+zenithboard backup list                      # the backups, newest first
+zenithboard backup clean --keep 3            # delete the older ones; asks you to type delete
 ```
 
 Or the menu: *6 Maintenance → Back up everything*. The web console makes one too (*System → Backup*), without the
@@ -32,6 +34,40 @@ The restore lists them at its end, under *Still to do*.
 
 **The file is yours alone.** It holds Flightradar24's sharing key and the stations' identities: it is written for its
 owner only (mode 600), and never goes into an issue or a chat. `backup show` names what is inside, never the values.
+
+## Checking a backup
+
+`zenithboard backup show FILE` reads each part back the way a restore would, and says what it covers. On the reference
+Pi's first backup, made from the console on 21 October 2026 at 12:51 (24 MB):
+
+```
+Checked:
+  statistics: 572 samples, 2026-10-15 14:00 to 2026-10-21 12:45
+  aircraft lists: 2026-10-15 to 2026-10-21
+  posting history: readable, 6 aircraft posted
+  graphs1090: 68 databases, last point 2026-10-21 12:50
+  kept logs: 13 boot(s), 2026-10-08T09:06 to 2026-10-21T12:51
+  Everything in it reads back; made 2026-10-21 12:51.
+```
+
+Every part ends within minutes of the backup: nothing was left in memory. A damaged part is named (*NOT COMPLETE:
+graphs1090 would not come back*) and the command ends with an error; `backup restore` shows the same lines before it
+asks for `RESTORE`. Each new backup is also read back once written (a full card shows up there).
+
+## Where backups are kept, and clearing them
+
+* **From the terminal or the menu**: where you said, by default the current folder (the menu: your home folder),
+  named `zenithboard-backup-HOST-YYYYMMDD-HHMM.tar.gz`. The name sorts in time order; `backup list` shows them newest
+  first with their size. Nothing deletes them by itself: `backup clean --keep 3` deletes all but the three newest
+  (it lists them and asks you to type `delete`), or the menu, *Back up everything → Delete the older ones*. They are
+  your files: `rm` works too.
+* **From the console**: one copy only, `/var/lib/zenithboard/console/out/backup.tar.gz`, replaced by the next one,
+  so it never piles up; *Delete it* (or `sudo zenithboard backup delete --console`) frees its room on the card. Its
+  download is named `zenithboard-backup-HOST-YYYYMMDD-HHMM-console.tar.gz`: the same order, marked as the one
+  without the networks' identities.
+
+A backup takes about the size of the logs kept (50 MB at most) plus graphs1090's history (30 MB on the reference Pi,
+compressed): copy it off the Pi and keep a few, not dozens, on the card.
 
 ## Moving to a new card, step by step
 
@@ -72,12 +108,13 @@ ADSB Exchange (its UUID), Flightradar24 (its sharing key) and Plane Finder (its 
 
 ## From the web console
 
-*System → Backup → Make a backup*, then *Download it*. The console's backup holds everything above **except the
+*System → Backup → Make a backup*, then *Download it* (and *Delete it* once downloaded, if you want the room back). The console's backup holds everything above **except the
 networks' identities**: keys never travel through the console, which runs as an unprivileged user over plain HTTP
 on your home network. It keeps one backup at a time, readable by the wall's user only, in the console's own folder;
 each download is written in the console's audit log.
 
-**Restoring is done in the terminal**, never from the console: it replaces settings and data, runs the installers of
+**Restoring (the import) is done in the terminal**, never from the console: the card says so, with the command.
+A restore replaces settings and data, runs the installers of
 what was on, and asks for a typed word, like every step that cannot be taken back in one click.
 
 ## Taking a restore back
