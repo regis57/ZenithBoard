@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.39.3
+- **Console: a change waiting behind a long one says so.** The Pi runs the console's commands one at a time; while graphs1090 installed, the changes made meanwhile were reported as *the console's helper has not taken the job … console on*, again and again (the owner's recording). Now: *Queued: graphs1090 runs first, then this*, once, and the drawer says how many are before it; the helper is blamed only when a change waits with nothing running.
+- *Activity*: clicking one of the last jobs shows its output at the top of the drawer, scrolled into view (it opened out of sight), and marks the job; the background *Refresh* jobs are no longer listed among the last jobs.
+- The sign-in page says why it never shows a QR code. The wiki gains *How it behaves, by design* (one change at a time; where QR codes are made; a code signs in the phone that scans it, once) and two break-glass rows. Signing a computer in with the phone is written down as a proposal.
+
 ## 0.39.2
 - **Fix: the console refused every pairing code**, *used or out of date*, on the reference Pi; failed codes also count as failed sign-in tries, which can hold the password back for a while. The wall had been started (by the update) before `console on` made the console's folder, and its sandbox opens for writing only folders that exist when it starts (`ReadWritePaths=-…`): it could not note the code as used, and refused it rather than let it work twice. Now a used code is known in memory first, the card's note only carries it over a restart; `console on` restarts the wall; and the page says, with the command, when the wall cannot write its folder.
 - **The terminal is for setting up, not for every visit**: a browser signed in with the password stays signed in for a week (a day unused; 12 hours before), a paired phone as long as it opens the console once a month, a year at most (30 days before). The QR code needs no password; the wiki says plainly which way needs what.

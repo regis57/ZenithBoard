@@ -179,6 +179,23 @@ class PairsTest(TempDirs):
         self.assertFalse(p.redeem(tok, "iPhone"), "still once: known in memory")
 
 
+class QueueTest(TempDirs):
+    def test_a_job_waiting_behind_a_long_one_says_so(self):
+        # the owner's recording, 21 October: changes made while graphs1090 installed were reported as "not taken"
+        with open(os.path.join(self.dir, "out", "00000000000000aa.json"), "w") as fh:
+            json.dump({"id": "00000000000000aa", "action": "graphs", "state": "running", "started": int(time.time())}, fh)
+        a = console.submit("gain-log", {"value": "on"}, "Mac 1")
+        time.sleep(0.01)
+        b = console.submit("stats", {"value": "on"}, "Mac 1")
+        st = console.job_status(b)
+        self.assertEqual((st["state"], st["behind"], st["ahead"]), ("queued", "graphs", 1))
+        self.assertEqual(console.job_status(a)["ahead"], 0)
+
+    def test_nothing_running_says_nothing_is_ahead(self):
+        st = console.job_status(console.submit("stats", {"value": "on"}, "Mac 1"))
+        self.assertIsNone(st["behind"])
+
+
 class HandleTest(TempDirs):
     CFG = {"CONSOLE": "1", "_VERSION": "0.39.0"}
 

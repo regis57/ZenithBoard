@@ -297,10 +297,19 @@
           if (r.status === 404) { setTimeout(tick, 1500); return; }      // between the spool and the helper's first word
           var d = r.data;
           if (d.log) j.log += d.log;
-          j.next = d.next || j.next; j.state = d.state; j.rc = d.rc; j.error = d.error;
-          if (j.state === "queued" && Date.now() - started > 20000 && !S.warnedQueue[id]) {
+          j.next = d.next || j.next; j.state = d.state; j.rc = d.rc; j.error = d.error; j.behind = d.behind; j.ahead = d.ahead;
+          // 0.39.3: one job at a time. Waiting behind a long one (graphs1090, an update) is said as such, once; only a job
+          // waiting with nothing running means the helper is not there (the owner's recording, 21 October)
+          if (j.state === "queued" && !S.warnedQueue[id] && (d.behind ? Date.now() - started > 3000 : Date.now() - started > 20000)) {
             S.warnedQueue[id] = true;
-            toast("The console's helper has not taken the job. Over SSH: sudo zenithboard console on", true);
+            var now_ = Date.now();
+            if (d.behind && now_ - (S.lastQueueNote || 0) > 15000) {
+              S.lastQueueNote = now_;
+              toast("Queued: " + ((S.catalog[d.behind] || {}).label || d.behind) + " runs first, then this. The Pi does one change at a time.");
+            } else if (!d.behind && now_ - (S.lastQueueNote || 0) > 15000) {
+              S.lastQueueNote = now_;
+              toast("The console's helper has not taken the job. Over SSH: sudo zenithboard console on", true);
+            }
           }
           if (S.drawerJob === id) drawTerm();
           if (j.state === "done" || j.state === "refused") return finish();
@@ -698,7 +707,7 @@
     var j = S.jobs[S.drawerJob];
     if (!j || !termPre) return;
     var atEnd = termPre.scrollHeight - termPre.scrollTop - termPre.clientHeight < 40;
-    termPre.textContent = j.log || (j.state === "queued" ? "Waiting for the Pi's helper…" : "");
+    termPre.textContent = j.log || (j.state === "queued" ? (j.behind ? "Waiting: " + ((S.catalog[j.behind] || {}).label || j.behind) + " runs first" + (j.ahead ? " (" + j.ahead + " before this one)" : "") + ". The Pi does one change at a time." : "Waiting for the Pi's helper…") : "");
     if (atEnd) termPre.scrollTop = termPre.scrollHeight;
     var st = j.state === "done" ? (j.rc === 0 ? ["ok", "done"] : ["bad", "exit " + j.rc]) : j.state === "refused" ? ["bad", "refused"] : [j.state === "running" ? "run" : "queued", j.state];
     termPill.className = "pill " + st[0]; termPill.textContent = st[1];
@@ -717,10 +726,10 @@
     }
     var a = S.activity;
     if (!a) { body.appendChild(h("p", { "class": "note", text: "Reading…" })); return; }
-    body.appendChild(h("div", null, h("p", { "class": "sub", text: "The last jobs" }), h("div", { "class": "list" }, a.jobs.length ? a.jobs.slice(0, 12).map(function (x) {
+    body.appendChild(h("div", null, h("p", { "class": "sub", text: "The last jobs" }), h("div", { "class": "list" }, a.jobs.filter(function (x) { return x.action !== "refresh"; }).length ? a.jobs.filter(function (x) { return x.action !== "refresh"; }).slice(0, 12).map(function (x) {
       var spec = S.catalog[x.action] || { label: x.action }, ok = x.state === "done" && x.rc === 0;
       var params = x.params && typeof x.params === "object" ? Object.keys(x.params).map(function (k) { return x.params[k]; }).filter(Boolean).join(" ") : "";
-      return h("button", { type: "button", "class": "li", onclick: function () { showOld(x); } },
+      return h("button", { type: "button", "class": "li" + (x.id === S.drawerJob ? " sel" : ""), "aria-current": x.id === S.drawerJob ? "true" : null, onclick: function () { showOld(x); } },
         h("div", null, h("b", { text: spec.label + (params ? ": " + params : "") }), h("small", { text: clock(x.started || 0) + " · " + (x.by || "") })),
         h("span", { "class": "pill " + (x.state === "running" ? "run" : ok ? "ok" : x.state === "done" || x.state === "refused" ? "bad" : "queued"), text: x.state === "done" ? (ok ? "ok" : "exit " + x.rc) : x.state }));
     }) : h("p", { "class": "note", text: "Nothing run from the console yet." }))));
@@ -731,6 +740,7 @@
     if (!S.jobs[x.id]) S.jobs[x.id] = { id: x.id, action: x.action, label: (S.catalog[x.action] || {}).label || x.action, params: x.params, state: x.state, log: "", next: 0, key: "old-" + x.id, quiet: true };
     var j = S.jobs[x.id];
     S.drawerJob = x.id; drawDrawer();
+    $("drawer-body").scrollTop = 0;     // its output is at the top of the drawer: show it (0.39.3, it opened out of sight)
     if (!j.log) api("job?id=" + x.id + "&from=0").then(function (r) { if (r.ok) { j.log = r.data.log || ""; j.state = r.data.state; j.rc = r.data.rc; drawTerm(); } });
   }
   $("open-activity").addEventListener("click", function () { openDrawer(); });
