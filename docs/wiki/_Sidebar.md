@@ -6,6 +6,7 @@
 
 *Getting started*
 * [Fresh install, step by step](Fresh-install)
+* [Backup and restore](Backup-and-restore)
 
 *How it works*
 * [Architecture](Architecture)

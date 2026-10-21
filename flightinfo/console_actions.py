@@ -9,7 +9,9 @@ not written below. A value is only ever one of the values listed, a number in it
 
 Left out on purpose, and done over SSH: uninstalling, Wi-Fi on/off/connect/forget/country and fixed addresses (one
 mistake cuts the Pi off the network the console is reached through), anything asking for a password, token or key
-(the Bluesky account, the domain name), posting to Bluesky, emptying statistics or logs, importing settings,
+(the Bluesky account, the domain name), posting to Bluesky, emptying statistics or logs, importing settings or
+restoring a backup (0.42.0: a backup is made here and downloaded, but put back over SSH; the networks' keys never
+travel through the console, so its backup leaves them out),
 `config-set` (any key, any value), and the old ACARS removal.
 """
 import re
@@ -101,6 +103,7 @@ ACTIONS = {
     "wifi-status":  ("system", "Wi-Fi", ["wifi", "status"], [], "read"),
     "ddns-status":  ("system", "Domain name", ["ddns", "status"], [], "read"),
     "ddns-update":  ("system", "Refresh the domain name", ["ddns", "update"], [], ""),
+    "backup":       ("system", "Make a backup to download", ["backup", "make", "--console"], [], "long"),
     "console-off":  ("system", "Turn the console off", ["console", "off"], [], "ask"),
     "phone-signin": ("system", "Sign computers in with a phone", ["console", "phone-signin", "{value}"], [("value", "enum", ON_OFF)], "ask"),
     "refresh":      ("overview", "Refresh", None, [], "read"),       # nothing to run: the helper only reads the state again

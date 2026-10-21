@@ -38,6 +38,16 @@ CONSOLE_DIR = os.environ.get("ZB_CONSOLE_DIR", "/var/lib/zenithboard/console")
 STATE_DIR = os.path.join(CONSOLE_DIR, "state")
 SPOOL_DIR = os.path.join(STATE_DIR, "spool")
 OUT_DIR = os.path.join(CONSOLE_DIR, "out")
+BACKUP = os.path.join(OUT_DIR, "backup.tar.gz")          # 0.42.0: written by `backup make --console`, root's, wall-readable
+
+
+def backup_info():
+    """The last backup made from the console, for its card: when, how big. None when there is none."""
+    try:
+        st = os.stat(BACKUP)
+    except OSError:
+        return None
+    return {"at": int(st.st_mtime), "bytes": st.st_size}
 
 COOKIE = "zbc"
 # 0.39.2: kept while used, so the terminal is for setting up, not for every visit: a browser signed in with the
@@ -581,8 +591,9 @@ class Request(object):
 
 
 class Reply(object):
-    def __init__(self, code, body, ctype="application/json", cookie=None, file=None):
+    def __init__(self, code, body, ctype="application/json", cookie=None, file=None, stream=None, download=None):
         self.code, self.body, self.ctype, self.file = code, body, ctype, file
+        self.stream, self.download = stream, download      # 0.42.0: a file sent in pieces, saved under that name
         self.headers = dict(SECURITY_HEADERS)
         if cookie is not None:
             self.headers["Set-Cookie"] = cookie
@@ -707,7 +718,7 @@ class Console(object):
         if api == "state":
             snap = _read_json(os.path.join(OUT_DIR, "state.json")) or {}
             shown = {k: str(req.cfg.get(k, d)) for k, d in SHOWN_KEYS.items()}
-            return Reply(200, {"cfg": shown, "facts": snap.get("facts") or {}, "facts_at": snap.get("at"),
+            return Reply(200, {"cfg": shown, "facts": snap.get("facts") or {}, "facts_at": snap.get("at"), "backup": backup_info(),
                                "catalog": actions.catalog(), "sections": actions.SECTIONS, "now": int(now())})
         if api == "job":
             st = job_status(req.q("id"), int(req.q("from", "0") or 0) if req.q("from", "0").isdigit() else 0)
@@ -721,6 +732,13 @@ class Console(object):
         if api == "approve":
             st = self.approvals.info(req.q("id")) if phone_signin(req.cfg) else None
             return Reply(200, st) if st else Reply(404, {"error": "This sign-in code is out of date: the computer shows a new one."})
+        if api == "backup":
+            info = backup_info()
+            if not info:
+                return Reply(404, {"error": "No backup yet: System, Make a backup to download."})
+            audit("backup downloaded by %s %s" % (sess["label"], sess["id"]))
+            name = "zenithboard-backup-%s.tar.gz" % time.strftime("%Y%m%d-%H%M", time.localtime(info["at"]))
+            return Reply(200, None, "application/gzip", stream=BACKUP, download=name)
         if api == "pair":
             st = self.pairs.status(req.q("id"))
             return Reply(200, st) if st else Reply(404, {"error": "no such pairing"})
