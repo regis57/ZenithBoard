@@ -39,7 +39,7 @@
  "A sample every 15 minutes misses an aircraft that crossed in less, so an aircraft count is a floor, never a total. Messages are what the receiver decoded. Everything on this page follows the period chosen at the top. The lists count each aircraft once in the period: airlines by callsign, models from the aircraft database, countries from the aircraft's address. An airline's flag is the country it is based in (cargo and airline lists checked against a published source), else the one its aircraft are registered in. <a>The wall</a> · <code>zenithboard stats</code> prints the same in the terminal. Cities: <a>GeoNames</a>, CC BY 4.0. Flags: <a>country-flag-icons</a>, MIT.": "每 15 分钟采样一次，会漏掉在更短时间内飞过的飞机，因此飞机数量只是下限，而非总数。消息数是接收机解码出的消息数量。本页所有内容都按顶部所选的时段显示。各列表在该时段内每架飞机只计一次：航空公司按呼号，机型依据飞机数据库，国家/地区依据飞机的地址码。航空公司的旗帜表示其所在的国家/地区（货运航空公司和航空公司列表已对照公开资料核实），否则为其飞机的注册国家/地区。<a>显示墙</a> · <code>zenithboard stats</code> 可在终端中输出相同内容。城市：<a>GeoNames</a>，CC BY 4.0。旗帜：<a>country-flag-icons</a>，MIT。",
  "no sample": "无采样",
  "{n} aircraft": "{n} 架飞机",
- "None heard in this period.": "此时段内未接收到。",
+ "None heard in this period.": "此时段内未收到任何飞机。",
  "Helicopters": "直升机",
  "Light aircraft": "轻型飞机",
  "Gliders": "滑翔机",
