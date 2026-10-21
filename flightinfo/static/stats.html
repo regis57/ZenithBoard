@@ -36,35 +36,26 @@
         <div class="tile"><div class="k">Aircraft</div><div class="v" id="t-aircraft">&ndash;</div><div class="d" id="t-aircraft-d">&nbsp;</div></div>
         <div class="tile"><div class="k">Messages</div><div class="v" id="t-messages">&ndash;</div><div class="d" id="t-busiest">&nbsp;</div></div>
         <div class="tile"><div class="k">Farthest</div><div class="v" id="t-far">&ndash;</div><div class="d" id="t-far-d">&nbsp;</div></div>
-        <div class="tile"><div class="k">Best in 30 days</div><div class="v" id="t-best">&ndash;</div><div class="d" id="t-bestday">&nbsp;</div></div>
+        <div class="tile"><div class="k" id="t-best-k">Busiest</div><div class="v" id="t-best">&ndash;</div><div class="d" id="t-bestday">&nbsp;</div></div>
       </div>
 
       <div class="panel records">
-        <div class="rec"><div class="k">Farthest today</div><p id="r-today">&ndash;</p></div>
-        <div class="rec"><div class="k">Farthest in 30 days</div><p id="r-best">&ndash;</p></div>
-        <p class="rnote" id="r-note" hidden></p>
-      </div>
-
-      <div class="panel grid2">
-        <figure class="wide"><figcaption>Messages <span id="c-msgs-sub"></span></figcaption><div id="c-msgs"></div></figure>
-        <figure><figcaption>Farthest aircraft <span id="c-far-sub"></span></figcaption><div id="c-far"></div></figure>
-        <figure><figcaption>Aircraft <span id="c-planes-sub"></span></figcaption><div id="c-planes"></div></figure>
+        <div class="rec"><div class="k" id="r-period-k">Farthest</div><p id="r-period" class="withflag">&ndash;</p></div>
       </div>
 
       <div class="panel">
-        <figure><figcaption>The sky by hour <span>&middot; aircraft with a position, on average, the last 30 days (whatever the period above)</span></figcaption><div id="c-heat"></div></figure>
-      </div>
-
-      <div class="panel grid2">
-        <figure><figcaption>Airlines most seen <span class="per">&middot; distinct aircraft</span></figcaption><div id="c-airlines" class="ranks"></div></figure>
-        <figure><figcaption>Models most seen <span class="per">&middot; distinct aircraft</span></figcaption><div id="c-types" class="ranks"></div></figure>
-        <figure class="wide"><figcaption>How high <span id="c-alt-sub"></span></figcaption><div id="c-alt"></div></figure>
+        <h2>Aircraft</h2>
+        <figure><figcaption>The sky by hour <span id="c-heat-sub"></span></figcaption><div id="c-heat"></div></figure>
+        <div class="grid2">
+          <figure><figcaption>Airlines most seen <span class="per">&middot; distinct aircraft</span></figcaption><div id="c-airlines" class="ranks flags"></div></figure>
+          <figure><figcaption>Models most seen <span class="per">&middot; distinct aircraft</span></figcaption><div id="c-types" class="ranks"></div></figure>
+        </div>
       </div>
 
       <div class="panel">
         <h2>Cargo and business jets</h2>
         <div class="grid3">
-          <figure><div class="big"><b id="n-cargo">0</b><span>cargo aircraft</span></div><figcaption>Cargo airlines &middot; most seen model</figcaption><div id="c-cargo" class="ranks"></div></figure>
+          <figure><div class="big"><b id="n-cargo">0</b><span>cargo aircraft</span></div><figcaption>Cargo airlines &middot; most seen model</figcaption><div id="c-cargo" class="ranks flags"></div></figure>
           <figure><div class="big"><b id="n-biz">0</b><span>business jets</span></div><figcaption>Make and model</figcaption><div id="c-biz" class="ranks"></div></figure>
           <figure><div class="big"><b id="n-bizc">0</b><span>countries</span></div><figcaption>Most registered in</figcaption><div id="c-bizc" class="ranks flags"></div></figure>
         </div>
@@ -82,8 +73,21 @@
         <div id="c-ga" class="grid4"></div>
       </div>
 
+      <div class="panel">
+        <figure><figcaption>How high <span id="c-alt-sub"></span></figcaption><div id="c-alt"></div></figure>
+      </div>
+
+      <div class="panel">
+        <figure><figcaption>Messages <span id="c-msgs-sub"></span></figcaption><div id="c-msgs"></div></figure>
+      </div>
+
+      <div class="panel grid2">
+        <figure><figcaption>Farthest aircraft <span id="c-far-sub"></span></figcaption><div id="c-far"></div></figure>
+        <figure><figcaption>Aircraft <span id="c-planes-sub"></span></figcaption><div id="c-planes"></div></figure>
+      </div>
+
       <details class="panel"><summary>The same numbers as a table</summary><div class="scroller"><table id="table"></table></div></details>
-      <p class="note">A sample every 15 minutes misses an aircraft that crossed in less, so an aircraft count is a floor, never a total. Messages are what the receiver decoded. The lists count each aircraft once in the period: airlines by callsign, models from the aircraft database, countries from the aircraft's address. <a href="/">The wall</a> &middot; <code>zenithboard stats</code> prints the same in the terminal. Cities: <a href="https://www.geonames.org/" target="_blank" rel="noopener noreferrer">GeoNames</a>, CC&nbsp;BY&nbsp;4.0. Flags: <a href="https://gitlab.com/catamphetamine/country-flag-icons" target="_blank" rel="noopener noreferrer">country-flag-icons</a>, MIT.</p>
+      <p class="note">A sample every 15 minutes misses an aircraft that crossed in less, so an aircraft count is a floor, never a total. Messages are what the receiver decoded. Everything on this page follows the period chosen at the top. The lists count each aircraft once in the period: airlines by callsign, models from the aircraft database, countries from the aircraft's address. An airline's flag is the country it is based in (cargo and airline lists checked against a published source), else the one its aircraft are registered in. <a href="/">The wall</a> &middot; <code>zenithboard stats</code> prints the same in the terminal. Cities: <a href="https://www.geonames.org/" target="_blank" rel="noopener noreferrer">GeoNames</a>, CC&nbsp;BY&nbsp;4.0. Flags: <a href="https://gitlab.com/catamphetamine/country-flag-icons" target="_blank" rel="noopener noreferrer">country-flag-icons</a>, MIT.</p>
       <p class="note version"><a id="s-version" href="https://github.com/regis57/ZenithBoard/releases" target="_blank" rel="noopener noreferrer">ZenithBoard</a></p>
     </section>
   </main>

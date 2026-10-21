@@ -98,4 +98,26 @@ check "update: a component when on"                    'grep -q "graphs1090) is_
 check "security: port 8542 is known"                   'grep -q "8542) known=" lib/security.sh'
 check "uninstall everything takes it"                  'grep -q "then graphs_off; fi" install.sh'
 check "never purge, never apt_remove (purge)"          '! grep -v "^ *#" lib/graphs.sh | grep -q "purge\|apt_remove"'
+
+# ---- 0.43.0: graphs1090 in ZenithBoard's look, and back: its own page and its own colours untouched otherwise
+L="$t/look"; mkdir -p "$L/usr/share/graphs1090/html" "$L/etc/default"
+printf '<html><head>\n\t\t<link rel="stylesheet" href="bootstrap.custom.light.css">\n\t\t<link rel="stylesheet" href="portal.css">\n</head><body><h1>Performance Graphs</h1>\n\t\t<script src="graphs.js"></script>\n</body></html>\n' > "$L/usr/share/graphs1090/html/index.html"
+printf 'colorscheme=default\nDRAW_INTERVAL=60\n' > "$L/etc/default/graphs1090"
+cp "$L/usr/share/graphs1090/html/index.html" "$t/index.before"; cp "$L/etc/default/graphs1090" "$t/default.before"
+look() { ( export ZB_GRAPHS_ROOT="$L" ZENITHBOARD_HOME="$PWD" ZB_SKIP_SERVICES=1; . lib/common.sh; . lib/graphs.sh; "$@" ); }
+check "look: original by default"                      '[ "$(look graphs_look_state)" = original ]'
+cfg_set THEME green
+look graphs_look zenithboard >/dev/null
+check "look: the palette after graphs1090's own"       'tail -n +3 "$L/etc/default/graphs1090" | grep -q "^colorscheme=dark$" && grep -q "^BLUE=39ff6a$" "$L/etc/default/graphs1090" && grep -q "^colorscheme=default$" "$L/etc/default/graphs1090"'
+check "look: the page links its stylesheet and script" 'grep -q "zenithboard.css" "$L/usr/share/graphs1090/html/index.html" && grep -q "zenithboard.js" "$L/usr/share/graphs1090/html/index.html" && [ -f "$L/usr/share/graphs1090/html/font5x7.js" ]'
+check "look: the wall colour in the stylesheet"        'grep -q -- "--on: #39ff6a;" "$L/usr/share/graphs1090/html/zenithboard.css"'
+check "look: twice is the same as once"                'look graphs_look zenithboard >/dev/null; [ "$(grep -c "ZenithBoard look" "$L/etc/default/graphs1090")" = 2 ] && [ "$(grep -c "zenithboard.css" "$L/usr/share/graphs1090/html/index.html")" = 1 ]'
+check "look: the palette is bash (graphs1090 sources it)" 'bash -n "$L/etc/default/graphs1090" && ( . "$L/etc/default/graphs1090"; [ "$colorscheme" = dark ] && [ "$BLUE" = 39ff6a ] && [[ $colors == *CANVAS#0a0a0a* ]] )'
+look graphs_look original >/dev/null
+check "original: page and settings as they were"       'cmp -s "$t/index.before" "$L/usr/share/graphs1090/html/index.html" && cmp -s "$t/default.before" "$L/etc/default/graphs1090" && [ ! -e "$L/usr/share/graphs1090/html/zenithboard.css" ]'
+rm -f "$L/usr/share/graphs1090/html/index.html"
+check "look: refused when graphs1090 is not there"     '! look graphs_look zenithboard >/dev/null 2>&1'
+check "look: kept after graphs1090 is updated or the colour changes" 'grep -q "graphs_look_keep" lib/graphs.sh && grep -q "graphs_look_keep" bin/zenithboard'
+check "look: graphs1090 sources its settings after its colour schemes (the hook this relies on)" 'grep -q "colorscheme" lib/graphs.sh'
+
 [ "$fail" = 0 ] && echo "ALL OK"; exit "$fail"

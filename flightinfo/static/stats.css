@@ -84,6 +84,12 @@ svg { width: 100%; height: auto; display: block; }
 .ranks li .n { font: 13px ui-monospace, Menlo, Consolas, monospace; color: var(--muted); font-variant-numeric: tabular-nums; }
 .ranks li .fill { grid-column: 2 / -1; height: 4px; border-radius: 2px; background: var(--on); margin-top: 3px; }
 .ranks li.flag .fill { grid-column: 2 / -1; }
+/* 0.43.0: a flag first on every airline row, all rows the same height so the names line up under one another */
+.ranks li.flag { grid-template-columns: 36px minmax(0, 1fr) auto; align-items: center; }
+.rec p.withflag { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.rec p.withflag > img.flag, .rec p.withflag > .noflag { flex: none; }
+.rec p.withflag > span:not(.rnote) { flex: 1 1 300px; min-width: 0; }
+.rec p.withflag .rnote { flex-basis: 100%; }
 .ranks .empty { color: var(--faint); font-size: 13px; margin: 0; }
 img.flag { width: 36px; height: 24px; display: block; border: 1px solid #333; border-radius: 2px; align-self: center; }
 .noflag { width: 36px; height: 24px; display: grid; place-items: center; border: 1px solid #333; border-radius: 2px; font: 10px ui-monospace, Menlo, Consolas, monospace; color: var(--muted); }

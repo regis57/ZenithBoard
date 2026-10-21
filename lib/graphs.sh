@@ -84,6 +84,7 @@ graphs_on() {
   log "Installing graphs1090 (wiedehopf's installer: a minute or two)"
   graphs_run_installer || { err "graphs1090 is not installed. To put back what was changed: sudo zenithboard graphs off"; return 1; }
   cfg_set GRAPHS1090 1
+  graphs_look_keep
   ! declare -F bk_pending_apply >/dev/null || bk_pending_apply graphs       # 0.42.0: the history from a backup
   echo "graphs1090 is ON (version $(graphs_version)). The first points appear within ten minutes:"
   graphs_urls
@@ -124,7 +125,7 @@ graphs_off() {
     fi
   fi
   rm -f "$GRAPHS_STATE"
-  cfg_set GRAPHS1090 0
+  cfg_set GRAPHS1090 0                             # GRAPHS_LOOK is kept: a later `on` puts the chosen look back
   echo "graphs1090 is OFF."
   if [ -d "$GRAPHS_ROOT/var/lib/collectd/rrd" ]; then
     echo "Its history is kept on the card ($(graphs_du "$GRAPHS_ROOT/var/lib/collectd/rrd"), /var/lib/collectd/rrd): 'graphs on' picks it up again."
@@ -133,10 +134,102 @@ graphs_off() {
 }
 
 # zenithboard update: graphs1090's installer again (it stops at once when its version has not changed)
-graphs_update() { is_graphs || return 0; graphs_run_installer || warn "graphs1090 update failed (above)"; }
+graphs_update() {
+  is_graphs || return 0
+  graphs_run_installer || warn "graphs1090 update failed (above)"
+  graphs_look_keep                                 # 0.43.0: its installer writes its page again: the look goes back on
+}
+
+# ---- 0.43.0: graphs1090 in ZenithBoard's look (the owner, 21 October 2026), off by default.
+# Two things, both graphs1090's own ways: the graphs' colours are rrdtool's, set by variables graphs1090 reads from
+# /etc/default/graphs1090 after its own colour schemes (graphs1090.sh sources that file again after them, commit
+# 2f96314), so a block at its end wins; and the page gets a stylesheet and a script beside its own, linked from its
+# index.html. `original` takes the block, the two links and the three files away; graphs1090's dark scheme is part
+# of the block, so its own page switches back to light by itself (its boot.sh, at the restart).
+GRAPHS_DEFAULTS="$GRAPHS_ROOT/etc/default/graphs1090"
+GRAPHS_LOOK_BEGIN="# >>> ZenithBoard look"
+GRAPHS_LOOK_END="# <<< ZenithBoard look"
+GRAPHS_LOOK_FILES="zenithboard.css zenithboard.js font5x7.js"
+graphs_look_state() { grep -qF "$GRAPHS_LOOK_BEGIN" "$GRAPHS_DEFAULTS" 2>/dev/null && echo zenithboard || echo original; }
+graphs_theme_hex() {
+  case "$(wall_theme)" in green) echo 39ff6a ;; red) echo ff3b30 ;; white) echo e8e8e8 ;; turquoise) echo 00d6d7 ;; *) echo ffb000 ;; esac
+}
+# The palette: the wall's colour for the main series (messages, aircraft), its shades for the others, the wall's
+# turquoise, green and red where graphs1090 needs more series told apart; a black canvas, light grey text. Read
+# against each graph of the reference Pi's own history (21 October 2026), every line still told apart.
+graphs_look_block() {
+  local on; on=$(graphs_theme_hex)
+  local light dim dark
+  light=$(graphs_mix "$on" ffffff 40); dim=$(graphs_mix "$on" 000000 30); dark=$(graphs_mix "$on" 000000 55)
+  cat <<EOT
+$GRAPHS_LOOK_BEGIN (sudo zenithboard graphs look zenithboard). Taken away by: sudo zenithboard graphs look original
+colorscheme=dark
+CANVAS=0a0a0a
+colors="-c CANVAS#0a0a0a -c BACK#000000 -c FONT#e8e8e8 -c AXIS#8c8c8c -c ARROW#8c8c8c -c FRAME#333333 -c GRID#262626 -c MGRID#3a3a3a -c SHADEA#000000 -c SHADEB#000000"
+LBLUE=$light
+BLUE=$on
+ABLUE=$dim
+DBLUE=$dark
+LGREEN=7dffa3
+GREEN=1f6b37
+DGREEN=39d468
+CYAN=00d6d7
+LCYAN=7aeaea
+RED=ff3b30
+DRED=c4281f
+LRED=ff8a80
+LIGHTYELLOW=2b2b2b
+AYELLOW=$on
+AGRAY=1c1c1c
+$GRAPHS_LOOK_END
+EOT
+}
+graphs_mix() {   # graphs_mix RRGGBB RRGGBB PERCENT_OF_THE_SECOND -> RRGGBB
+  local a=$1 b=$2 p=$3 i out=""
+  for i in 0 2 4; do out="$out$(printf '%02x' $(( (16#${a:$i:2} * (100 - p) + 16#${b:$i:2} * p) / 100 )))"; done
+  printf '%s' "$out"
+}
+graphs_look_strip() {
+  [ -f "$GRAPHS_DEFAULTS" ] && sed -i "/^$GRAPHS_LOOK_BEGIN/,/^$GRAPHS_LOOK_END/d" "$GRAPHS_DEFAULTS"
+  local html="$GRAPHS_HOME/html/index.html" f
+  [ -f "$html" ] && sed -i -e '/zenithboard\.css/d' -e '/zenithboard\.js/d' -e '/font5x7\.js/d' "$html"
+  for f in $GRAPHS_LOOK_FILES; do rm -f "$GRAPHS_HOME/html/$f"; done
+  return 0
+}
+graphs_look_apply() {
+  local html="$GRAPHS_HOME/html/index.html" src="$ZB_HOME/tools/graphs1090-look"
+  graphs_look_strip
+  graphs_look_block >> "$GRAPHS_DEFAULTS"
+  install -m 644 "$src/zenithboard.js" "$ZB_HOME/flightinfo/static/font5x7.js" "$GRAPHS_HOME/html/"
+  sed "s|--on: #ffb000; /\* ZB_THEME_HEX \*/|--on: #$(graphs_theme_hex);|" "$src/zenithboard.css" > "$GRAPHS_HOME/html/zenithboard.css"
+  chmod 644 "$GRAPHS_HOME/html/zenithboard.css"
+  sed -i -e 's|\(<link rel="stylesheet" href="portal.css">\)|\1\n\t\t<link rel="stylesheet" href="zenithboard.css">|' \
+         -e 's|\(<script src="graphs.js"></script>\)|\1\n\t\t<script src="font5x7.js"></script>\n\t\t<script src="zenithboard.js"></script>|' "$html"
+  grep -q 'zenithboard.css' "$html" && grep -q 'zenithboard.js' "$html"
+}
+graphs_look() {   # graphs_look zenithboard|original|status
+  case "${1:-status}" in
+    status) echo "graphs1090's look: $(graphs_look_state)"; return 0 ;;
+    zenithboard|zb|on)
+      is_graphs || { err "graphs1090 is not installed: sudo zenithboard graphs on, then this again."; return 1; }
+      graphs_look_apply || { graphs_look_strip; err "graphs1090's page is not the one this was written for (its links were not found): nothing was changed."; return 1; }
+      cfg_set GRAPHS_LOOK zenithboard ;;
+    original|off)
+      graphs_look_strip; cfg_set GRAPHS_LOOK original ;;
+    *) err "Usage: zenithboard graphs look zenithboard|original|status"; return 1 ;;
+  esac
+  [ "${ZB_SKIP_SERVICES:-}" = 1 ] || systemctl restart graphs1090 >/dev/null 2>&1 || true
+  echo "graphs1090's look: $(graphs_look_state). The graphs are drawn again in the next minute (the longer periods within the hour); reload the page."
+}
+# after graphs1090's installer, or a new wall colour: the look again, if it was chosen
+graphs_look_keep() {
+  [ "$(cfg_get GRAPHS_LOOK original)" = zenithboard ] && is_graphs || return 0
+  graphs_look_apply >/dev/null 2>&1 || return 0
+  [ "${ZB_SKIP_SERVICES:-}" = 1 ] || systemctl restart graphs1090 >/dev/null 2>&1 || true
+}
 
 graphs_status() {
-  echo "graphs1090: $(graphs_state)$(is_graphs && printf ' (version %s)' "$(graphs_version)")"
+  echo "graphs1090: $(graphs_state)$(is_graphs && printf ' (version %s), look: %s' "$(graphs_version)" "$(graphs_look_state)")"
   is_graphs || { echo "    Turn it on: sudo zenithboard graphs on   (menu 3 Settings -> 2 Receiver -> 6)"; return 0; }
   graphs_urls
   echo "    collectd: $(systemctl is-active collectd 2>/dev/null)   graph drawing: $(systemctl is-active graphs1090 2>/dev/null)"

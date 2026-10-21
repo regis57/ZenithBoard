@@ -39,6 +39,7 @@ stats_remove_units() {
 
 # The folder belongs to the wall's user: the timer runs as that user, and the wall server reads it.
 stats_prepare_dir() {
+  ensure_zb_user                                    # 0.43.0: the timer runs as the wall's user, which a fresh card may not have yet
   [ -d "$STATS_DIR" ] || install -d -m 755 "$STATS_DIR" 2>/dev/null || return 1
   [ "$(id -u)" -ne 0 ] || chown "$ZB_USER:$ZB_USER" "$STATS_DIR" 2>/dev/null || true
   [ -f "$STATS_FILE" ] || { echo "$STATS_HEADER" > "$STATS_FILE" && { [ "$(id -u)" -ne 0 ] || chown "$ZB_USER:$ZB_USER" "$STATS_FILE" 2>/dev/null || true; }; }

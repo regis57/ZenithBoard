@@ -219,7 +219,7 @@ def week_data(c, stats_dir=None, now=None, posts=None, period="weekly"):
                 "bizjet_countries": [(cc, k) for cc, k in fleet.get("bizjet_countries") or [] if cc][:TOP],
                 "military": fleet.get("military") or [], "military_total": fleet.get("military_total", 0),
                 "military_unknown": fleet.get("military_unknown") or {}, "until": now_dt.strftime("%H:%M"),
-                "misc": fleet.get("misc") or {}, "covered": covered, "shown": shown, "since": since, "posted": posted,
+                "misc": fleet.get("misc") or {}, "airline_cc": fleet.get("airline_cc") or {}, "covered": covered, "shown": shown, "since": since, "posted": posted,
                 "fleet_from": fleet_from,
                 "fleet_week": first_full_week(fleet_from) if period == "weekly" else first_full(fleet_from, n)})
     return out
@@ -650,7 +650,7 @@ def _period_graph(d, f, col, w):
         d.text((gx + h * cw + cw / 2, gy + 7 * ch + 6), "%02dh" % h, font=f["small"], fill=FAINT, anchor="ma")
 
 
-def draw(w, theme, area, out):
+def draw(w, theme, area, out, flags=None):
     """The week's card, as a PNG at `out`: the counts on the left; the week by hour, then the airlines and the
     models most seen side by side, on the right (0.35.0: the grid smaller to make room for the models).
     Needs Pillow (social_card). Returns {path, width, height, bytes, mime}."""
@@ -672,7 +672,10 @@ def draw(w, theme, area, out):
     # the airlines and the models, side by side
     x0, x1, colw, ly = 466, 820, 332, 300
     if w.get("airlines") or w.get("models"):
-        _ranks(d, f, col, x0, ly, colw, "AIRLINES MOST SEEN", w.get("airlines") or [])
+        # 0.43.0: each airline with the flag of the country it is based in, first, as on the statistics page (the owner)
+        acc = w.get("airline_cc") or {}
+        _flag_ranks(img, d, f, col, flags or {}, x0, ly, colw, "AIRLINES MOST SEEN",
+                    [(n, acc.get(n), k) for n, k in w.get("airlines") or []])
         _ranks(d, f, col, x1, ly, colw, "MODELS MOST SEEN", w.get("models") or [])
     else:
         d.text((x0, ly), "AIRLINES AND MODELS MOST SEEN", font=f["lbl"], fill=GREY)
@@ -704,12 +707,14 @@ def draw_second(w, theme, area, out, flags=None):
     flags = flags or {}
     _header(d, f, col, dim, ("CARGO AND BUSINESS JETS " + area) if area else "CARGO AND BUSINESS JETS", w)
     # cargo: the airline, then in grey the model it flew most and how many of them, the airline's count on the right
-    x, width = M, 420
-    _total(d, f, col, x, 108, w.get("cargo_total", 0), "CARGO AIRCRAFT")
-    d.text((x, 236), "CARGO AIRLINES \u00b7 MOST SEEN MODEL", font=f["lbl"], fill=GREY)
-    y, cargo, cm = 268, w.get("cargo") or [], w.get("cargo_models") or {}
+    x0, width0 = M, 420
+    _total(d, f, col, x0, 108, w.get("cargo_total", 0), "CARGO AIRCRAFT")
+    d.text((x0, 236), "CARGO AIRLINES \u00b7 MOST SEEN MODEL", font=f["lbl"], fill=GREY)
+    y, cargo, cm, acc = 268, w.get("cargo") or [], w.get("cargo_models") or {}, w.get("airline_cc") or {}
     best = cargo[0][1] if cargo else 0
+    x, width = x0 + 58, width0 - 58            # 0.43.0: the airline's flag first, the rest after it
     for name, k in cargo[:TOP]:
+        _flag_or_code(img, d, f, flags, acc.get(name), x0, y - 6)
         num = number(k)
         room = width - d.textlength(num, font=f["name"]) - 14
         d.text((x, y), _fit(d, name, f["name"], room), font=f["name"], fill=INK)
@@ -722,7 +727,7 @@ def draw_second(w, theme, area, out, flags=None):
         d.rounded_rectangle([x, y + 26, x + max(4, int(width * k / best)), y + 31], radius=2, fill=col)
         y += 44
     if not cargo:
-        d.text((x, 268), "None heard this week.", font=f["name"], fill=FAINT)
+        d.text((x0, 268), "None heard this week.", font=f["name"], fill=FAINT)
     # business jets: make and model
     x, width = 500, 300
     _total(d, f, col, x, 108, w.get("bizjet_total", 0), "BUSINESS JETS")

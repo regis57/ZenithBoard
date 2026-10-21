@@ -110,6 +110,21 @@ is_fr24()        { pkg_installed fr24feed; }
 is_planefinder() { pkg_installed pfclient; }
 is_flightinfo()  { unit_exists zenithboard-flightinfo; }
 
+# The wall's own user, made by menu 2 until 0.43.0; now by whatever needs it first. On a fresh card the console
+# (whose folders belong to it) was switched on before the wall: "chown: invalid user: zenithboard" (the owner,
+# 21 October 2026, a new card on a Pi 4). Root only: tests and plain users never make users.
+ensure_zb_user() {
+  [ "$(id -u)" -eq 0 ] && [ "${ZB_SKIP_SERVICES:-}" != 1 ] || return 0
+  id "$ZB_USER" >/dev/null 2>&1 || useradd --system --home-dir "$ZB_DATA" --shell /usr/sbin/nologin "$ZB_USER"
+  # 2751: anyone may walk through to data/ (so `zenithboard status` works without sudo) but only the service
+  # may list the folder, which keeps the statistics and the social state out of sight.
+  install -d -o "$ZB_USER" -g "$ZB_USER" -m 2751 "$ZB_DATA"
+  # the downloaded aircraft-type list is read by the wall server (user zenithboard): world-readable, root-writable
+  install -d -m 755 "$ZB_DATA/data"
+}
+
+
+
 installed_decoder() { if is_readsb; then echo readsb; elif is_dump1090; then echo dump1090-fa; fi; }
 decoder_json()   { echo "/run/$(cfg_get DECODER readsb)/aircraft.json"; }
 

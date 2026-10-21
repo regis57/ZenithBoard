@@ -105,7 +105,7 @@ graphs lived on the card only):
 15. **Your old settings**, if you kept only a settings file (a backup restored at step 12 already did this): copy the file to the Pi (`scp zenithboard-settings.env
     YOUR_USER@zenithboard.local:`), then `sudo zenithboard settings import ~/zenithboard-settings.env`. The values
     from before are kept in a `.bak` file.
-16. **Switch the web console on** — *3 Settings → 7 Web console* in the menu, or the commands:
+16. **Switch the web console on**, once the wall of step 14 is there (the console is one of its pages) — *3 Settings → 7 Web console* in the menu, or the commands:
     ```
     sudo zenithboard console password          # its own password, asked twice, 10 characters at least
     sudo zenithboard console on                # prints its address
