@@ -1180,6 +1180,16 @@ def publish_week(c, sec, now, state=None, dry=False, keep=None, second=False, pa
     for k in ("models", "bizjets"):              # "BOEING 737-800" as the posts write it: "Boeing 737-800" (0.34.1)
         w[k] = [(nice_type({"type_name": n}), v) for n, v in w.get(k) or []]
     w["cargo_models"] = {a: (nice_type({"type_name": m}), v) for a, (m, v) in (w.get("cargo_models") or {}).items()}
+    if part == 3 and str(c.get("SHOW_ROUTES", "1")).lower() in ("1", "on", "yes", "true") and w.get("military_unknown"):
+        # 0.40.5: a military aircraft of unknown type is asked of adsbdb, then hexdb, by its address, as the wall asks
+        # for every aircraft when routes are on; two seconds apart, a dozen at most
+        last = {"t": 0.0}
+
+        def ask(hex_code):
+            time.sleep(max(0.0, week.server.AIRCRAFT_GAP_S - (time.time() - last["t"])))
+            last["t"] = time.time()
+            return week.server._aircraft_api(hex_code.upper())[0]
+        week.name_unknown_military(w, ask)
     for e in w.get("military") or []:
         e["models"] = [(nice_type({"type_name": n}), v) for n, v in e["models"]]
     if part > 1 and not week.has_part(w, part):
@@ -1205,11 +1215,14 @@ def publish_week(c, sec, now, state=None, dry=False, keep=None, second=False, pa
             info = week.draw_military(w, theme_of(c), area, out, flags)
             text, alt = week.text_military(w, area, tags, fit_post), week.alt_military(w, area)
         elif part == 4:
+            codes = []
             for g in ("heli", "light", "glider", "drone", "balloon"):
                 e = (w.get("misc") or {}).get(g)
                 if e:
                     e["models"] = [(nice_type({"type_name": n}), v) for n, v in e["models"]]
-            info = week.draw_misc(w, theme_of(c), area, out)
+                    e["rows"] = [(nice_type({"type_name": n}), cc, v) for n, cc, v in e.get("rows") or []]
+                    codes += [cc for _, cc, _ in e["rows"]]
+            info = week.draw_misc(w, theme_of(c), area, out, week.load_flags(codes))
             text, alt = week.text_misc(w, area, tags, fit_post), week.alt_misc(w, area)
         else:
             info = week.draw(w, theme_of(c), area, out)

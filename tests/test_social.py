@@ -1537,7 +1537,8 @@ class WeeklyTest(unittest.TestCase):
         info = social_week.draw(w, "amber", "above Trémery", os.path.join(self.d, "w.png"))
         self.assertEqual(info["width"], 1200)
         self.assertEqual(social_week.first_full_week("2026-10-18"), "2026-10-25", "a Sunday start covers the next week")
-        self.assertEqual(social_week.first_full_week("2026-10-19"), "2026-11-01", "a Monday start is not counted whole")
+        self.assertEqual(social_week.first_full_week("2026-10-19"), "2026-10-25", "a Monday start: six days of seven, shown (0.40.4)")
+        self.assertEqual(social_week.first_full_week("2026-10-23"), "2026-11-01", "a Friday start: three days of seven, not yet")
         self.assertIsNone(social_week.fleet_start(self.d + "/none"))
 
     def add_cargo_and_bizjets(self):
@@ -1599,6 +1600,37 @@ class WeeklyTest(unittest.TestCase):
             fh.write("3c1a01\t\t1500\tEC45\tA7\t\n3c1a02\t\t1200\tEC45\tA7\t\n")
             fh.write("3c1a03\t\t2000\tC172\tA1\t\n3c1a04\t\t3000\tGLID\tB1\t\n3c1a05\t\t400\t\tB6\t\n")
             fh.write("4b1a01\t\t41000\tFA7X\tA2\t\n")                # a Swiss business jet
+
+    def test_general_aviation_rows_carry_the_country_and_unknown_military_is_asked(self):
+        # 0.40.5, the owner: the flags of the helicopters and light aircraft; and "Germany: Unknown type (2)"
+        import social_week
+        self.add_military_and_general_aviation()
+        with open(os.path.join(self.d, "fleet-2026-10-15"), "a") as fh:
+            fh.write("3f4401\t\t20000\t\t\t1\n3f4402\t\t21000\t\t\t1\n")     # German military, no type
+            fh.write("4b1b01\t\t9000\tEC45\tA7\t\n")                       # a Swiss helicopter
+        w = self.week()
+        m = social_week.misc_lists(w)
+        heli = {(n, cc): k for n, cc, k in m["heli"]["rows"]}
+        self.assertEqual(sum(heli.values()), 3)
+        self.assertEqual({cc for _, cc in heli}, {"DE", "CH"}, "one row per model and country")
+        self.assertEqual(sorted(w["military_unknown"]["DE"]), ["3f4401", "3f4402"])
+        asked = []
+        social_week.name_unknown_military(w, lambda h: asked.append(h) or ({"manufacturer": "Airbus", "type": "A400M Atlas"} if h == "3f4401" else None))
+        de = {e["cc"]: e for e in w["military"]}["DE"]
+        self.assertEqual(sorted(asked), ["3f4401", "3f4402"])
+        self.assertIn(("Airbus A400M Atlas", 1), de["models"])
+        self.assertIn(("Unknown type", 1), de["models"])
+        self.assertEqual(de["models"][-1][0], "Unknown type", "the unknown last")
+        flags = social_week.load_flags(["DE", "CH", "US", "FR"])
+        info = social_week.draw_misc(w, "amber", "above Trémery", os.path.join(self.d, "m.png"), flags)
+        self.assertEqual((info["width"], info["height"]), (1200, 675))
+
+    def test_the_cards_say_the_period_in_words(self):
+        import social_week
+        self.assertEqual(social_week.SPAN_TITLES, {"daily": "LAST 24 HOURS", "weekly": "LAST 7 DAYS", "monthly": "LAST 30 DAYS"})
+        self.assertEqual(social_week.span_footer({"period": "daily", "dates": ["2026-10-20", "2026-10-21"], "until": "09:20"}),
+                         "20 October, 09:20 – 21 October, 09:20")
+        self.assertEqual(social_week.span_footer({"period": "weekly", "dates": ["2026-10-12", "2026-10-18"]}), "12–18 October")
 
     def test_military_and_general_aviation(self):
         import social_week
