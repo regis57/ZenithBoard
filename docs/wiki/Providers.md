@@ -57,6 +57,8 @@ Each feeder fails on its own. A 404 from Plane Finder does not stop FlightAware 
 
 **What it sends**, read in their code: every 5 seconds, the feed's aircraft list (`/run/adsbexchange-feed/aircraft.json`, what the feed already gives them), the feed's UUID, three signal figures (average, weakest, strongest) and the Pi's power warnings (`vcgencmd get_throttled`). It runs as the `adsbexchange` user, at the lowest priority.
 
+**What it costs** on the reference Pi 3B: 6 MB of memory, in two processes (measured 22 October 2026, [Hardware](Hardware)). What it uploads (the aircraft list, compressed, every 5 seconds) has not been measured on the Pi yet.
+
 **What it adds**: `jq`, `bind9-host` and `bash-builtins` from apt (signed; whichever are missing), its folder `/usr/local/share/adsbexchange-stats`, the `adsbexchange-stats` service, `adsbexchange-showurl`, and the `adsbexchange` user in the video group (for `vcgencmd`). `off` takes all of that back: their uninstaller, the packages that were not there before (unless something installed since needs one, which is said), and the group. The feed's UUID stays: it is the feed's, the backup keeps it, and `on` again gives the same map.
 
 ![The console's Receiver → Measure with ADSB Exchange's stats on and the link to their map](https://raw.githubusercontent.com/regis57/ZenithBoard/main/docs/images/console-adsbx-stats.png)
