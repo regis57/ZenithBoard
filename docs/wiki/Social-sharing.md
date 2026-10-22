@@ -172,9 +172,9 @@ Its starts, the last two days (each update restarts it):
 ```
 
 A *last* with a date and no time was recorded by 0.48.0 or before: it stands for that day whatever the time. **A service
-still on older code**: an update restarts the social service at its very end; an update that stopped before (an error, a
-closed SSH window) leaves it posting with the code it started with, which `why` and `sudo zenithboard social status`
-say, with the restart command.
+still on older code**: an update restarts the social service at its very end. Until then (the update still running),
+or for good if it stopped before (an error, a closed SSH window), the service posts with the code it
+started with, which `why` and `sudo zenithboard social status` say, with the restart command.
 
 The service writes a line when a summary falls due (*social: daily summary due (every day at 23:35): posts 1,2,3,4
 queued, 2 min apart, the first now*), one per post (*posted the daily summary, post 2*), and why a post was skipped or
