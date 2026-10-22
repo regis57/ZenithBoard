@@ -621,9 +621,10 @@ def place_name(c):
 
 def bare_place(c):
     """The owner typed a name alone ("Trémery"), not a phrase with its own preposition ("near Metz", "over the
-    Moselle", "près de Metz": a phrase starts with a small letter, or with one of English's own)."""
+    Moselle", "près de Metz": a phrase starts with a small letter, or with one of English's own). 0.51.0: a name in a
+    script without capitals (東京, 서울) is a name too."""
     area = place_name(c)
-    return bool(area) and area[0].isupper() and not re.match(r"^(Over|Near|Above|Around|By)\b", area)
+    return bool(area) and not area[0].islower() and area[0].isalpha() and not re.match(r"^(Over|Near|Above|Around|By)\b", area)
 
 
 def area_words(c, lang=None):

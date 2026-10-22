@@ -387,10 +387,13 @@ def messages_words(n, L=None):
 
 
 def messages_phrase(n, L=None):
-    """"58.7 million messages", "3 412 messages": the words of the posts."""
+    """"58.7 million messages", "3 412 messages": the words of the posts. Japanese, Korean and Chinese count in tens of
+    thousands: 5870万件 rather than 58.7 million (post_lang.Lang.myriad)."""
     L = L or EN
+    if L.myriad(n):
+        return L.tn(int(n), "{n} messages", "{n} messages", n=L.myriad(n))
     if n >= 1e6:
-        return L.t("{n} million messages", n=millions(n, L))
+        return L.tn(int(n // 1e6), "{n} million messages", "{n} million messages", n=millions(n, L))   # "1,2 million de messages"
     return L.tn(n, "{n} messages", "{n} messages")
 
 

@@ -128,19 +128,19 @@ class Lang(object):
             got = got.get("other") or key
         return self.render(got, values)
 
-    def tn(self, n, one, other, **values):
-        """One of a plural pair, by n's category in this language; {n} is n written this language's way unless given.
-        The catalogue keeps it under the English "other" form, as the web pages do."""
-        values.setdefault("n", self.num(n))
+    def tn(self, count, one, other, **values):
+        """One of a plural pair, by count's category in this language; {n} is count written this language's way unless
+        given (58,7 for 58.7 million). The catalogue keeps it under the English "other" form, as the web pages do."""
+        values.setdefault("n", self.num(count))
         if self.code == "en":
-            return self.render(one if n == 1 else other, values)
+            return self.render(one if count == 1 else other, values)
         got = self.words.get(other)
         if isinstance(got, dict):
-            form = got.get(plural(self.code, n)) or got.get("other") or (one if n == 1 else other)
+            form = got.get(plural(self.code, count)) or got.get("other") or (one if count == 1 else other)
         elif isinstance(got, str):
             form = got
         else:
-            form = one if n == 1 else other
+            form = one if count == 1 else other
         return self.render(form, values)
 
     def render(self, template, values):
@@ -200,6 +200,16 @@ class Lang(object):
             head, rest = s[:len(s) % 3 or 3], s[len(s) % 3 or 3:]
             s = group.join([head] + [rest[i:i + 3] for i in range(0, len(rest), 3)])
         return ("-" if n < 0 else "") + s
+
+    def myriad(self, n):
+        """Japanese, Korean and Chinese count big numbers in tens of thousands: 5,870万 (58 700 000), 1.2億; "" below
+        ten thousand and in the other languages."""
+        units = {"ja": ("万", "億"), "zh-Hans": ("万", "亿"), "zh-Hant": ("萬", "億"), "ko": ("만", "억")}.get(self.code)
+        if not units or n < 10000:
+            return ""
+        if n >= 1e8:
+            return ("%.1f" % (n / 1e8)).rstrip("0").rstrip(".") + units[1]
+        return self.num(int(round(n / 1e4))) + units[0]
 
     def dec(self, x, digits=1):
         """10.6 in English, 10,6 in French."""
