@@ -117,7 +117,16 @@ class OfferedTest(unittest.TestCase):
         got = post_lang.offered()
         self.assertEqual(got[0], "en")
         self.assertIn("fr", got)
-        self.assertNotIn("sw", got, "Swahili waits for a native review (draft.txt)")
+        self.assertIn("sw", got, "Swahili, offered since 0.53.1 (the owner, 22 October 2026)")
+
+    def test_a_language_marked_draft_is_held_back(self):
+        d = tempfile.mkdtemp(); self.addCleanup(shutil.rmtree, d, True)
+        shutil.copytree(post_lang.I18N_DIR, os.path.join(d, "i18n"))
+        open(os.path.join(d, "i18n", "de", "draft.txt"), "w").close()
+        self.addCleanup(setattr, post_lang, "I18N_DIR", post_lang.I18N_DIR)
+        post_lang.I18N_DIR = os.path.join(d, "i18n")
+        self.assertNotIn("de", post_lang.offered())
+        self.assertIn("sw", post_lang.offered())
 
 
 # Every shipped catalogue, as the service would post with it

@@ -112,8 +112,7 @@ Several shapes, comma-separated (`story,spotter,lookup`), or `random`: one is dr
 ## The posts' language (0.51.0)
 
 English until you choose another: `sudo zenithboard social lang fr` (menu *Social sharing → 11*, or the console's
-*Sharing → Language of the posts*). Every language of the web pages is offered (Swahili once a native speaker has
-reviewed it). It covers every word of the aircraft posts, in all five shapes and your own templates, and the summaries'
+*Sharing → Language of the posts*). Every language of the web pages is offered, Swahili too since 0.53.1. It covers every word of the aircraft posts, in all five shapes and your own templates, and the summaries'
 four texts. The alt texts come along too. The numbers, the dates, the weekdays and the country names are written as
 that language writes them (Unicode's CLDR data): *11 280 m* and *12–18 octobre* in French, *11.280 m* and
 *12.–18. Oktober* in German, *10月12日～10月18日* in Japanese. Since 0.52.1 the time of day and the metric units
