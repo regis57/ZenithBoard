@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.53.0
+- **The web console as an app** (the owner, 22 October 2026): its own icon and its own window on a phone or a computer. *System → The console as an app* says how for the browser in hand:
+  - iPhone and iPad, in Safari: *Share → Add to Home Screen*;
+  - Android, in Chrome: *⋮ → Add to Home screen*;
+  - a computer, in Chrome: *⋮ → Cast, save, and share → Install page as app*; in Edge: *Apps → Install this site as an app*; in Safari on a Mac: *File → Add to Dock*.
+- **Why the browser's menu.** Browsers show their own *Install* button only on an https address, and the Pi answers in plain http on the home network. On an https address (Tailscale or a domain that serves https), the card shows *Install the app* itself.
+- **What it adds:**
+  - a manifest;
+  - icons drawn from the wall's own shapes and dot font (`tools/make_console_icons.js`): 192, 512, a maskable 512, and 180 px for iOS;
+  - a service worker that keeps nothing (nothing stale is ever shown), registered only over https.
+
+  The console's security headers are unchanged. Its new strings are translated into each language.
+
 ## 0.52.1
 - **The time of day in the posts, as each language writes it**: *Di atas Trémery pukul 13.50* in Indonesian, *klo 13.50* in Finnish; 13:50 elsewhere. The owner read *pukul 13:50* on 22 October and asked whether *pukul* (also *to hit*) was right. It is the standard word before a clock time. The colon was the mistake: Indonesian spelling (EYD) separates hours and minutes with a full stop, and so does CLDR. This covers the board's line, your templates' `{time}`, and the summaries' busiest hour.
 - **The metric units in the posts' language too**, from CLDR like the numbers and dates: *839 км/ч* and *10 670 м* in Russian, *км/год* in Ukrainian, *km/u* in Dutch, *km/godz.* in Polish, *km/j* in Indonesian, *10,670米* in Chinese, *839km/h* in Korean. In Arabic the word for metre follows the count (متر, أمتار, مترًا). French takes CLDR's narrow space before the unit (*10 670 m*). Feet and knots stay *ft* and *kt*, as in aviation. The pictures keep their English labels.

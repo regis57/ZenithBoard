@@ -226,6 +226,7 @@ input.day { width: 4.5em; }
 .ticks { list-style: none; padding: 0; margin: 0 0 8px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
 .ticks li::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--on); margin: 0 10px 2px 0; }
 .ticks.no li::before { background: var(--faint); }
+.ticks li.here { font-weight: 600; }                       /* 0.53.0: the line for this device, in the app card */
 .plan li.run::before { animation: pulse .5s infinite alternate; }
 .plan li.ok::before { background: var(--ok); } .plan li.bad::before { background: var(--bad); }
 

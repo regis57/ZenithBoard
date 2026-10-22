@@ -533,6 +533,39 @@ window.ZBI18N.start({ part: "console" }, function () {
     ["zenithboard_flightinfo", t("The wall")], ["zenithboard_social", t("Bluesky posts")], ["graphs1090", "graphs1090"], ["lighttpd", t("Receiver map's web server")]
   ];
   function go(section) { return function () { location.hash = "#" + section; }; }
+
+  // ---- 0.53.0: the console as an app (the owner, 22 October 2026). The manifest and icons let a browser install
+  // it; Chrome's own Install button needs https, so over the Pi's plain http home address the card says which menu
+  // does it. The service worker keeps nothing and registers only where the browser allows it (https).
+  var INSTALL = { prompt: null, done: false };
+  window.addEventListener("beforeinstallprompt", function (e) {
+    e.preventDefault(); INSTALL.prompt = e;
+    if (S.section === "system" && !$("app").hidden) draw();
+  });
+  window.addEventListener("appinstalled", function () { INSTALL.prompt = null; INSTALL.done = true; if (S.section === "system" && !$("app").hidden) draw(); });
+  if ("serviceWorker" in navigator && window.isSecureContext) {
+    navigator.serviceWorker.register("/console-sw.js", { scope: "/console" }).catch(function () { /* the page works without it */ });
+  }
+  function installCard() {
+    var nav = navigator, ua = nav.userAgent || "";
+    var app = (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || nav.standalone === true;
+    var ios = /iPhone|iPad|iPod/.test(ua) || (nav.platform === "MacIntel" && nav.maxTouchPoints > 1), android = /Android/.test(ua);
+    var body = [];
+    if (app) body.push(h("p", { "class": "note", text: t("Installed: this window is the app.") }));
+    else if (INSTALL.done) body.push(h("p", { "class": "note", text: t("Installed: open it from its icon.") }));
+    else {
+      if (INSTALL.prompt) body.push(h("div", { "class": "actions" }, h("button", { type: "button", "class": "primary", text: t("Install the app"), onclick: function () {
+        var p = INSTALL.prompt; INSTALL.prompt = null;
+        p.prompt(); p.userChoice.then(function (c) { if (c && c.outcome === "accepted") INSTALL.done = true; draw(); });
+      } })));
+      body.push(h("ul", { "class": "ticks" },
+        h("li", { "class": ios ? "here" : null, text: t("iPhone or iPad, in Safari: Share → Add to Home Screen. It opens full screen, with its own icon; sign in once more inside it.") }),
+        h("li", { "class": android ? "here" : null, text: t("Android, in Chrome: ⋮ → Add to Home screen.") }),
+        h("li", { "class": !ios && !android ? "here" : null, text: t("A computer, in Chrome: ⋮ → Cast, save, and share → Install page as app. In Edge: ⋯ → Apps → Install this site as an app. In Safari on a Mac: File → Add to Dock.") })));
+      if (!window.isSecureContext) body.push(h("p", { "class": "note", text: t("The Install button that browsers show by themselves needs an https address; this Pi answers in plain http on your home network, so their menu does it instead. Same console, same password.") }));
+    }
+    return card(t("The console as an app"), "phone", t("Its own icon and its own window, on the phone or the computer. Nothing is downloaded: it is this same page, from this Pi."), body, "w6");
+  }
   // 0.52.0: the link to ADSB Exchange's map of this antenna's aircraft, only when it is theirs
   function adsbxMap() { var u = S.facts.adsbx_map || ""; return /^https:\/\/www\.adsbexchange\.com\/api\/feeders\/\?feed=[0-9A-Fa-f-]{36}$/.test(u) ? u : null; }
 
@@ -727,6 +760,7 @@ window.ZBI18N.start({ part: "console" }, function () {
           h("p", { "class": "note" }, t("A word that reads wrong? Every language has its review sheet, the English beside it: "),
             h("a", { href: "https://github.com/regis57/ZenithBoard/wiki/Translating", target: "_blank", rel: "noopener noreferrer", text: t("Translating ↗") }))
         ], "w6"),
+        installCard(),
         card(t("Signed in"), "phone", t("Browsers and phones signed in to this console. Signed in with the password: a week (a day unused). A paired phone: as long as it opens the console once a month."), [
           sessionsList(),
           row(t("Sign computers in with a phone"), t("A computer's sign-in page shows a QR code; a phone signed in here scans it and says yes"), sw("phone-signin", on(S.cfg.CONSOLE_PHONE_SIGNIN))),

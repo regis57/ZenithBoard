@@ -71,6 +71,7 @@ One file, read top to bottom in five parts:
 | `flags.js` | Registration prefix to country, maker to country, and the flags themselves at 11 x 7 dots. No manufacturer mark is ever drawn |
 | `stats.html`, `stats.css`, `stats.js` | The `/stats` page: four headline numbers, the two farthest aircraft in words (`farthestLine`), and three charts from `/api/stats`, one series each, following the device's light or dark setting |
 | `i18n.js`, `i18n.css`, `i18n/<lang>/*.json` | The pages' languages (0.47.0): `t()` and `tn()` with the English as key, the catalogues, the flag and the list at the top, the first visit's choice. `tools/i18n.py` finds the keys, checks the catalogues and makes the review sheets (`docs/translations/`) |
+| `console.webmanifest`, `console-icon-*.png`, `console-sw.js` | The console as an app (0.53.0): the manifest, the icons (`tools/make_console_icons.js` draws them from `shapes.js` and `font5x7.js`), a service worker that keeps nothing |
 | `console.html`, `console.css`, `console.js` | The web console (0.39.0): one section at a time, the wizard, Activity, pairing a phone with a QR code (`vendor/qrcode.js`, MIT). Reads `/console/api/*` |
 | `font5x7.js`, `format.js` | The dot font, and formatting numbers in metric or imperial units |
 

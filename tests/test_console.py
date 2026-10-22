@@ -470,5 +470,60 @@ class RunnerTest(TempDirs):
         self.assertFalse([n for n in os.listdir(os.path.join(self.dir, "out")) if n.endswith(".log") and n != "journal.log"], "nothing ran")
 
 
+class AppTest(unittest.TestCase):
+    """0.53.0: the console as an app: a manifest a browser accepts, its icons, a service worker that keeps nothing."""
+    STATIC = os.path.join(os.path.dirname(__file__), "..", "flightinfo", "static")
+
+    def test_the_manifest_meets_the_install_criteria(self):
+        import struct
+        with open(os.path.join(self.STATIC, "console.webmanifest"), encoding="utf-8") as fh:
+            m = json.load(fh)
+        self.assertTrue(m["name"] and m["short_name"])
+        self.assertIn(m["display"], ("standalone", "fullscreen", "minimal-ui"))
+        self.assertTrue(m["start_url"].startswith(m["scope"]))
+        self.assertNotIn("prefer_related_applications", m)
+        sizes = set()
+        for icon in m["icons"]:
+            path = os.path.join(self.STATIC, icon["src"][len("/static/"):])
+            with open(path, "rb") as fh:
+                head = fh.read(24)
+            self.assertEqual(head[:8], b"\x89PNG\r\n\x1a\n", icon["src"])
+            w, h = struct.unpack(">II", head[16:24])
+            self.assertEqual("%dx%d" % (w, h), icon["sizes"], icon["src"])
+            sizes.add((icon["sizes"], icon.get("purpose", "any")))
+        self.assertTrue({("192x192", "any"), ("512x512", "any"), ("512x512", "maskable")} <= sizes)
+        page = open(os.path.join(self.STATIC, "console.html"), encoding="utf-8").read()
+        self.assertIn('<link rel="manifest" href="/static/console.webmanifest">', page)
+        self.assertIn('rel="apple-touch-icon" href="/static/console-icon-180.png"', page)
+
+    def test_the_service_worker_keeps_nothing(self):
+        sw = open(os.path.join(self.STATIC, "console-sw.js"), encoding="utf-8").read()
+        self.assertIn('addEventListener("fetch"', sw)
+        self.assertNotIn("caches", sw, "nothing stale is ever shown")
+        js = open(os.path.join(self.STATIC, "console.js"), encoding="utf-8").read()
+        self.assertIn('register("/console-sw.js", { scope: "/console" })', js)
+        self.assertIn("window.isSecureContext", js)
+
+    def test_served_with_their_types_and_the_console_headers(self):
+        import http.client, threading
+        import server
+        httpd = server.WallServer(("127.0.0.1", 0), server.Handler); port = httpd.server_address[1]
+        threading.Thread(target=httpd.serve_forever, daemon=True).start()
+        self.addCleanup(httpd.server_close)
+        self.addCleanup(httpd.shutdown)
+
+        def get(path):
+            c = http.client.HTTPConnection("127.0.0.1", port, timeout=5); c.request("GET", path); r = c.getresponse(); r.read(); c.close()
+            return r.status, r.getheader("Content-Type"), r.getheader("Content-Security-Policy")
+        st, ctype, csp = get("/static/console.webmanifest")
+        self.assertEqual((st, ctype), (200, "application/manifest+json"))
+        self.assertIn("default-src 'self'", csp)
+        st, ctype, csp = get("/console-sw.js")
+        self.assertEqual(st, 200)
+        self.assertTrue(ctype.startswith("text/javascript"))
+        self.assertIn("script-src 'self'", csp)
+        self.assertEqual(get("/static/console-icon-512.png")[:2], (200, "image/png"))
+
+
 if __name__ == "__main__":
     unittest.main()
