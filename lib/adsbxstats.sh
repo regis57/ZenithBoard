@@ -32,6 +32,8 @@ AXS_CLONE="${ZB_AXS_CLONE:-/tmp/adsbexchange-stats-git}"        # where their st
 AXS_STATE="${ZENITHBOARD_ETC:-/etc/zenithboard}/adsbx-stats.state"
 # what their adsbexchange-showurl prints, the UUID after it (read in its code, 22 October 2026)
 AXS_MAP="https://www.adsbexchange.com/api/feeders/?feed="
+# what graphs1090's installer also brings (lib/graphs.sh): left in place by `off` while graphs1090 is on
+AXS_SHARED_GRAPHS="bash-builtins git wget unzip"
 
 is_adsbx_stats() { [ -f "$AXS_UNIT" ]; }
 adsbx_stats_state() { is_adsbx_stats && echo on || echo off; }
@@ -53,13 +55,16 @@ axs_state_set() {
 axs_packages() { dpkg-query -W -f='${db:Status-Status} ${binary:Package}\n' 2>/dev/null | awk '$1 == "installed" {sub(/:.*/, "", $2); print $2}' | sort -u; }
 axs_in_video() { id -nG adsbexchange 2>/dev/null | tr ' ' '\n' | grep -qx video; }
 
-# Their script (on, and the update), noting the packages it added: those, and only those, go with `off`.
-axs_run_installer() {
+# Their script (on, and the update), noting the packages it added: those, and only those, go with `off`. One
+# installer at a time (zb_pkg_locked), so graphs1090's packages are never counted as theirs.
+axs_run_installer() { zb_pkg_locked axs_run_installer_unlocked; }
+axs_run_installer_unlocked() {
   local before after script added
   before=$(zb_tmp axstats-before) && after=$(zb_tmp axstats-after) && script=$(zb_tmp axstats.sh) || return 1
   axs_packages > "$before"
   fetch "$ADSBX_STATS_URL" "$script" || { err "Could not download ADSB Exchange's stats script."; return 1; }
-  ( cd / && bash "$script" ) || err "ADSB Exchange's stats script reported an error (above)."
+  # their install.sh ends by printing the UUID and the map's link: hidden here, since an update's output is pasted
+  ( cd / && set -o pipefail && bash "$script" 2>&1 | zb_mask_ids ) || err "ADSB Exchange's stats script reported an error (above)."
   axs_packages > "$after"
   added=$(comm -13 "$before" "$after" | tr '\n' ' ' | sed 's/ *$//')
   if [ -n "$added" ]; then
@@ -70,13 +75,13 @@ axs_run_installer() {
   is_adsbx_stats
 }
 
+# Where the link is, never the link itself: on, status and update are pasted and screenshotted; `url` alone prints it.
 adsbx_stats_where() {
-  local url
-  url=$(adsbx_stats_url) || { warn "The feed's UUID ($AXS_UUID) is missing or unreadable: run the ADSB Exchange setup again (menu 1)."; return 0; }
-  echo "  Your map, only the aircraft this antenna hears, from anywhere (a minute or two after the start):"
-  echo "    $url"
-  echo "  The same link is at the bottom of https://www.adsbexchange.com/myip/ opened from your home network."
-  echo "  Keep it to yourself: the aircraft on it show roughly where the antenna is."
+  adsbx_stats_url >/dev/null || { warn "The feed's UUID ($AXS_UUID) is missing or unreadable: run the ADSB Exchange setup again (menu 1)."; return 0; }
+  echo "  Your map, only the aircraft this antenna hears, from anywhere (a minute or two after the start): its link is"
+  echo "  printed by  zenithboard adsbx-stats url , shown in the console (Overview, Pages), and at the bottom of"
+  echo "  https://www.adsbexchange.com/myip/ opened from your home network."
+  echo "  Keep the link to yourself: it carries the station's UUID, and the aircraft on it show roughly where the antenna is."
 }
 
 adsbx_stats_on() {
@@ -93,7 +98,7 @@ adsbx_stats_on() {
 }
 
 adsbx_stats_off() {
-  local added extra out
+  local added extra="" out keep="" left="" why=""
   if ! is_adsbx_stats && [ ! -f "$AXS_STATE" ]; then echo "ADSB Exchange stats are already off."; return 0; fi
   log "Removing ADSB Exchange's stats package"
   if [ -f "$AXS_HOME/uninstall.sh" ]; then
@@ -106,17 +111,33 @@ adsbx_stats_off() {
   systemctl daemon-reload >/dev/null 2>&1 || true
   if [ "$(axs_state_get VIDEO)" = 0 ] && axs_in_video; then gpasswd -d adsbexchange video >/dev/null 2>&1 || true; fi
   added=$(axs_state_get ADDED)
+  # graphs1090 brings some of the same packages; while it is on they stay, and are its own from then on
+  if [ -n "$added" ] && declare -F is_graphs >/dev/null && is_graphs; then
+    keep=$(tr ' ' '\n' <<<"$added" | grep -xF -f <(tr ' ' '\n' <<<"$AXS_SHARED_GRAPHS") | tr '\n' ' ' | sed 's/ *$//')
+    [ -z "$keep" ] || { echo "  Left for graphs1090, which uses them too: $keep"; added=$(tr ' ' '\n' <<<"$added" | grep -vxF -f <(tr ' ' '\n' <<<"$keep") | tr '\n' ' ' | sed 's/ *$//'); }
+  fi
   if [ -n "$added" ]; then
     # shellcheck disable=SC2086
     extra=$(apt-get -s remove $added 2>/dev/null | awk '/^Remv /{print $2}' | sort -u | comm -23 - <(tr ' ' '\n' <<<"$added" | sort -u) | tr '\n' ' ')
     if [ -n "${extra// /}" ]; then
-      warn "Removing the packages ADSB Exchange's stats brought ($added) would also remove: $extra. They are left installed."
+      # needed by something installed since: theirs now; the command to remove them later is said
+      warn "Removing the packages ADSB Exchange's stats brought ($added) would also remove: $extra. They are left installed;"
+      warn "once that is gone:  sudo apt-get remove $added"
     else
       # shellcheck disable=SC2086
-      DEBIAN_FRONTEND=noninteractive apt-get remove -y $added >/dev/null || warn "Some packages were not removed: $added"
+      DEBIAN_FRONTEND=noninteractive apt-get remove -y $added >/dev/null || true
     fi
   fi
-  rm -f "$AXS_STATE"
+  # what could not be put back (apt busy: the daily security fixes, another session; the group) is kept for next time
+  [ -z "$added" ] || [ -n "${extra// /}" ] || left=$(tr ' ' '\n' <<<"$added" | grep -xF -f <(axs_packages) | tr '\n' ' ' | sed 's/ *$//')
+  [ -z "$left" ] || why="the packages $left"
+  if [ "$(axs_state_get VIDEO)" = 0 ] && axs_in_video; then why="${why:+$why, }the adsbexchange user's video group"; fi
+  if [ -n "$why" ]; then
+    axs_state_set ADDED "$left"
+    warn "Not put back yet: $why (apt busy, or refused). Run again later:  sudo zenithboard adsbx-stats off"
+  else
+    rm -f "$AXS_STATE"
+  fi
   echo "ADSB Exchange stats are OFF: nothing more is sent besides the feed. The feed's UUID is kept, so 'on' again"
   echo "gives the same map."
 }

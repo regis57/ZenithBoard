@@ -12,7 +12,7 @@
 set -u
 cd "$(dirname "$0")/.." || exit 1
 t=$(mktemp -d); trap 'rm -rf "$t"' EXIT
-export ZENITHBOARD_ETC="$t/etc" T="$t" ZB_AXS_ROOT="$t/root" ZB_AXS_CLONE="$t/tmp/adsbexchange-stats-git"
+export ZENITHBOARD_ETC="$t/etc" T="$t" ZB_AXS_ROOT="$t/root" ZB_AXS_CLONE="$t/tmp/adsbexchange-stats-git" TMPDIR="$t" ZB_PKG_LOCK="$t/lock"
 mkdir -p "$ZENITHBOARD_ETC" "$t/bin" "$t/root/usr/local/share/adsbexchange" "$t/root/etc/systemd/system" "$t/root/usr/local/bin" "$t/tmp"
 touch "$ZENITHBOARD_ETC/config.env"
 echo "0f1e2d3c-4b5a-6978-8796-a5b4c3d2e1f0" > "$t/root/usr/local/share/adsbexchange/adsbx-uuid"
@@ -26,6 +26,7 @@ cat > "$t/bin/apt-get" <<'S'
 echo "apt-get $*" >> "$T/log"
 if [ "$1" = -s ]; then shift 2; for p in "$@" $(cat "$T/extra"); do echo "Remv $p [1.0]"; done; exit 0; fi
 [ "$1" = remove ] || exit 0
+[ -f "$T/dpkg-busy" ] && { echo "E: Could not get lock /var/lib/dpkg/lock-frontend" >&2; exit 100; }
 shift 2; for p in "$@"; do sed -i "/ $p\$/d" "$T/pkgs"; done
 S
 cat > "$t/bin/id" <<'S'
@@ -33,7 +34,7 @@ cat > "$t/bin/id" <<'S'
 [ "$1 $2" = "-nG adsbexchange" ] && { cat "$T/groups"; exit 0; }
 exec /usr/bin/id "$@"
 S
-printf '#!/bin/bash\necho "gpasswd $*" >> "$T/log"\n[ "$1" = -d ] && echo adsbexchange > "$T/groups"\nexit 0\n' > "$t/bin/gpasswd"
+printf '#!/bin/bash\necho "gpasswd $*" >> "$T/log"\n[ -f "$T/gpasswd-fails" ] && exit 3\n[ "$1" = -d ] && echo adsbexchange > "$T/groups"\nexit 0\n' > "$t/bin/gpasswd"
 chmod +x "$t"/bin/*; export PATH="$t/bin:$PATH"
 # shellcheck source=lib/common.sh
 . lib/common.sh
@@ -59,6 +60,8 @@ echo "[Service]" > "$R/etc/systemd/system/adsbexchange-stats.service"
 echo showurl > "$R/usr/local/bin/adsbexchange-showurl"
 echo "adsbexchange video" > "$T/groups"
 echo "their script ran" >> "$T/log"
+echo "#####################################"; cat "$R/usr/local/share/adsbexchange/adsbx-uuid"
+sed -e 's$^$https://www.adsbexchange.com/api/feeders/?feed=$' "$R/usr/local/share/adsbexchange/adsbx-uuid"
 S
 }
 fail=0
@@ -75,12 +78,14 @@ out=$(adsbx_stats_on 2>&1)
 check "on: their script, from the pinned address"         'grep -q "^fetch https://adsbexchange.com/stats.sh$" "$t/log" && grep -q "their script ran" "$t/log" && [ "$(adsbx_stats_state)" = on ]'
 check "on: notes exactly the packages it added (jq was only rc)" '[ "$(axs_state_get ADDED)" = "bash-builtins bind9-host jq" ]'
 check "on: notes the user was not in the video group"    '[ "$(axs_state_get VIDEO)" = 0 ]'
-check "on: says what is sent, and the link"               'printf "%s" "$out" | grep -q "Every 5 seconds" && printf "%s" "$out" | grep -qF "$URL" && printf "%s" "$out" | grep -q "Keep it to yourself"'
+check "on: says what is sent, and where the link is"     'printf "%s" "$out" | grep -q "Every 5 seconds" && printf "%s" "$out" | grep -q "zenithboard adsbx-stats url" && printf "%s" "$out" | grep -q "Keep the link to yourself"'
+check "on: never the UUID, theirs hidden too"            '! printf "%s" "$out" | grep -q "0f1e2d3c" && printf "%s" "$out" | grep -q "feed=(id hidden)"'
 check "on: their clone in /tmp is cleaned up"             '[ ! -e "$ZB_AXS_CLONE" ]'
 check "on again: already on, nothing downloaded"          'adsbx_stats_on | grep -q "already on" && [ "$(grep -c "^fetch" "$t/log")" = 1 ]'
 check "url: the link their adsbexchange-showurl prints"   '[ "$(adsbx_stats_url)" = "$URL" ]'
-check "status: on, running, the link"                     'adsbx_stats_status | grep -q "ON, active" && adsbx_stats_status | grep -qF "$URL"'
-adsbx_stats_update >/dev/null 2>&1
+check "status: on, running, where the link is, never it"  'adsbx_stats_status | grep -q "ON, active" && adsbx_stats_status | grep -q "adsbx-stats url" && ! adsbx_stats_status | grep -q 0f1e2d3c'
+out=$(adsbx_stats_update 2>&1)
+check "update: their output without the UUID"             '! printf "%s" "$out" | grep -q 0f1e2d3c'
 check "update: their script again, the list unchanged"    '[ "$(grep -c "^fetch" "$t/log")" = 2 ] && [ "$(axs_state_get ADDED)" = "bash-builtins bind9-host jq" ] && [ "$(axs_state_get VIDEO)" = 0 ]'
 
 : > "$t/log"
@@ -95,11 +100,37 @@ check "off: state gone"                                   '[ ! -f "$AXS_STATE" ]
 adsbx_stats_on >/dev/null 2>&1; echo kodi > "$t/extra"; : > "$t/log"
 out=$(adsbx_stats_off 2>&1)
 check "a package now needed elsewhere: all kept, said"    '! grep -q "^apt-get remove -y" "$t/log" && printf "%s" "$out" | grep -q "would also remove: kodi" && grep -q " jq$" "$t/pkgs"'
-: > "$t/extra"
+check "  and the command to remove them later, notes gone" 'printf "%s" "$out" | grep -q "sudo apt-get remove bash-builtins bind9-host jq" && [ ! -f "$AXS_STATE" ]'
+: > "$t/extra"; sed -i '/ jq$\| bind9-host$\| bash-builtins$/d' "$t/pkgs"
+
+# apt busy (the daily security fixes running) and the group refused: what is not put back is kept for the next `off`
+adsbx_stats_on >/dev/null 2>&1; touch "$t/dpkg-busy" "$t/gpasswd-fails"; : > "$t/log"
+out=$(adsbx_stats_off 2>&1)
+check "apt busy: the notes kept, said, run again"        '[ "$(axs_state_get ADDED)" = "bash-builtins bind9-host jq" ] && [ "$(axs_state_get VIDEO)" = 0 ] && printf "%s" "$out" | grep -q "Run again later:  sudo zenithboard adsbx-stats off" && printf "%s" "$out" | grep -q "video group"'
+check "apt busy: off, though (the service is gone)"     '[ "$(adsbx_stats_state)" = off ] && [ ! -e "$AXS_UNIT" ]'
+rm -f "$t/dpkg-busy" "$t/gpasswd-fails"; : > "$t/log"
+adsbx_stats_off >/dev/null 2>&1
+check "off again: finishes the job"                       'grep -q "^apt-get remove -y bash-builtins bind9-host jq$" "$t/log" && grep -q "^gpasswd -d adsbexchange video$" "$t/log" && [ ! -f "$AXS_STATE" ] && ! grep -q " jq$" "$t/pkgs"'
+
+# graphs1090 brings bash-builtins too: while it is on, `off` leaves it
+is_graphs() { true; }
+adsbx_stats_on >/dev/null 2>&1; : > "$t/log"
+out=$(adsbx_stats_off 2>&1)
+check "graphs1090 on: its shared package left, said"      'grep -q "^apt-get remove -y bind9-host jq$" "$t/log" && grep -q " bash-builtins$" "$t/pkgs" && printf "%s" "$out" | grep -q "Left for graphs1090, which uses them too: bash-builtins" && [ ! -f "$AXS_STATE" ]'
+unset -f is_graphs; sed -i '/ bash-builtins$/d' "$t/pkgs"
+
+# one package installer at a time
+( flock 9; sleep 3 ) 9>>"$ZB_PKG_LOCK" &
+sleep 0.5
+check "another installer running: waits, then refuses"    'out=$(ZB_PKG_LOCK_WAIT=1 zb_pkg_locked echo ran 2>&1); ! printf "%s" "$out" | grep -q ran && printf "%s" "$out" | grep -q "Another installation is still running"'
+wait
+check "  and runs once it ends"                           '[ "$(zb_pkg_locked echo ran)" = ran ]'
+check "graphs1090 and the stats both take it"             'grep -q "zb_pkg_locked graphs_run_installer_unlocked" lib/graphs.sh && grep -q "zb_pkg_locked axs_run_installer_unlocked" lib/adsbxstats.sh'
+check "health hides a station's UUID"                     '[ "$(echo "Using UUID [0f1e2d3c-4b5a-6978-8796-a5b4c3d2e1f0] for stats" | zb_mask_ids)" = "Using UUID [(id hidden)] for stats" ] && grep -q "zb_mask_ids" lib/reliability.sh'
 
 # installed by hand with their two lines, before ZenithBoard knew: off removes it and nothing else
 sed -i '/ jq$\| bind9-host$\| bash-builtins$/d' "$t/pkgs"
-bash "$(f=$(mktemp "$t/x.XXXX"); fetch x "$f"; echo "$f")"; : > "$t/log"
+bash "$(f=$(mktemp "$t/x.XXXX"); fetch x "$f"; echo "$f")" >/dev/null; : > "$t/log"
 check "by hand: seen as on"                               '[ "$(adsbx_stats_state)" = on ]'
 adsbx_stats_off >/dev/null 2>&1
 check "by hand: off runs their uninstaller, no package or group taken" 'grep -q "uninstall.sh ran" "$t/log" && ! grep -q "apt-get" "$t/log" && ! grep -q gpasswd "$t/log" && [ "$(adsbx_stats_state)" = off ]'
@@ -111,7 +142,7 @@ check "download fails: not on, the way back said"         '[ "$rc" != 0 ] && [ "
 check "download fails: off still cleans its notes"        'adsbx_stats_off >/dev/null 2>&1; [ ! -f "$AXS_STATE" ]'
 rm -f "$t/fetch-fails"
 
-# a link where their clone goes is somebody else's: never followed
+# a link where their clone goes is somebody else's: never followed (their stats.sh removes one too; this is the guard)
 mkdir -p "$t/elsewhere"; echo keep > "$t/elsewhere/file"; rm -rf "$ZB_AXS_CLONE"; ln -s "$t/elsewhere" "$ZB_AXS_CLONE"
 fetch() {
   echo "fetch $1" >> "$T/log"
@@ -126,6 +157,7 @@ printf '{0f1e2d3c-4b5a-6978-8796-a5b4c3d2e1f0}\n' > "$R/usr/local/share/adsbexch
 check "UUID in braces: the link without them"             '[ "$(adsbx_stats_url)" = "$URL" ]'
 printf 'not-a-uuid"; rm -rf /\n' > "$R/usr/local/share/adsbexchange/adsbx-uuid"
 check "UUID broken: no link, and status says why"         '! adsbx_stats_url >/dev/null && adsbx_stats_status 2>&1 | grep -q "missing or unreadable"'
+check "the console: their myip page when the link is unknown" 'grep -q "else if (f.adsbx_stats === \"on\")" flightinfo/static/console.js'
 echo "0f1e2d3c-4b5a-6978-8796-a5b4c3d2e1f0" > "$R/usr/local/share/adsbexchange/adsbx-uuid"
 
 # removing ADSB Exchange takes the stats first (their feed uninstaller leaves them running)
@@ -141,6 +173,8 @@ check "status, logs, console: the service is known"       'grep -q "ADSB Exchang
 check "the address is checked monthly"                    'grep -q "ADSBX_STATS_URL" tools/check-links.sh'
 check "both entry points load it"                         'grep -q "lib/adsbxstats.sh" bin/zenithboard && grep -q "lib/adsbxstats.sh" install.sh'
 check "never purge, never apt_remove (purge)"             '! grep -v "^ *#" lib/adsbxstats.sh | grep -q "purge\|apt_remove"'
+check "uninstall everything: the stats even without the feed" 'grep -q "if is_adsbx_stats || \[ -f \"\$AXS_STATE\" \]; then adsbx_stats_off; fi" install.sh'
+check "menu 1: an untick finishes what an attempt left"   'grep -q "Finish removing ADSB Exchange stats" lib/adsb.sh && grep -q "elif is_adsbx_stats || \[ -f \"\$AXS_STATE\" \]; then" lib/adsb.sh'
 check "status never prints the UUID (it is pasted in chats)" '! sed -n "/^cmd_status()/,/^}/p" bin/zenithboard | grep -q "adsbx_stats_url\|adsbx_stats_where"'
 
 [ "$fail" = 0 ] && echo "ALL OK"; exit "$fail"

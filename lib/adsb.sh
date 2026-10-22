@@ -277,7 +277,8 @@ adsb_menu() {
   [ "$dec_now" != "$dec_sel" ] && plan+="- Decoder: ${dec_now:-none} -> $dec_sel\n"
   is_adsbx || plan+="- Install ADSB Exchange\n"
   if [[ "$feeders" == *" ADSBX_STATS "* ]]; then is_adsbx_stats || plan+="- Install ADSB Exchange stats (every 5 s, the aircraft heard, to them)\n"
-  else is_adsbx_stats && plan+="- REMOVE ADSB Exchange stats\n"; fi
+  elif is_adsbx_stats; then plan+="- REMOVE ADSB Exchange stats\n"
+  elif [ -f "$AXS_STATE" ]; then plan+="- Finish removing ADSB Exchange stats (what an earlier attempt left)\n"; fi
   local pair f name checker
   for pair in "FLIGHTAWARE:is_piaware" "FR24:is_fr24" "PLANEFINDER:is_planefinder"; do
     f=${pair%%:*}; checker=${pair##*:}
@@ -305,8 +306,8 @@ adsb_menu() {
   is_adsbx || install_adsbx
   if [[ "$feeders" == *" ADSBX_STATS "* ]]; then
     is_adsbx_stats || { is_adsbx && adsbx_stats_on; } || warn "ADSB Exchange stats were not installed."
-  else
-    is_adsbx_stats && adsbx_stats_off
+  elif is_adsbx_stats || [ -f "$AXS_STATE" ]; then
+    adsbx_stats_off
   fi
   for pair in "FLIGHTAWARE:piaware" "FR24:fr24" "PLANEFINDER:planefinder"; do
     f=${pair%%:*}; name=${pair##*:}

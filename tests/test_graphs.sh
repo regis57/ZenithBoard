@@ -9,7 +9,7 @@
 set -u
 cd "$(dirname "$0")/.." || exit 1
 t=$(mktemp -d); trap 'rm -rf "$t"' EXIT
-export ZENITHBOARD_ETC="$t/etc" T="$t" ZB_GRAPHS_ROOT="$t/root"
+export ZENITHBOARD_ETC="$t/etc" T="$t" ZB_GRAPHS_ROOT="$t/root" ZB_PKG_LOCK="$t/lock" TMPDIR="$t"
 mkdir -p "$ZENITHBOARD_ETC" "$t/bin" "$t/root/run" "$t/root/etc/lighttpd/conf-enabled" "$t/root/etc/lighttpd/conf-available"
 touch "$ZENITHBOARD_ETC/config.env"
 printf 'bash\ngit\nlighttpd\nwget\n' > "$t/pkgs"; echo 200 > "$t/runfree"; : > "$t/extra"
@@ -90,6 +90,13 @@ check "off again: already off"                         'graphs_off | grep -q "al
 graphs_on >/dev/null 2>&1; echo kodi > "$t/extra"; : > "$t/log"
 out=$(graphs_off 2>&1)
 check "a package now needed elsewhere: all kept, said" '! grep -q "^apt-get remove -y" "$t/log" && printf "%s" "$out" | grep -q "would also remove: kodi" && grep -q "^collectd-core$" "$t/pkgs" && [ -d "$R/etc/collectd" ]'
+
+# 0.52.0: ADSB Exchange's stats use bash-builtins, git, jq and curl too; while they are on, graphs1090's `off` leaves those
+: > "$t/extra"; graphs_off >/dev/null 2>&1; graphs_on >/dev/null 2>&1; graphs_state_set ADDED "bash-builtins collectd-core rrdtool"
+echo bash-builtins >> "$t/pkgs"; is_adsbx_stats() { true; }; : > "$t/log"
+out=$(graphs_off 2>&1)
+check "stats on: the shared package left, said"         'grep -q "^apt-get remove -y collectd-core rrdtool$" "$t/log" && grep -qx bash-builtins "$t/pkgs" && printf "%s" "$out" | grep -q "Left for ADSB Exchange'"'"'s stats, which use them too: bash-builtins"'
+unset -f is_adsbx_stats
 
 # the rest of ZenithBoard knows it
 check "command: graphs on|off|status"                  'grep -q "on)     root_or_die; graphs_on" bin/zenithboard && grep -q "zenithboard graphs on|off|status" bin/zenithboard'

@@ -216,7 +216,7 @@ health_check() {
       echo "Previous boot: ended normally (a clean shutdown or restart)"
     else
       echo "Previous boot: ended ABRUPTLY (a freeze, a crash or a power cut). Its last lines:"
-      journalctl -b -1 -n 8 --no-pager 2>/dev/null | sed 's/^/    /'
+      journalctl -b -1 -n 8 --no-pager 2>/dev/null | zb_mask_ids | sed 's/^/    /'       # 0.52.0: no station's UUID
     fi
   else
     echo "Previous boot: no earlier boot in the logs"

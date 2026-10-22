@@ -166,6 +166,17 @@ zb_tmp() {
 }
 zb_tmp_clean() { [ -z "${ZB_TMPDIR:-}" ] || rm -rf "$ZB_TMPDIR"; ZB_TMPDIR=""; }
 
+# 0.52.0: a station's identity (ADSB Exchange's UUID, FlightAware's feeder ID) hidden in output that is often pasted
+zb_mask_ids() { sed -E 's/\{?[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}\}?/(id hidden)/g'; }
+
+# 0.52.0: the installers whose added packages are noted for `off` (graphs1090, ADSB Exchange's stats) run one at a time,
+# so one never counts the other's packages as its own (the console running one while the terminal runs the other)
+ZB_PKG_LOCK="${ZB_PKG_LOCK:-/run/lock/zenithboard-packages.lock}"
+zb_pkg_locked() {  # zb_pkg_locked COMMAND...   runs it holding the lock; waits up to 30 minutes for the other
+  ( flock -w "${ZB_PKG_LOCK_WAIT:-1800}" 9 || { err "Another installation is still running (graphs1090 or ADSB Exchange's stats): try again when it ends."; exit 1; }
+    "$@" ) 9>>"$ZB_PKG_LOCK"
+}
+
 fetch() {  # fetch URL DEST   (fails loudly)
   # https only, and a redirection cannot drop to plain http on the way
   curl -fsSL --proto '=https' --proto-redir '=https' --tlsv1.2 --retry 3 --connect-timeout 15 --max-time 900 \

@@ -61,7 +61,9 @@ Each feeder fails on its own. A 404 from Plane Finder does not stop FlightAware 
 
 ![The console's Receiver → Measure with ADSB Exchange's stats on and the link to their map](https://raw.githubusercontent.com/regis57/ZenithBoard/main/docs/images/console-adsbx-stats.png)
 
-**Keep the link to yourself.** It carries the UUID, and the aircraft on the map show roughly where the antenna is. ZenithBoard prints it for `adsbx-stats url`, `status` and `on`, and the console shows it, signed in; `zenithboard status`, which is often pasted, does not.
+**Keep the link to yourself.** It carries the UUID, and the aircraft on the map show roughly where the antenna is. Only `zenithboard adsbx-stats url` prints it, and the console links to it (signed in). `on`, `status`, `zenithboard status` and the update say where it is instead, because their output is pasted and screenshotted. Their script prints the UUID and the link at its end, and ZenithBoard shows that output with both hidden as `(id hidden)`. `zenithboard health` hides a station's UUID in the last lines of a boot that ended abruptly.
+
+**If `off` cannot finish** (apt busy with the daily security fixes, the group refused), it says so and keeps what is left for the next `off`. A package that something installed since needs is left, with the command to remove it later. graphs1090 also brings bash-builtins and git: while it is on, those stay. Their installer and graphs1090's run one at a time, so neither counts the other's packages as its own.
 
 ### Flightradar24
 

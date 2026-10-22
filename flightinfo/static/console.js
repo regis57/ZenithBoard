@@ -938,6 +938,8 @@ window.ZBI18N.start({ part: "console" }, function () {
     if (f.svc_fr24feed !== undefined) list.push(page("plane", t("Flightradar24"), t("Its feeder's page, port 8754"), "http://" + hh + ":8754/"));
     if (f.svc_adsbexchange_feed !== undefined) list.push(h("a", { "class": "page", href: "https://www.adsbexchange.com/myip/", target: "_blank", rel: "noopener noreferrer" }, ico("link"), h("div", null, h("b", { text: t("ADSB Exchange") }), h("span", { text: t("Your feed, on their site") }))));
     if (adsbxMap()) list.push(h("a", { "class": "page", href: adsbxMap(), target: "_blank", rel: "noopener noreferrer" }, ico("map"), h("div", null, h("b", { text: t("Your aircraft on ADSB Exchange") }), h("span", { text: t("Their map: only what your antenna hears") }))));
+    // on, but the UUID unreadable here: their myip page carries the same link at its bottom
+    else if (f.adsbx_stats === "on") list.push(h("a", { "class": "page", href: "https://www.adsbexchange.com/myip/", target: "_blank", rel: "noopener noreferrer" }, ico("map"), h("div", null, h("b", { text: t("Your aircraft on ADSB Exchange") }), h("span", { text: t("Your feed, on their site") }))));
     else if (f.svc_adsbexchange_feed !== undefined) list.push(later("map", t("Your aircraft on ADSB Exchange"), t("Off · switch on in Receiver"), "receiver"));
     if (f.bluesky) {
       list.push(page("picture", t("Last post's picture"), t("What 'Try a post' drew"), "/social/preview"));

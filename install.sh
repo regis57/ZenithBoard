@@ -182,6 +182,8 @@ uninstall_all() {
   is_planefinder && remove_planefinder
   is_fr24 && remove_fr24
   is_piaware && remove_piaware
+  # 0.52.0: ADSB Exchange's stats, also when their feed was removed by hand first (its uninstaller leaves them running)
+  if is_adsbx_stats || [ -f "$AXS_STATE" ]; then adsbx_stats_off; fi
   is_adsbx && remove_adsbx
   [ -n "$(installed_decoder)" ] && remove_decoder
   if wt_yesno "Also delete your ZenithBoard settings ($ZB_ETC) and program files ($ZB_HOME)?" 8; then
