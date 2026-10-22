@@ -184,14 +184,22 @@ sudo zenithboard social template add '{airline} {flight}[, {from} → {to}] at {
 sudo zenithboard social template test                # each filled on an aircraft overhead now, or a sample; posts nothing
 sudo zenithboard social template del 2
 sudo zenithboard social template tags                # the tags, as above
+sudo zenithboard social template set none            # delete them all
+sudo zenithboard social template undo                # put back the ones before the last change (0.53.3)
 ```
 
 In the menu: *Social sharing → 12 Your own templates*. In the console: *Sharing → Your own templates*, one per line,
 the tags a click away, *Try (posts nothing)* and *Save*.
 
-![The console's templates card: two templates, the tags, and Try filling them in French (a preview against a stand-in, nothing posted)](https://raw.githubusercontent.com/regis57/ZenithBoard/main/docs/images/console-templates.png)
- They live in `/etc/zenithboard/social-templates.txt`, one per
-line, no secret in it; a change keeps the file before it as `.bak`.
+**Deleting them** (0.53.3, the owner: a real button rather than an emptied field): *Delete them all* in the console,
+asked first, or *4 Delete them all* in the menu. The posts go on with the other words ticked, the factual ones when
+none is left. Unticking *your own* instead keeps them for later. Every change keeps the file before it as `.bak`:
+*Put back the previous ones* in the console (shown while there is something to put back), *5 Put back* in the menu,
+or `social template undo`. Today's templates take the `.bak`'s place, so a put-back can be undone too.
+
+![The console's templates card: a template, the tags, Try, Save and Delete them all](https://raw.githubusercontent.com/regis57/ZenithBoard/main/docs/images/console-templates.png)
+
+They live in `/etc/zenithboard/social-templates.txt`, one per line, no secret in it.
 
 ## The words, from the console (0.50.0, 0.51.0)
 
@@ -206,7 +214,7 @@ The answers of `social words` are fields in the console's *Sharing* tab, and com
 | Town names on the maps | `sudo zenithboard social places on` |
 | Hashtags | `sudo zenithboard social hashtags ADSB avgeek ZenithBoard` (or `none`) |
 | Language of the posts (0.51.0) | `sudo zenithboard social lang fr` (or `en`) |
-| Your own templates (0.51.0) | `sudo zenithboard social template add '…'`, `del N`, `test` |
+| Your own templates (0.51.0) | `sudo zenithboard social template add '…'`, `del N`, `set none`, `undo`, `test` |
 
 A place name is your words: letters, digits, spaces and `' - . ,`, 40 characters at most. A name alone reads
 *above Trémery*; words with their own preposition (*near Metz*, *over the Moselle*) are kept as typed. The

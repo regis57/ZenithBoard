@@ -125,7 +125,7 @@ ZenithBoard $ZB_VERSION - ADSB Flight Info
   zenithboard social post [HEX]         post now, once
   zenithboard social area [WORDS|none]  the place name the posts say (above Trémery, near Metz); never the position
   zenithboard social lang [CODE]        the posts' language: en (the default), fr, de, es... the pictures keep English
-  zenithboard social template [list|tags|add TEXT|del N|set TEXT|test [TEXT]]   your own post templates (the "custom" style)
+  zenithboard social template [list|tags|add TEXT|del N|set TEXT|undo|test [TEXT]]   your own post templates (the "custom" style); set none deletes them all, undo puts back the ones before
   zenithboard social radius [KM]        the sharing radius, 1 to 200 km (not the wall's)
   zenithboard social rules [all|LIST]   what is worth a post: all, or some of military,helicopter,heavy,rare,farthest
   zenithboard social check              try the account

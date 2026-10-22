@@ -466,6 +466,17 @@ def post_templates():
         return ""
 
 
+def post_templates_before():
+    """0.53.3: whether the templates before the last change (their .bak) can be put back: kept, not empty, and not the
+    same as today's."""
+    try:
+        with open(TEMPLATES_FILE + ".bak", encoding="utf-8", errors="replace") as fh:
+            before = fh.read(4096)
+    except OSError:
+        return False
+    return bool(before.strip()) and before.strip() != post_templates().strip()
+
+
 def phone_signin(cfg):
     return str(cfg.get("CONSOLE_PHONE_SIGNIN", "0")).lower() in ("1", "on", "yes", "true")
 
@@ -742,7 +753,7 @@ class Console(object):
             snap = _read_json(os.path.join(OUT_DIR, "state.json")) or {}
             shown = {k: str(req.cfg.get(k, d)) for k, d in SHOWN_KEYS.items()}
             return Reply(200, {"cfg": shown, "facts": snap.get("facts") or {}, "facts_at": snap.get("at"), "backup": backup_info(),
-                               "templates": post_templates(),
+                               "templates": post_templates(), "templates_before": post_templates_before(),
                                "catalog": actions.catalog(), "sections": actions.SECTIONS, "now": int(now())})
         if api == "job":
             st = job_status(req.q("id"), int(req.q("from", "0") or 0) if req.q("from", "0").isdigit() else 0)
