@@ -17,7 +17,7 @@
  "{what|a|cap}[ bound for {to} from {from}] has just crossed the sky[ {area}][, {altitude} up].[ {callsign}]": "Een {what}[ op weg van {from} naar {to}] is zojuist door de lucht[ {area}] gevlogen[, op {altitude} hoogte].[ {callsign}]",
  "[{area|cap} at {time}]": "[{area|cap} om {time}]",
  "[{altitude}][ {area}][ at {speed}]": "[{altitude}][ {area}][ met {speed}]",
- "[{registration}, ]{what|a}[, flying {from} → {to}][ as {callsign}][: {rest}].": "[{registration}, ]{what}[, vlucht {from} → {to}][ onder callsign {callsign}][: {rest}].",
+ "[{registration}, ]{what|a}[, flying {from} → {to}][ as {callsign}][: {rest}].": "[{registration}, ]{what|cap}[, vlucht {from} → {to}][ onder callsign {callsign}][: {rest}].",
  "Look up[, {place}]! {who} is passing[ {height}] overhead[ on its way from {from} to {to}].": "Kijk omhoog[, {place}]! Nu boven je: {who}[, op {height} hoogte][, op weg van {from} naar {to}].",
  "Military flight[ {callsign}]": "Militaire vlucht[ {callsign}]",
  "Flight {airline}[ {callsign}]": "Vlucht {airline}[ {callsign}]",

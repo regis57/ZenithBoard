@@ -72,7 +72,7 @@
  "Glider, type unknown": "Segelflugzeug, Typ unbekannt",
  "Balloon or airship": "Ballon oder Luftschiff",
  "Drone": "Drohne",
- "{n} million messages": "{n} Millionen Nachrichten",
+ "{n} million messages": "{n} Mio. Nachrichten",
  "{n} messages": {
   "one": "{n} Nachricht",
   "other": "{n} Nachrichten"

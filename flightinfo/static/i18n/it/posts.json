@@ -17,7 +17,7 @@
  "{what|a|cap}[ bound for {to} from {from}] has just crossed the sky[ {area}][, {altitude} up].[ {callsign}]": "Un {what}[ in volo da {from} a {to}] ha appena attraversato il cielo[ {area}][, a {altitude} di quota].[ {callsign}]",
  "[{area|cap} at {time}]": "[{area|cap} alle {time}]",
  "[{altitude}][ {area}][ at {speed}]": "[{altitude}][ {area}][ a {speed}]",
- "[{registration}, ]{what|a}[, flying {from} → {to}][ as {callsign}][: {rest}].": "[{registration}, ]{what}[, volo {from} → {to}][ con nominativo {callsign}][: {rest}].",
+ "[{registration}, ]{what|a}[, flying {from} → {to}][ as {callsign}][: {rest}].": "[{registration}, ]{what|cap}[, volo {from} → {to}][ con nominativo {callsign}][: {rest}].",
  "Look up[, {place}]! {who} is passing[ {height}] overhead[ on its way from {from} to {to}].": "Naso all'insù[, {place}]! Proprio sopra di te: {who}[, a {height} di quota][, in volo da {from} a {to}].",
  "Military flight[ {callsign}]": "Volo militare[ {callsign}]",
  "Flight {airline}[ {callsign}]": "Volo {airline}[ {callsign}]",
