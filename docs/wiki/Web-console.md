@@ -96,9 +96,9 @@ One section on screen at a time: a side bar on a computer, tabs at the bottom of
 
 | Section | What is in it |
 |---|---|
-| Overview | Up time, temperature and power warnings, memory, card; each service running or not; links to every page this Pi serves (the wall, `/stats`, the receiver map, graphs1090, Plane Finder, Flightradar24, the post pictures) and to the ones it can serve once switched on |
+| Overview | Up time, temperature and power warnings, memory, card; each service running or not; links to every page this Pi serves (the wall, `/stats`, the receiver map, graphs1090, Plane Finder, Flightradar24, the post pictures, your map on ADSB Exchange once its stats are on) and to the ones it can serve once switched on |
 | Wall | Look, colour, units, radius, seconds per aircraft; photos, routes, the receiver map's database, the monthly data refresh |
-| Receiver | Region, antenna position, statistics, graphs1090, the gain (check, one step down or up), the gain log, status |
+| Receiver | Region, antenna position, statistics, graphs1090, ADSB Exchange's stats (0.52.0, with the link to their map of your aircraft), the gain (check, one step down or up), the gain log, status |
 | Sharing | Bluesky on or off; the place name, the sharing radius, what is worth a post, the gap, the town names on the maps (0.50.0); the picture (look, colour, map, units, photo link, the words, the hashtags, the posts' language, 0.51.0); *Your own templates*, with the tags a click away and a try (0.51.0); the three summaries (on or off, day and time, which posts, a try); *Try a post* and the pictures |
 | Reliability | Hardware and network watchdogs, logs kept after a restart, Wi-Fi hardening, daily security fixes, daily log clean-up; health, memory, logs |
 | System | Update ZenithBoard and the wall, update everything; the pages' language (0.47.0); Tailscale (0.46.0: connect, its sign-in link as a button, disconnect, the console over it, its addresses; removing it stays in the terminal); a backup to make, download and delete (0.42.0, without the networks' identities: [Backup and restore](Backup-and-restore#from-the-web-console)); network, Wi-Fi and domain name status; who is signed in, pairing a phone; the security check; turning the console off |

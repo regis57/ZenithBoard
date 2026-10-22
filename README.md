@@ -143,6 +143,8 @@ Everything in the menus also exists as a command, which is quicker once you know
 
 **ADS-B, in detail** (menu *1 ADS-B → 1*, or step 2 of *Start here*) — pick the decoder (**readsb** is recommended; **dump1090-fa** is supported as an alternative; both feed the same local port so every feeder works with either). Then tick where to share. *ADSB Exchange is always on.* The ADSB Exchange script will ask for a station name and your position, and prints a link to see your feed. FlightAware prints a claim link; **Flightradar24** runs FR24's own sign-up after printing what to answer (paste your *sharing key* — flightradar24.com → account → *My data sharing* — if you already feed FR24; otherwise Enter); Beast, `127.0.0.1`, port `30005` and MLAT no are enforced afterwards; Plane Finder finishes setup on a small web page. Unticking an installed feeder removes it after a confirmation.
 
+**ADSB Exchange's stats** (0.52.0, optional, off by default): a tick in the same list, `sudo zenithboard adsbx-stats on`, or the console's *Receiver*. It installs ADSB Exchange's own *stats package*, which fills *Feed Details* on their [myip](https://www.adsbexchange.com/myip/) page (*Feed UID Not Found / No Stats* without it). You get their map of only the aircraft your antenna hears, viewable from anywhere, and your receiver's statistics. In exchange, the Pi sends them every 5 seconds the aircraft list their feed already gets, with its power warnings. `off` removes it and the packages it added. `zenithboard adsbx-stats url` prints the link to your map: keep it to yourself, since the aircraft on it show roughly where the antenna is. Details: [Providers](https://github.com/regis57/ZenithBoard/wiki/Providers#adsb-exchanges-stats-0520-optional).
+
 **The wall** (menu *2 The wall → 1*, or step 3 of *Start here*) — installs the wall. At the end it prints the address, e.g. `http://192.168.1.50:8080/`.
 
 *ACARS (menu 3 until 0.29.0) left ZenithBoard in 0.30.0: it was never run on the reference Pi and needed about 900 MB more than a 1 GB board has. A Pi that installed it keeps it until `sudo zenithboard acars remove`; `zenithboard status` says so.*
@@ -246,7 +248,7 @@ In the menu, **Help me choose** explains these three, **Set up** asks for the na
 | `http://<pi>:8080/` | **ZenithBoard wall** | Change with `sudo zenithboard config-set PORT 8090` |
 | `http://<pi>:8081/` | ZenithBoard **demo** | Only while `zenithboard-demo` runs |
 | `http://<pi>/tar1090/` | **Map of your own receiver** | Served on **port 80**, so it never clashes with 8080. Installed with readsb. If you also ran the ADSB Exchange web interface installer, that one is at `http://<pi>/adsbx/`. `zenithboard status` prints whichever you have. |
-| <https://www.adsbexchange.com/myip/> | ADSB Exchange feed status | Open it from the same network as the Pi: it tells you whether your feed is received |
+| <https://www.adsbexchange.com/myip/> | ADSB Exchange feed status | Open it from the same network as the Pi: it tells you whether your feed is received. *Feed Details* (your own map, your statistics) needs their stats package: `sudo zenithboard adsbx-stats on` (0.52.0, optional) |
 | `http://<pi>:30053/` | Plane Finder setup page | Only if Plane Finder is installed |
 
 `zenithboard status` prints the ones that apply to your Pi.

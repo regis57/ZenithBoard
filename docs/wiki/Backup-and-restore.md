@@ -20,7 +20,7 @@ networks' identities: see [below](#from-the-web-console).
 | Part | From | Back on the new card |
 |---|---|---|
 | Settings | `config.env`, without its secrets (as `settings export`) | Imported; the file from before kept as `config.env.bak-DATE` |
-| What is on | Statistics, graphs1090, both watchdogs, logs kept after a restart, daily security fixes, Wi-Fi hardening, daily log clean-up, gain log, Bluesky posts, the web console, phone sign-in | Each switched on again by its own command (`stats on`, `watchdog on`…), so its timer or its file is really there, not only a line in `config.env` |
+| What is on | Statistics, graphs1090, both watchdogs, logs kept after a restart, daily security fixes, Wi-Fi hardening, daily log clean-up, gain log, Bluesky posts, the web console, phone sign-in, ADSB Exchange's stats (0.52.0: after ADSB Exchange's feed, the restore says the command) | Each switched on again by its own command (`stats on`, `watchdog on`…), so its timer or its file is really there, not only a line in `config.env` |
 | Statistics | `/var/lib/zenithboard/stats`: the 30 days behind `/stats` and the summaries | Copied back; the samples of both cards are merged, once each, in time order |
 | Posting history | `/var/lib/zenithboard/social/state.json`: what was posted, when the summaries went out | Copied back: nothing is posted twice, the next summary comes at its time |
 | Your own post templates (0.51.0) | `/etc/zenithboard/social-templates.txt` | Copied back; the ones it replaces are kept in `before-restore-DATE/` |

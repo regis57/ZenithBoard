@@ -179,7 +179,7 @@ console_state_lines() {
   printf 'load=%s\n' "$(cut -d' ' -f1-3 /proc/loadavg 2>/dev/null)"
   printf 'ip=%s\n' "$(local_ip)"
   d=$(installed_decoder); printf 'decoder=%s\n' "$d"
-  for svc in "$d" adsbexchange-feed piaware fr24feed pfclient dump978-fa zenithboard-flightinfo zenithboard-social graphs1090 lighttpd; do
+  for svc in "$d" adsbexchange-feed adsbexchange-stats piaware fr24feed pfclient dump978-fa zenithboard-flightinfo zenithboard-social graphs1090 lighttpd; do
     [ -n "$svc" ] || continue
     if systemctl list-unit-files "$svc.service" 2>/dev/null | grep -q "^$svc.service"; then
       printf 'svc_%s=%s\n' "${svc//-/_}" "$(systemctl is-active "$svc" 2>/dev/null || true)"
@@ -188,6 +188,11 @@ console_state_lines() {
   printf 'watchdog=%s\nnetwatch=%s\nkeeplogs=%s\nwifi_harden=%s\npatches=%s\ngraphs=%s\nlogs_auto=%s\n' \
     "$(watchdog_state)" "$(netwatch_state)" "$(keeplogs_state)" "$(wifi_harden_state)" "$(patches_state)" "$(graphs_state)" \
     "$( [ "$(cfg_get LOG_AUTOCLEAN 0)" = 1 ] && echo on || echo off)"
+  # 0.52.0: ADSB Exchange's stats and the link to their map of this antenna's aircraft (the console is signed in)
+  if declare -F adsbx_stats_state >/dev/null; then
+    printf 'adsbx_stats=%s\n' "$(adsbx_stats_state)"
+    ! is_adsbx_stats || printf 'adsbx_map=%s\n' "$(adsbx_stats_url)"
+  fi
   printf 'bluesky=%s\n' "$(social_account)"
   # 0.48.0: when each summary last went out and goes next, beside its row in Sharing (the owner, 21 October)
   [ -f "${SOCIAL_PY:-}" ] && python3 "$SOCIAL_PY" summary-when --facts 2>/dev/null

@@ -7,6 +7,8 @@ HERE="$(dirname "$(readlink -f "$0")")"
 . "$HERE/../lib/common.sh"
 # shellcheck source=lib/adsb.sh
 . "$HERE/../lib/adsb.sh"
+# shellcheck source=lib/adsbxstats.sh
+. "$HERE/../lib/adsbxstats.sh"
 # shellcheck source=lib/flightinfo.sh
 . "$HERE/../lib/flightinfo.sh"
 # shellcheck source=lib/legacy.sh
@@ -139,6 +141,7 @@ ZenithBoard $ZB_VERSION - ADSB Flight Info
   zenithboard update list               what is installed and can be updated one by one
   zenithboard update only NAME...       update just those (e.g. readsb flightinfo)
   zenithboard mlat-guard                re-enforce a single MLAT client
+  zenithboard adsbx-stats on|off|status|url   ADSB Exchange's stats: their map of only your aircraft, Feed Details on their page (off by default)
   zenithboard logs [flightinfo|decoder|uat|social]   show the last 100 lines of a service
   zenithboard logs usage|review         size of the system logs / size + recent warnings
   zenithboard logs limit MB|default     cap the size of the system logs (10-2000 MB)
@@ -171,6 +174,8 @@ cmd_status() {
   echo "Decoder / feeders:"
   if [ -n "$dec" ]; then show_state "Decoder ($dec)" true "$dec"; else echo "  Decoder                    not installed"; fi
   show_state "ADSB Exchange" is_adsbx adsbexchange-feed
+  if is_adsbx_stats; then show_state "ADSB Exchange stats" true adsbexchange-stats
+  elif is_adsbx; then printf '  %-26s %s\n' "ADSB Exchange stats" "off (their map of your aircraft: sudo zenithboard adsbx-stats on)"; fi
   show_state "FlightAware (piaware)" is_piaware piaware
   show_state "Flightradar24" is_fr24 fr24feed
   show_state "Plane Finder" is_planefinder pfclient
@@ -410,6 +415,14 @@ case "${1:-}" in
       *) die "Usage: zenithboard routes on|off|test [CALLSIGN]" ;;
     esac ;;
   mlat-guard) root_or_die; zb_mlat_guard ;;
+  adsbx-stats)                                    # 0.52.0: ADSB Exchange's stats package, optional
+    case "${2:-status}" in
+      on)     root_or_die; adsbx_stats_on ;;
+      off)    root_or_die; adsbx_stats_off ;;
+      status) adsbx_stats_status ;;
+      url)    adsbx_stats_url || die "No ADSB Exchange UUID on this Pi: install ADSB Exchange first (menu 1 ADSB)." ;;
+      *) die "Usage: zenithboard adsbx-stats on|off|status|url" ;;
+    esac ;;
   update)
     case "${2:-}" in
       list) zb_update_list ;;

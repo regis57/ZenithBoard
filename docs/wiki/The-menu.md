@@ -54,6 +54,9 @@ The decoder and the networks (install, add, remove: an unticked network is remov
 antenna's position and region (applied everywhere it is stored: the decoder, the networks that take it, the wall), the
 gain ([Gain tuning](Gain-tuning)), and what is running with the single-MLAT check.
 
+0.52.0: the list of networks has *ADSB Exchange stats: their map of your aircraft*, unticked until it is on. Ticked, it installs
+ADSB Exchange's stats package; unticked again, it removes it ([ADSB Exchange's stats](Providers#adsb-exchanges-stats-0520-optional)).
+
 ## 2 The wall
 
 ![2 The wall](https://raw.githubusercontent.com/regis57/ZenithBoard/main/docs/images/menu-wall.png)

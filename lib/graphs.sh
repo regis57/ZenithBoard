@@ -38,7 +38,9 @@ graphs_urls() {
 }
 
 # Run graphs1090's installer (on, and the update), noting the packages it added: those, and only those, go with `off`.
-graphs_run_installer() {
+# 0.52.0: one installer at a time (zb_pkg_locked), so ADSB Exchange's stats' packages are never counted as its own.
+graphs_run_installer() { zb_pkg_locked graphs_run_installer_unlocked; }
+graphs_run_installer_unlocked() {
   local before after script added
   before=$(zb_tmp graphs-before) && after=$(zb_tmp graphs-after) && script=$(zb_tmp graphs1090-install.sh) || return 1
   graphs_packages > "$before"
@@ -112,6 +114,11 @@ graphs_off() {
   # the packages `on` added, and nothing else: apt is asked first what it would remove, and a package that something
   # installed since depends on is left in place rather than taken with it
   added=$(graphs_state_get ADDED)
+  # 0.52.0: ADSB Exchange's stats use some of the same (lib/adsbxstats.sh); while they are on, those stay
+  if [ -n "$added" ] && declare -F is_adsbx_stats >/dev/null && is_adsbx_stats; then
+    extra=$(tr ' ' '\n' <<<"$added" | grep -xF -e bash-builtins -e git -e jq -e curl | tr '\n' ' ' | sed 's/ *$//')
+    [ -z "$extra" ] || { echo "Left for ADSB Exchange's stats, which use them too: $extra"; added=$(tr ' ' '\n' <<<"$added" | grep -vxF -f <(tr ' ' '\n' <<<"$extra") | tr '\n' ' ' | sed 's/ *$//'); }
+  fi
   if [ -n "$added" ]; then
     # shellcheck disable=SC2086
     extra=$(apt-get -s remove $added 2>/dev/null | awk '/^Remv /{print $2}' | sort -u | comm -23 - <(tr ' ' '\n' <<<"$added" | sort -u) | tr '\n' ' ')

@@ -32,6 +32,7 @@ docs/wiki/              the source of this wiki
 | `common.sh` | `cfg_get` / `cfg_set`, the default for every setting, the whiptail helpers (`wt_menu`, `wt_input`, `wt_msg`), validation, service checks |
 | `versions.sh` | **Every pinned version and download URL**, plus `ZB_VERSION`. The one file to edit when a provider moves a file |
 | `adsb.sh` | The decoder and the sharing services, the single-MLAT rule |
+| `adsbxstats.sh` | ADSB Exchange's stats package (0.52.0, optional): `on` by their script with the packages it adds noted, `off` by their uninstaller and back to what was there, the link to their map |
 | `flightinfo.sh` | Installing and configuring the wall |
 | `gain.sh` | The gain steps, reading `stats.json`, the advice, the 24-hour log, the menu |
 | `reliability.sh` | Both watchdogs, persistent logs, the health screen |
