@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.53.2
+- **The project's site, zenithboard.app.** A static site in the console's languages that explains ADS-B, how to build a receiver, how to join ADSB Exchange, FlightAware, Flightradar24 and Plane Finder, and what ZenithBoard does. Linked from the README and from the console's side bar (*Learn more ↗*, translated into every language). Its source: [regis57/zenithboard-site](https://github.com/regis57/zenithboard-site).
+
 ## 0.53.1
 - **Swahili is offered** (the owner, 22 October 2026): the console, the statistics page, graphs1090's page and the Bluesky posts, chosen like any other language, with the map of Africa as its picture. It was translated in 0.48.0 and held back for a native speaker's review, which has not come. Its review sheet stays open for corrections, applied like any other language's. 21 languages in all.
 - Holding a language back with a `draft.txt` in its folder still works, for the next one that needs a review first.

@@ -29,6 +29,8 @@ Inspired by [jprochazka/adsb-receiver](https://github.com/jprochazka/adsb-receiv
 <p align="center"><img src="docs/images/wall/zb-three-colours.jpg" alt="The wall in amber and turquoise dot matrix, and in green split-flap" width="640"></p>
 <p align="center"><em>Recorded on the reference Pi, 20 October 2026 (0.26.1). The tablet also shows the aircraft's photo from Planespotters; it is left out of these captures, as Planespotters' terms ask that its photos be shown only by the screen that fetches them, never copied.</em></p>
 
+**New to ADS-B?** [zenithboard.app](https://zenithboard.app/) explains what the signal is, how to build a receiver for about 60 to 120 €, how to join the networks that share the sky, and what ZenithBoard does, in the same languages as the console.
+
 The story behind the project: [ZenithBoard on regis-hennequin.info](https://regis-hennequin.info/beyond-the-desk/adsb/zenithboard/).
 
 ---

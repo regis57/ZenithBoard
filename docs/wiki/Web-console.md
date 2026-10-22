@@ -115,7 +115,7 @@ stays in English, like the menu. A word that reads wrong: [Translating](Translat
 
 ## What it does
 
-One section on screen at a time: a side bar on a computer, tabs at the bottom of a phone.
+One section on screen at a time: a side bar on a computer, tabs at the bottom of a phone. The side bar's foot links to the wall, the statistics page, the project's site [zenithboard.app](https://zenithboard.app/) (*Learn more ↗*, 0.53.2) and the running version's release notes.
 
 | Section | What is in it |
 |---|---|
