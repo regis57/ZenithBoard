@@ -56,7 +56,8 @@ import uuid
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import server  # noqa: E402  (config, aircraft.json path, user agent)
 import post_lang  # noqa: E402  (0.51.0: the posts' language)
-from post_lang import N_  # noqa: E402
+
+N_ = post_lang.N_                # marks a sentence of the posts where it is defined (tools/i18n.py finds it)
 
 SECRETS_FILE = os.environ.get("ZENITHBOARD_SOCIAL_SECRETS", "/etc/zenithboard/social.env")
 STATE_DIR = os.environ.get("ZENITHBOARD_SOCIAL_DIR", "/var/lib/zenithboard/social")

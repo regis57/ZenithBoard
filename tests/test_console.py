@@ -68,7 +68,7 @@ class ActionsTest(unittest.TestCase):
         # 0.52.0: their stats package, on and off only; it runs their script, so it says so and takes minutes
         self.assertEqual(actions.build("adsbx-stats", {"value": "on"}), ["adsbx-stats", "on"])
         self.assertEqual(actions.build("adsbx-stats", {"value": "off"}), ["adsbx-stats", "off"])
-        self.assertTrue({"long", "ask"} <= set(actions.flags("adsbx-stats")))
+        self.assertEqual(set(), {"long", "ask"} - set(actions.flags("adsbx-stats")))
         self.assertEqual(actions.catalog()["adsbx-stats"]["section"], "receiver")
         for v in ("url", "status", "on;id", ""):
             with self.assertRaises(actions.Refused, msg=v):
@@ -94,7 +94,7 @@ class ActionsTest(unittest.TestCase):
         for name, params in bad:
             with self.assertRaises(actions.Refused, msg=(name, params)):
                 actions.build(name, params)
-        self.assertTrue({"SOCIAL_RADIUS_KM", "SOCIAL_RULES", "SOCIAL_HASHTAGS", "SOCIAL_PLACES"} <= set(console.SHOWN_KEYS))
+        self.assertEqual(set(), {"SOCIAL_RADIUS_KM", "SOCIAL_RULES", "SOCIAL_HASHTAGS", "SOCIAL_PLACES"} - set(console.SHOWN_KEYS))
 
     def test_catalog_never_shows_the_commands(self):
         cat = actions.catalog()
@@ -491,16 +491,19 @@ class AppTest(unittest.TestCase):
             w, h = struct.unpack(">II", head[16:24])
             self.assertEqual("%dx%d" % (w, h), icon["sizes"], icon["src"])
             sizes.add((icon["sizes"], icon.get("purpose", "any")))
-        self.assertTrue({("192x192", "any"), ("512x512", "any"), ("512x512", "maskable")} <= sizes)
-        page = open(os.path.join(self.STATIC, "console.html"), encoding="utf-8").read()
+        self.assertEqual(set(), {("192x192", "any"), ("512x512", "any"), ("512x512", "maskable")} - sizes)
+        with open(os.path.join(self.STATIC, "console.html"), encoding="utf-8") as fh:
+            page = fh.read()
         self.assertIn('<link rel="manifest" href="/static/console.webmanifest">', page)
         self.assertIn('rel="apple-touch-icon" href="/static/console-icon-180.png"', page)
 
     def test_the_service_worker_keeps_nothing(self):
-        sw = open(os.path.join(self.STATIC, "console-sw.js"), encoding="utf-8").read()
+        with open(os.path.join(self.STATIC, "console-sw.js"), encoding="utf-8") as fh:
+            sw = fh.read()
         self.assertIn('addEventListener("fetch"', sw)
         self.assertNotIn("caches", sw, "nothing stale is ever shown")
-        js = open(os.path.join(self.STATIC, "console.js"), encoding="utf-8").read()
+        with open(os.path.join(self.STATIC, "console.js"), encoding="utf-8") as fh:
+            js = fh.read()
         self.assertIn('register("/console-sw.js", { scope: "/console" })', js)
         self.assertIn("window.isSecureContext", js)
 

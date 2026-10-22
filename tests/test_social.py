@@ -5,7 +5,6 @@ The network is not called: a fake urlopen records what would have been sent and 
 copied from its API documentation). The renderers are real: node for the dot-matrix picture, Pillow for the split-flap
 one, which is given fake map tiles.
 """
-import contextlib
 import io
 import json
 import os
@@ -710,7 +709,7 @@ class FlapPictureTest(unittest.TestCase):
         img, shown = social_card.draw_map(metz, dict(EZY, track=2), "#ff0000", mode="terrain",
                                           fetch=lambda *a: fake_tile("terrain_3857", "jpg", 1, 1, 1))
         self.assertEqual(shown, "terrain")
-        self.assertTrue({"Metz", "Thionville", "Talange", "Woippy"} <= set(names), names)
+        self.assertEqual(set(), {"Metz", "Thionville", "Talange", "Woippy"} - set(names), names)
         self.assertNotIn("Hayange", names, "0.28.0: 10 km off a track along the Moselle, not named when the track's surroundings give enough")
         # 0.25.3: the two OpenStreetMap maps too, whose own labels were unreadable once reduced on the real posts
         for mode in ("normal", "night"):
@@ -752,7 +751,7 @@ class FlapPictureTest(unittest.TestCase):
         unnamed = {"terrain-light_3857", "streets_3857", "terrain_3857", "s2cloudless-%d_3857" % social_card.S2_YEAR}
         for mode, st in social_card.MAP_STYLES.items():
             if st.get("names"):
-                self.assertTrue({l for l, _ in st["layers"]} <= unnamed, mode)
+                self.assertEqual(set(), {l for l, _ in st["layers"]} - unnamed, mode)
                 self.assertIn("GeoNames", st["credit_full"], mode)
         road = Image.new("RGBA", (4, 1), (255, 255, 255, 255)); road.putpixel((0, 0), (120, 120, 120, 255))
         t = social_card.tint(road, (214, 140, 60))
