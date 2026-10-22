@@ -600,6 +600,8 @@ Since 0.39.0, `http://PI:8080/console` shows ZenithBoard's settings in the wall'
 
 ![The web console](docs/images/console-overview.png)
 
+**As an app** (0.53.0): its own icon and window on a phone or a computer. *System → The console as an app* says how for the browser in hand (Safari: *Add to Home Screen*; Chrome: *Install page as app*). Browsers' own Install button needs https, which the Pi's home address is not, so their menu does it. Details: wiki [Web console](https://github.com/regis57/ZenithBoard/wiki/Web-console#as-an-app-0530).
+
 ```
 sudo zenithboard console password     # its own password, asked twice, kept as a hash
 sudo zenithboard console on           # prints the address; off again: sudo zenithboard console off

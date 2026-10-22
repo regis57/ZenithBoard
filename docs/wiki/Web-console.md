@@ -76,6 +76,29 @@ it only in a *secure context*: HTTPS, or `localhost` on the machine itself. A pl
 domain name the phone trusts — the DuckDNS name with a real certificate, say — which is a project of its own; the QR
 code is what signs a phone in meanwhile.
 
+## As an app (0.53.0)
+
+The console can sit on a phone's home screen or a computer's dock with its own icon (the ZenithBoard logo in the wall's
+dots) and its own window. *System → The console as an app* says how, for the browser in hand:
+
+| Where | How |
+|---|---|
+| iPhone, iPad (Safari) | Share → *Add to Home Screen*: full screen, its own icon. Sign in once more inside it (iOS keeps an app's cookies apart) |
+| Android (Chrome) | ⋮ → *Add to Home screen* |
+| A computer | Chrome: ⋮ → *Cast, save, and share* → *Install page as app*. Edge: ⋯ → *Apps* → *Install this site as an app*. Safari on a Mac: *File* → *Add to Dock* |
+
+**Why the menu, and not an Install button.** The Install button browsers offer by themselves, and the prompt the card
+shows when one is offered, need an **https** address (Chrome's [install criteria](https://web.dev/install-criteria)).
+The Pi answers in plain http on the home network, so the browser's menu does it instead: same page, same password.
+Over an https address (a Tailscale or domain name that serves https), the card shows *Install the app* itself.
+
+What it adds: `console.webmanifest` (name, `/console` as start and scope, standalone), four icons drawn by
+`tools/make_console_icons.js` from the wall's own shapes and font (192 and 512 px, a maskable 512 px, 180 px for iOS),
+and a service worker, `/console-sw.js`, registered only over https. It keeps nothing: every page and every answer
+comes from the Pi, as before, so nothing stale is ever shown. The console's CSP and headers are unchanged.
+
+![The console as an app, the card on an iPhone, in French](https://raw.githubusercontent.com/regis57/ZenithBoard/main/docs/images/console-app.png)
+
 ## Languages
 
 **20 languages** (French 0.47.0, the others 0.48.0): English, French, German, Dutch, Italian, Spanish, Portuguese

@@ -27,7 +27,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.52.1"
+VERSION = "0.53.0"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -1200,6 +1200,7 @@ FILE_TYPES = {
     ".webp": "image/webp",
     ".gif": "image/gif",
     ".ico": "image/x-icon",
+    ".webmanifest": "application/manifest+json",     # 0.53.0: the console as an app
     ".txt": "text/plain; charset=utf-8",
 }
 HEADER_TYPES = {t: t for t in set(FILE_TYPES.values()) | {"text/plain", "application/octet-stream"}}
@@ -1968,6 +1969,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._console(cfg, url)
         if path.startswith("/static/console") or path.startswith("/static/vendor/"):
             return self._static(path, console.SECURITY_HEADERS)
+        if path == "/console-sw.js":                  # 0.53.0: at the root, so that its scope can be /console itself
+            return self._static("/static/console-sw.js", console.SECURITY_HEADERS)
         if path == "/api/config":
             return self._send(200, public_config(cfg))
         if path == "/api/health":
