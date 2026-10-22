@@ -9,6 +9,7 @@ import os
 import shutil
 import sys
 import tempfile
+import time
 import unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -190,10 +191,61 @@ class EveryLanguageTest(unittest.TestCase):
             for f in (week.alt, week.alt_second, week.alt_military, week.alt_misc):
                 self.assertNotIn("{", f(WEEK, area, L), (code, f.__name__))
 
+    def test_clock_and_units_as_each_language_writes_them(self):
+        # 0.52.1: the owner read "Di atas Trémery pukul 13:50"; Indonesian spelling (EYD) writes 13.50, as CLDR does
+        G = post_lang.get
+        self.assertEqual(G("id").clock(13, 50), "13.50")
+        self.assertEqual(G("fi").clock(9, 5), "09.05")
+        for code in ("en", "fr", "de", "ru", "ja", "ar"):
+            self.assertEqual(G(code).clock(13, 50), "13:50", code)
+        self.assertEqual(G("en").unit(10670, "meter"), "10\u00a0670\u00a0m", "English as before")
+        self.assertEqual(G("en").unit(839, "kilometer-per-hour", "839"), "839\u00a0km/h")
+        self.assertEqual(G("ru").unit(839, "kilometer-per-hour"), "839\u00a0км/ч")
+        self.assertEqual(G("uk").unit(839, "kilometer-per-hour"), "839\u00a0км/год")
+        self.assertEqual(G("nl").unit(839, "kilometer-per-hour"), "839\u00a0km/u")
+        self.assertEqual(G("id").unit(839, "kilometer-per-hour"), "839\u00a0km/j")
+        self.assertEqual(G("ko").unit(839, "kilometer-per-hour"), "839km/h")
+        self.assertEqual(G("zh-Hans").unit(10670, "meter"), "10,670米")
+        self.assertEqual(G("ru").unit(10670, "meter"), "10\u00a0670\u00a0м")
+        self.assertEqual(G("fr").unit(10670, "meter"), "10\u202f670\u202fm")
+        # Arabic's metre follows the count: 10 600 متر, 10 610 أمتار, 10 670 مترًا
+        self.assertEqual(G("ar").unit(10600, "meter"), "10,600\u00a0متر")
+        self.assertEqual(G("ar").unit(10610, "meter"), "10,610\u00a0أمتار")
+        self.assertEqual(G("ar").unit(10670, "meter"), "10,670\u00a0مترًا")
+        # every offered language has a clock and the three units, each with its figure, never a breaking space
+        for code in post_lang.LANGS:
+            L = G(code)
+            self.assertRegex(L.clock(7, 5), r"^07\D{1,3}05$", code)
+            for u in ("meter", "kilometer", "kilometer-per-hour"):
+                got = L.unit(1234, u)
+                self.assertIn(L.num(1234), got, (code, u))
+                self.assertNotIn(" ", got, (code, u))
+
+    def test_the_posts_say_it_so(self):
+        # 0.52.1: the board's time, the speed, the altitude and a range record in the posts' language
+        ida = dict(SOCIAL_AREA="Trémery", SOCIAL_HASHTAGS="#ADSB", SOCIAL_LANG="id", UNITS="metric")
+        noon = time.mktime((2026, 10, 22, 13, 50, 0, 0, 0, -1))
+        board = social.styled_text("board", RYR, ida, now=noon)
+        self.assertIn("pukul 13.50", board)
+        self.assertIn("km/j", board)
+        self.assertNotIn("13:50", board)
+        ru = dict(ida, SOCIAL_LANG="ru")
+        board = social.styled_text("board", RYR, ru, now=noon)
+        self.assertIn("км/ч", board)
+        self.assertIn("\u00a0м", board)
+        self.assertIn("13:50", board)
+        self.assertEqual(social.range_words(312, post_lang.get("ru")), post_lang.get("ru").t("over {distance} out", distance="300\u00a0км"))
+        en = dict(ida, SOCIAL_LANG="en")
+        board = social.styled_text("board", RYR, en, now=noon)
+        self.assertIn("km/h", board)
+        self.assertIn("at 13:50", board)
+        self.assertEqual(social.speed_words(453, "imperial", post_lang.get("ru")), "453\u00a0kt", "knots stay kt")
+        self.assertTrue(social.metres(35000, "imperial", post_lang.get("ru")).endswith("\u00a0ft"), "feet stay ft")
+
     def test_french_reads_french(self):
         c = dict(SOCIAL_AREA="Ennery", SOCIAL_HASHTAGS="#ADSB", SOCIAL_LANG="fr", UNITS="metric")
         self.assertTrue(social.post_text(RYR, c, None, shape="factual").startswith(
-            "Vol Ryanair #RYR5ZK · Boeing 737-800 · Amsterdam → Pisa · altitude 10\u202f570\u00a0m · au-dessus d'Ennery"))
+            "Vol Ryanair #RYR5ZK · Boeing 737-800 · Amsterdam → Pisa · altitude 10\u202f570\u202fm · au-dessus d'Ennery"))
         self.assertIn("Un Boeing 737-800 de Ryanair en route d'Amsterdam vers Pisa", social.post_text(RYR, c, None, shape="story"))
         L = post_lang.of(c)
         self.assertTrue(week.text(WEEK, c, social.area_words(c, L), "", social.fit_post).startswith(

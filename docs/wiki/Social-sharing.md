@@ -116,8 +116,11 @@ English until you choose another: `sudo zenithboard social lang fr` (menu *Socia
 reviewed it). It covers every word of the aircraft posts, in all five shapes and your own templates, and the summaries'
 four texts. The alt texts come along too. The numbers, the dates, the weekdays and the country names are written as
 that language writes them (Unicode's CLDR data): *11 280 m* and *12–18 octobre* in French, *11.280 m* and
-*12.–18. Oktober* in German, *10月12日～10月18日* in Japanese. Each post also tells Bluesky its language, for its
-language filters. On RYR5ZK, Brussels to Pisa, above Ennery, in French:
+*12.–18. Oktober* in German, *10月12日～10月18日* in Japanese. Since 0.52.1 the time of day and the metric units
+are written that way too: *pukul 13.50* in Indonesian and *klo 13.50* in Finnish (13:50 elsewhere), *839 км/ч* and
+*10 670 м* in Russian, *839 km/u* in Dutch, *839 km/j* in Indonesian, *10,670米* in Chinese. Feet and knots stay
+*ft* and *kt*, as in aviation. Each post also tells Bluesky its language, for its language filters. On RYR5ZK,
+Brussels to Pisa, above Ennery, in French:
 
 > Vol Ryanair #RYR5ZK · Boeing 737-800 · Brussels → Pisa · altitude 10 570 m · au-dessus d'Ennery
 >

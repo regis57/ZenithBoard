@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.52.1
+- **The time of day in the posts, as each language writes it**: *Di atas Trémery pukul 13.50* in Indonesian, *klo 13.50* in Finnish; 13:50 elsewhere. The owner read *pukul 13:50* on 22 October and asked whether *pukul* (also *to hit*) was right. It is the standard word before a clock time. The colon was the mistake: Indonesian spelling (EYD) separates hours and minutes with a full stop, and so does CLDR. This covers the board's line, your templates' `{time}`, and the summaries' busiest hour.
+- **The metric units in the posts' language too**, from CLDR like the numbers and dates: *839 км/ч* and *10 670 м* in Russian, *км/год* in Ukrainian, *km/u* in Dutch, *km/godz.* in Polish, *km/j* in Indonesian, *10,670米* in Chinese, *839km/h* in Korean. In Arabic the word for metre follows the count (متر, أمتار, مترًا). French takes CLDR's narrow space before the unit (*10 670 m*). Feet and knots stay *ft* and *kt*, as in aviation. The pictures keep their English labels.
+- English is unchanged: 5 610 posts, summaries and alt texts compared with 0.52.0, byte for byte.
+
 ## 0.52.0
 - **ADSB Exchange's stats, optional, off by default.** The owner asked why ADSB Exchange's page shows *Feed UID Not Found / No Stats* under *Feed Details* while his feed and MLAT are fine (22 October 2026). That panel is filled by a second ADSB Exchange program, their stats package, which ZenithBoard did not install. Their script was read before it was added (`adsbexchange-stats`, commit 11647f2). Every 5 seconds it sends ADSB Exchange the aircraft list their feed already gets, the feed's UUID, three signal figures and the Pi's power warnings. In return you get *ADS-B Exchange Anywhere* (their map of only the aircraft your antenna hears, from anywhere), your receiver's statistics, and the claim of the receiver under an ADSB Exchange account if you want one. It can be switched on in three places:
   - the terminal: `sudo zenithboard adsbx-stats on`, then `off`, `status` or `url`;

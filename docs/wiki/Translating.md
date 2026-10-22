@@ -104,8 +104,9 @@ release: the change, its tests, a version, the PR. On the Pi: `cd ~/ZenithBoard 
   sheets list them under the page *posts*.
 * What is not words comes from Unicode's CLDR through Node: `node tools/make_post_locale.js` writes
   `flightinfo/data/post-locale.json`. It holds the decimal and group signs, the day-and-month pattern, a span of days,
-  the weekdays and the country names, and `tests/fixtures/plurals.json` the plural forms that `post_lang.py`'s rules
-  are held to.
+  the weekdays, the country names, the clock (0.52.1: `{h}.{m}` in Indonesian and Finnish) and the metric units
+  (`{n} км/ч`; Arabic's metre by plural category). `tests/fixtures/plurals.json` holds the plural forms that
+  `post_lang.py`'s rules are held to.
 * `python3 tools/i18n.py keys` lists every key; `sync LANG` adds the new ones and drops the old; `check` says what is
   missing or broken; `review LANG` writes the sheet. A change to an English string means its translations and its
   sheet in the same commit: `tests/test_i18n.sh` fails otherwise.
