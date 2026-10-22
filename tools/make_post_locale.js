@@ -48,7 +48,9 @@ for (const l of LANGS) {
   for (let m = 0; m < 12; m++) { const x = dayMonth(l, new Date(Date.UTC(2026, m, 12))); months.push(x.month); dm.push(x.pattern); }
   if (new Set(dm).size !== 1) throw new Error(l + ": the day-and-month pattern changes with the month: " + dm.join(" | "));
   const wd = [];
-  for (let i = 0; i < 7; i++) wd.push(new Intl.DateTimeFormat(tag(l), { weekday: "long", timeZone: "UTC" }).format(new Date(Date.UTC(2026, 9, 19 + i))));   // 19 October 2026 is a Monday
+  // the weekday as it is written inside a sentence (Latvian's alone has a capital): taken from a whole date
+  for (let i = 0; i < 7; i++) wd.push(new Intl.DateTimeFormat(tag(l), { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" })
+    .formatToParts(new Date(Date.UTC(2026, 9, 19 + i))).filter((p) => p.type === "weekday").map((p) => p.value).join(""));   // 19 October 2026 is a Monday
   const names = new Intl.DisplayNames([tag(l)], { type: "region", fallback: "none" });
   const countries = {};
   [...codes].sort().forEach((c) => { try { const n = names.of(c); if (n && n !== c) countries[c] = n; } catch (e) { /* not a region CLDR knows */ } });

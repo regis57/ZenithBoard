@@ -31,6 +31,9 @@
  "A heavy overhead.": "Raske lennuk pea kohal.",
  "A helicopter.": "Helikopter.",
  "A new 30-day range record.": "Uus 30 päeva kaugusrekord.",
+ "{a}, {b}": "{a}, {b}",
+ "{a}; {b}": "{a}; {b}",
+ "{sentence}.": "{sentence}.",
  "north": "põhi",
  "north-east": "kirre",
  "east": "ida",
@@ -72,11 +75,11 @@
  "Glider, type unknown": "Purilennuk, tüüp teadmata",
  "Balloon or airship": "Õhupall või õhulaev",
  "Drone": "Droon",
- "{n} million messages": "{n} miljonit sõnumit",
  "{n} messages": {
   "one": "{n} sõnum",
   "other": "{n} sõnumit"
  },
+ "{n} million messages": "{n} miljonit sõnumit",
  "{n} aircraft": {
   "one": "{n} lennuk",
   "other": "{n} lennukit"
@@ -148,6 +151,7 @@
  "Business jets by make and model, as bars: {list}.": "Ärilennukid tootja ja mudeli järgi tulpadena: {list}.",
  "The countries they are registered in, with their flags: {list}.": "Registririigid koos lippudega: {list}.",
  "Weekly card of the military aircraft, {period}[ {area}]: {aircraft}. By country, with its flag, the most represented first: {list}.": "Nädala pilt sõjaväelennukitest, {period}[ {area}]: {aircraft}. Riikide kaupa koos lipuga, enim esindatud eespool: {list}.",
+ "{label}: {n} ({list}).": "{label}: {n} ({list}).",
  "Weekly card of the helicopters, light aircraft, gliders, drones and balloons, {period}[ {area}]. {groups}": "Nädala pilt helikopteritest, väikelennukitest, purilennukitest, droonidest ja õhupallidest, {period}[ {area}]. {groups}",
  "a light relief map with the main roads": "hele reljeefkaart peamiste teedega",
  "a dark relief map with the main roads": "tume reljeefkaart peamiste teedega",

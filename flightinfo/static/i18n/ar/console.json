@@ -235,7 +235,7 @@
  "As set below. Never a distance or a direction.": "وفق ما ضُبط أدناه. دون ذكر أي مسافة أو اتجاه أبدًا.",
  "needs an account": "يتطلب حسابًا",
  "Place name": "اسم المكان",
- "Two or three words, as the posts say it: a town name reads “above” it; empty: no place. Never the receiver's position.": "كلمتان أو ثلاث، كما تَرِد في المنشورات: تُسبَق أسماء المدن بكلمة «above»؛ عند تركه فارغًا: لا يُذكر أي مكان. ولا يُذكر موقع جهاز الاستقبال أبدًا.",
+ "Two or three words, as the posts say it: a town name alone gets the posts' word for above (above Trémery); empty: no place. Never the receiver's position.": "كلمتان أو ثلاث، كما تَرِد في المنشورات: يصبح اسم المدينة وحده «فوق Trémery»؛ عند تركه فارغًا: لا يُذكر أي مكان. ولا يُذكر موقع جهاز الاستقبال أبدًا.",
  "none": "لا شيء",
  "Sharing radius": "نصف قطر المشاركة",
  "Kilometres; an aircraft inside it is a candidate. Not the wall's radius.": "بالكيلومترات؛ الطائرة داخله مرشّحة للنشر. وهو ليس نصف قطر اللوحة.",

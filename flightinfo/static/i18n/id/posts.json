@@ -31,6 +31,9 @@
  "A heavy overhead.": "Pesawat berat melintas.",
  "A helicopter.": "Helikopter.",
  "A new 30-day range record.": "Rekor jangkauan 30 hari yang baru.",
+ "{a}, {b}": "{a}, {b}",
+ "{a}; {b}": "{a}; {b}",
+ "{sentence}.": "{sentence}.",
  "north": "utara",
  "north-east": "timur laut",
  "east": "timur",
@@ -70,10 +73,10 @@
  "Glider, type unknown": "Pesawat layang, tipe tidak diketahui",
  "Balloon or airship": "Balon udara atau kapal udara",
  "Drone": "Drone",
- "{n} million messages": "{n} juta pesan",
  "{n} messages": {
   "other": "{n} pesan"
  },
+ "{n} million messages": "{n} juta pesan",
  "{n} aircraft": {
   "other": "{n} pesawat"
  },
@@ -136,6 +139,7 @@
  "Business jets by make and model, as bars: {list}.": "Jet bisnis menurut merek dan tipe, dalam diagram batang: {list}.",
  "The countries they are registered in, with their flags: {list}.": "Negara tempat pesawat-pesawat itu terdaftar, dengan benderanya: {list}.",
  "Weekly card of the military aircraft, {period}[ {area}]: {aircraft}. By country, with its flag, the most represented first: {list}.": "Kartu pesawat militer, {period}[ {area}]: {aircraft}. Per negara, dengan benderanya, dari yang terbanyak: {list}.",
+ "{label}: {n} ({list}).": "{label}: {n} ({list}).",
  "Weekly card of the helicopters, light aircraft, gliders, drones and balloons, {period}[ {area}]. {groups}": "Kartu helikopter, pesawat ringan, pesawat layang, drone, dan balon udara, {period}[ {area}]. {groups}",
  "a light relief map with the main roads": "peta relief terang dengan jalan-jalan utama",
  "a dark relief map with the main roads": "peta relief gelap dengan jalan-jalan utama",

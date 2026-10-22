@@ -235,7 +235,7 @@
  "As set below. Never a distance or a direction.": "Alla olevien asetusten mukaan. Ei koskaan etäisyyttä eikä suuntaa.",
  "needs an account": "vaatii tilin",
  "Place name": "Paikan nimi",
- "Two or three words, as the posts say it: a town name reads “above” it; empty: no place. Never the receiver's position.": "Kaksi tai kolme sanaa, niin kuin julkaisujen halutaan sanovan: paikkakunnan nimen eteen tulee ”above”; tyhjä: ei paikkaa. Ei koskaan vastaanottimen sijaintia.",
+ "Two or three words, as the posts say it: a town name alone gets the posts' word for above (above Trémery); empty: no place. Never the receiver's position.": "Kaksi tai kolme sanaa, niin kuin julkaisujen halutaan sanovan: pelkkä paikkakunnan nimi kirjoitetaan ”Trémery-alueella”; tyhjä: ei paikkaa. Ei koskaan vastaanottimen sijaintia.",
  "none": "ei mitään",
  "Sharing radius": "Jakamisen säde",
  "Kilometres; an aircraft inside it is a candidate. Not the wall's radius.": "Kilometreinä; sen sisällä oleva kone on ehdokas. Ei sama kuin taulun säde.",

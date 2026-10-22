@@ -185,7 +185,10 @@ sudo zenithboard social template tags                # the tags, as above
 ```
 
 In the menu: *Social sharing → 12 Your own templates*. In the console: *Sharing → Your own templates*, one per line,
-the tags a click away, *Try (posts nothing)* and *Save*. They live in `/etc/zenithboard/social-templates.txt`, one per
+the tags a click away, *Try (posts nothing)* and *Save*.
+
+![The console's templates card: two templates, the tags, and Try filling them in French (a preview against a stand-in, nothing posted)](https://raw.githubusercontent.com/regis57/ZenithBoard/main/docs/images/console-templates.png)
+ They live in `/etc/zenithboard/social-templates.txt`, one per
 line, no secret in it; a change keeps the file before it as `.bak`.
 
 ## The words, from the console (0.50.0, 0.51.0)

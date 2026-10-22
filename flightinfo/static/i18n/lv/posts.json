@@ -31,6 +31,9 @@
  "A heavy overhead.": "Smags gaisa kuģis virs galvas.",
  "A helicopter.": "Helikopters.",
  "A new 30-day range record.": "Jauns 30 dienu attāluma rekords.",
+ "{a}, {b}": "{a}, {b}",
+ "{a}; {b}": "{a}; {b}",
+ "{sentence}.": "{sentence}.",
  "north": "ziemeļi",
  "north-east": "ziemeļaustrumi",
  "east": "austrumi",
@@ -74,12 +77,12 @@
  "Glider, type unknown": "Planieris, tips nezināms",
  "Balloon or airship": "Gaisa balons vai dirižablis",
  "Drone": "Drons",
- "{n} million messages": "{n} milj. ziņojumu",
  "{n} messages": {
   "zero": "{n} ziņojumu",
   "one": "{n} ziņojums",
   "other": "{n} ziņojumi"
  },
+ "{n} million messages": "{n} milj. ziņojumu",
  "{n} aircraft": {
   "zero": "{n} gaisa kuģu",
   "one": "{n} gaisa kuģis",
@@ -160,6 +163,7 @@
  "Business jets by make and model, as bars: {list}.": "Biznesa lidmašīnas pēc ražotāja un modeļa stabiņos: {list}.",
  "The countries they are registered in, with their flags: {list}.": "Reģistrācijas valstis ar karogiem: {list}.",
  "Weekly card of the military aircraft, {period}[ {area}]: {aircraft}. By country, with its flag, the most represented first: {list}.": "Nedēļas attēls par militārajiem gaisa kuģiem, {period}[ {area}]: {aircraft}. Pa valstīm ar karogu, sākot ar visvairāk pārstāvēto: {list}.",
+ "{label}: {n} ({list}).": "{label}: {n} ({list}).",
  "Weekly card of the helicopters, light aircraft, gliders, drones and balloons, {period}[ {area}]. {groups}": "Nedēļas attēls par helikopteriem, vieglajām lidmašīnām, planieriem, droniem un gaisa baloniem, {period}[ {area}]. {groups}",
  "a light relief map with the main roads": "gaiša reljefa karte ar galvenajiem ceļiem",
  "a dark relief map with the main roads": "tumša reljefa karte ar galvenajiem ceļiem",

@@ -31,6 +31,9 @@
  "A heavy overhead.": "طائرة ثقيلة في الأجواء.",
  "A helicopter.": "مروحية.",
  "A new 30-day range record.": "رقم قياسي جديد للمدى خلال 30 يومًا.",
+ "{a}, {b}": "{a}، {b}",
+ "{a}; {b}": "{a}؛ {b}",
+ "{sentence}.": "{sentence}.",
  "north": "الشمال",
  "north-east": "الشمال الشرقي",
  "east": "الشرق",
@@ -80,7 +83,6 @@
  "Glider, type unknown": "طائرة شراعية، طرازها غير معروف",
  "Balloon or airship": "منطاد أو سفينة هوائية",
  "Drone": "طائرة مسيّرة",
- "{n} million messages": "{n} مليون رسالة",
  "{n} messages": {
   "zero": "{n} رسالة",
   "one": "رسالة واحدة",
@@ -89,6 +91,7 @@
   "many": "{n} رسالة",
   "other": "{n} رسالة"
  },
+ "{n} million messages": "{n} مليون رسالة",
  "{n} aircraft": {
   "zero": "{n} طائرة",
   "one": "طائرة واحدة",
@@ -196,6 +199,7 @@
  "Business jets by make and model, as bars: {list}.": "طائرات رجال الأعمال حسب الصانع والطراز، في أعمدة: {list}.",
  "The countries they are registered in, with their flags: {list}.": "البلدان المسجّلة فيها، مع أعلامها: {list}.",
  "Weekly card of the military aircraft, {period}[ {area}]: {aircraft}. By country, with its flag, the most represented first: {list}.": "بطاقة الطائرات العسكرية، {period}[ {area}]: {aircraft}. حسب البلد، مع علمه، والأكثر عددًا أولًا: {list}.",
+ "{label}: {n} ({list}).": "{label}: {n} ({list}).",
  "Weekly card of the helicopters, light aircraft, gliders, drones and balloons, {period}[ {area}]. {groups}": "بطاقة المروحيات والطائرات الخفيفة والطائرات الشراعية والمسيّرات والمناطيد، {period}[ {area}]. {groups}",
  "a light relief map with the main roads": "خريطة تضاريس فاتحة مع الطرق الرئيسية",
  "a dark relief map with the main roads": "خريطة تضاريس داكنة مع الطرق الرئيسية",

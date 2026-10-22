@@ -31,6 +31,9 @@
  "A heavy overhead.": "대형기입니다.",
  "A helicopter.": "헬리콥터입니다.",
  "A new 30-day range record.": "30일 최장 수신 거리 신기록입니다.",
+ "{a}, {b}": "{a}, {b}",
+ "{a}; {b}": "{a}; {b}",
+ "{sentence}.": "{sentence}.",
  "north": "북쪽",
  "north-east": "북동쪽",
  "east": "동쪽",
@@ -70,10 +73,10 @@
  "Glider, type unknown": "기종 미상 글라이더",
  "Balloon or airship": "기구 또는 비행선",
  "Drone": "드론",
- "{n} million messages": "메시지 {n}백만 건",
  "{n} messages": {
   "other": "메시지 {n}건"
  },
+ "{n} million messages": "메시지 {n}백만 건",
  "{n} aircraft": {
   "other": "항공기 {n}대"
  },
@@ -136,6 +139,7 @@
  "Business jets by make and model, as bars: {list}.": "제조사·기종별 비즈니스 제트기 막대그래프: {list}.",
  "The countries they are registered in, with their flags: {list}.": "등록 국가와 국기: {list}.",
  "Weekly card of the military aircraft, {period}[ {area}]: {aircraft}. By country, with its flag, the most represented first: {list}.": "{period}[ {area}] 군용기 주간 이미지: {aircraft}. 국가별(국기 포함, 많은 순): {list}.",
+ "{label}: {n} ({list}).": "{label}: {n} ({list}).",
  "Weekly card of the helicopters, light aircraft, gliders, drones and balloons, {period}[ {area}]. {groups}": "{period}[ {area}] 헬리콥터, 경비행기, 글라이더, 드론 및 기구 주간 이미지. {groups}",
  "a light relief map with the main roads": "주요 도로가 표시된 밝은 음영 기복도",
  "a dark relief map with the main roads": "주요 도로가 표시된 어두운 음영 기복도",

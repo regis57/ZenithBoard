@@ -235,7 +235,7 @@
  "As set below. Never a distance or a direction.": "Згідно з налаштуваннями нижче. Ні відстані, ні напрямку — ніколи.",
  "needs an account": "потрібен обліковий запис",
  "Place name": "Назва місця",
- "Two or three words, as the posts say it: a town name reads “above” it; empty: no place. Never the receiver's position.": "Два-три слова, як у дописах: перед назвою міста стоїть «above»; порожньо: місце не вказується. Розташування приймача не вказується ніколи.",
+ "Two or three words, as the posts say it: a town name alone gets the posts' word for above (above Trémery); empty: no place. Never the receiver's position.": "Два-три слова, як у дописах: сама назва міста стає «над Trémery»; порожньо: місце не вказується. Розташування приймача не вказується ніколи.",
  "none": "немає",
  "Sharing radius": "Радіус публікацій",
  "Kilometres; an aircraft inside it is a candidate. Not the wall's radius.": "Кілометри; літак у його межах — кандидат на допис. Це не радіус табло.",

@@ -624,7 +624,7 @@ window.ZBI18N.start({ part: "console" }, function () {
           t("No Bluesky account yet. Set it up over SSH, it asks for an app password: sudo zenithboard social setup"), [
           row(t("Post the aircraft overhead"), t("As set below. Never a distance or a direction."), acct ? sw("social", on(c.SOCIAL)) : h("span", { "class": "state", text: t("needs an account") })),
           // 0.50.0: the terminal wizard's answers, one by one (the owner: "no field for it")
-          row(t("Place name"), t("Two or three words, as the posts say it: a town name reads \u201cabove\u201d it; empty: no place. Never the receiver's position."),
+          row(t("Place name"), t("Two or three words, as the posts say it: a town name alone gets the posts' word for above (above Trémery); empty: no place. Never the receiver's position."),
             textApply("social-area", c.SOCIAL_AREA, 40, t("none"), function (v) { return v.replace(/\s+/g, " ").trim() || "none"; }, "none")),
           row(t("Sharing radius"), t("Kilometres; an aircraft inside it is a candidate. Not the wall's radius."), numberApply("social-radius", c.SOCIAL_RADIUS_KM, 1, 200)),
           row(t("What is worth a post"), t("Everything: every crossing, the special ones first"), rulesChips(c.SOCIAL_RULES)),
@@ -850,7 +850,8 @@ window.ZBI18N.start({ part: "console" }, function () {
       ta.focus(); ta.selectionStart = ta.selectionEnd = a + tag.length + 2;
     }
     function text() { return ta.value.replace(/\r\n?/g, "\n").split("\n").map(function (l) { return l.trim(); }).filter(Boolean).join("\n"); }
-    var help = h("details", { "class": "tags-help" }, h("summary", { text: t("The tags: click one to put it in") }),
+    var help = h("details", { "class": "tags-help", open: S.tplHelp ? true : null, ontoggle: function () { S.tplHelp = help.open; } },
+      h("summary", { text: t("The tags: click one to put it in") }),
       h("div", { "class": "chips" }, TAGS.map(function (x) {
         return h("button", { type: "button", "class": "chip", title: x[1], text: "{" + x[0] + "}", onclick: function () { insert(x[0]); } });
       })),

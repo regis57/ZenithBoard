@@ -31,6 +31,9 @@
  "A heavy overhead.": "Ciężki samolot nad głową.",
  "A helicopter.": "Śmigłowiec.",
  "A new 30-day range record.": "Nowy rekord zasięgu z 30 dni.",
+ "{a}, {b}": "{a}, {b}",
+ "{a}; {b}": "{a}; {b}",
+ "{sentence}.": "{sentence}.",
  "north": "północ",
  "north-east": "północny wschód",
  "east": "wschód",
@@ -76,13 +79,13 @@
  "Glider, type unknown": "Szybowiec, typ nieznany",
  "Balloon or airship": "Balon lub sterowiec",
  "Drone": "Dron",
- "{n} million messages": "{n} mln komunikatów",
  "{n} messages": {
   "one": "{n} komunikat",
   "few": "{n} komunikaty",
   "many": "{n} komunikatów",
   "other": "{n} komunikatów"
  },
+ "{n} million messages": "{n} mln komunikatów",
  "{n} aircraft": {
   "one": "{n} samolot",
   "few": "{n} samoloty",
@@ -172,6 +175,7 @@
  "Business jets by make and model, as bars: {list}.": "Odrzutowce biznesowe według producenta i modelu, w postaci słupków: {list}.",
  "The countries they are registered in, with their flags: {list}.": "Kraje ich rejestracji, z flagami: {list}.",
  "Weekly card of the military aircraft, {period}[ {area}]: {aircraft}. By country, with its flag, the most represented first: {list}.": "Grafika tygodniowa lotnictwa wojskowego, {period}[ {area}]: {aircraft}. Według krajów, z flagą, od najliczniej reprezentowanego: {list}.",
+ "{label}: {n} ({list}).": "{label}: {n} ({list}).",
  "Weekly card of the helicopters, light aircraft, gliders, drones and balloons, {period}[ {area}]. {groups}": "Grafika tygodniowa śmigłowców, lekkich samolotów, szybowców, dronów i balonów, {period}[ {area}]. {groups}",
  "a light relief map with the main roads": "jasna mapa rzeźby terenu z głównymi drogami",
  "a dark relief map with the main roads": "ciemna mapa rzeźby terenu z głównymi drogami",

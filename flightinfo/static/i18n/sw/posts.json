@@ -31,6 +31,9 @@
  "A heavy overhead.": "Ndege nzito angani.",
  "A helicopter.": "Helikopta.",
  "A new 30-day range record.": "Rekodi mpya ya masafa ya siku 30.",
+ "{a}, {b}": "{a}, {b}",
+ "{a}; {b}": "{a}; {b}",
+ "{sentence}.": "{sentence}.",
  "north": "kaskazini",
  "north-east": "kaskazini mashariki",
  "east": "mashariki",
@@ -72,11 +75,11 @@
  "Glider, type unknown": "Ndege isiyo na injini, aina haijulikani",
  "Balloon or airship": "Puto au meli ya anga",
  "Drone": "Droni",
- "{n} million messages": "jumbe milioni {n}",
  "{n} messages": {
   "one": "ujumbe {n}",
   "other": "jumbe {n}"
  },
+ "{n} million messages": "jumbe milioni {n}",
  "{n} aircraft": {
   "one": "ndege {n}",
   "other": "ndege {n}"
@@ -148,6 +151,7 @@
  "Business jets by make and model, as bars: {list}.": "Jeti binafsi kwa chapa na modeli, kwa chati ya pau: {list}.",
  "The countries they are registered in, with their flags: {list}.": "Nchi zilikosajiliwa, pamoja na bendera zake: {list}.",
  "Weekly card of the military aircraft, {period}[ {area}]: {aircraft}. By country, with its flag, the most represented first: {list}.": "Kadi ya ndege za kijeshi, {period}[ {area}]: {aircraft}. Kwa nchi, pamoja na bendera yake, kuanzia yenye ndege nyingi zaidi: {list}.",
+ "{label}: {n} ({list}).": "{label}: {n} ({list}).",
  "Weekly card of the helicopters, light aircraft, gliders, drones and balloons, {period}[ {area}]. {groups}": "Kadi ya helikopta, ndege ndogo, ndege zisizo na injini, droni na maputo, {period}[ {area}]. {groups}",
  "a light relief map with the main roads": "ramani angavu ya miinuko yenye barabara kuu",
  "a dark relief map with the main roads": "ramani nyeusi ya miinuko yenye barabara kuu",

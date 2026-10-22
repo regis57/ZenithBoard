@@ -31,6 +31,9 @@
  "A heavy overhead.": "Sunkusis orlaivis virš galvos.",
  "A helicopter.": "Sraigtasparnis.",
  "A new 30-day range record.": "Naujas 30 dienų atstumo rekordas.",
+ "{a}, {b}": "{a}, {b}",
+ "{a}; {b}": "{a}; {b}",
+ "{sentence}.": "{sentence}.",
  "north": "šiaurė",
  "north-east": "šiaurės rytai",
  "east": "rytai",
@@ -76,13 +79,13 @@
  "Glider, type unknown": "Sklandytuvas, tipas nežinomas",
  "Balloon or airship": "Oro balionas arba dirižablis",
  "Drone": "Dronas",
- "{n} million messages": "{n} mln. pranešimų",
  "{n} messages": {
   "one": "{n} pranešimas",
   "few": "{n} pranešimai",
   "many": "{n} pranešimų",
   "other": "{n} pranešimų"
  },
+ "{n} million messages": "{n} mln. pranešimų",
  "{n} aircraft": {
   "one": "{n} orlaivis",
   "few": "{n} orlaiviai",
@@ -172,6 +175,7 @@
  "Business jets by make and model, as bars: {list}.": "Verslo lėktuvai pagal gamintoją ir modelį stulpeliais: {list}.",
  "The countries they are registered in, with their flags: {list}.": "Registracijos šalys su vėliavomis: {list}.",
  "Weekly card of the military aircraft, {period}[ {area}]: {aircraft}. By country, with its flag, the most represented first: {list}.": "Savaitės paveikslėlis apie karinius orlaivius, {period}[ {area}]: {aircraft}. Pagal šalis su vėliava, pradedant gausiausiai atstovaujama: {list}.",
+ "{label}: {n} ({list}).": "{label}: {n} ({list}).",
  "Weekly card of the helicopters, light aircraft, gliders, drones and balloons, {period}[ {area}]. {groups}": "Savaitės paveikslėlis apie sraigtasparnius, lengvuosius lėktuvus, sklandytuvus, dronus ir oro balionus, {period}[ {area}]. {groups}",
  "a light relief map with the main roads": "šviesus reljefo žemėlapis su pagrindiniais keliais",
  "a dark relief map with the main roads": "tamsus reljefo žemėlapis su pagrindiniais keliais",

@@ -235,7 +235,7 @@
  "As set below. Never a distance or a direction.": "아래 설정에 따릅니다. 거리나 방향은 절대 게시하지 않습니다.",
  "needs an account": "계정 필요",
  "Place name": "지명",
- "Two or three words, as the posts say it: a town name reads “above” it; empty: no place. Never the receiver's position.": "게시물에 표시되는 그대로 두세 단어로 적습니다. 도시 이름 앞에는 “above”가 붙고, 비워 두면 장소를 넣지 않습니다. 수신기 위치는 절대 게시하지 않습니다.",
+ "Two or three words, as the posts say it: a town name alone gets the posts' word for above (above Trémery); empty: no place. Never the receiver's position.": "게시물에 표시되는 그대로 두세 단어로 적습니다. 도시 이름만 적으면 “Trémery 상공”이 되고, 비워 두면 장소를 넣지 않습니다. 수신기 위치는 절대 게시하지 않습니다.",
  "none": "없음",
  "Sharing radius": "공유 반경",
  "Kilometres; an aircraft inside it is a candidate. Not the wall's radius.": "km 단위, 이 반경 안의 항공기가 게시 후보가 됩니다. 전광판의 반경과는 별개입니다.",

@@ -31,6 +31,9 @@
  "A heavy overhead.": "Raskas kone yläpuolella.",
  "A helicopter.": "Helikopteri.",
  "A new 30-day range record.": "Uusi 30 päivän kantamaennätys.",
+ "{a}, {b}": "{a}, {b}",
+ "{a}; {b}": "{a}; {b}",
+ "{sentence}.": "{sentence}.",
  "north": "pohjoinen",
  "north-east": "koillinen",
  "east": "itä",
@@ -72,11 +75,11 @@
  "Glider, type unknown": "Purjelentokone, tyyppi tuntematon",
  "Balloon or airship": "Kuumailmapallo tai ilmalaiva",
  "Drone": "Drooni",
- "{n} million messages": "{n} miljoonaa viestiä",
  "{n} messages": {
   "one": "{n} viesti",
   "other": "{n} viestiä"
  },
+ "{n} million messages": "{n} miljoonaa viestiä",
  "{n} aircraft": {
   "one": "{n} kone",
   "other": "{n} konetta"
@@ -148,6 +151,7 @@
  "Business jets by make and model, as bars: {list}.": "Liikesuihkukoneet valmistajan ja mallin mukaan pylväinä: {list}.",
  "The countries they are registered in, with their flags: {list}.": "Rekisteröintimaat lippuineen: {list}.",
  "Weekly card of the military aircraft, {period}[ {area}]: {aircraft}. By country, with its flag, the most represented first: {list}.": "Viikkokuva sotilaskoneista, {period}[ {area}]: {aircraft}. Maittain lippuineen, yleisin ensin: {list}.",
+ "{label}: {n} ({list}).": "{label}: {n} ({list}).",
  "Weekly card of the helicopters, light aircraft, gliders, drones and balloons, {period}[ {area}]. {groups}": "Viikkokuva helikoptereista, pienlentokoneista, purjelentokoneista, drooneista ja kuumailmapalloista, {period}[ {area}]. {groups}",
  "a light relief map with the main roads": "vaalea korkokuvakartta pääteineen",
  "a dark relief map with the main roads": "tumma korkokuvakartta pääteineen",

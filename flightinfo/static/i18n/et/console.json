@@ -235,7 +235,7 @@
  "As set below. Never a distance or a direction.": "Nagu allpool seadistatud. Kaugust ega suunda ei avaldata kunagi.",
  "needs an account": "vajab kontot",
  "Place name": "Koha nimi",
- "Two or three words, as the posts say it: a town name reads “above” it; empty: no place. Never the receiver's position.": "Kaks või kolm sõna, nii nagu postitused seda ütlevad: asula nime ette lisatakse „above“; tühi: kohta ei nimetata. Vastuvõtja asukohta ei kasutata kunagi.",
+ "Two or three words, as the posts say it: a town name alone gets the posts' word for above (above Trémery); empty: no place. Never the receiver's position.": "Kaks või kolm sõna, nii nagu postitused seda ütlevad: ainult asula nimi kirjutatakse „Trémery kohal“; tühi: kohta ei nimetata. Vastuvõtja asukohta ei kasutata kunagi.",
  "none": "puudub",
  "Sharing radius": "Jagamise raadius",
  "Kilometres; an aircraft inside it is a candidate. Not the wall's radius.": "Kilomeetrites; selle sees olev lennuk on kandidaat. See ei ole tabloo raadius.",

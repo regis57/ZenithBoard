@@ -852,8 +852,7 @@ def post_text(p, c, why=None, credit=None, photo=None, shape=None):
     height = L.t("altitude {altitude}", altitude=alt) if alt else ""
     if record:
         parts.append(height)
-        parts.append(", ".join(x for x in (L.t("range record for 30 days: {range}", range=range_words(p["distance_km"], L)),
-                                           seen_from(c, L)) if x))
+        parts.append(L.join([L.t("range record for 30 days: {range}", range=range_words(p["distance_km"], L)), seen_from(c, L)]))
     else:
         parts.append(height)
         parts.append(area_words(c, L))
@@ -893,6 +892,7 @@ TEMPLATE_TAGS = ("flight", "callsign", "airline", "airline_country", "flag", "re
                  "squawk", "why", "area", "time", "date", "photo", "tracker", "hashtags")
 WHY_WORDS = {"rare": N_("A rare visitor."), "military": N_("Military traffic."), "heavy": N_("A heavy overhead."),
              "helicopter": N_("A helicopter."), "farthest": N_("A new 30-day range record.")}
+LIST_WORDS = (N_("{a}, {b}"), N_("{a}; {b}"), N_("{sentence}."))   # post_lang's join and a sentence's full stop (0.51.0)
 COMPASS = (N_("north"), N_("north-east"), N_("east"), N_("south-east"), N_("south"), N_("south-west"), N_("west"),
            N_("north-west"))
 
@@ -1024,7 +1024,7 @@ def alt_text(p, c, trace, look="dotmap", info=None):
     if metres(p.get("alt_ft"), units):
         bits.append(L.t("altitude {altitude}", altitude=metres(p.get("alt_ft"), units, L)))
     mins = max(1, int(round((trace[-1][3] - trace[0][3]) / 60))) if len(trace) > 1 else 0
-    s = ", ".join(bits) + "."
+    s = L.t("{sentence}.", sentence=L.join(bits))
     if mins and look in MAP_LOOKS and info.get("map_words"):
         s += " " + L.tn(mins, "Beside it, {map} with the aircraft's track over the last {n} minute, north up.",
                         "Beside it, {map} with the aircraft's track over the last {n} minutes, north up.", map=L.t(info["map_words"]))

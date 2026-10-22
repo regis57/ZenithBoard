@@ -424,7 +424,8 @@ def model_name(name, L=None):
 
 
 def _ranked(label, pairs, n, L=None):
-    return (L or EN).t("{label}: {list}.", label=label, list=", ".join("%s (%s)" % (model_name(name, L), number(k, L)) for name, k in pairs[:n])) if pairs else None
+    L = L or EN
+    return L.t("{label}: {list}.", label=label, list=L.join(["%s (%s)" % (model_name(name, L), number(k, L)) for name, k in pairs[:n]])) if pairs else None
 
 
 def _fit_lines(head, parts, tags, fit, L=None):
@@ -487,11 +488,11 @@ def alt(w, area, L=None):
         bits.append(L.t("busiest day {day} with {aircraft}", day=day_name(w["best_day"][0], L), aircraft=aircraft_phrase(w["best_day"][1], L)))
     if w.get("busiest_hour") is not None:
         bits.append(L.t("busiest hour {hour}", hour="%02d:00" % w["busiest_hour"]))
-    s = ", ".join(bits) + ". " + L.t(ALT_PICTURE[period])
+    s = L.t("{sentence}.", sentence=L.join(bits)) + " " + L.t(ALT_PICTURE[period])
     if w.get("airlines"):
-        s += " " + L.t("The airlines most seen, as bars: {list}.", list=", ".join("%s %d" % (n, k) for n, k in w["airlines"]))
+        s += " " + L.t("The airlines most seen, as bars: {list}.", list=L.join(["%s %d" % (n, k) for n, k in w["airlines"]]))
     if w.get("models"):
-        s += " " + L.t("Beside them, the models most seen: {list}.", list=", ".join("%s %d" % (model_name(n, L), k) for n, k in w["models"]))
+        s += " " + L.t("Beside them, the models most seen: {list}.", list=L.join(["%s %d" % (model_name(n, L), k) for n, k in w["models"]]))
     return s
 
 
@@ -596,7 +597,7 @@ def text_misc(w, area, tags, fit, L=None):
     m = misc_lists(w)
     shown = [g for g, _, _ in MISC_SHOWN if (m.get(g) or {}).get("total")]
     counts = [L.tn(m[g]["total"], MISC_COUNT[g][0], MISC_COUNT[g][1]) for g in shown]
-    head = L.t("General aviation[ {area}], {period}: {counts}.", area=area, period=period_words(w, L), counts=", ".join(counts))
+    head = L.t("General aviation[ {area}], {period}: {counts}.", area=area, period=period_words(w, L), counts=L.join(counts))
     return _fit_lines(head, [(L.t(label), m[g]["models"]) for g, label, _ in MISC_SHOWN if g in shown], tags, fit, L)
 
 
@@ -607,14 +608,14 @@ def alt_second(w, area, L=None):
             bizjets=L.tn(w.get("bizjet_total", 0), "{n} business jets", "{n} business jets"))
     if w.get("cargo"):
         cm = w.get("cargo_models") or {}
-        s += " " + L.t("Cargo airlines, as bars, each with the model it flew most: {list}.", list=", ".join(
+        s += " " + L.t("Cargo airlines, as bars, each with the model it flew most: {list}.", list=L.join([
             "%s %d%s" % (n, k, (" " + L.t("(mostly {model}, {n})", model=model_name(cm[n][0], L), n=cm[n][1])) if n in cm else "")
-            for n, k in w["cargo"]))
+            for n, k in w["cargo"]]))
     if w.get("bizjets"):
-        s += " " + L.t("Business jets by make and model, as bars: {list}.", list=", ".join("%s %d" % (n, k) for n, k in w["bizjets"]))
+        s += " " + L.t("Business jets by make and model, as bars: {list}.", list=L.join(["%s %d" % (n, k) for n, k in w["bizjets"]]))
     if w.get("bizjet_countries"):
-        s += " " + L.t("The countries they are registered in, with their flags: {list}.", list=", ".join(
-            "%s %d" % (L.country(c, server.country_name(c)), k) for c, k in w["bizjet_countries"]))
+        s += " " + L.t("The countries they are registered in, with their flags: {list}.", list=L.join([
+            "%s %d" % (L.country(c, server.country_name(c)), k) for c, k in w["bizjet_countries"]]))
     return s
 
 
@@ -622,15 +623,15 @@ def alt_military(w, area, L=None):
     L = L or EN
     return L.t("Weekly card of the military aircraft, {period}[ {area}]: {aircraft}. By country, with its flag, the most represented first: {list}.",
                period=period_words(w, L), area=area, aircraft=aircraft_phrase(w.get("military_total", 0), L),
-               list="; ".join("%s %d (%s)" % (L.country(e.get("cc"), e["country"]), e["total"],
-                                              ", ".join("%s %d" % (model_name(n, L), k) for n, k in e["models"][:3]))
-                              for e in w.get("military") or []))
+               list=L.join(["%s %d (%s)" % (L.country(e.get("cc"), e["country"]), e["total"],
+                                            L.join(["%s %d" % (model_name(n, L), k) for n, k in e["models"][:3]]))
+                            for e in w.get("military") or []], "{a}; {b}"))
 
 
 def alt_misc(w, area, L=None):
     L = L or EN
     m = misc_lists(w)
-    groups = ["%s: %d (%s)." % (L.t(label), m[g]["total"], ", ".join("%s %d" % (model_name(n, L), k) for n, k in m[g]["models"]))
+    groups = [L.t("{label}: {n} ({list}).", label=L.t(label), n=m[g]["total"], list=L.join(["%s %d" % (model_name(n, L), k) for n, k in m[g]["models"]]))
               for g, label, _ in MISC_SHOWN if (m.get(g) or {}).get("total")]
     return L.t("Weekly card of the helicopters, light aircraft, gliders, drones and balloons, {period}[ {area}]. {groups}",
                period=period_words(w, L), area=area, groups=" ".join(groups))

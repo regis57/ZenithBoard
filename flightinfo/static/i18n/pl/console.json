@@ -235,7 +235,7 @@
  "As set below. Never a distance or a direction.": "Zgodnie z ustawieniami poniżej. Nigdy odległość ani kierunek.",
  "needs an account": "wymaga konta",
  "Place name": "Nazwa miejsca",
- "Two or three words, as the posts say it: a town name reads “above” it; empty: no place. Never the receiver's position.": "Dwa lub trzy słowa, tak jak mają brzmieć we wpisach: przed nazwą miejscowości pojawi się „above”; puste: bez miejsca. Nigdy pozycja odbiornika.",
+ "Two or three words, as the posts say it: a town name alone gets the posts' word for above (above Trémery); empty: no place. Never the receiver's position.": "Dwa lub trzy słowa, tak jak mają brzmieć we wpisach: sama nazwa miejscowości daje „nad miejscowością Trémery”; puste: bez miejsca. Nigdy pozycja odbiornika.",
  "none": "brak",
  "Sharing radius": "Promień publikowania",
  "Kilometres; an aircraft inside it is a candidate. Not the wall's radius.": "Kilometry; samolot w tym promieniu jest kandydatem do wpisu. To nie jest promień tablicy.",

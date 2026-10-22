@@ -31,6 +31,9 @@
  "A heavy overhead.": "大型機です。",
  "A helicopter.": "ヘリコプターです。",
  "A new 30-day range record.": "30日間の最遠記録を更新しました。",
+ "{a}, {b}": "{a}、{b}",
+ "{a}; {b}": "{a}；{b}",
+ "{sentence}.": "{sentence}。",
  "north": "北",
  "north-east": "北東",
  "east": "東",
@@ -70,10 +73,10 @@
  "Glider, type unknown": "機種不明のグライダー",
  "Balloon or airship": "気球または飛行船",
  "Drone": "ドローン",
- "{n} million messages": "{n}百万件のメッセージ",
  "{n} messages": {
   "other": "{n}件のメッセージ"
  },
+ "{n} million messages": "{n}百万件のメッセージ",
  "{n} aircraft": {
   "other": "{n}機"
  },
@@ -136,6 +139,7 @@
  "Business jets by make and model, as bars: {list}.": "ビジネスジェットのメーカー・機種別の棒グラフ：{list}。",
  "The countries they are registered in, with their flags: {list}.": "登録国（国旗付き）：{list}。",
  "Weekly card of the military aircraft, {period}[ {area}]: {aircraft}. By country, with its flag, the most represented first: {list}.": "{period}[、{area}]の軍用機の週間画像：{aircraft}。国別（国旗付き、多い順）：{list}。",
+ "{label}: {n} ({list}).": "{label}：{n}（{list}）。",
  "Weekly card of the helicopters, light aircraft, gliders, drones and balloons, {period}[ {area}]. {groups}": "{period}[、{area}]のヘリコプター、軽飛行機、グライダー、ドローン、気球の週間画像。{groups}",
  "a light relief map with the main roads": "主要道路入りの明るい陰影起伏図",
  "a dark relief map with the main roads": "主要道路入りの暗い陰影起伏図",

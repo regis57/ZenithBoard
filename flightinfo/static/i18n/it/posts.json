@@ -31,6 +31,9 @@
  "A heavy overhead.": "Un peso massimo in cielo.",
  "A helicopter.": "Un elicottero.",
  "A new 30-day range record.": "Un nuovo record di distanza in 30 giorni.",
+ "{a}, {b}": "{a}, {b}",
+ "{a}; {b}": "{a}; {b}",
+ "{sentence}.": "{sentence}.",
  "north": "nord",
  "north-east": "nord-est",
  "east": "est",
@@ -74,12 +77,12 @@
  "Glider, type unknown": "Aliante, tipo sconosciuto",
  "Balloon or airship": "Pallone o dirigibile",
  "Drone": "Drone",
- "{n} million messages": "{n} milioni di messaggi",
  "{n} messages": {
   "one": "{n} messaggio",
   "many": "{n} messaggi",
   "other": "{n} messaggi"
  },
+ "{n} million messages": "{n} milioni di messaggi",
  "{n} aircraft": {
   "one": "{n} aereo",
   "many": "{n} aerei",
@@ -160,6 +163,7 @@
  "Business jets by make and model, as bars: {list}.": "I business jet per costruttore e modello, a barre: {list}.",
  "The countries they are registered in, with their flags: {list}.": "I paesi di immatricolazione, con le loro bandiere: {list}.",
  "Weekly card of the military aircraft, {period}[ {area}]: {aircraft}. By country, with its flag, the most represented first: {list}.": "Immagine settimanale degli aerei militari, {period}[ {area}]: {aircraft}. Per paese, con la sua bandiera, dal più rappresentato: {list}.",
+ "{label}: {n} ({list}).": "{label}: {n} ({list}).",
  "Weekly card of the helicopters, light aircraft, gliders, drones and balloons, {period}[ {area}]. {groups}": "Immagine settimanale di elicotteri, aerei leggeri, alianti, droni e aerostati, {period}[ {area}]. {groups}",
  "a light relief map with the main roads": "una mappa in rilievo chiara con le strade principali",
  "a dark relief map with the main roads": "una mappa in rilievo scura con le strade principali",

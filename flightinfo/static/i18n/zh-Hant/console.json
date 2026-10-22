@@ -235,7 +235,7 @@
  "As set below. Never a distance or a direction.": "依下方的設定。絕不透露距離或方向。",
  "needs an account": "需要帳號",
  "Place name": "地名",
- "Two or three words, as the posts say it: a town name reads “above” it; empty: no place. Never the receiver's position.": "兩三個字詞，依貼文中的寫法：城鎮名稱前會加上「above」；留空：不顯示地點。絕不透露接收器的位置。",
+ "Two or three words, as the posts say it: a town name alone gets the posts' word for above (above Trémery); empty: no place. Never the receiver's position.": "兩三個字詞，依貼文中的寫法：只寫城鎮名稱時會顯示為「Trémery 上空」；留空：不顯示地點。絕不透露接收器的位置。",
  "none": "無",
  "Sharing radius": "分享半徑",
  "Kilometres; an aircraft inside it is a candidate. Not the wall's radius.": "公里；在此範圍內的飛機即成為發文候選。這不是看板的半徑。",

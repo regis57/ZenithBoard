@@ -143,6 +143,17 @@ class Lang(object):
             form = one if count == 1 else other
         return self.render(form, values)
 
+    def join(self, items, how="{a}, {b}"):
+        """Words in a list, with the language's own comma (、 in Japanese and Chinese, ، in Arabic): the catalogue's
+        "{a}, {b}" (or "{a}; {b}"), applied pair by pair."""
+        items = [x for x in items if x]
+        if not items:
+            return ""
+        out = items[0]
+        for x in items[1:]:
+            out = self.t(how, a=out, b=x)
+        return out
+
     def render(self, template, values):
         """{tag} replaced by its value, {tag|a} with English's article, {tag|cap} with a capital; a [part] is left out
         when one of its tags is empty. French says d'Ennery, l'Airbus: "de", "le", "la", "que" before a vowel."""

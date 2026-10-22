@@ -235,7 +235,7 @@
  "As set below. Never a distance or a direction.": "按下方的设置。绝不包含距离或方向。",
  "needs an account": "需要账号",
  "Place name": "地名",
- "Two or three words, as the posts say it: a town name reads “above” it; empty: no place. Never the receiver's position.": "两三个词，按帖子中的写法：城镇名前会加上“above”；留空：不写地点。绝不包含接收机的位置。",
+ "Two or three words, as the posts say it: a town name alone gets the posts' word for above (above Trémery); empty: no place. Never the receiver's position.": "两三个词，按帖子中的写法：只写城镇名时显示为“Trémery 上空”；留空：不写地点。绝不包含接收机的位置。",
  "none": "无",
  "Sharing radius": "分享半径",
  "Kilometres; an aircraft inside it is a candidate. Not the wall's radius.": "单位：公里；进入此范围的飞机即成为发帖候选。这不是显示墙的半径。",

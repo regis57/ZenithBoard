@@ -31,6 +31,9 @@
  "A heavy overhead.": "Ein Schwergewicht am Himmel.",
  "A helicopter.": "Ein Hubschrauber.",
  "A new 30-day range record.": "Ein neuer Reichweitenrekord der letzten 30 Tage.",
+ "{a}, {b}": "{a}, {b}",
+ "{a}; {b}": "{a}; {b}",
+ "{sentence}.": "{sentence}.",
  "north": "Norden",
  "north-east": "Nordosten",
  "east": "Osten",
@@ -72,11 +75,11 @@
  "Glider, type unknown": "Segelflugzeug, Typ unbekannt",
  "Balloon or airship": "Ballon oder Luftschiff",
  "Drone": "Drohne",
- "{n} million messages": "{n} Mio. Nachrichten",
  "{n} messages": {
   "one": "{n} Nachricht",
   "other": "{n} Nachrichten"
  },
+ "{n} million messages": "{n} Mio. Nachrichten",
  "{n} aircraft": {
   "one": "{n} Flugzeug",
   "other": "{n} Flugzeuge"
@@ -148,6 +151,7 @@
  "Business jets by make and model, as bars: {list}.": "Businessjets nach Hersteller und Typ als Balken: {list}.",
  "The countries they are registered in, with their flags: {list}.": "Die Länder, in denen sie registriert sind, mit ihren Flaggen: {list}.",
  "Weekly card of the military aircraft, {period}[ {area}]: {aircraft}. By country, with its flag, the most represented first: {list}.": "Wochenbild der Militärflugzeuge, {period}[ {area}]: {aircraft}. Nach Land, jeweils mit Flagge, das häufigste zuerst: {list}.",
+ "{label}: {n} ({list}).": "{label}: {n} ({list}).",
  "Weekly card of the helicopters, light aircraft, gliders, drones and balloons, {period}[ {area}]. {groups}": "Wochenbild der Hubschrauber, Leichtflugzeuge, Segelflugzeuge, Drohnen und Ballons, {period}[ {area}]. {groups}",
  "a light relief map with the main roads": "eine helle Reliefkarte mit den Hauptstraßen",
  "a dark relief map with the main roads": "eine dunkle Reliefkarte mit den Hauptstraßen",

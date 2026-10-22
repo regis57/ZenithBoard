@@ -31,6 +31,9 @@
  "A heavy overhead.": "Een zwaargewicht in de lucht.",
  "A helicopter.": "Een helikopter.",
  "A new 30-day range record.": "Een nieuw bereikrecord over 30 dagen.",
+ "{a}, {b}": "{a}, {b}",
+ "{a}; {b}": "{a}; {b}",
+ "{sentence}.": "{sentence}.",
  "north": "noord",
  "north-east": "noordoost",
  "east": "oost",
@@ -72,11 +75,11 @@
  "Glider, type unknown": "Zweefvliegtuig, type onbekend",
  "Balloon or airship": "Ballon of luchtschip",
  "Drone": "Drone",
- "{n} million messages": "{n} miljoen berichten",
  "{n} messages": {
   "one": "{n} bericht",
   "other": "{n} berichten"
  },
+ "{n} million messages": "{n} miljoen berichten",
  "{n} aircraft": {
   "one": "{n} vliegtuig",
   "other": "{n} vliegtuigen"
@@ -148,6 +151,7 @@
  "Business jets by make and model, as bars: {list}.": "Zakenjets per merk en type, als staven: {list}.",
  "The countries they are registered in, with their flags: {list}.": "De landen waar ze geregistreerd zijn, met hun vlag: {list}.",
  "Weekly card of the military aircraft, {period}[ {area}]: {aircraft}. By country, with its flag, the most represented first: {list}.": "Weekafbeelding van de militaire vliegtuigen, {period}[ {area}]: {aircraft}. Per land, met de vlag, het sterkst vertegenwoordigde eerst: {list}.",
+ "{label}: {n} ({list}).": "{label}: {n} ({list}).",
  "Weekly card of the helicopters, light aircraft, gliders, drones and balloons, {period}[ {area}]. {groups}": "Weekafbeelding van de helikopters, lichte vliegtuigen, zweefvliegtuigen, drones en ballonnen, {period}[ {area}]. {groups}",
  "a light relief map with the main roads": "een lichte reliëfkaart met de hoofdwegen",
  "a dark relief map with the main roads": "een donkere reliëfkaart met de hoofdwegen",

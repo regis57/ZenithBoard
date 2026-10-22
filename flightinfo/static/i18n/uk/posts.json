@@ -31,6 +31,9 @@
  "A heavy overhead.": "Важкий літак над головою.",
  "A helicopter.": "Гелікоптер.",
  "A new 30-day range record.": "Новий рекорд дальності за 30 днів.",
+ "{a}, {b}": "{a}, {b}",
+ "{a}; {b}": "{a}; {b}",
+ "{sentence}.": "{sentence}.",
  "north": "північ",
  "north-east": "північний схід",
  "east": "схід",
@@ -76,13 +79,13 @@
  "Glider, type unknown": "Планер, тип невідомий",
  "Balloon or airship": "Аеростат або дирижабль",
  "Drone": "Дрон",
- "{n} million messages": "{n} млн повідомлень",
  "{n} messages": {
   "one": "{n} повідомлення",
   "few": "{n} повідомлення",
   "many": "{n} повідомлень",
   "other": "{n} повідомлень"
  },
+ "{n} million messages": "{n} млн повідомлень",
  "{n} aircraft": {
   "one": "{n} літак",
   "few": "{n} літаки",
@@ -172,6 +175,7 @@
  "Business jets by make and model, as bars: {list}.": "Бізнес-джети за маркою й моделлю у вигляді стовпців: {list}.",
  "The countries they are registered in, with their flags: {list}.": "Країни реєстрації з їхніми прапорами: {list}.",
  "Weekly card of the military aircraft, {period}[ {area}]: {aircraft}. By country, with its flag, the most represented first: {list}.": "Картка військових літаків, {period}[ {area}]: {aircraft}. За країнами, з прапорами, за спаданням кількості: {list}.",
+ "{label}: {n} ({list}).": "{label}: {n} ({list}).",
  "Weekly card of the helicopters, light aircraft, gliders, drones and balloons, {period}[ {area}]. {groups}": "Картка гелікоптерів, легких літаків, планерів, дронів і аеростатів, {period}[ {area}]. {groups}",
  "a light relief map with the main roads": "світла карта рельєфу з основними дорогами",
  "a dark relief map with the main roads": "темна карта рельєфу з основними дорогами",

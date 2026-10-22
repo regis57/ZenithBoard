@@ -2612,13 +2612,13 @@
    "decembris"
   ],
   "weekdays": [
-   "Pirmdiena",
-   "Otrdiena",
-   "Trešdiena",
-   "Ceturtdiena",
-   "Piektdiena",
-   "Sestdiena",
-   "Svētdiena"
+   "pirmdiena",
+   "otrdiena",
+   "trešdiena",
+   "ceturtdiena",
+   "piektdiena",
+   "sestdiena",
+   "svētdiena"
   ],
   "span_one_month": "{d1}.–{d2}. {M2}",
   "span_two_months": "{d1}. {M1} – {d2}. {M2}",

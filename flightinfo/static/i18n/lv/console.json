@@ -235,7 +235,7 @@
  "As set below. Never a distance or a direction.": "Kā iestatīts zemāk. Attālums vai virziens netiek norādīts nekad.",
  "needs an account": "vajadzīgs konts",
  "Place name": "Vietas nosaukums",
- "Two or three words, as the posts say it: a town name reads “above” it; empty: no place. Never the receiver's position.": "Divi vai trīs vārdi, kā tie būs ierakstos: pirms apdzīvotas vietas nosaukuma tiek likts „above”; tukšs: bez vietas. Uztvērēja pozīcija netiek izmantota nekad.",
+ "Two or three words, as the posts say it: a town name alone gets the posts' word for above (above Trémery); empty: no place. Never the receiver's position.": "Divi vai trīs vārdi, kā tie būs ierakstos: tikai apdzīvotas vietas nosaukums kļūst par „virs Trémery”; tukšs: bez vietas. Uztvērēja pozīcija netiek izmantota nekad.",
  "none": "nav",
  "Sharing radius": "Kopīgošanas rādiuss",
  "Kilometres; an aircraft inside it is a candidate. Not the wall's radius.": "Kilometri; gaisa kuģis tā robežās ir kandidāts. Tas nav tablo rādiuss.",

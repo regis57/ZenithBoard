@@ -235,7 +235,7 @@
  "As set below. Never a distance or a direction.": "По настройкам ниже. Расстояние и направление не указываются никогда.",
  "needs an account": "нужна учётная запись",
  "Place name": "Название места",
- "Two or three words, as the posts say it: a town name reads “above” it; empty: no place. Never the receiver's position.": "Два-три слова, как в публикациях: перед названием города ставится «above»; если пусто — место не указывается. Местоположение приёмника не указывается никогда.",
+ "Two or three words, as the posts say it: a town name alone gets the posts' word for above (above Trémery); empty: no place. Never the receiver's position.": "Два-три слова, как в публикациях: одно название города превращается в «над Trémery»; если пусто — место не указывается. Местоположение приёмника не указывается никогда.",
  "none": "нет",
  "Sharing radius": "Радиус публикаций",
  "Kilometres; an aircraft inside it is a candidate. Not the wall's radius.": "Километры; борт внутри радиуса — кандидат на публикацию. Это не радиус табло.",

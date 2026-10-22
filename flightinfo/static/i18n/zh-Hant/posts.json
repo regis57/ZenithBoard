@@ -31,6 +31,9 @@
  "A heavy overhead.": "大型機飛過。",
  "A helicopter.": "一架直升機。",
  "A new 30-day range record.": "30 天最遠接收新紀錄。",
+ "{a}, {b}": "{a}、{b}",
+ "{a}; {b}": "{a}；{b}",
+ "{sentence}.": "{sentence}。",
  "north": "北",
  "north-east": "東北",
  "east": "東",
@@ -70,10 +73,10 @@
  "Glider, type unknown": "未知型號滑翔機",
  "Balloon or airship": "氣球或飛艇",
  "Drone": "無人機",
- "{n} million messages": "{n} 百萬則訊息",
  "{n} messages": {
   "other": "{n} 則訊息"
  },
+ "{n} million messages": "{n} 百萬則訊息",
  "{n} aircraft": {
   "other": "{n} 架飛機"
  },
@@ -136,6 +139,7 @@
  "Business jets by make and model, as bars: {list}.": "依廠牌與型號排列的商務噴射機長條圖：{list}。",
  "The countries they are registered in, with their flags: {list}.": "註冊國家及其國旗：{list}。",
  "Weekly card of the military aircraft, {period}[ {area}]: {aircraft}. By country, with its flag, the most represented first: {list}.": "{period}[ {area}]軍機每週圖：{aircraft}。依國家排列，附國旗，數量多者在前：{list}。",
+ "{label}: {n} ({list}).": "{label}：{n}（{list}）。",
  "Weekly card of the helicopters, light aircraft, gliders, drones and balloons, {period}[ {area}]. {groups}": "{period}[ {area}]直升機、輕型飛機、滑翔機、無人機與氣球每週圖。{groups}",
  "a light relief map with the main roads": "標有主要道路的淺色地勢圖",
  "a dark relief map with the main roads": "標有主要道路的深色地勢圖",
