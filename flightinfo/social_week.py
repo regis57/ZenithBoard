@@ -460,11 +460,11 @@ def text(w, c, area, tags, fit):
     bd, bh = w.get("best_day"), w.get("busiest_hour")
     if bd and bh is not None:
         parts.append(L.t("Busiest: {day} ({aircraft}) and {hour}.", day=day_name(bd[0], L), aircraft=aircraft_phrase(bd[1], L),
-                         hour="%02d:00" % bh))
+                         hour=L.clock(bh)))
     elif bd:
         parts.append(L.t("Busiest: {day} ({aircraft}).", day=day_name(bd[0], L), aircraft=aircraft_phrase(bd[1], L)))
     elif bh is not None:
-        parts.append(L.t("Busiest hour: {hour}.", hour="%02d:00" % bh))
+        parts.append(L.t("Busiest hour: {hour}.", hour=L.clock(bh)))
     parts.append((L.t("Airlines"), w.get("airlines") or []))
     parts.append((L.t("Models"), w.get("models") or []))          # 0.35.0
     if w.get("posted"):
@@ -487,7 +487,7 @@ def alt(w, area, L=None):
     if w.get("best_day"):
         bits.append(L.t("busiest day {day} with {aircraft}", day=day_name(w["best_day"][0], L), aircraft=aircraft_phrase(w["best_day"][1], L)))
     if w.get("busiest_hour") is not None:
-        bits.append(L.t("busiest hour {hour}", hour="%02d:00" % w["busiest_hour"]))
+        bits.append(L.t("busiest hour {hour}", hour=L.clock(w["busiest_hour"])))
     s = L.t("{sentence}.", sentence=L.join(bits)) + " " + L.t(ALT_PICTURE[period])
     if w.get("airlines"):
         s += " " + L.t("The airlines most seen, as bars: {list}.", list=L.join(["%s %d" % (n, k) for n, k in w["airlines"]]))

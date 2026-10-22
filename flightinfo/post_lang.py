@@ -26,6 +26,7 @@ LOCALE_FILE = os.path.join(HERE, "data", "post-locale.json")
 LANGS = ("en", "fr", "de", "nl", "it", "es", "pt-BR", "pl", "fi", "et", "lv", "lt", "id", "sw", "ru", "uk", "ar", "ja", "ko",
          "zh-Hans", "zh-Hant")
 NBSP = " "
+EN_UNITS = {"meter": "m", "kilometer": "km", "kilometer-per-hour": "km/h"}
 EN_DAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
 EN_MONTHS = ("January", "February", "March", "April", "May", "June", "July", "August", "September", "October",
              "November", "December")
@@ -229,6 +230,27 @@ class Lang(object):
             return s
         whole, _, frac = s.partition(".")
         return self.num(int(whole)) + ((self.loc.get("decimal", ".") + frac) if frac else "")
+
+    # ---- units and the clock (0.52.1)
+    def unit(self, n, unit, text=None):
+        """A metric figure with its unit as the language writes it: 10 670 m, 839 км/ч, 839 km/u, 10 670米, 839km/h;
+        Arabic's metre by the count (متر, أمتار, مترًا). text is n already written (lang.num, lang.dec); English keeps
+        its own: the figure, a space that does not break, m, km or km/h. Feet and knots stay ft and kt, as in aviation."""
+        text = self.num(n) if text is None else text
+        pat = (self.loc.get("units") or {}).get(unit) if self.code != "en" else None
+        if isinstance(pat, dict):
+            pat = pat.get(plural(self.code, int(round(abs(n))))) or pat.get("other")
+        if not isinstance(pat, str) or "{n}" not in pat:
+            return text + NBSP + EN_UNITS.get(unit, unit)
+        return pat.replace("{n}", text)
+
+    def clock(self, h, m=0):
+        """A time of day, 24-hour: 13:50; 13.50 in Indonesian and Finnish (the owner, 22 October 2026: "pukul 13:50";
+        Indonesian spelling separates hours and minutes with a full stop, as CLDR has it)."""
+        pat = self.loc.get("clock") if self.code != "en" else None
+        if not isinstance(pat, str) or "{h}" not in pat or "{m}" not in pat:
+            pat = "{h}:{m}"
+        return pat.replace("{h}", "%02d" % int(h)).replace("{m}", "%02d" % int(m))
 
     # ---- dates
     def _month(self, d):

@@ -605,7 +605,7 @@ def metres(alt_ft, units, lang=None):
     lang = lang or post_lang.get("en")
     if units == "imperial":
         return lang.num(int(round(alt_ft / 100.0) * 100)) + NBSP + "ft"
-    return lang.num(int(round(alt_ft * 0.3048 / 10.0) * 10)) + NBSP + "m"
+    return lang.unit(int(round(alt_ft * 0.3048 / 10.0) * 10), "meter")       # 0.52.1: 10 670 м in Russian
 
 
 def nice_type(p):
@@ -659,7 +659,7 @@ def range_words(km, lang=None):
     """A range record, said without placing the antenna: rounded DOWN to 50 km ("over 300 km"), never the figure."""
     lang = lang or post_lang.get("en")
     step = int(km // 50) * 50
-    return lang.t("over {distance} out", distance=lang.num(max(step, 50)) + NBSP + "km")
+    return lang.t("over {distance} out", distance=lang.unit(max(step, 50), "kilometer"))
 
 
 POST_MAX = 300                   # Bluesky's limit, in characters
@@ -726,12 +726,14 @@ def _a(word):
     return ("an " if vowel else "a ") + word
 
 
-def speed_words(gs_kt, units):
+def speed_words(gs_kt, units, lang=None):
+    """839 km/h, or 453 kt; 0.52.1: km/h as the posts' language writes it (839 км/ч, 839 km/j, 839 km/u)."""
     if not gs_kt:
         return ""
     if units == "imperial":
         return "%d%skt" % (int(round(gs_kt)), NBSP)
-    return "%d%skm/h" % (int(round(gs_kt * 1.852)), NBSP)
+    n = int(round(gs_kt * 1.852))
+    return (lang or post_lang.get("en")).unit(n, "kilometer-per-hour", str(n))
 
 
 def height_words(alt_ft, units, lang=None):
@@ -742,7 +744,7 @@ def height_words(alt_ft, units, lang=None):
     if units == "imperial":
         n = int(round(alt_ft / 100.0) * 100)
         return ("{:,}".format(n) if lang.code == "en" else lang.num(n)) + NBSP + "ft"
-    return lang.dec(alt_ft * 0.3048 / 1000.0, 1) + NBSP + "km"
+    return lang.unit(alt_ft * 0.3048 / 1000.0, "kilometer", lang.dec(alt_ft * 0.3048 / 1000.0, 1))
 
 
 def what_words(p, L):
@@ -778,7 +780,7 @@ def styled_text(shape, p, c, why=None, now=None):
     if not what or why == "farthest":           # a range record is nowhere near overhead: the factual words say so
         return None
     alt = metres(p.get("alt_ft"), units, L) or ""
-    speed = speed_words(p.get("gs_kt"), units)
+    speed = speed_words(p.get("gs_kt"), units, L)
     r = p.get("route") or {}
     a = (r.get("from") or {}).get("city") or (r.get("from") or {}).get("name") or ""
     b = (r.get("to") or {}).get("city") or (r.get("to") or {}).get("name") or ""
@@ -786,7 +788,8 @@ def styled_text(shape, p, c, why=None, now=None):
         a = b = ""                               # a route is said whole or not at all
     area = area_words(c, L)                      # "above Trémery", or the owner's own phrase ("near Metz")
     place = place_name(c) if bare_place(c) else ""
-    clock = time.strftime("%H:%M", time.localtime(now))
+    lt = time.localtime(now)
+    clock = L.clock(lt.tm_hour, lt.tm_min)        # 0.52.1: 13.50 in Indonesian and Finnish
     if shape == "story":
         text = L.t("{what|a|cap}[ bound for {to} from {from}] has just crossed the sky[ {area}][, {altitude} up].[ {callsign}]",
                    what=what, to=b, area=area, altitude=alt, callsign=cs, **{"from": a})
@@ -976,10 +979,10 @@ def template_values(p, c, why, L, now=None):
         "reg_country": L.country(r_cc, server.country_name(r_cc)) if r_cc else "",
         "type": nice_type(p), "type_code": p.get("type") or "", "category": category_words(p, L),
         "from": a_words, "to": b_words, "from_code": a_code, "to_code": b_code,
-        "altitude": metres(p.get("alt_ft"), units, L) or "", "speed": speed_words(p.get("gs_kt"), units),
+        "altitude": metres(p.get("alt_ft"), units, L) or "", "speed": speed_words(p.get("gs_kt"), units, L),
         "climb": climb, "heading": heading, "squawk": squawk if re.match(r"^[0-7]{4}$", squawk) else "",
         "why": L.t(WHY_WORDS[why]) if why in WHY_WORDS else "", "area": area_words(c, L),
-        "time": time.strftime("%H:%M", time.localtime(now)), "date": L.day_month(datetime.date.fromtimestamp(now or time.time())),
+        "time": L.clock(time.localtime(now).tm_hour, time.localtime(now).tm_min), "date": L.day_month(datetime.date.fromtimestamp(now or time.time())),
         "photo": photo, "tracker": ("https://globe.adsbexchange.com/?icao=" + hexc) if re.match(r"^[0-9a-f]{6}$", hexc) else "",
         "hashtags": post_hashtags(p, c),
     }

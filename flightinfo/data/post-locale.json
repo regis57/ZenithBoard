@@ -30,6 +30,12 @@
   ],
   "span_one_month": "{d1}–{d2} {M2}",
   "span_two_months": "{d1} {M1} – {d2} {M2}",
+  "clock": "{h}:{m}",
+  "units": {
+   "meter": "{n} m",
+   "kilometer": "{n} km",
+   "kilometer-per-hour": "{n} km/h"
+  },
   "countries": {
    "AC": "Île de l’Ascension",
    "AD": "Andorre",
@@ -318,6 +324,12 @@
   ],
   "span_one_month": "{d1}.–{d2}. {M2}",
   "span_two_months": "{d1}. {M1} – {d2}. {M2}",
+  "clock": "{h}:{m}",
+  "units": {
+   "meter": "{n} m",
+   "kilometer": "{n} km",
+   "kilometer-per-hour": "{n} km/h"
+  },
   "countries": {
    "AC": "Ascension",
    "AD": "Andorra",
@@ -606,6 +618,12 @@
   ],
   "span_one_month": "{d1}–{d2} {M2}",
   "span_two_months": "{d1} {M1} – {d2} {M2}",
+  "clock": "{h}:{m}",
+  "units": {
+   "meter": "{n} m",
+   "kilometer": "{n} km",
+   "kilometer-per-hour": "{n} km/u"
+  },
   "countries": {
    "AC": "Ascension",
    "AD": "Andorra",
@@ -894,6 +912,12 @@
   ],
   "span_one_month": "{d1}–{d2} {M2}",
   "span_two_months": "{d1} {M1} – {d2} {M2}",
+  "clock": "{h}:{m}",
+  "units": {
+   "meter": "{n} m",
+   "kilometer": "{n} km",
+   "kilometer-per-hour": "{n} km/h"
+  },
   "countries": {
    "AC": "Isola Ascensione",
    "AD": "Andorra",
@@ -1182,6 +1206,12 @@
   ],
   "span_one_month": "{d1}–{d2} de {M2}",
   "span_two_months": "{d1} de {M1} – {d2} de {M2}",
+  "clock": "{h}:{m}",
+  "units": {
+   "meter": "{n} m",
+   "kilometer": "{n} km",
+   "kilometer-per-hour": "{n} km/h"
+  },
   "countries": {
    "AC": "Isla de la Ascensión",
    "AD": "Andorra",
@@ -1470,6 +1500,12 @@
   ],
   "span_one_month": "{d1} – {d2} de {M2}",
   "span_two_months": "{d1} de {M1} – {d2} de {M2}",
+  "clock": "{h}:{m}",
+  "units": {
+   "meter": "{n} m",
+   "kilometer": "{n} km",
+   "kilometer-per-hour": "{n} km/h"
+  },
   "countries": {
    "AC": "Ilha de Ascensão",
    "AD": "Andorra",
@@ -1758,6 +1794,12 @@
   ],
   "span_one_month": "{d1}–{d2} {M2}",
   "span_two_months": "{d1} {M1} – {d2} {M2}",
+  "clock": "{h}:{m}",
+  "units": {
+   "meter": "{n} m",
+   "kilometer": "{n} km",
+   "kilometer-per-hour": "{n} km/godz."
+  },
   "countries": {
    "AC": "Wyspa Wniebowstąpienia",
    "AD": "Andora",
@@ -2046,6 +2088,12 @@
   ],
   "span_one_month": "{d1}.–{d2}. {M2}",
   "span_two_months": "{d1}. {M1} – {d2}. {M2}",
+  "clock": "{h}.{m}",
+  "units": {
+   "meter": "{n} m",
+   "kilometer": "{n} km",
+   "kilometer-per-hour": "{n} km/h"
+  },
   "countries": {
    "AC": "Ascension-saari",
    "AD": "Andorra",
@@ -2334,6 +2382,12 @@
   ],
   "span_one_month": "{d1}.–{d2}. {M2}",
   "span_two_months": "{d1}. {M1} – {d2}. {M2}",
+  "clock": "{h}:{m}",
+  "units": {
+   "meter": "{n} m",
+   "kilometer": "{n} km",
+   "kilometer-per-hour": "{n} km/h"
+  },
   "countries": {
    "AC": "Ascensioni saar",
    "AD": "Andorra",
@@ -2622,6 +2676,12 @@
   ],
   "span_one_month": "{d1}.–{d2}. {M2}",
   "span_two_months": "{d1}. {M1} – {d2}. {M2}",
+  "clock": "{h}:{m}",
+  "units": {
+   "meter": "{n} m",
+   "kilometer": "{n} km",
+   "kilometer-per-hour": "{n} km/st."
+  },
   "countries": {
    "AC": "Debesbraukšanas sala",
    "AD": "Andora",
@@ -2910,6 +2970,12 @@
   ],
   "span_one_month": "{M2} {d1}–{d2}",
   "span_two_months": "{M1} {d1} – {M2} {d2}",
+  "clock": "{h}:{m}",
+  "units": {
+   "meter": "{n} m",
+   "kilometer": "{n} km",
+   "kilometer-per-hour": "{n} km/val."
+  },
   "countries": {
    "AC": "Dangun Žengimo sala",
    "AD": "Andora",
@@ -3198,6 +3264,12 @@
   ],
   "span_one_month": "{d1}–{d2} {M2}",
   "span_two_months": "{d1} {M1} – {d2} {M2}",
+  "clock": "{h}.{m}",
+  "units": {
+   "meter": "{n} m",
+   "kilometer": "{n} km",
+   "kilometer-per-hour": "{n} km/j"
+  },
   "countries": {
    "AC": "Pulau Ascension",
    "AD": "Andorra",
@@ -3486,6 +3558,12 @@
   ],
   "span_one_month": "{d1} – {d2} {M2}",
   "span_two_months": "{d1} {M1} – {d2} {M2}",
+  "clock": "{h}:{m}",
+  "units": {
+   "meter": "mita {n}",
+   "kilometer": "km {n}",
+   "kilometer-per-hour": "km {n}/saa"
+  },
   "countries": {
    "AC": "Kisiwa cha Ascension",
    "AD": "Andorra",
@@ -3774,6 +3852,12 @@
   ],
   "span_one_month": "{d1}–{d2} {M2}",
   "span_two_months": "{d1} {M1} – {d2} {M2}",
+  "clock": "{h}:{m}",
+  "units": {
+   "meter": "{n} м",
+   "kilometer": "{n} км",
+   "kilometer-per-hour": "{n} км/ч"
+  },
   "countries": {
    "AC": "о-в Вознесения",
    "AD": "Андорра",
@@ -4062,6 +4146,12 @@
   ],
   "span_one_month": "{d1}–{d2} {M2}",
   "span_two_months": "{d1} {M1} – {d2} {M2}",
+  "clock": "{h}:{m}",
+  "units": {
+   "meter": "{n} м",
+   "kilometer": "{n} км",
+   "kilometer-per-hour": "{n} км/год"
+  },
   "countries": {
    "AC": "Острів Вознесіння",
    "AD": "Андорра",
@@ -4350,6 +4440,16 @@
   ],
   "span_one_month": "{d1}–{d2} {M2}",
   "span_two_months": "{d1} {M1} – {d2} {M2}",
+  "clock": "{h}:{m}",
+  "units": {
+   "meter": {
+    "few": "{n} أمتار",
+    "many": "{n} مترًا",
+    "other": "{n} متر"
+   },
+   "kilometer": "{n} كم",
+   "kilometer-per-hour": "{n} كم/س"
+  },
   "countries": {
    "AC": "جزيرة أسينشيون",
    "AD": "أندورا",
@@ -4638,6 +4738,12 @@
   ],
   "span_one_month": "{M1}月{d1}日～{M2}月{d2}日",
   "span_two_months": "{M1}月{d1}日～{M2}月{d2}日",
+  "clock": "{h}:{m}",
+  "units": {
+   "meter": "{n} m",
+   "kilometer": "{n} km",
+   "kilometer-per-hour": "{n} km/h"
+  },
   "countries": {
    "AC": "アセンション島",
    "AD": "アンドラ",
@@ -4926,6 +5032,12 @@
   ],
   "span_one_month": "{M2} {d1}일~{d2}일",
   "span_two_months": "{M1} {d1}일 ~ {M2} {d2}일",
+  "clock": "{h}:{m}",
+  "units": {
+   "meter": "{n}m",
+   "kilometer": "{n}km",
+   "kilometer-per-hour": "{n}km/h"
+  },
   "countries": {
    "AC": "어센션섬",
    "AD": "안도라",
@@ -5214,6 +5326,12 @@
   ],
   "span_one_month": "{M1}月{d1}日 – {M2}月{d2}日",
   "span_two_months": "{M1}月{d1}日 – {M2}月{d2}日",
+  "clock": "{h}:{m}",
+  "units": {
+   "meter": "{n}米",
+   "kilometer": "{n}公里",
+   "kilometer-per-hour": "{n} km/h"
+  },
   "countries": {
    "AC": "阿森松岛",
    "AD": "安道尔",
@@ -5502,6 +5620,12 @@
   ],
   "span_one_month": "{M1}月{d1}日至{M2}月{d2}日",
   "span_two_months": "{M1}月{d1}日至{M2}月{d2}日",
+  "clock": "{h}:{m}",
+  "units": {
+   "meter": "{n} 公尺",
+   "kilometer": "{n} 公里",
+   "kilometer-per-hour": "{n} 公里/小時"
+  },
   "countries": {
    "AC": "阿森松島",
    "AD": "安道爾",
