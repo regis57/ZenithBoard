@@ -148,11 +148,33 @@ The daily card has the 24 hours as one row of lit dots, the busiest hour by airc
 ```
 sudo zenithboard social summary
   daily    ON   23:35      posts 1,2,3,4
-           last: 2026-10-21 21:00   next: Wed 2026-10-21 23:35
+           last: 2026-10-21   next: Thu 2026-10-22 23:35
   ...
 sudo zenithboard social summary why            # as set, last and next, the queue, what it needs, the service's version,
-                                               # and two days of its journal lines about summaries and errors
+                                               # two days of its journal lines about summaries and errors, its starts
 ```
+
+What `why` showed on the real Pi on 22 October 2026, cut short (0.49.1 wording):
+
+```
+  Service: active, since Thu 2026-10-22 00:11:33 CEST
+  It runs: ZenithBoard 0.47.0   (this copy: 0.49.1)
+  It still runs the code it started with, from before the last update: the summaries follow its rules, not this copy's.
+  Restart it:  sudo systemctl restart zenithboard-social
+
+The service's lines about the summaries and its errors, the last two days:
+  Oct 21 09:20:06 rp3 python3[27276]: social: posted the daily summary, post 1: {"bluesky": "at://…"}
+  Oct 21 09:22:07 rp3 python3[27276]: social: no daily summary, post 2: the airline and type lists do not cover the last 24 hours yet (counted since 2026-10-20, shown from the summary of 2026-10-22)
+  …
+Its starts, the last two days (each update restarts it):
+  Oct 21 23:19  0.46.0
+  Oct 22 00:11  0.47.0
+```
+
+A *last* with a date and no time was recorded by 0.48.0 or before: it stands for that day whatever the time. **A service
+still on older code**: an update restarts the social service at its very end; an update that stopped before (an error, a
+closed SSH window) leaves it posting with the code it started with, which `why` and `sudo zenithboard social status`
+say, with the restart command.
 
 The service writes a line when a summary falls due (*social: daily summary due (every day at 23:35): posts 1,2,3,4
 queued, 2 min apart, the first now*), one per post (*posted the daily summary, post 2*), and why a post was skipped or

@@ -90,6 +90,18 @@ check "weekly summary: off by default, on says what it needs, off (0.33.0)" '[ "
 check "summaries (0.38.0): times checked, kept tidy"   'social_summary daily at 21:30 >/dev/null && [ "$(cfg_get SOCIAL_DAILY_AT)" = "21:30" ] && social_summary weekly at "Saturday 08:05" >/dev/null && [ "$(cfg_get SOCIAL_WEEKLY_AT)" = "sat 08:05" ] && social_summary monthly at "28 23:59" >/dev/null && ! social_summary monthly at "31 09:00" >/dev/null && ! social_summary daily at 25:00 >/dev/null && ! social_summary weekly at "21:00" >/dev/null && ! social_summary daily at "mon 21:00" >/dev/null && [ "$(cfg_get SOCIAL_MONTHLY_AT)" = "28 23:59" ]'
 check "summaries: the posts picked, the first always"  'social_summary weekly parts 3,2 >/dev/null && [ "$(cfg_get SOCIAL_WEEKLY_PARTS)" = "1,2,3" ] && social_summary daily parts all >/dev/null && [ "$(cfg_get SOCIAL_DAILY_PARTS)" = "1,2,3,4" ] && ! social_summary daily parts 5 >/dev/null && ! social_summary daily parts "1;rm" >/dev/null && [ "$(cfg_get SOCIAL_DAILY_PARTS)" = "1,2,3,4" ]'
 check "summaries: why (0.49.0) says what each needs and points nowhere else" 'social_summary why > "$t/why" 2>&1; grep -q "Summaries, as set" "$t/why" && grep -q "Statistics:" "$t/why" && grep -q "Social sharing:" "$t/why" && grep -q "lines about the summaries" "$t/why" && social_summary | grep -q "social summary why"'
+# 0.49.1: seen on the real Pi on 22 October 2026: the files 0.49.0, the service still 0.47.0 from 00:11, and a day of
+# updates in its journal. `why` says the service runs older code, with the command, and keeps the summary lines
+mkdir -p "$t/whybin"
+printf '#!/bin/bash\ncat "%s/tests/fixtures/social-journal-why.txt"\n' "$PWD" > "$t/whybin/journalctl"
+printf '#!/bin/bash\ncase "$*" in *is-active*) echo active ;; *ActiveEnterTimestamp*) echo "${WHY_SINCE:-Thu 2026-10-22 00:11:33 UTC}" ;; esac\n' > "$t/whybin/systemctl"
+chmod +x "$t"/whybin/*
+why_run() { PATH="$t/whybin:$PATH" ZB_VERSION=$1 WHY_SINCE=$2 social_summary why; }
+why_run 0.49.1 "Thu 2026-10-22 00:11:33 UTC" > "$t/why-old" 2>&1
+check "why (0.49.1): the service on older code said, with the restart"    'grep -q "It runs: ZenithBoard 0.47.0   (this copy: 0.49.1)" "$t/why-old" && grep -q "from before the last update" "$t/why-old" && grep -q "sudo systemctl restart zenithboard-social" "$t/why-old"'
+check "why: the summary lines kept however many starts, the starts apart" 'grep -q "posted the daily summary, post 1" "$t/why-old" && grep -q "no daily summary, post 4" "$t/why-old" && grep -q "could not post EWG14A" "$t/why-old" && grep -q "^  Oct 22 00:11  0.47.0$" "$t/why-old" && [ "$(sed -n "/^Its starts/,\$p" "$t/why-old" | grep -c "^  Oct")" = 12 ] && ! grep -q "posted AB0" "$t/why-old"'
+why_run 0.47.0 "Fri 2099-01-01 00:00:00 UTC" > "$t/why-same" 2>&1
+check "why: the same version, started after the code: nothing to restart"  'grep -q "It runs: ZenithBoard 0.47.0   (this copy: 0.47.0)" "$t/why-same" && ! grep -q "Restart it" "$t/why-same"'
 check "summaries: the overview and a wrong period"     'social_summary | grep -q "daily" && social_summary | grep -q "monthly" && ! social_summary yearly on >/dev/null'
 check "summaries: command and menu"                 'grep -q "summary-test" bin/zenithboard && grep -q "set -- social summary weekly" bin/zenithboard && grep -q "weekly \"7  Summaries" lib/social.sh && grep -q "^summary_menu()" lib/social.sh && grep -q "remove \"12 Remove" lib/social.sh'
 check "units: metric, imperial or the wall's, nothing else (0.24.3)" 'social_set_units imperial >/dev/null && [ "$(cfg_get SOCIAL_UNITS)" = imperial ] && ! social_set_units feet >/dev/null && [ "$(cfg_get SOCIAL_UNITS)" = imperial ] && social_set_units wall >/dev/null && [ -z "$(cfg_get SOCIAL_UNITS "")" ]'
