@@ -626,7 +626,7 @@ window.ZBI18N.start({ part: "console" }, function () {
           row(t("Place name"), t("Two or three words, as the posts say it: a town name reads \u201cabove\u201d it; empty: no place. Never the receiver's position."),
             textApply("social-area", c.SOCIAL_AREA, 40, t("none"), function (v) { return v.replace(/\s+/g, " ").trim() || "none"; }, "none")),
           row(t("Sharing radius"), t("Kilometres; an aircraft inside it is a candidate. Not the wall's radius."), numberApply("social-radius", c.SOCIAL_RADIUS_KM, 1, 200)),
-          row(t("What is worth a post"), t("Everything: every crossing, the special ones first"), rulesChips(c.SOCIAL_RULES || "rare,military,helicopter,heavy,farthest")),
+          row(t("What is worth a post"), t("Everything: every crossing, the special ones first"), rulesChips(c.SOCIAL_RULES)),
           row(t("Least time between posts"), t("Minutes; 0 = every crossing posted once"), numberApply("social-gap", c.SOCIAL_GAP_MIN, 0, 1440)),
           row(t("Town names on the maps"), t("From GeoNames, made on the Pi (a few minutes); off: the lists shipped with ZenithBoard"), sw("social-places", on(c.SOCIAL_PLACES))),
           h("div", { "class": "actions" }, btn(t("Try a post (posts nothing)"), "social-test"), h("a", { "class": "btn", href: "/social/preview", target: "_blank", rel: "noopener", text: t("Last picture ↗") }), btn(t("Status"), "social-status"))
@@ -772,8 +772,8 @@ window.ZBI18N.start({ part: "console" }, function () {
       onclick: function () { var v = prep(inp.value); if (v !== (cur || none)) run(action, { value: v }); } })];
   }
   function rulesChips(cur) {
-    var five = ["military", "helicopter", "heavy", "rare", "farthest"], every = cur === "all";
-    var picked = every ? five.slice() : String(cur).split(",").filter(function (w) { return five.indexOf(w) >= 0; });
+    var five = ["military", "helicopter", "heavy", "rare", "farthest"], every = cur === "all" || cur === "any";   // "any": its name before 0.19.1
+    var picked = every ? five.slice() : String(cur || "").split(",").filter(function (w) { return five.indexOf(w) >= 0; });   // the server gives the default when unset
     var names = { military: t("Military"), helicopter: t("Helicopters"), heavy: t("Heavies"), rare: t("Rare types"), farthest: t("Range records") };
     var waiting = S.pending["social-rules"];
     var chips = five.map(function (w) {
@@ -815,7 +815,12 @@ window.ZBI18N.start({ part: "console" }, function () {
             var v = ready(); if (v === null) return;
             confirmBox(t("Post this to Bluesky?"), [h("p", { "class": "say-quote", dir: "auto", text: v }), t("It goes out at once under @{account}, exactly as written. To take it back, delete it in the Bluesky app.", { account: acct })], t("Post it")).then(function (yes) {
               if (!yes) return;
-              run("social-say", { text: v }, { confirmed: true, card: title }).then(function (j) { if (j && j.rc === 0) { S.sayDraft = ""; draw(); } });
+              run("social-say", { text: v }, { confirmed: true, card: title }).then(function (j) {
+                if (!j || j.rc !== 0 || String(S.sayDraft || "").replace(/\r\n?/g, "\n").trim() !== v) return;   // a new draft typed meanwhile stays
+                S.sayDraft = "";
+                if (document.activeElement && document.activeElement.tagName === "TEXTAREA") document.activeElement.blur();
+                draw();
+              });
             });
           } }))
     ], "w12");

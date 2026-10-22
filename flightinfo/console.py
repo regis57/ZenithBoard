@@ -460,9 +460,10 @@ def phone_signin(cfg):
 
 # --------------------------------------------------------------------------- jobs for the root helper
 def submit(name, params, by):
-    actions.build(name, params)                  # raises Refused; the helper checks it again as root
+    params = actions.checked(name, params)       # raises Refused; the helper checks it again as root
     job_id = secrets.token_hex(8)
-    body = json.dumps({"action": name, "params": params or {}, "by": by, "at": int(now())})
+    # 0.50.0: UTF-8 rather than \u escapes, so a written post of 300 emoji stays well inside the helper's 4 KB
+    body = json.dumps({"action": name, "params": params, "by": by, "at": int(now())}, ensure_ascii=False)
     tmp = os.path.join(SPOOL_DIR, "." + job_id + ".tmp")
     fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)   # root reads it; nobody else need
     with os.fdopen(fd, "w", encoding="utf-8") as fh:

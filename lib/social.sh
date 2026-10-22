@@ -133,7 +133,7 @@ social_setup_words() {
   local area radius gap rules
   while true; do
     area=$(wt_input "Where is this, in two or three words, as the posts should say it? A town name (Trémery) reads \"above Trémery\"; your own words (near Metz) are kept.\nLeave empty for no place at all. The receiver's position is never used." "$(cfg_get SOCIAL_AREA "")") || return 1
-    if [ -z "$area" ]; then cfg_set SOCIAL_AREA ""; break; fi
+    if [ -z "${area//[[:space:]]/}" ] || [ "$(social_area_clean "$area")" = none ]; then cfg_set SOCIAL_AREA ""; break; fi
     if area=$(social_area_clean "$area"); then cfg_set SOCIAL_AREA "$area"; break; fi
     wt_msg "Letters, digits, spaces and ' - . , only, 40 characters at most." 8
   done
@@ -211,6 +211,7 @@ social_area_reads() {   # NAME -> how a post ends with it, by social.py's own ru
 }
 social_set_area() {     # social_set_area [WORDS...|none]
   local v="$*"
+  v="${v#"${v%%[![:space:]]*}"}"; v="${v%"${v##*[![:space:]]}"}"      # trimmed, so " none " is none
   if [ -z "$v" ]; then
     echo "Place name: $(or_text "$(cfg_get SOCIAL_AREA "")" "(none)")"
     echo "Change:  sudo zenithboard social area Trémery   (or near Metz: two or three words, as the posts say it), or none"; return 0
@@ -236,6 +237,7 @@ social_set_rules() {    # social_set_rules [all|LIST]: what is worth a post, as 
     echo "What is worth a post: $(cfg_get SOCIAL_RULES rare,military,helicopter,heavy,farthest)"
     echo "Change:  sudo zenithboard social rules all   (every crossing), or some of: ${SOCIAL_RULE_WORDS// /,}"; return 0
   fi
+  [[ ${1//[, ]/} ]] || { echo "Rules: all, or one or more of ${SOCIAL_RULE_WORDS// /, }, separated by commas" >&2; return 1; }
   for w in ${1//,/ }; do
     [ "$w" = all ] && { cfg_set SOCIAL_RULES all; echo "What is worth a post: all (every crossing, the special ones first). The service takes it at its next look."; return 0; }
     social_valid_in "$w" $SOCIAL_RULE_WORDS || { echo "Rules: all, or one or more of ${SOCIAL_RULE_WORDS// /, }, separated by commas" >&2; return 1; }

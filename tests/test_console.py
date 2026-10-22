@@ -59,9 +59,11 @@ class ActionsTest(unittest.TestCase):
         self.assertEqual(argv, ["social", "say", "--", "Bonjour\nle ciel de Trémery #avgeek; $(id) `id`"],
                          "never through a shell: the text is one argument, as typed")
         self.assertEqual(actions.build("social-say", {"text": "--dry"})[2:], ["--", "--dry"], "after --: text, not an option")
-        for bad in ("", "   ", "x" * 301, "nul\x00", "esc\x1b[2J"):
+        for bad in ("", "   ", "x" * 301, "nul\x00", "esc\x1b[2J", "lone \ud800", "private \ue000"):
             with self.assertRaises(actions.Refused, msg=repr(bad)):
                 actions.build("social-say", {"text": bad})
+        self.assertEqual(actions.checked("social-say", {"text": "  hi\r\nthere" + " " * 4000}), {"text": "hi\nthere"},
+                         "the job file keeps the checked text: padding cannot make it too long for the helper")
         self.assertEqual(actions.catalog()["social-say"]["params"][0]["max"], 300)
 
     def test_the_words_of_the_posts(self):
@@ -429,7 +431,7 @@ class RunnerTest(TempDirs):
         j = self.job("social-say", {"text": "Line one\nline two #avgeek"})
         self.run_helper()
         st = console.job_status(j)
-        self.assertIn("ran: social say -- Line one\nline two #avgeek", st["log"], "one argument, its line kept")
+        self.assertIn("ran: social say -- Line one\nline two #avgeek", st["log"], "the text reaches the command, its line kept (one argument: ActionsTest)")
         self.assertTrue(st["log"].startswith("$ zenithboard social say -- Line one line two #avgeek\n"))
         with open(os.path.join(self.dir, "out", "journal.log")) as fh:
             lines = fh.read().splitlines()

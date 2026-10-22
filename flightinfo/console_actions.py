@@ -148,6 +148,11 @@ class Refused(ValueError):
     """An action or a value that is not in the list."""
 
 
+def _unwritable(ch):
+    cat = unicodedata.category(ch)
+    return (cat == "Cc" and ch not in "\n\t") or cat in ("Cs", "Co")
+
+
 def _check(kind, rule, value):
     value = str(value).strip()
     if kind == "enum":
@@ -165,10 +170,26 @@ def _check(kind, rule, value):
     elif kind == "text":                          # 0.50.0: (longest, pattern or None); lines kept, no other control
         longest, pattern = rule
         value = value.replace("\r\n", "\n").replace("\r", "\n")
-        if 0 < len(value) <= longest and not any(unicodedata.category(ch) == "Cc" and ch not in "\n\t" for ch in value) \
+        # control characters but the line and the tab; a lone surrogate (a JSON escape could carry one, and nothing
+        # can write it out) or a private-use character
+        if 0 < len(value) <= longest and not any(_unwritable(ch) for ch in value) \
                 and (pattern is None or ("\n" not in value and re.fullmatch(pattern, value))):
             return value
     raise Refused("not an allowed value")
+
+
+def checked(name, params):
+    """The values as build() takes them (stripped, lines as \n): what the job file keeps (0.50.0), so a value padded
+    with spaces in a crafted request cannot make the file too long for the helper. Raises Refused like build()."""
+    build(name, params)
+    spec = ACTIONS[name]
+    params = params if isinstance(params, dict) else {}
+    out = {}
+    for p in spec[3]:
+        raw = params.get(p[0], "")
+        if raw not in ("", None):
+            out[p[0]] = _check(p[1], p[2], raw)
+    return out
 
 
 def build(name, params):

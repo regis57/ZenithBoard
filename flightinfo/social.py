@@ -1094,6 +1094,7 @@ def _post_once(ses, text, data, alt, width, height, mime, links):
 SAY_MAX = 300                    # Bluesky: 300 graphemes. Characters are counted here, never fewer than graphemes
 TAG_MAX = 64                     # Bluesky's longest hashtag
 _TRIM = ".,;:!?'\"’”"
+_INVISIBLE = "\u00ad\u200a\u200b\u200c\u200d\u2060\u20e2\ufeff"   # Bluesky ends a hashtag at these; never in a link
 
 
 def _is_punct(ch):
@@ -1105,40 +1106,47 @@ def say_clean(text):
     text = str(text or "").replace("\r\n", "\n").replace("\r", "\n").strip()
     if not text:
         raise ValueError("nothing to post: the text is empty")
-    bad = [ch for ch in text if unicodedata.category(ch) == "Cc" and ch not in "\n\t"]
+    bad = [ch for ch in text if (unicodedata.category(ch) == "Cc" and ch not in "\n\t") or unicodedata.category(ch) in ("Cs", "Co")]
     if bad:
-        raise ValueError("the text holds a control character (U+%04X)" % ord(bad[0]))
-    text = re.sub(r"\n{3,}", "\n\n", text)
+        raise ValueError("the text holds a character that cannot be posted (U+%04X)" % ord(bad[0]))
     if len(text) > SAY_MAX:
         raise ValueError("%d characters: %d at most" % (len(text), SAY_MAX))
     return text
 
 
 def say_facets(text):
-    """Hashtags and links of a written post as Bluesky facets, as the Bluesky app finds them: a hashtag after a space
-    or at the start, its trailing punctuation left out, not digits alone, 64 characters at most, accents kept
-    (#Trémery); a link written with http:// or https://. @names are left as plain text (each would need its account
-    looked up). Returns (facets, [tags], [links])."""
-    facets, tags, links = [], [], []
-    for m in re.finditer(r"(?:^|(?<=\s))[#\uff03](\S+)", text):
+    """Hashtags and links of a written post as Bluesky facets, as the Bluesky app finds them: a link written with
+    http:// or https:// and a host with a dot; a hashtag after a space or at the start, ended by a space or an
+    invisible character, its trailing punctuation left out, not digits alone, 64 characters at most, accents kept
+    (#Trémery). A hashtag inside a link is the link's. @names are left as plain text (each would need its account
+    looked up). Returns (facets, [tags], [links]), the facets in order and never overlapping."""
+    spans, tags, links = [], [], []
+    stop = "\\s<>\"" + _INVISIBLE
+    for m in re.finditer(r"(?:^|(?<=[\s(]))(https?://[^%s/][^%s]*)" % (stop, stop), text):
+        uri = m.group(1)
+        while uri and (uri[-1] in _TRIM or (uri[-1] == ")" and uri.count("(") < uri.count(")"))):
+            uri = uri[:-1]
+        host = uri.split("://", 1)[1].split("/", 1)[0]
+        if "." not in host.strip("."):
+            continue
+        spans.append((m.start(1), m.start(1) + len(uri), {"$type": "app.bsky.richtext.facet#link", "uri": uri}))
+        links.append(uri)
+    for m in re.finditer(r"(?:^|(?<=\s))[#\uff03](?!\ufe0f)([^\s%s]+)" % _INVISIBLE, text):
         tag = m.group(1)
         while tag and _is_punct(tag[-1]):
             tag = tag[:-1]
         if not tag or len(tag) > TAG_MAX or all(ch.isdigit() or _is_punct(ch) for ch in tag):
             continue
-        a, b = _byte_span(text, m.start(), m.start(1) + len(tag))
-        facets.append({"index": {"byteStart": a, "byteEnd": b}, "features": [{"$type": "app.bsky.richtext.facet#tag", "tag": tag}]})
+        a, b = m.start(), m.start(1) + len(tag)
+        if any(a < e and s < b for s, e, _ in spans):
+            continue                             # inside a link (or a link inside it): the link's
+        spans.append((a, b, {"$type": "app.bsky.richtext.facet#tag", "tag": tag}))
         tags.append("#" + tag)
-    for m in re.finditer(r"(?:^|(?<=[\s(]))(https?://[^\s<>\"]+)", text):
-        uri = m.group(1)
-        while uri and (uri[-1] in _TRIM or (uri[-1] == ")" and uri.count("(") < uri.count(")"))):
-            uri = uri[:-1]
-        if len(uri) <= len("https://"):
-            continue
-        a, b = _byte_span(text, m.start(1), m.start(1) + len(uri))
-        facets.append({"index": {"byteStart": a, "byteEnd": b}, "features": [{"$type": "app.bsky.richtext.facet#link", "uri": uri}]})
-        links.append(uri)
-    return sorted(facets, key=lambda f: f["index"]["byteStart"]), tags, links
+    facets = []
+    for s, e, feature in sorted(spans, key=lambda x: x[0]):
+        a, b = _byte_span(text, s, e)
+        facets.append({"index": {"byteStart": a, "byteEnd": b}, "features": [feature]})
+    return facets, tags, links
 
 
 def post_bluesky_text(sec, text):
@@ -1192,7 +1200,8 @@ def cmd_say(text, dry=False):
         print("Not posted: Bluesky answered %s" % _http_error_text(exc))
         return 1
     except Exception as exc:
-        print("Not posted: %s" % exc)
+        # no answer (a timeout, the network gone): Bluesky may have taken it all the same
+        print("No answer from Bluesky (%s): it may or may not be posted. Look at the account before posting it again." % exc)
         return 1
     print("bluesky: %s" % uri)
     print("Posted under @%s. To take it back, delete it in the Bluesky app." % sec.get("BLUESKY_HANDLE", "?"))

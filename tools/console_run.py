@@ -145,7 +145,7 @@ def run_job(job_id, job):
         timeout = TIMEOUT_S["long"] if "long" in flags else TIMEOUT_S[""]
         log_path = os.path.join(OUT, job_id + ".log")
         with os.fdopen(_create(log_path), "wb", buffering=0) as log:
-            log.write(("$ zenithboard %s\n" % " ".join(" ".join(a.split()) for a in argv)).encode("utf-8"))
+            log.write(("$ zenithboard %s\n" % " ".join(" ".join(a.split()) for a in argv)).encode("utf-8", "replace"))
             try:
                 p = subprocess.Popen([ZB_BIN] + argv, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
                                      stderr=subprocess.STDOUT, env=_env(), cwd="/")
@@ -160,8 +160,8 @@ def run_job(job_id, job):
                 killer.cancel()
                 if time.time() - started >= timeout:
                     log.write(b"\n(stopped: it ran longer than %d minutes)\n" % (timeout // 60))
-            except OSError as e:
-                log.write(("could not run it: %s\n" % e).encode("utf-8"))
+            except (OSError, ValueError) as e:     # 0.50.0: ValueError too (an argument that cannot be written)
+                log.write(("could not run it: %s\n" % e).encode("utf-8", "replace"))
                 rc = 127
     meta.update(state="done", rc=rc, ended=int(time.time()))
     write_out(job_id + ".json", json.dumps(meta))

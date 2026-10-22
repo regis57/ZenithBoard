@@ -361,7 +361,7 @@ case "${1:-}" in
       off)    root_or_die; social_off ;;
       test)   root_or_zb; social_need_tools && social_prepare_dir && { [ "$(id -u)" -ne 0 ] && python3 "$SOCIAL_PY" test "${3:-}" || sudo -u "$ZB_USER" python3 "$SOCIAL_PY" test "${3:-}"; } ;;
       say)    root_or_zb; shift 2; social_say "$@" ;;
-      area)   [ -z "${3:-}" ] || root_or_die; social_set_area "${@:3}" ;;
+      area)   [ -z "${*:3}" ] || root_or_die; social_set_area "${@:3}" ;;
       radius) [ -z "${3:-}" ] || root_or_die; social_set_radius "${3:-}" ;;
       rules)  [ -z "${3:-}" ] || root_or_die; social_set_rules "${3:-}" ;;
       post)   root_or_zb; social_need_tools && social_prepare_dir && { [ "$(id -u)" -ne 0 ] && python3 "$SOCIAL_PY" post "${3:-}" || sudo -u "$ZB_USER" python3 "$SOCIAL_PY" post "${3:-}"; } ;;
