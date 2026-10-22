@@ -1,4 +1,0 @@
-Swahili is translated in full but not offered yet (0.48.0). The owner asked for a language only when its translation
-reaches 90%; for Swahili that could not be promised (technical vocabulary differs between Tanzania, Kenya and the
-software glossaries), so it waits for a native speaker's review: docs/translations/sw.csv. Once its corrections are
-taken (python3 tools/i18n.py apply sw.csv), delete this file and the language is offered.

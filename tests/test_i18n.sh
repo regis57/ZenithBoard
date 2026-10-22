@@ -67,7 +67,8 @@ for l in common graphs console; do
   . "lib/$l.sh"
 done
 check "languages offered: English and those with a catalogue, as the wall's server says" '[ "$(zb_langs)" = "$(python3 -c "import sys; sys.path.insert(0, \"flightinfo\"); import server; print(\" \".join(server.web_langs()))")" ] && zb_langs | grep -qw fr'
-check "a language marked draft is complete but not offered (Swahili, waiting for a native reviewer)" '[ -e flightinfo/static/i18n/sw/draft.txt ] && ! zb_langs | grep -qw sw && python3 tools/i18n.py check sw | grep -q "0 problem" && ! console_lang sw >/dev/null 2>&1'
+check "Swahili offered (0.53.1, the owner): complete, chosen like the others" '[ ! -e flightinfo/static/i18n/sw/draft.txt ] && zb_langs | grep -qw sw && python3 tools/i18n.py check sw | grep -q "0 problem" && console_lang sw >/dev/null && [ "$(cfg_get CONSOLE_LANG)" = sw ] && cfg_set CONSOLE_LANG ""'
+check "a language marked draft is still held back (the mechanism stays for the next one)" 'grep -q "draft.txt" lib/common.sh && grep -q "draft.txt" flightinfo/server.py && grep -q "draft.txt" flightinfo/post_lang.py'
 check "not chosen by default: the console asks at its first visit" '[ -z "$(cfg_get CONSOLE_LANG)" ] && console_lang | grep -q "not chosen yet"'
 check "console lang: a language with no catalogue is refused" '! console_lang xx >/dev/null 2>&1 && [ -z "$(cfg_get CONSOLE_LANG)" ]'
 check "console lang fr: written, said"                    'console_lang fr | grep -q "Language of the web pages: fr" && [ "$(cfg_get CONSOLE_LANG)" = fr ]'

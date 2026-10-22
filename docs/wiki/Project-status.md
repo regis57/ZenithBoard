@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **22 October 2026**, version **0.53.0**.
+Last updated: **22 October 2026**, version **0.53.1**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -64,6 +64,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 22 October 2026, 21:24 | The owner: *publish Swahili*. Held back since 0.48.0 for a native review that has not come; 0.53.1 offers it for the web pages and the posts, its sheet left open for a Swahili speaker's corrections. The `draft.txt` mechanism stays, for a language to hold back later |
 | 22 October 2026, 20:58 | The owner: *add "install the app" in the browser for /console*. 0.53.0: a manifest, the icons, a service worker that keeps nothing, and a card in *System* that says how for the browser in hand. Chrome's own Install button needs https and the Pi answers in plain http at home, so on the Pi's home address the browser's menu does it (Chrome: *Install page as app*; Safari: *Add to Home Screen*). Checked in Chromium on a secure address: the manifest read with no error, no installability error, the service worker registered on `/console`. Not yet tried on the owner's phone or computer |
 | 22 October 2026, 14:00 | **The posts in Indonesian and French, on the real account**: both read right to the owner. One question: *pukul* also means *to hit*; is it right? It is: before a clock time, *pukul* is the standard word for *at (the hour)* (KBBI's own examples: *pukul 17.00*), and *jam* is a duration. What was wrong is beside it: *pukul 13:50*. Indonesian spelling (EYD) separates hours and minutes with a full stop, *pukul 13.50*, and so does CLDR, for Finnish too. The units were English everywhere as well: *839 km/h* where Indonesian writes *km/j*, Russian *км/ч*, Dutch *km/u*. 0.52.1 writes the time of day and the metric units as each language does (feet and knots stay *ft* and *kt*). English is unchanged: 5 610 posts and summaries compared with 0.52.0, byte for byte |
 | 22 October 2026, 13:51 | **ADSB Exchange's stats on the real Pi, 0.52.0.** Their *myip* page now has *Feed Details* filled: a *Feed UID* with *Stats Ok*, and the two *ADS-B Exchange Anywhere* links (*Map* and *Stats*). The *Feed UID* there is a short code of their own, not the UUID that ZenithBoard's `adsbx-stats url` puts in its link. `zenithboard status` lists *ADSB Exchange stats  running* without the link; `adsbx-stats status` says *ON, active* and where the link is. `zenithboard memory` (RSS, without sudo): **adsbexchange-stats 6 MB, two processes** (their loop and its sleep). 558 MB available of 905, 165 MB of swap used, 242 threads, load 0.78 / 0.97 / 0.75, with every feed, graphs1090 and Tailscale running. What it uploads was not measured |

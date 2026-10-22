@@ -39,7 +39,7 @@ def N_(text):
 
 def offered():
     """The languages a post can be written in: English, and each with a posts catalogue that is not held back
-    (draft.txt: Swahili, waiting for a native review)."""
+    (a draft.txt in its folder: complete but held back, as Swahili was until 0.53.1)."""
     out = ["en"]
     for code in LANGS[1:]:
         d = os.path.join(I18N_DIR, code)
