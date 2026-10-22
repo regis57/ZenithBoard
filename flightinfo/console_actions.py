@@ -94,6 +94,9 @@ ACTIONS = {
     "social-lang":  ("sharing", "Language of the posts", ["social", "lang", "{value}"], [("value", "enum", LANGS)], ""),
     "social-templates": ("sharing", "Your own templates", ["social", "template", "set", "--", "{text}"], [("text", "text", (TEMPLATES_MAX, None))], ""),
     "social-template-try": ("sharing", "Try the templates", ["social", "template", "test", "--", "{text}"], [("text", "text", (TEMPLATES_MAX, None))], "read"),
+    # 0.53.3: a real button to delete them all (the owner), and one to put back the ones before the last change (.bak)
+    "social-templates-delete": ("sharing", "Delete your templates", ["social", "template", "set", "--", "none"], [], "ask"),
+    "social-templates-undo": ("sharing", "Put back your previous templates", ["social", "template", "undo"], [], "ask"),
     "social-gap":   ("sharing", "Least time between posts", ["social", "gap", "{value}"], [("value", "int", (0, 1440))], ""),
     # 0.50.0: what `social words` asks, one answer at a time
     "social-area":  ("sharing", "Place name", ["social", "area", "{value}"], [("value", "text", (40, AREA_RE))], ""),

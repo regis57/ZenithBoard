@@ -264,7 +264,7 @@ social_set_lang() {     # social_set_lang [CODE]
 }
 
 # ---- 0.51.0: the owner's own templates, the "custom" style: tags ZenithBoard fills in, [parts] left out when empty
-social_template() {     # social_template [list|tags|add TEXT|del N|set TEXT|test [TEXT]]
+social_template() {     # social_template [list|tags|add TEXT|del N|set TEXT|undo|test [TEXT]]
   local what=${1:-list} n tmp
   [ $# -eq 0 ] || shift
   [ "${1:-}" != -- ] || shift
@@ -301,8 +301,15 @@ social_template() {     # social_template [list|tags|add TEXT|del N|set TEXT|tes
       grep -v '^[[:space:]]*$' "$SOCIAL_TEMPLATES" | sed "${1}d" > "$tmp" || true
       chmod 644 "$tmp"; mv -f "$tmp" "$SOCIAL_TEMPLATES"
       echo "Template $1 deleted; $((n - 1)) left. The file before is kept as $SOCIAL_TEMPLATES.bak." ;;
+    undo)                           # 0.53.3: the templates before the last change come back; today's become the .bak
+      [ -s "$SOCIAL_TEMPLATES.bak" ] || { echo "Nothing to put back: no earlier templates kept ($SOCIAL_TEMPLATES.bak)." >&2; return 1; }
+      tmp=$(mktemp "$SOCIAL_TEMPLATES.XXXXXX") || return 1
+      if [ -f "$SOCIAL_TEMPLATES" ]; then cp -p "$SOCIAL_TEMPLATES" "$tmp"; else : > "$tmp"; fi
+      cp -p "$SOCIAL_TEMPLATES.bak" "$SOCIAL_TEMPLATES"; chmod 644 "$SOCIAL_TEMPLATES"
+      chmod 644 "$tmp"; mv -f "$tmp" "$SOCIAL_TEMPLATES.bak"
+      echo "Templates put back: $(grep -c . "$SOCIAL_TEMPLATES" || true). The ones they replaced are kept as $SOCIAL_TEMPLATES.bak (undo again to swap back)." ;;
     test) ZENITHBOARD_SOCIAL_TEMPLATES="$SOCIAL_TEMPLATES" social_py template-test -- "$*" ;;
-    *) echo "Usage: zenithboard social template [list|tags|add TEXT|del N|set TEXT|test [TEXT]]" >&2; return 1 ;;
+    *) echo "Usage: zenithboard social template [list|tags|add TEXT|del N|set TEXT|undo|test [TEXT]]" >&2; return 1 ;;
   esac
 }
 
@@ -697,7 +704,8 @@ The aircraft posts and the summaries' words; the pictures keep English." "$(cfg_
       template)
         local tc tt
         tc=$(wt_menu "Your own templates: posts in your words, with tags ZenithBoard fills in ({airline}, {from}, {to}, {altitude}...). A [part] is left out when a tag inside it is empty. Used when custom is ticked in 6." \
-          list "1  See them" add "2  Add one" del "3  Delete one" test "4  Try them on an aircraft overhead (posts nothing)" tags "5  The tags" back "Return to the previous menu") || continue
+          list "1  See them" add "2  Add one" del "3  Delete one" clear "4  Delete them all" undo "5  Put back the ones before the last change" \
+          test "6  Try them on an aircraft overhead (posts nothing)" tags "7  The tags" back "Return to the previous menu") || continue
         case "$tc" in
           list) clear; social_template list; read -rp "Press Enter to continue..." _ ;;
           add) tt=$(wt_input "The template, on one line. Example:
@@ -705,6 +713,9 @@ The aircraft posts and the summaries' words; the pictures keep English." "$(cfg_
                clear; social_template add "$tt"; read -rp "Press Enter to continue..." _ ;;
           del) tt=$(wt_input "The number of the template to delete (menu 1 shows them):" "") || continue
                clear; social_template del "$tt"; read -rp "Press Enter to continue..." _ ;;
+          clear) wt_yesno "Delete all your templates?\n\nThe posts go on with the other words you ticked (factual when none is left). They are kept as a .bak: item 5 puts them back." 11 || continue
+                 clear; social_template set none; read -rp "Press Enter to continue..." _ ;;
+          undo) clear; social_template undo; read -rp "Press Enter to continue..." _ ;;
           test) clear; social_template test; read -rp "Press Enter to continue..." _ ;;
           tags) clear; social_template tags; read -rp "Press Enter to continue..." _ ;;
         esac ;;

@@ -306,6 +306,7 @@ window.ZBI18N.start({ part: "console" }, function () {
       if (!r.ok) return;
       S.cfg = r.data.cfg || {}; S.facts = r.data.facts || {}; S.factsAt = r.data.facts_at || 0; S.backup = r.data.backup || null;
       S.templates = typeof r.data.templates === "string" ? r.data.templates : "";
+      S.templatesBefore = !!r.data.templates_before;
       S.catalog = r.data.catalog || {}; S.sections = r.data.sections || [];
       theme(S.cfg.THEME);
       // the overview's facts are read as root by the helper after each change; older than two minutes: again
@@ -374,6 +375,8 @@ window.ZBI18N.start({ part: "console" }, function () {
     "update-quick": [t("Update ZenithBoard and the wall?"), t("Seconds. The wall restarts, so this page reconnects by itself. The feeders are left as they are.")],
     update: [t("Update everything?"), t("ZenithBoard, the decoder and every feeder, one after the other: several minutes. The wall restarts during it; this page follows. A new GitHub signing key is never accepted from here: the update says so, and it is answered over SSH.")],
     "phone-signin": [t("Sign computers in with a phone"), t("When on, a computer's sign-in page shows a QR code. A phone already signed in scans it, sees the computer, its address and a four-digit code, and says yes: the computer is signed in, no password. Off again: computers use the password.")],
+    "social-templates-delete": [t("Delete all your templates?"), t("The posts go on with the other words you ticked (factual when none is left). They are kept on the Pi: Put back brings them again.")],
+    "social-templates-undo": [t("Put back your previous templates?"), t("The templates before the last change come back; today's are kept in their place, so it can be undone too.")],
     "backup-delete": [t("Delete the console's backup?"), t("Only the copy kept here for download: the files you already downloaded, and the Pi itself, are not touched.")],
     tailscale: [t("Tailscale"), t("Switching it on installs Tailscale the first time (from its own repository, a few minutes), then prints a sign-in link in this card: open it, sign in to YOUR Tailscale account, approve the Pi. The wall then answers your Tailscale devices too. Off disconnects the Pi from your Tailscale network; it stays installed. The wall restarts either way: this page reconnects by itself.")],
     "tailscale-console": [t("The console over Tailscale"), t("On: the devices signed in to your Tailscale account can open this console too (encrypted by Tailscale; the password still applies). Off: your home network only. The wall restarts: this page reconnects by itself.")],
@@ -879,6 +882,13 @@ window.ZBI18N.start({ part: "console" }, function () {
     ["hashtags", t("your hashtags (then not added again at the end)")]];
   function templatesCard() {
     var title = t("Your own templates");
+    // the file changed on the Pi: read again what it holds now, and drop the draft that showed the old one
+    function tplButton(label, action, cls) {
+      var busy = S.pending[action];
+      return h("button", { type: "button", "class": cls, disabled: busy ? true : null, text: busy ? label + "…" : label, onclick: function () {
+        run(action, {}, { card: title }).then(function (j) { if (j && j.rc === 0) { S.tplDraft = null; loadState(); } });
+      } });
+    }
     var ta = h("textarea", { rows: 4, dir: "auto", spellcheck: "false", "aria-label": title,
       placeholder: "{flag} {airline} {flight}[, {from} → {to}] · {type} at {altitude}. {why}" });
     ta.value = S.tplDraft !== undefined && S.tplDraft !== null ? S.tplDraft : (S.templates || "").replace(/\s+$/, "");
@@ -915,7 +925,10 @@ window.ZBI18N.start({ part: "console" }, function () {
               }
               draw();
             });
-          } }))
+          } }),
+        // 0.53.3: delete them all with a real button (the owner), and put back the ones before the last change
+        S.templates && S.templates.trim() ? tplButton(t("Delete them all"), "social-templates-delete", "danger") : null,
+        S.templatesBefore ? tplButton(t("Put back the previous ones"), "social-templates-undo", "btn") : null)
     ], "w12");
   }
   function summaryRow(p, title) {

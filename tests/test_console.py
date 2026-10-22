@@ -74,6 +74,25 @@ class ActionsTest(unittest.TestCase):
             with self.assertRaises(actions.Refused, msg=v):
                 actions.build("adsbx-stats", {"value": v})
 
+    def test_delete_and_put_back_the_templates(self):
+        # 0.53.3: a real button for each (the owner), both asked first; no text travels with them
+        self.assertEqual(actions.build("social-templates-delete", {}), ["social", "template", "set", "--", "none"])
+        self.assertEqual(actions.build("social-templates-undo", {}), ["social", "template", "undo"])
+        self.assertIn("ask", actions.flags("social-templates-delete"))
+        self.assertIn("ask", actions.flags("social-templates-undo"))
+        with self.assertRaises(actions.Refused):
+            actions.build("social-templates-delete", {"text": "x"})
+        d = tempfile.mkdtemp(); self.addCleanup(shutil.rmtree, d, True)
+        self.addCleanup(setattr, console, "TEMPLATES_FILE", console.TEMPLATES_FILE)
+        console.TEMPLATES_FILE = os.path.join(d, "social-templates.txt")
+        self.assertFalse(console.post_templates_before(), "no .bak")
+        with open(console.TEMPLATES_FILE + ".bak", "w", encoding="utf-8") as fh:
+            fh.write("{airline}\n")
+        self.assertTrue(console.post_templates_before(), "deleted: they can come back")
+        with open(console.TEMPLATES_FILE, "w", encoding="utf-8") as fh:
+            fh.write("{airline}\n")
+        self.assertFalse(console.post_templates_before(), "the same as today's: nothing to put back")
+
     def test_the_page_reads_the_templates_as_they_are(self):
         d = tempfile.mkdtemp(); self.addCleanup(shutil.rmtree, d, True)
         self.addCleanup(setattr, console, "TEMPLATES_FILE", console.TEMPLATES_FILE)

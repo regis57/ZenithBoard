@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.53.3
+- **A real button to delete your templates** (the owner, 22 October 2026). *Sharing → Your own templates → Delete them all* in the console, asked first; *4 Delete them all* in the menu; `sudo zenithboard social template set none`. The posts go on with the other words ticked, the factual ones when none is left. Before, emptying the field and saving did it, and nothing said so.
+- **And one to put them back**: every change keeps the templates before it as `.bak`. *Put back the previous ones* (console, shown while there is something to put back), *5 Put back* (menu), or `sudo zenithboard social template undo`. Today's templates take the `.bak`'s place, so a put-back can be undone too.
+- The console's new strings are translated into each language.
+
 ## 0.53.2
 - **The project's site, zenithboard.app.** A static site in the console's languages that explains ADS-B, how to build a receiver, how to join ADSB Exchange, FlightAware, Flightradar24 and Plane Finder, and what ZenithBoard does. Linked from the README and from the console's side bar (*Learn more ↗*, translated into every language). Its source: [regis57/zenithboard-site](https://github.com/regis57/zenithboard-site).
 
