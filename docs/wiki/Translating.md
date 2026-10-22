@@ -1,6 +1,7 @@
 # Translating
 
-Since **0.47.0** the web console, the statistics page and graphs1090's page speak more than English. This page is for
+Since **0.47.0** the web console, the statistics page and graphs1090's page speak more than English, and since
+**0.51.0** the Bluesky posts do too, in the language chosen for them (`SOCIAL_LANG`). This page is for
 the people who read a language and want it right: **every language has a review sheet**, the English beside the
 translation, with a column for your correction. No account, no tool to install, no code.
 
@@ -97,12 +98,19 @@ release: the change, its tests, a version, the PR. On the Pi: `cd ~/ZenithBoard 
 * The English text is the key: in the pages' scripts every word shown goes through `t("…")` (`tn(n, "one", "other")`
   for a count), and a static page's text is marked `data-t`. A missing translation shows the English.
 * Catalogues: `flightinfo/static/i18n/<lang>/console.json`, `stats.json`, `graphs.json`; the reading side is
-  `flightinfo/static/i18n.js`.
+  `flightinfo/static/i18n.js`. The posts (0.51.0): `posts.json`, read by `flightinfo/post_lang.py`. Its keys are found
+  in `social.py`, `social_week.py` and `social_card.py` (`L.t("…")`, `L.tn(n, "one", "other")`, `N_("…")`). They are
+  templates: `{tags}`, `{tag|cap}`, and `[parts]` left out when a tag inside is empty, kept balanced by `check`. The
+  sheets list them under the page *posts*.
+* What is not words comes from Unicode's CLDR through Node: `node tools/make_post_locale.js` writes
+  `flightinfo/data/post-locale.json`. It holds the decimal and group signs, the day-and-month pattern, a span of days,
+  the weekdays and the country names, and `tests/fixtures/plurals.json` the plural forms that `post_lang.py`'s rules
+  are held to.
 * `python3 tools/i18n.py keys` lists every key; `sync LANG` adds the new ones and drops the old; `check` says what is
   missing or broken; `review LANG` writes the sheet. A change to an English string means its translations and its
   sheet in the same commit: `tests/test_i18n.sh` fails otherwise.
 * A language whose folder holds `draft.txt` is complete but not offered (Swahili, waiting for a native review).
-* The language codes are listed in four places that the tests hold together: `lib/common.sh`, `console_actions.py`,
-  `i18n.js`, `tools/i18n.py`.
+* The language codes are listed in five places that the tests hold together: `lib/common.sh`, `console_actions.py`,
+  `i18n.js`, `tools/i18n.py`, `post_lang.py`.
 
 More: [Translation plan](Translation-plan) · [Web console](Web-console#languages).

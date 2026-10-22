@@ -28,7 +28,10 @@ photo, and the account secret (a Bluesky app password), which lives in /etc/zeni
     social.py summary-test PERIOD          the four posts of the daily, weekly or monthly summary; posts nothing (0.38.0)
     social.py summary-when                 each summary: when it last went out, when it goes next; the queue (0.48.0)
     social.py summary-post PERIOD [N]      post N (1 to 4) of that summary now
-    social.py say [--dry] TEXT             post the owner's own words, as written: no picture, no map (0.50.0)
+    social.py template-check [--] TEXT     the owner's templates (one per line): usable, and short enough? (0.51.0)
+    social.py template-test [--] [TEXT]    each template filled on an aircraft overhead now (or a sample); posts nothing
+    social.py template-tags                the tags a template can use
+    social.py langs                        the languages a post can be written in (SOCIAL_LANG)
     social.py status         what it would do right now
 
 Standard library only for the service and the network, like the rest of the wall; Pillow only for the looks with a
@@ -52,6 +55,8 @@ import uuid
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import server  # noqa: E402  (config, aircraft.json path, user agent)
+import post_lang  # noqa: E402  (0.51.0: the posts' language)
+from post_lang import N_  # noqa: E402
 
 SECRETS_FILE = os.environ.get("ZENITHBOARD_SOCIAL_SECRETS", "/etc/zenithboard/social.env")
 STATE_DIR = os.environ.get("ZENITHBOARD_SOCIAL_DIR", "/var/lib/zenithboard/social")
@@ -593,12 +598,14 @@ NBSP = "\u00a0"                  # between the thousands and before the unit: "8
                                  # (seen on a phone, 0.19.8: "altitude 8" at the end of one line, "600 m" on the next)
 
 
-def metres(alt_ft, units):
+def metres(alt_ft, units, lang=None):
+    """11 280 m, or 37 000 ft; the thousands as the posts' language writes them (0.51.0: 11.280 m in German)."""
     if alt_ft is None:
         return None
+    lang = lang or post_lang.get("en")
     if units == "imperial":
-        return "{:,}".format(int(round(alt_ft / 100.0) * 100)).replace(",", NBSP) + NBSP + "ft"
-    return "{:,}".format(int(round(alt_ft * 0.3048 / 10.0) * 10)).replace(",", NBSP) + NBSP + "m"
+        return lang.num(int(round(alt_ft / 100.0) * 100)) + NBSP + "ft"
+    return lang.num(int(round(alt_ft * 0.3048 / 10.0) * 10)) + NBSP + "m"
 
 
 def nice_type(p):
@@ -612,19 +619,23 @@ def place_name(c):
     return re.sub(r"\s+", " ", str(c.get("SOCIAL_AREA", ""))).strip()
 
 
-def area_words(c):
-    """How the post ends. A place name ("Trémery") reads "above Trémery"; words that bring their own preposition
-    ("near Metz", "over the Moselle") are kept as typed."""
+def bare_place(c):
+    """The owner typed a name alone ("Trémery"), not a phrase with its own preposition ("near Metz", "over the
+    Moselle", "près de Metz": a phrase starts with a small letter, or with one of English's own)."""
     area = place_name(c)
-    if area and area[0].isupper() and not re.match(r"^(Over|Near|Above|Around|By)\b", area):
-        area = "above " + area
-    return area
+    return bool(area) and area[0].isupper() and not re.match(r"^(Over|Near|Above|Around|By)\b", area)
 
 
-def seen_from(c):
+def area_words(c, lang=None):
+    """How the post ends. A place name ("Trémery") reads "above Trémery" (0.51.0: in the posts' language, "au-dessus
+    de Trémery"); words that bring their own preposition ("near Metz", "over the Moselle") are kept as typed."""
+    area = place_name(c)
+    return (lang or post_lang.get("en")).t("above {place}", place=area) if bare_place(c) else area
+
+
+def seen_from(c, lang=None):
     """For a range record, which is nowhere near overhead: "seen from Trémery". A phrase is left out."""
-    area = place_name(c)
-    return ("seen from " + area) if area and area[0].isupper() and not re.match(r"^(Over|Near|Above|Around|By)\b", area) else ""
+    return (lang or post_lang.get("en")).t("seen from {place}", place=place_name(c)) if bare_place(c) else ""
 
 
 def clock_label(t=None):
@@ -643,10 +654,11 @@ def hashtag_callsign(flight):
     return ("#" + flight) if server.CALLSIGN_RE.match(flight or "") else flight
 
 
-def range_words(km):
+def range_words(km, lang=None):
     """A range record, said without placing the antenna: rounded DOWN to 50 km ("over 300 km"), never the figure."""
+    lang = lang or post_lang.get("en")
     step = int(km // 50) * 50
-    return "over %d%skm out" % (max(step, 50), NBSP)
+    return lang.t("over {distance} out", distance=lang.num(max(step, 50)) + NBSP + "km")
 
 
 POST_MAX = 300                   # Bluesky's limit, in characters
@@ -677,24 +689,26 @@ def photo_line(p, c):
     link, who = str(p.get("photo_link") or ""), " ".join(str(p.get("photo_credit") or "").split())[:40]
     if not server.cfg_bool(c, "SOCIAL_PHOTOLINK", "0") or not PHOTO_PAGE.match(link) or not who:
         return None, []
-    line = "Photo: %s / Planespotters" % who
+    line = post_lang.of(c).t("Photo: {name} / Planespotters", name=who)
     return line, [(line, link)]
 
 
 # 0.29.0, asked for by the owner: the post's words in one of five shapes, filled from the flight's own data (templates,
 # never generated text: the account says so). None of them gives the distance or the direction from the receiver.
 SENTENCES = ("factual", "story", "board", "spotter", "lookup")
-OPENINGS = {"rare": "Rare visitor: ", "military": "Military traffic: ", "heavy": "Heavy overhead: ",
-            "helicopter": "Helicopter: ", "farthest": "New 30-day range record: "}
+OPENINGS = {"rare": N_("Rare visitor: {post}"), "military": N_("Military traffic: {post}"), "heavy": N_("Heavy overhead: {post}"),
+            "helicopter": N_("Helicopter: {post}"), "farthest": N_("New 30-day range record: {post}")}
 STYLED_MAX = 220                 # a shaped text longer than this goes back to the factual one, which can be cut cleanly
 
 
 def sentences_of(c):
-    """The shapes the owner chose, in order; unknown words are left out, nothing valid gives factual."""
+    """The shapes the owner chose, in order; unknown words are left out, nothing valid gives factual. 0.51.0: "custom",
+    the owner's own templates, while there is one; "random" takes them in too."""
     words = [w.strip().lower() for w in str(c.get("SOCIAL_SENTENCE", "factual") or "factual").split(",")]
+    known = SENTENCES + (("custom",) if custom_templates(c) else ())
     if "random" in words:
-        return list(SENTENCES)
-    return [w for w in words if w in SENTENCES] or ["factual"]
+        return list(known)
+    return [w for w in words if w in known] or ["factual"]
 
 
 def sentence_for(c, rng=random):
@@ -716,18 +730,37 @@ def speed_words(gs_kt, units):
     return "%d%skm/h" % (int(round(gs_kt * 1.852)), NBSP)
 
 
-def height_words(alt_ft, units):
-    """"10.6 km" or "34,700 ft": the look-up shape says how high in round words."""
+def height_words(alt_ft, units, lang=None):
+    """"10.6 km" or "34,700 ft": the look-up shape says how high in round words (0.51.0: 10,6 km in French)."""
     if not alt_ft:
         return ""
+    lang = lang or post_lang.get("en")
     if units == "imperial":
-        return "{:,}".format(int(round(alt_ft / 100.0) * 100)) + NBSP + "ft"
-    return ("%.1f" % (alt_ft * 0.3048 / 1000.0)) + NBSP + "km"
+        n = int(round(alt_ft / 100.0) * 100)
+        return ("{:,}".format(n) if lang.code == "en" else lang.num(n)) + NBSP + "ft"
+    return lang.dec(alt_ft * 0.3048 / 1000.0, 1) + NBSP + "km"
+
+
+def what_words(p, L):
+    """What it is, for the shapes: "Ryanair Boeing 737-800", "military Boeing C-17A Globemaster III", "helicopter"."""
+    typ = nice_type(p)
+    airline = p.get("airline") or ""
+    military = bool(p.get("military")) and airline in ("", "MILITARY")
+    heli = p.get("shape") == "heli"
+    if airline == "MILITARY":
+        airline = ""
+    if military:
+        return L.t("military {type}", type=typ) if typ else (L.t("military helicopter") if heli else L.t("military"))
+    if airline:
+        return L.t("{airline} {type}", airline=airline, type=typ) if typ else (L.t("{airline} helicopter", airline=airline) if heli else airline)
+    return typ or (L.t("helicopter") if heli else "")
 
 
 def styled_text(shape, p, c, why=None, now=None):
     """The post's text in one of the shapes other than factual, or None when the flight lacks what the shape needs
-    (an airline or a type) or the result is too long: the factual text is used then."""
+    (an airline or a type) or the result is too long: the factual text is used then. 0.51.0: each shape is a template
+    of the posts' catalogue, in the posts' language (SOCIAL_LANG)."""
+    L = post_lang.of(c)
     units = units_of(c)
     flight = (p.get("flight") or "").strip()
     cs = hashtag_callsign(flight)
@@ -735,58 +768,55 @@ def styled_text(shape, p, c, why=None, now=None):
     typ = nice_type(p)
     airline = p.get("airline") or ""
     military = bool(p.get("military")) and airline in ("", "MILITARY")
-    heli = p.get("shape") == "heli"
     if airline == "MILITARY":
         airline = ""
-    what = " ".join(x for x in ("military" if military else airline, typ or ("helicopter" if heli else "")) if x)
+    what = what_words(p, L)
     if not what or why == "farthest":           # a range record is nowhere near overhead: the factual words say so
         return None
-    alt = metres(p.get("alt_ft"), units) or ""
+    alt = metres(p.get("alt_ft"), units, L) or ""
     speed = speed_words(p.get("gs_kt"), units)
     r = p.get("route") or {}
     a = (r.get("from") or {}).get("city") or (r.get("from") or {}).get("name") or ""
     b = (r.get("to") or {}).get("city") or (r.get("to") or {}).get("name") or ""
-    area = area_words(c)                          # "above Trémery", or the owner's own phrase ("near Metz")
-    place = place_name(c) if area.startswith("above ") else ""
+    if not (a and b):
+        a = b = ""                               # a route is said whole or not at all
+    area = area_words(c, L)                      # "above Trémery", or the owner's own phrase ("near Metz")
+    place = place_name(c) if bare_place(c) else ""
     clock = time.strftime("%H:%M", time.localtime(now))
     if shape == "story":
-        text = _a(what)
-        text = text[0].upper() + text[1:]
-        if a and b:
-            text += " bound for %s from %s" % (b, a)
-        text += " has just crossed the sky" + (" " + area if area else "") + (", %s up." % alt if alt else ".")
-        text += (" " + cs) if cs else ""
+        text = L.t("{what|a|cap}[ bound for {to} from {from}] has just crossed the sky[ {area}][, {altitude} up].[ {callsign}]",
+                   what=what, to=b, area=area, altitude=alt, callsign=cs, **{"from": a})
     elif shape == "board":
         lines = ["\u2708 " + " · ".join(x for x in (cs, reg) if x), "%s \u2192 %s" % (a, b) if a and b else "",
-                 " · ".join(x for x in (typ, alt, speed) if x),
-                 ((area[0].upper() + area[1:] + " at " + clock) if area else "")]
+                 " · ".join(x for x in (typ, alt, speed) if x), L.t("[{area|cap} at {time}]", area=area, time=clock)]
         text = "\n".join(x for x in lines if x.strip())
     elif shape == "spotter":
-        text = (reg + ", " if reg else "") + _a(what)
-        if a and b:
-            text += ", flying %s \u2192 %s" % (a, b)
-        if cs and cs.replace("#", "") != reg.replace("-", ""):
-            text += " as " + cs
-        rest = " ".join(x for x in (alt, area, ("at " + speed) if speed else "") if x)
-        text += (": " + rest + ".") if rest else "."
+        rest = L.t("[{altitude}][ {area}][ at {speed}]", altitude=alt, area=area, speed=speed).strip()
+        text = L.t("[{registration}, ]{what|a}[, flying {from} \u2192 {to}][ as {callsign}][: {rest}].",
+                   registration=reg, what=what, to=b, rest=rest, **{"from": a,
+                   "callsign": cs if cs and cs.replace("#", "") != reg.replace("-", "") else ""})
     elif shape == "lookup":
-        who = " ".join(x for x in ((airline or ("military" if military else "")), cs or reg or typ) if x)
-        text = ("Look up, %s! " % place) if place else "Look up! "
-        text += "%s is passing %s overhead" % (who or _a(what), height_words(p.get("alt_ft"), units) or "")
-        text = text.replace("passing  overhead", "passing overhead")
-        text += (" on its way from %s to %s." % (a, b)) if a and b else "."
+        who = " ".join(x for x in ((airline or (L.t("military") if military else "")), cs or reg or typ) if x)
+        text = L.t("Look up[, {place}]! {who} is passing[ {height}] overhead[ on its way from {from} to {to}].",
+                   place=place, who=who or L.render("{w|a}", {"w": what}), height=height_words(p.get("alt_ft"), units, L),
+                   to=b, **{"from": a})
+    elif shape == "custom":
+        return custom_text(p, c, why, L, now)
     else:
         return None
-    text = OPENINGS.get(why, "") + text
+    if why in OPENINGS:
+        text = L.t(OPENINGS[why], post=text)
     return text if len(text) <= STYLED_MAX else None
 
 
 def post_text(p, c, why=None, credit=None, photo=None, shape=None):
-    """The post. English, short, nothing the wall does not know. Starts with the flight ("Flight Etihad #ETD11K"),
-    ends with the place ("above Trémery"); a range record ends with where it was seen from instead, since it was
-    nowhere near overhead. credit: the map's credit line, when the picture has a map."""
+    """The post, short, nothing the wall does not know. Starts with the flight ("Flight Etihad #ETD11K"), ends with
+    the place ("above Trémery"); a range record ends with where it was seen from instead, since it was nowhere near
+    overhead. credit: the map's credit line, when the picture has a map. 0.51.0: in the posts' language
+    (SOCIAL_LANG), English by default; the hashtags stay as set."""
+    L = post_lang.of(c)
     units = units_of(c)
-    alt = metres(p.get("alt_ft"), units)
+    alt = metres(p.get("alt_ft"), units, L)
     flight = (p.get("flight") or "").strip()
     reg = p.get("registration") or ""
     typ = nice_type(p)
@@ -797,15 +827,15 @@ def post_text(p, c, why=None, credit=None, photo=None, shape=None):
     cs = hashtag_callsign(flight)
     # the head: what this is
     if military:
-        head = "Military flight" + (" " + cs if cs else "")
+        head = L.t("Military flight[ {callsign}]", callsign=cs)
     elif airline and airline != "MILITARY":
-        head = "Flight %s %s" % (airline, cs) if cs else "Flight " + airline
+        head = L.t("Flight {airline}[ {callsign}]", airline=airline, callsign=cs)
     elif heli:
-        head = "Helicopter " + (cs or reg) if (cs or reg) else "Helicopter"
+        head = L.t("Helicopter[ {ident}]", ident=cs or reg)
     elif cs and cs.replace("-", "") != reg.replace("-", ""):     # a callsign that is not just the registration
-        head = "Flight " + cs
+        head = L.t("Flight {callsign}", callsign=cs)
     else:
-        head = "Aircraft " + reg if reg else "Aircraft"
+        head = L.t("Aircraft[ {registration}]", registration=reg)
     parts = [head.strip()]
     # then what it is and where it goes
     if typ:
@@ -818,21 +848,26 @@ def post_text(p, c, why=None, credit=None, photo=None, shape=None):
         parts.append("%s → %s" % (a.get("city") or a.get("name"), b.get("city") or b.get("name") or "?"))
     # and last, where it is. The altitude is said as one ("altitude 8 500 m"): "8 500 m above Trémery" was read as
     # a distance from the place (0.19.0)
-    height = ("altitude " + alt) if alt else ""
+    height = L.t("altitude {altitude}", altitude=alt) if alt else ""
     if record:
         parts.append(height)
-        parts.append(", ".join(x for x in ("range record for 30 days: " + range_words(p["distance_km"]), seen_from(c)) if x))
+        parts.append(", ".join(x for x in (L.t("range record for 30 days: {range}", range=range_words(p["distance_km"], L)),
+                                           seen_from(c, L)) if x))
     else:
         parts.append(height)
-        parts.append(area_words(c))
+        parts.append(area_words(c, L))
     text = " · ".join(x for x in parts if x)          # starts with the flight itself: no icon in front of it
     if why in ("rare", "heavy"):                 # 0.29.0: the reason, said first (the others already say theirs)
-        text = OPENINGS[why] + text
+        text = L.t(OPENINGS[why], post=text)
     shape = shape or sentence_for(c)
+    custom_tags = False
     if shape != "factual":
-        text = styled_text(shape, p, c, why) or text
+        styled = styled_text(shape, p, c, why)
+        if styled:
+            text = styled
+            custom_tags = shape == "custom" and "{hashtags" in " ".join(custom_templates(c))
     tags = str(c.get("SOCIAL_HASHTAGS", "")).strip()
-    if tags.lower() == "none":                   # set so: no hashtags at all, not even #helicopter
+    if tags.lower() == "none" or custom_tags:   # set so: no hashtags at all, not even #helicopter; or a template placed them
         tags = ""
     if heli and tags:
         tags = tags.replace("#avgeek", "#helicopter") if "#avgeek" in tags else tags + " #helicopter"
@@ -845,37 +880,159 @@ def post_text(p, c, why=None, credit=None, photo=None, shape=None):
     return fit_post(text, credit, tags.strip())
 
 
+# --------------------------------------------------------------------------- the owner's own templates (0.51.0)
+# Asked for by the owner on 22 October 2026: posts in his own words, with tags ZenithBoard fills in, as one more style
+# ("custom") beside the five. One template per line in /etc/zenithboard/social-templates.txt; several are drawn in turn
+# like the styles. No tag gives a distance, a direction from the antenna or a place near it: the templates cannot give
+# the receiver's position away any more than the built-in words.
+TEMPLATES_FILE = os.environ.get("ZENITHBOARD_SOCIAL_TEMPLATES") or "/etc/zenithboard/social-templates.txt"
+TEMPLATE_MAX = 260               # a filled template longer than this gives the factual words (room for the map's credit)
+TEMPLATE_TAGS = ("flight", "callsign", "airline", "airline_country", "flag", "registration", "reg_country", "type",
+                 "type_code", "category", "from", "to", "from_code", "to_code", "altitude", "speed", "climb", "heading",
+                 "squawk", "why", "area", "time", "date", "photo", "tracker", "hashtags")
+WHY_WORDS = {"rare": N_("A rare visitor."), "military": N_("Military traffic."), "heavy": N_("A heavy overhead."),
+             "helicopter": N_("A helicopter."), "farthest": N_("A new 30-day range record.")}
+COMPASS = (N_("north"), N_("north-east"), N_("east"), N_("south-east"), N_("south"), N_("south-west"), N_("west"),
+           N_("north-west"))
+
+
+def custom_templates(c=None):
+    """The owner's templates that can be used, in their order (an unusable line is left out, said by `template`)."""
+    try:
+        with open(TEMPLATES_FILE, encoding="utf-8") as fh:
+            lines = [x.strip() for x in fh.read().splitlines()]
+    except OSError:
+        return []
+    return [x for x in lines if x and post_lang.check_template(x, TEMPLATE_TAGS) is None]
+
+
+def _flag_emoji(cc):
+    cc = str(cc or "").upper()
+    return "".join(chr(0x1F1E6 + ord(ch) - ord("A")) for ch in cc) if re.match(r"^[A-Z]{2}$", cc) else ""
+
+
+def _airport_words(ap):
+    ap = ap or {}
+    name = ap.get("city") or ap.get("name") or ""
+    code = ap.get("iata") or ap.get("icao") or ""
+    return (("%s (%s)" % (name, code)) if name and code else (name or code)), code
+
+
+def category_words(p, L):
+    """What kind of aircraft, in the posts' language: airliner, cargo aircraft, business jet, helicopter..."""
+    shape = p.get("shape") or ""
+    if p.get("military"):
+        return L.t("military aircraft")
+    if shape == "heli":
+        return L.t("helicopter")
+    if shape == "glider":
+        return L.t("glider")
+    if shape == "balloon":
+        return L.t("balloon")
+    if shape in ("light", "twinprop"):
+        return L.t("light aircraft")
+    if shape == "bizjet":
+        return L.t("business jet")
+    icao = str(p.get("airline_icao") or "")
+    if icao and icao in server.load_cargo():
+        return L.t("cargo aircraft")
+    if shape in ("narrow", "wide", "quad", "rearjet", "turboprop", "regional") and p.get("airline") and p.get("airline") != "MILITARY":
+        return L.t("airliner")
+    return L.t("aircraft")
+
+
+def template_values(p, c, why, L, now=None):
+    """Every tag's value for that aircraft, in the posts' language; an unknown one is empty (its [part] goes)."""
+    units = units_of(c)
+    r = p.get("route") or {}
+    flight = (p.get("flight") or "").strip()
+    a_words, a_code = _airport_words(r.get("from"))
+    b_words, b_code = _airport_words(r.get("to"))
+    airline = p.get("airline") if p.get("airline") not in (None, "", "MILITARY") else ""
+    a_cc = server.airline_cc(p.get("airline_icao")) if p.get("airline_icao") else None
+    r_cc = server.icao_country(p.get("hex", "")) if p.get("hex") else ""
+    vr = p.get("vrate_fpm")
+    climb = "" if not isinstance(vr, (int, float)) else (L.t("climbing") if vr > 300 else L.t("descending") if vr < -300 else L.t("level"))
+    track = p.get("track")
+    heading = L.t(COMPASS[int((float(track) % 360 + 22.5) // 45) % 8]) if isinstance(track, (int, float)) else ""
+    hexc = str(p.get("hex") or "").lower()
+    photo = str(p.get("photo_link") or "") if server.cfg_bool(c, "SOCIAL_PHOTOLINK", "0") and PHOTO_PAGE.match(str(p.get("photo_link") or "")) else ""
+    tags = str(c.get("SOCIAL_HASHTAGS", "")).strip()
+    squawk = str(p.get("squawk") or "")
+    return {
+        "flight": r.get("flight_iata") or flight, "callsign": flight, "airline": airline,
+        "airline_country": L.country(a_cc, server.country_name(a_cc)) if a_cc else "",
+        "flag": _flag_emoji(a_cc or r_cc), "registration": p.get("registration") or "",
+        "reg_country": L.country(r_cc, server.country_name(r_cc)) if r_cc else "",
+        "type": nice_type(p), "type_code": p.get("type") or "", "category": category_words(p, L),
+        "from": a_words, "to": b_words, "from_code": a_code, "to_code": b_code,
+        "altitude": metres(p.get("alt_ft"), units, L) or "", "speed": speed_words(p.get("gs_kt"), units),
+        "climb": climb, "heading": heading, "squawk": squawk if re.match(r"^[0-7]{4}$", squawk) else "",
+        "why": L.t(WHY_WORDS[why]) if why in WHY_WORDS else "", "area": area_words(c, L),
+        "time": time.strftime("%H:%M", time.localtime(now)), "date": L.day_month(datetime.date.fromtimestamp(now or time.time())),
+        "photo": photo, "tracker": ("https://globe.adsbexchange.com/?icao=" + hexc) if re.match(r"^[0-9a-f]{6}$", hexc) else "",
+        "hashtags": "" if tags.lower() == "none" else tags,
+    }
+
+
+def fill_template(template, p, c, why, L, now=None):
+    """One template filled: the empty [parts] gone, the spaces tidied, each line trimmed."""
+    text = L.render(template, template_values(p, c, why, L, now))
+    lines = [re.sub(r"[ \t]{2,}", " ", x).strip() for x in text.split("\n")]
+    return "\n".join(x for x in lines if x)
+
+
+def custom_text(p, c, why, L, now=None, rng=random):
+    """The owner's words for this aircraft, one of his templates drawn; None when there is none or it is too long
+    (the factual words then)."""
+    templates = custom_templates(c)
+    if not templates:
+        return None
+    text = fill_template(rng.choice(templates), p, c, why, L, now)
+    return text if text and len(text) <= TEMPLATE_MAX else None
+
+
+# long names, for a template's length when it is saved: an aircraft that gives every tag a long value
+LONG_SAMPLE = {"hex": "4ca7b1", "flight": "RYR5ZK", "registration": "EI-ENK", "type": "B38M", "type_name": "BOEING 737 MAX 8-200",
+               "shape": "narrow", "airline": "Air Europa Lineas Aereas", "airline_icao": "AEA", "alt_ft": 37000, "gs_kt": 480,
+               "track": 135, "vrate_fpm": -1200, "squawk": "7700", "photo_link": "https://www.planespotters.net/photo/1234567",
+               "route": {"from": {"city": "San Sebastián de los Reyes", "iata": "MAD"}, "to": {"city": "Saint Petersburg", "iata": "LED"},
+                         "flight_iata": "UX1234"}}
+
+
 def alt_text(p, c, trace, look="dotmap", info=None):
-    """For the picture: what a screen reader should say."""
+    """For the picture: what a screen reader should say, in the posts' language (0.51.0)."""
+    L = post_lang.of(c)
     units = units_of(c)
     info = info or {}
-    bits = ["Split-flap flight board" if look == "flap" else "Dot-matrix flight board"]
+    bits = [L.t("Split-flap flight board") if look == "flap" else L.t("Dot-matrix flight board")]
     if p.get("flight"):
         bits.append((p.get("flight") or "").strip())
     if p.get("registration") and p["registration"].replace("-", "") != (p.get("flight") or "").strip():
-        bits.append("registration " + p["registration"])            # the picture's second row (0.18.3)
+        bits.append(L.t("registration {registration}", registration=p["registration"]))   # the picture's second row (0.18.3)
     if p.get("airline") and p["airline"] != "MILITARY":
         bits.append(p["airline"])
     if p.get("military"):
-        bits.append("military")
+        bits.append(L.t("military"))
     if nice_type(p):
         bits.append(nice_type(p))
     r = p.get("route") or {}
     if r.get("from") and r.get("to"):
-        bits.append("from %s to %s" % ((r["from"].get("city") or r["from"].get("name")), (r["to"].get("city") or r["to"].get("name"))))
+        bits.append(L.t("from {from} to {to}", to=(r["to"].get("city") or r["to"].get("name")),
+                        **{"from": (r["from"].get("city") or r["from"].get("name"))}))
     if metres(p.get("alt_ft"), units):
-        bits.append("altitude " + metres(p.get("alt_ft"), units))
+        bits.append(L.t("altitude {altitude}", altitude=metres(p.get("alt_ft"), units, L)))
     mins = max(1, int(round((trace[-1][3] - trace[0][3]) / 60))) if len(trace) > 1 else 0
-    s = "" if mins == 1 else "s"
-    if not mins:
-        tail = "."
-    elif look in MAP_LOOKS and info.get("map_words"):
-        tail = ". Beside it, %s with the aircraft's track over the last %d minute%s, north up." % (info["map_words"], mins, s)
-    else:
-        tail = ". Beside it, the aircraft's track over the last %d minute%s, north up." % (mins, s)
+    s = ", ".join(bits) + "."
+    if mins and look in MAP_LOOKS and info.get("map_words"):
+        s += " " + L.tn(mins, "Beside it, {map} with the aircraft's track over the last {n} minute, north up.",
+                        "Beside it, {map} with the aircraft's track over the last {n} minutes, north up.", map=L.t(info["map_words"]))
+    elif mins:
+        s += " " + L.tn(mins, "Beside it, the aircraft's track over the last {n} minute, north up.",
+                        "Beside it, the aircraft's track over the last {n} minutes, north up.")
     if info.get("credit_full"):
-        tail += " Map: " + info["credit_full"] + "."
-    return ", ".join(bits) + tail
+        s += " " + L.t("Map: {credit}.", credit=info["credit_full"])
+    return s
 
 
 # --------------------------------------------------------------------------- the picture
@@ -1048,50 +1205,51 @@ def bluesky_facets(text, links=None):
     """Hashtags and links as facets, which is how Bluesky makes them clickable. Byte offsets, UTF-8.
     links: [(label, uri)], each label found in the text (the map credit's "maps.eox.at")."""
     facets = []
-    for m in re.finditer(r"(?<!\w)#([A-Za-z0-9_]+)", text):
-        a, b = _byte_span(text, m.start(), m.end())
-        facets.append({"index": {"byteStart": a, "byteEnd": b},
-                       "features": [{"$type": "app.bsky.richtext.facet#tag", "tag": m.group(1)}]})
     for label, uri in links or ():
         at = text.rfind(label)                   # the credit is the last line: its words, not the same word higher up
         if at >= 0 and uri.startswith("https://"):
             a, b = _byte_span(text, at, at + len(label))
             facets.append({"index": {"byteStart": a, "byteEnd": b},
                            "features": [{"$type": "app.bsky.richtext.facet#link", "uri": uri}]})
+    # 0.51.0: the hashtags and the links written in the text (an owner's template can hold #Trémery or a link), found
+    # as the Bluesky app finds them; one overlapping a link given above is the link's
+    for f in text_facets(text)[0]:
+        i = f["index"]
+        if not any(i["byteStart"] < g["index"]["byteEnd"] and g["index"]["byteStart"] < i["byteEnd"] for g in facets):
+            facets.append(f)
     return sorted(facets, key=lambda f: f["index"]["byteStart"])
 
 
-def post_bluesky(sec, text, path, alt, width, height, mime="image/png", links=None):
-    """The post, with the session kept from the last one; a token refused on the way: one new sign-in, once."""
+def post_bluesky(sec, text, path, alt, width, height, mime="image/png", links=None, lang="en"):
+    """The post, with the session kept from the last one; a token refused on the way: one new sign-in, once. lang: the
+    language the record declares (0.51.0: the posts' own, for Bluesky's language filters)."""
     with open(path, "rb") as fh:
         data = fh.read()
     if len(data) > 1000000:
         raise RuntimeError("picture is %d bytes, Bluesky takes 1,000,000 at most" % len(data))
     try:
-        return _post_once(bluesky_session(sec), text, data, alt, width, height, mime, links)
+        return _post_once(bluesky_session(sec), text, data, alt, width, height, mime, links, lang)
     except urllib.error.HTTPError as exc:
         if not token_refused(exc):
             raise
-    return _post_once(bluesky_session(sec, fresh=True), text, data, alt, width, height, mime, links)
+    return _post_once(bluesky_session(sec, fresh=True), text, data, alt, width, height, mime, links, lang)
 
 
-def _post_once(ses, text, data, alt, width, height, mime, links):
+def _post_once(ses, text, data, alt, width, height, mime, links, lang="en"):
     auth = {"Authorization": "Bearer " + ses["accessJwt"]}
     blob = _json_request(BLUESKY_PDS + "/xrpc/com.atproto.repo.uploadBlob", data,
                          dict(auth, **{"Content-Type": mime}))["blob"]
     text = text[:300]
     record = {"$type": "app.bsky.feed.post", "text": text, "createdAt": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
-              "langs": ["en"], "facets": bluesky_facets(text, links),
+              "langs": [lang], "facets": bluesky_facets(text, links),
               "embed": {"$type": "app.bsky.embed.images", "images": [{"alt": alt, "image": blob, "aspectRatio": {"width": width, "height": height}}]}}
     out = _json_request(BLUESKY_PDS + "/xrpc/com.atproto.repo.createRecord",
                         {"repo": ses["did"], "collection": "app.bsky.feed.post", "record": record}, auth)
     return out.get("uri", "")
 
 
-# --------------------------------------------------------------------------- a written post (0.50.0)
-# Asked for by the owner on 22 October 2026: a post in his own words, from the terminal or the web console. Text only:
-# no picture, no map, nothing read from the receiver, so nothing in it can place the antenna but what he writes.
-SAY_MAX = 300                    # Bluesky: 300 graphemes. Characters are counted here, never fewer than graphemes
+# --------------------------------------------------------------------------- hashtags and links as Bluesky finds them
+# 0.50.0, kept in 0.51.0 for every post: the owner's own templates can carry hashtags with accents and links.
 TAG_MAX = 64                     # Bluesky's longest hashtag
 _TRIM = ".,;:!?'\"’”"
 _INVISIBLE = "\u00ad\u200a\u200b\u200c\u200d\u2060\u20e2\ufeff"   # Bluesky ends a hashtag at these; never in a link
@@ -1101,21 +1259,8 @@ def _is_punct(ch):
     return unicodedata.category(ch).startswith("P")
 
 
-def say_clean(text):
-    """The text as it will be posted, or raises ValueError with the reason in plain words."""
-    text = str(text or "").replace("\r\n", "\n").replace("\r", "\n").strip()
-    if not text:
-        raise ValueError("nothing to post: the text is empty")
-    bad = [ch for ch in text if (unicodedata.category(ch) == "Cc" and ch not in "\n\t") or unicodedata.category(ch) in ("Cs", "Co")]
-    if bad:
-        raise ValueError("the text holds a character that cannot be posted (U+%04X)" % ord(bad[0]))
-    if len(text) > SAY_MAX:
-        raise ValueError("%d characters: %d at most" % (len(text), SAY_MAX))
-    return text
-
-
-def say_facets(text):
-    """Hashtags and links of a written post as Bluesky facets, as the Bluesky app finds them: a link written with
+def text_facets(text):
+    """Hashtags and links written in a post, as Bluesky facets, found the way the Bluesky app finds them: a link written with
     http:// or https:// and a host with a dot; a hashtag after a space or at the start, ended by a space or an
     invisible character, its trailing punctuation left out, not digits alone, 64 characters at most, accents kept
     (#Trémery). A hashtag inside a link is the link's. @names are left as plain text (each would need its account
@@ -1147,65 +1292,6 @@ def say_facets(text):
         a, b = _byte_span(text, s, e)
         facets.append({"index": {"byteStart": a, "byteEnd": b}, "features": [feature]})
     return facets, tags, links
-
-
-def post_bluesky_text(sec, text):
-    """A text-only post, the session kept like the others; a token refused on the way: one new sign-in, once.
-    No language is declared: the owner writes in the language he likes."""
-    facets = say_facets(text)[0]
-
-    def once(ses):
-        record = {"$type": "app.bsky.feed.post", "text": text,
-                  "createdAt": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")}
-        if facets:
-            record["facets"] = facets
-        out = _json_request(BLUESKY_PDS + "/xrpc/com.atproto.repo.createRecord",
-                            {"repo": ses["did"], "collection": "app.bsky.feed.post", "record": record},
-                            {"Authorization": "Bearer " + ses["accessJwt"]})
-        return out.get("uri", "")
-    try:
-        return once(bluesky_session(sec))
-    except urllib.error.HTTPError as exc:
-        if not token_refused(exc):
-            raise
-    return once(bluesky_session(sec, fresh=True))
-
-
-def cmd_say(text, dry=False):
-    try:
-        text = say_clean(text)
-    except ValueError as exc:
-        print("Not posted: %s." % exc)
-        return 1
-    _, tags, links = say_facets(text)
-    print("The post, as it will read on Bluesky (%d of %d characters):" % (len(text), SAY_MAX))
-    print("")
-    for line in text.split("\n"):
-        print("  " + line)
-    print("")
-    print("Hashtags made clickable: %s" % (" ".join(tags) or "none"))
-    print("Links made clickable: %s" % (" ".join(links) or "none"))
-    if "@" in text:
-        print("(@names stay plain text: a mention would need the account looked up.)")
-    if dry:
-        print("Nothing posted.")
-        return 0
-    sec = account()
-    if not bluesky_ready(sec):
-        print("Not posted: no Bluesky account is set up (sudo zenithboard social setup).")
-        return 1
-    try:
-        uri = post_bluesky_text(sec, text)
-    except urllib.error.HTTPError as exc:
-        print("Not posted: Bluesky answered %s" % _http_error_text(exc))
-        return 1
-    except Exception as exc:
-        # no answer (a timeout, the network gone): Bluesky may have taken it all the same
-        print("No answer from Bluesky (%s): it may or may not be posted. Look at the account before posting it again." % exc)
-        return 1
-    print("bluesky: %s" % uri)
-    print("Posted under @%s. To take it back, delete it in the Bluesky app." % sec.get("BLUESKY_HANDLE", "?"))
-    return 0
 
 
 def check_bluesky(sec):
@@ -1269,7 +1355,7 @@ def publish(p, trace, why, c, sec, dry=False, keep=None):
             return results
         try:
             results["bluesky"] = post_bluesky(sec, text, info["path"], alt, info.get("width", 0), info.get("height", 0),
-                                              info.get("mime", "image/png"), links)
+                                              info.get("mime", "image/png"), links, lang=post_lang.of(c).bcp47)
         except urllib.error.HTTPError as exc:
             results["bluesky"] = "FAILED: " + _http_error_text(exc)
         except Exception as exc:
@@ -1325,18 +1411,20 @@ def publish_week(c, sec, now, state=None, dry=False, keep=None, second=False, pa
         return {"skipped": "the weekly picture needs Pillow (install it: sudo zenithboard social test)"}
     tags = str(c.get("SOCIAL_HASHTAGS", "")).strip()
     tags = "" if tags.lower() == "none" else tags
-    area = area_words(c)
+    area = area_words(c)                         # the pictures stay English (0.51.0)
+    L = post_lang.of(c)
+    words = area_words(c, L)                     # the text and the alt text in the posts' language
     out = os.path.join(work_dir(), "week-%s.png" % uuid.uuid4().hex)
     results = {}
     try:
         if part == 2:
             flags = week.load_flags([cc for cc, _ in w.get("bizjet_countries") or []] + list((w.get("airline_cc") or {}).values()))
             info = week.draw_second(w, theme_of(c), area, out, flags)
-            text, alt = week.text_second(w, area, tags, fit_post), week.alt_second(w, area)
+            text, alt = week.text_second(w, words, tags, fit_post, L), week.alt_second(w, words, L)
         elif part == 3:
             flags = week.load_flags([e["cc"] for e in w.get("military") or []])
             info = week.draw_military(w, theme_of(c), area, out, flags)
-            text, alt = week.text_military(w, area, tags, fit_post), week.alt_military(w, area)
+            text, alt = week.text_military(w, words, tags, fit_post, L), week.alt_military(w, words, L)
         elif part == 4:
             codes = []
             for g in ("heli", "light", "glider", "drone", "balloon"):
@@ -1346,10 +1434,10 @@ def publish_week(c, sec, now, state=None, dry=False, keep=None, second=False, pa
                     e["rows"] = [(nice_type({"type_name": n}), cc, v) for n, cc, v in e.get("rows") or []]
                     codes += [cc for _, cc, _ in e["rows"]]
             info = week.draw_misc(w, theme_of(c), area, out, week.load_flags(codes))
-            text, alt = week.text_misc(w, area, tags, fit_post), week.alt_misc(w, area)
+            text, alt = week.text_misc(w, words, tags, fit_post, L), week.alt_misc(w, words, L)
         else:
             info = week.draw(w, theme_of(c), area, out, week.load_flags(list((w.get("airline_cc") or {}).values())))
-            text, alt = week.text(w, c, area, tags, fit_post), week.alt(w, area)
+            text, alt = week.text(w, c, words, tags, fit_post), week.alt(w, words, L)
         if keep:
             try:
                 results["preview"] = keep_copy(out, keep)
@@ -1361,7 +1449,7 @@ def publish_week(c, sec, now, state=None, dry=False, keep=None, second=False, pa
                            fleet_since=w.get("since"))
             return results
         try:
-            results["bluesky"] = post_bluesky(sec, text, out, alt, info["width"], info["height"], info["mime"])
+            results["bluesky"] = post_bluesky(sec, text, out, alt, info["width"], info["height"], info["mime"], lang=L.bcp47)
         except urllib.error.HTTPError as exc:
             results["bluesky"] = "FAILED: " + _http_error_text(exc)
         except Exception as exc:
@@ -1687,6 +1775,90 @@ def cmd_week(post=False, second=False, part=None, period="weekly"):
     return 0
 
 
+# 0.51.0: what the shell and the console ask of the owner's templates
+TAG_HELP = (("flight", "the flight number when known (FR4512), else the callsign"), ("callsign", "the callsign as sent (RYR4512)"),
+            ("airline", "the airline"), ("airline_country", "the country the airline is based in"),
+            ("flag", "that country's flag, as an emoji (else the country of registration's)"), ("registration", "the registration"),
+            ("reg_country", "the country it is registered in"), ("type", "make and model"), ("type_code", "the ICAO type code (B738)"),
+            ("category", "airliner, cargo aircraft, business jet, helicopter, military aircraft..."),
+            ("from", "departure, city and code: Dublin (DUB)"), ("to", "arrival, city and code"), ("from_code", "the departure's code"),
+            ("to_code", "the arrival's code"), ("altitude", "the altitude, in the posts' units"), ("speed", "the ground speed"),
+            ("climb", "climbing, descending or level"), ("heading", "where it is heading: south-east"), ("squawk", "its transponder code"),
+            ("why", "why it is posted: A rare visitor."), ("area", "your place name, as the posts say it (above Trémery)"),
+            ("time", "the time on the Pi's clock"), ("date", "the date"), ("photo", "its Planespotters page, when photo links are on"),
+            ("tracker", "its page on ADSB Exchange's map"), ("hashtags", "your hashtags (then not added again at the end)"))
+SAMPLE = {"hex": "4ca7b1", "flight": "RYR5ZK", "registration": "EI-ENK", "type": "B738", "type_name": "BOEING 737-800",
+          "shape": "narrow", "airline": "Ryanair", "airline_icao": "RYR", "alt_ft": 34680, "gs_kt": 389, "track": 160,
+          "vrate_fpm": 0, "route": {"from": {"city": "Brussels", "iata": "CRL"}, "to": {"city": "Pisa", "iata": "PSA"},
+                                    "flight_iata": "FR5ZK"}}
+
+
+def template_problems(text, c):
+    """[(line, reason)] for each line that cannot be used: a broken template, or one too long filled with long names."""
+    L = post_lang.of(c)
+    out = []
+    for line in [x.strip() for x in str(text).splitlines() if x.strip()]:
+        why = post_lang.check_template(line, TEMPLATE_TAGS)
+        if why is None:
+            n = len(fill_template(line, LONG_SAMPLE, dict(c, SOCIAL_PHOTOLINK="1"), "rare", L))
+            if n > TEMPLATE_MAX:
+                why = "%d characters with long names: %d at most (Bluesky takes 300, the map's credit needs the rest)" % (n, TEMPLATE_MAX)
+        if why:
+            out.append((line, why))
+    return out
+
+
+def cmd_template_check(text):
+    c = cfg()
+    lines = [x for x in str(text).splitlines() if x.strip()]
+    if not lines:
+        print("No template given.")
+        return 1
+    bad = template_problems(text, c)
+    for line, why in bad:
+        print("Not usable: %s\n  %s" % (why, line))
+    if not bad:
+        print("%d template%s usable." % (len(lines), "" if len(lines) == 1 else "s"))
+    return 1 if bad else 0
+
+
+def cmd_template_test(text=None):
+    """Each template filled on an aircraft the wall shows now (an airliner first), or on a sample; posts nothing."""
+    c = cfg()
+    L = post_lang.of(c)
+    lines = [x.strip() for x in (str(text).splitlines() if text else custom_templates_all()) if x.strip()]
+    if not lines:
+        print("No template yet. Add one:  sudo zenithboard social template add '{airline} {flight}[, {from} → {to}] at {altitude}. {why}'")
+        return 1
+    planes = ask_wall(c, server.cfg_float(c, "SOCIAL_RADIUS_KM", 15))
+    p = next((x for x in planes if x.get("airline") not in (None, "", "MILITARY")), None) or (planes[0] if planes else None)
+    if p:
+        print("On %s %s, overhead now (language: %s):" % ((p.get("flight") or "").strip(), p.get("hex"), L.code))
+    else:
+        p = SAMPLE
+        print("No aircraft overhead now: on a sample, Ryanair RYR5ZK Brussels → Pisa (language: %s):" % L.code)
+    rc = 0
+    for i, line in enumerate(lines, 1):
+        why = post_lang.check_template(line, TEMPLATE_TAGS)
+        if why:
+            print("\n%d. Not usable: %s\n   %s" % (i, why, line))
+            rc = 1
+            continue
+        out = fill_template(line, p, c, "rare", L)
+        print("\n%d. (%d characters)\n%s" % (i, len(out), out))
+    print("\n{why} is shown as if the aircraft were a rare visitor. Nothing posted.")
+    return rc
+
+
+def custom_templates_all():
+    """Every line of the templates file, usable or not (for `template test`)."""
+    try:
+        with open(TEMPLATES_FILE, encoding="utf-8") as fh:
+            return [x.strip() for x in fh.read().splitlines() if x.strip()]
+    except OSError:
+        return []
+
+
 def cmd_check():
     sec = account()
     if not bluesky_ready(sec):
@@ -1799,13 +1971,21 @@ def main(argv):
         return cmd_week(post=True, part=int(n) if n in ("1", "2", "3", "4") else 1, period=arg)
     if cmd == "status":
         return cmd_status()
-    if cmd == "say":                              # 0.50.0: say [--dry] [--] TEXT...
-        rest, dry = argv[2:], False
-        if rest and rest[0] == "--dry":
-            dry, rest = True, rest[1:]
+    if cmd in ("template-check", "template-test"):   # 0.51.0: [--] TEXT (several lines: one template each)
+        rest = argv[2:]
         if rest and rest[0] == "--":
             rest = rest[1:]
-        return cmd_say(" ".join(rest), dry=dry)
+        text = " ".join(rest)
+        return cmd_template_check(text) if cmd == "template-check" else cmd_template_test(text or None)
+    if cmd == "template-tags":
+        for name, words in TAG_HELP:
+            print("  {%s}%s%s" % (name, " " * max(1, 18 - len(name)), words))
+        print("  [ ... ]             a part left out when one of its tags is empty: [{from} → {to}]")
+        print("  {tag|cap}           with a capital letter; {tag|a} with English's a or an")
+        return 0
+    if cmd == "langs":
+        print(" ".join(post_lang.offered()))
+        return 0
     if cmd == "summary-when":                     # 0.48.0: for `zenithboard social summary`
         import social_week
         c, now = cfg(), time.time()

@@ -89,7 +89,8 @@ The dynamic-DNS **token is not stored here.** It is asked for interactively and 
 | `SOCIAL_WEEKLY_AT` · `SOCIAL_WEEKLY_PARTS` | `sun 19:00` · `1,2,3,4` | `zenithboard social summary weekly at …` · `parts …` | Its day and time on the Pi's clock, and its posts (0.38.0) |
 | `SOCIAL_DAILY` · `SOCIAL_DAILY_AT` · `SOCIAL_DAILY_PARTS` | `0` · `21:00` · `1` | `zenithboard social summary daily …` | The summary of the last 24 hours (0.38.0) |
 | `SOCIAL_MONTHLY` · `SOCIAL_MONTHLY_AT` · `SOCIAL_MONTHLY_PARTS` | `0` · `1 09:00` · `1,2,3,4` | `zenithboard social summary monthly …` | The summary of the last 30 days, on a day of the month 1 to 28 (0.38.0) |
-| `SOCIAL_SENTENCE` | `factual` | `zenithboard social sentence LIST` | The words of a post: `factual`, `story`, `board`, `spotter`, `lookup`, several (`story,lookup`) or `random` (0.29.0) |
+| `SOCIAL_SENTENCE` | `factual` | `zenithboard social sentence LIST` | The words of a post: `factual`, `story`, `board`, `spotter`, `lookup`, `custom` (your own templates, 0.51.0), several (`story,lookup`) or `random` (0.29.0) |
+| `SOCIAL_LANG` | `en` | `zenithboard social lang CODE` | The posts' language (0.51.0): every word of the aircraft posts and the summaries, numbers and dates as that language writes them; the pictures keep English |
 | `SOCIAL_PHOTOLINK` | `0` | `zenithboard social photolink on\|off` | `1`: a last line linking to the aircraft's Planespotters photo page, with the photographer's name (0.25.0) |
 | `SOCIAL_UNITS` | empty | `zenithboard social units metric\|imperial\|wall` | The posts' units, picture and text; empty = the wall's `UNITS` (0.24.3) |
 | `SOCIAL_THEME` | empty | `zenithboard social colour NAME\|wall\|rotate` | The picture's colour: `amber`, `green`, `red`, `white`, `turquoise`; empty = the wall's `THEME`; `rotate` = the colours in turn. `blue` (taken out in 0.23.0) gives the wall's colour |

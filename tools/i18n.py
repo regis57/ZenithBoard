@@ -20,7 +20,9 @@ The English text is the key. This tool finds every key in the pages' own files, 
 
 Pages: console (console.js, console.html, the action labels and the answers of console_actions.py and console.py),
 stats (stats.js, stats.html, the period names the wall's server sends), graphs (graphs1090's page). i18n.js's own
-words (the language menu) belong to all three.
+words (the language menu) belong to all three. 0.51.0: posts, the Bluesky posts' words (social.py, social_week.py,
+social_card.py: each L.t("..."), L.tn(n, "one", "other") and N_("...") of the posts' language, post_lang.py), templates
+with {tags} and [parts left out when a tag inside is empty], kept balanced by the check.
 """
 import ast
 import csv
@@ -43,12 +45,13 @@ PAGES = {
                 "flightinfo/console_actions.py", "flightinfo/console.py"],
     "stats": ["flightinfo/static/i18n.js", "flightinfo/static/stats.html", "flightinfo/static/stats.js", "flightinfo/server.py"],
     "graphs": ["flightinfo/static/i18n.js", "tools/graphs1090-look/zenithboard.js"],
+    "posts": ["flightinfo/social.py", "flightinfo/social_week.py", "flightinfo/social_card.py"],
 }
 
 JS_STR = r'"((?:[^"\\\n]|\\.)*)"'
 JS_T = re.compile(r'(?<![\w.$])t\(\s*(?:[\w.$\[\]"]+\s*\|\|\s*)?' + JS_STR)
 JS_TN = re.compile(r'(?<![\w.$])tn\(\s*[^"]+?,\s*' + JS_STR + r',\s*' + JS_STR)
-PLACEHOLDER = re.compile(r"\{(\w+)\}")
+PLACEHOLDER = re.compile(r"\{(\w+)(?:\|\w+)*\}")       # a post's {what|a|cap} is the tag what
 TAG = re.compile(r"</?(\w+)>")
 
 
@@ -148,6 +151,8 @@ def keys_of_file(rel):
         return [(k, None, "%s:%d" % (os.path.basename(rel), ln)) for k, ln in p.keys]
     tree = ast.parse(src)
     base = os.path.basename(rel)
+    if base in ("social.py", "social_week.py", "social_card.py"):
+        return post_keys(tree, base)
     if base == "console_actions.py":            # the sections' and the actions' names, shown by the console
         for node in ast.walk(tree):
             if isinstance(node, ast.Assign) and getattr(node.targets[0], "id", "") == "SECTIONS":
@@ -173,6 +178,45 @@ def keys_of_file(rel):
                 out.append((node.value.value, None, "%s:%d" % (base, node.lineno)))
         out.sort(key=lambda k: int(k[2].split(":")[1]))
     return out
+
+
+def post_keys(tree, base):
+    """The posts' words (0.51.0): L.t("key"), L.tn(n, "one", "other"), N_("key"), and a pair (N_("one"), N_("other")),
+    in the order of the file."""
+    def const(node):
+        return node.value if isinstance(node, ast.Constant) and isinstance(node.value, str) else None
+
+    def is_n(node):
+        f = getattr(node, "func", None)
+        return isinstance(node, ast.Call) and (getattr(f, "id", None) == "N_" or getattr(f, "attr", None) == "N_")
+    out, pairs = [], set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Tuple) and len(node.elts) == 2 and all(is_n(e) and e.args and const(e.args[0]) for e in node.elts):
+            one, other = const(node.elts[0].args[0]), const(node.elts[1].args[0])
+            out.append((other, one, "%s:%d" % (base, node.lineno), node.lineno, node.col_offset))
+            pairs.update(id(e) for e in node.elts)
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call) or id(node) in pairs:
+            continue
+        f = node.func
+        if is_n(node) and node.args and const(node.args[0]):
+            out.append((const(node.args[0]), None, "%s:%d" % (base, node.lineno), node.lineno, node.col_offset))
+        elif isinstance(f, ast.Attribute) and f.attr == "t" and node.args and const(node.args[0]):
+            out.append((const(node.args[0]), None, "%s:%d" % (base, node.lineno), node.lineno, node.col_offset))
+        elif isinstance(f, ast.Attribute) and f.attr == "tn" and len(node.args) >= 3 and const(node.args[1]) and const(node.args[2]):
+            out.append((const(node.args[2]), const(node.args[1]), "%s:%d" % (base, node.lineno), node.lineno, node.col_offset))
+    out.sort(key=lambda k: (k[3], k[4]))
+    return [k[:3] for k in out]
+
+
+def brackets_ok(s):
+    """A post template's [parts]: closed, none inside another (as post_lang.check_template)."""
+    depth = 0
+    for ch in s:
+        depth += (ch == "[") - (ch == "]")
+        if depth not in (0, 1):
+            return False
+    return depth == 0
 
 
 def page_keys(page):
@@ -243,6 +287,8 @@ def problems(lang):
                     ok = got == want
                 if not ok:
                     out.append((page, "shape", k, "%r has %s / %s, the English %s / %s" % (f, got[0], got[1], want[0], want[1])))
+                if page == "posts" and not brackets_ok(f):
+                    out.append((page, "shape", k, "%r: a [part] left open, or one inside another" % f))
         for k in cat:
             if k not in known:
                 out.append((page, "left over", k, ""))

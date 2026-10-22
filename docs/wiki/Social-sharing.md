@@ -109,36 +109,86 @@ zenithboard logs social
 
 Several shapes, comma-separated (`story,spotter,lookup`), or `random`: one is drawn at each post. The reason the post was made comes first when the words do not already say it: `Rare visitor:`, `Heavy overhead:`, `Military traffic:`, `Helicopter:`. A range record keeps the factual words, which say "range record for 30 days" and where it was seen from rather than "overhead". A shape that lacks what it needs (an aircraft with neither airline nor type) or would pass 220 characters gives the factual text, which can be cut cleanly at Bluesky's 300. No shape ever says the distance or the direction from the receiver: with the area, they would place it. The hashtags, the map's credit and the photo link follow as before.
 
-## A written post (0.50.0)
+## The posts' language (0.51.0)
 
-Your own words, posted as you typed them: no picture, no map, nothing read from the receiver. The automatic posts
-carry on as they are.
+English until you choose another: `sudo zenithboard social lang fr` (menu *Social sharing → 11*, or the console's
+*Sharing → Language of the posts*). Every language of the web pages is offered (Swahili once a native speaker has
+reviewed it). It covers every word of the aircraft posts, in all five shapes and your own templates, and the summaries'
+four texts. The alt texts come along too. The numbers, the dates, the weekdays and the country names are written as
+that language writes them (Unicode's CLDR data): *11 280 m* and *12–18 octobre* in French, *11.280 m* and
+*12.–18. Oktober* in German, *10月12日～10月18日* in Japanese. Each post also tells Bluesky its language, for its
+language filters. On RYR5ZK, Brussels to Pisa, above Ennery, in French:
+
+> Vol Ryanair #RYR5ZK · Boeing 737-800 · Brussels → Pisa · altitude 10 570 m · au-dessus d'Ennery
+>
+> Un Boeing 737-800 de Ryanair en route de Brussels vers Pisa vient de traverser le ciel au-dessus d'Ennery, à 10 570 m d'altitude. #RYR5ZK
+>
+> La semaine au-dessus d'Ennery, 12–18 octobre : 3 587 avions, 58,7 millions de messages.
+
+What stays as it is:
+
+* **The pictures** keep their English labels for now, both the board and the summary cards. Each script needs its letters
+  in the 5 × 7 dot font, and the cards need a font for Chinese, Japanese and Korean
+  ([Translation plan](Translation-plan), steps 4 and 5).
+* **City and airport names** come as the route database spells them (*Brussels*, *Munich*).
+* **The hashtags** are yours, as set.
+* **The map's credit line**, as its providers word it.
+
+A place name given alone gets the language's own word (*au-dessus de*, *über*). A phrase you write yourself is kept as
+you typed it: start it with a small letter (*près de Metz*). Every word of the posts has its line on the language's
+[review sheet](Translating), under *posts*.
+
+## Your own templates (0.51.0)
+
+Posts in your words, in your language, as a sixth style beside *factual*, *story*, *board*, *spotter* and *lookup*. Tick
+*your own* among the words of a post (`sudo zenithboard social sentence factual,custom`); with several styles ticked,
+one is drawn at each post, and with several templates, one of them is. You write a template once, and ZenithBoard fills
+in its tags for each aircraft:
 
 ```
-sudo zenithboard social say --dry 'Le bilan quotidien part maintenant à 08:45 #avgeek'   # shows it, posts nothing
-sudo zenithboard social say 'Le bilan quotidien part maintenant à 08:45 #avgeek'
+{flag} {airline} {flight}[, {from} → {to}] · {type} at {altitude}. {why}
 ```
 
-Or the menu, *Social sharing → 11 Write a post*: the post is shown first and goes when you type `yes`. Or the web
-console, *Sharing → Write a post*: a box with a counter, *Preview (posts nothing)*, and *Post it*, whose confirmation
-shows the words again before they go. The draft stays while you move around the page.
+> 🇮🇪 Ryanair FR5ZK, Brussels (CRL) → Pisa (PSA) · Boeing 737-800 at 10 570 m. A rare visitor.
 
-![The console's Write a post card: the text, its counter, and the Pi's preview (a preview against a stand-in, nothing posted)](https://raw.githubusercontent.com/regis57/ZenithBoard/main/docs/images/console-write-post.png)
+A part between `[` and `]` is left out when a tag inside it is empty: an aircraft with no route loses the whole
+`[, {from} → {to}]`. `{tag|cap}` gives a capital first letter.
 
-* **300 characters at most**, Bluesky's limit. ZenithBoard counts characters, never fewer than Bluesky's own count
-  (it counts what the eye sees as one letter, an emoji with its parts included), so a post it accepts always fits.
-* **Hashtags and links are clickable**, found the way the Bluesky app finds them. A hashtag starts after a space or at
-  the start, keeps its accents (`#Trémery`), and leaves out a full stop or an exclamation mark that follows it; digits
-  alone (`#2026`) are not one. A link is one written with `http://` or `https://`. `@names` stay plain text, because
-  a mention needs the account looked up.
-* **No language is declared** with it, so you write in the language you like. The automatic posts are in English.
-* **Quote the text in the terminal**: unquoted, the shell takes everything from a `#` on for a comment.
-* **To take one back**, delete it in the Bluesky app. ZenithBoard deletes nothing on Bluesky.
+| Tag | What it gives |
+|---|---|
+| `{flight}` | The flight number when it is known (*FR4512*), else the callsign |
+| `{callsign}` | The callsign as the aircraft sends it (*RYR4512*); `#{callsign}` makes it a hashtag |
+| `{airline}` · `{airline_country}` · `{flag}` | The airline, the country it is based in, that country's flag as an emoji (else the country of registration's) |
+| `{registration}` · `{reg_country}` | The registration, the country it is registered in |
+| `{type}` · `{type_code}` | Make and model (*Boeing 737-800*), the ICAO type code (*B738*) |
+| `{category}` | Airliner, cargo aircraft, business jet, helicopter, military aircraft, light aircraft, glider, balloon |
+| `{from}` · `{to}` · `{from_code}` · `{to_code}` | Departure and arrival, city and code (*Dublin (DUB)*), or the codes alone |
+| `{altitude}` · `{speed}` · `{climb}` · `{heading}` | In the posts' units; climbing, descending or level; where it heads (*south-east*) |
+| `{squawk}` | Its transponder code |
+| `{why}` | Why it is posted: *A rare visitor.*, *Military traffic.* … empty for the rule *all* |
+| `{area}` | Your place name, as the posts say it (*above Trémery*) |
+| `{time}` · `{date}` | When, on the Pi's clock |
+| `{photo}` · `{tracker}` | Its Planespotters page (when photo links are on), its page on ADSB Exchange's map |
+| `{hashtags}` | Your hashtags; a template that places them gets them once, not again at the end |
 
-It is the one post the web console can send (0.39.0 to 0.49.1 sent none, on purpose). An aircraft or a summary
-posted at once still stays in the terminal (`social post`, `social summary … post`).
+**No tag gives a distance, a direction from the antenna or a place near it.** The templates cannot give the receiver's
+position away any more than the built-in words. A tag the list does not have is refused when the template is saved,
+and so is a `[` left open. So is a template that would pass 260 characters filled with long names: Bluesky takes 300,
+and the map's credit needs the rest. A template too long for one aircraft gives the factual words for that one.
 
-## The words, from the console (0.50.0)
+```
+sudo zenithboard social template                     # yours, numbered, and what is wrong with any
+sudo zenithboard social template add '{airline} {flight}[, {from} → {to}] at {altitude}. {why}'
+sudo zenithboard social template test                # each filled on an aircraft overhead now, or a sample; posts nothing
+sudo zenithboard social template del 2
+sudo zenithboard social template tags                # the tags, as above
+```
+
+In the menu: *Social sharing → 12 Your own templates*. In the console: *Sharing → Your own templates*, one per line,
+the tags a click away, *Try (posts nothing)* and *Save*. They live in `/etc/zenithboard/social-templates.txt`, one per
+line, no secret in it; a change keeps the file before it as `.bak`.
+
+## The words, from the console (0.50.0, 0.51.0)
 
 The answers of `social words` are fields in the console's *Sharing* tab, and commands of their own:
 
@@ -150,6 +200,8 @@ The answers of `social words` are fields in the console's *Sharing* tab, and com
 | Least time between posts | `sudo zenithboard social gap 0` |
 | Town names on the maps | `sudo zenithboard social places on` |
 | Hashtags | `sudo zenithboard social hashtags ADSB avgeek ZenithBoard` (or `none`) |
+| Language of the posts (0.51.0) | `sudo zenithboard social lang fr` (or `en`) |
+| Your own templates (0.51.0) | `sudo zenithboard social template add '…'`, `del N`, `test` |
 
 A place name is your words: letters, digits, spaces and `' - . ,`, 40 characters at most. A name alone reads
 *above Trémery*; words with their own preposition (*near Metz*, *over the Moselle*) are kept as typed. The

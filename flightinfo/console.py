@@ -88,7 +88,7 @@ SHOWN_KEYS = {
     "SOCIAL": "0", "SOCIAL_STYLE": "dotmap", "SOCIAL_THEME": "", "SOCIAL_UNITS": "", "SOCIAL_MAP": "normal",
     "SOCIAL_PHOTOLINK": "0", "SOCIAL_SENTENCE": "factual", "SOCIAL_GAP_MIN": "0", "SOCIAL_AREA": "",
     "SOCIAL_RADIUS_KM": "15", "SOCIAL_RULES": "rare,military,helicopter,heavy,farthest",
-    "SOCIAL_HASHTAGS": "#ADSB #avgeek #ZenithBoard", "SOCIAL_PLACES": "0",
+    "SOCIAL_HASHTAGS": "#ADSB #avgeek #ZenithBoard", "SOCIAL_PLACES": "0", "SOCIAL_LANG": "",
     "SOCIAL_DAILY": "0", "SOCIAL_DAILY_AT": "21:00", "SOCIAL_DAILY_PARTS": "1",
     "SOCIAL_WEEKLY": "0", "SOCIAL_WEEKLY_AT": "sun 19:00", "SOCIAL_WEEKLY_PARTS": "1,2,3,4",
     "SOCIAL_MONTHLY": "0", "SOCIAL_MONTHLY_AT": "1 09:00", "SOCIAL_MONTHLY_PARTS": "1,2,3,4",
@@ -454,6 +454,18 @@ class Approvals(object):
             return v["state"], v
 
 
+TEMPLATES_FILE = os.environ.get("ZENITHBOARD_SOCIAL_TEMPLATES") or "/etc/zenithboard/social-templates.txt"
+
+
+def post_templates():
+    """0.51.0: the owner's own post templates, as the file has them (his words, no secret), for Sharing to edit."""
+    try:
+        with open(TEMPLATES_FILE, encoding="utf-8") as fh:
+            return fh.read(4096)
+    except OSError:
+        return ""
+
+
 def phone_signin(cfg):
     return str(cfg.get("CONSOLE_PHONE_SIGNIN", "0")).lower() in ("1", "on", "yes", "true")
 
@@ -730,6 +742,7 @@ class Console(object):
             snap = _read_json(os.path.join(OUT_DIR, "state.json")) or {}
             shown = {k: str(req.cfg.get(k, d)) for k, d in SHOWN_KEYS.items()}
             return Reply(200, {"cfg": shown, "facts": snap.get("facts") or {}, "facts_at": snap.get("at"), "backup": backup_info(),
+                               "templates": post_templates(),
                                "catalog": actions.catalog(), "sections": actions.SECTIONS, "now": int(now())})
         if api == "job":
             st = job_status(req.q("id"), int(req.q("from", "0") or 0) if req.q("from", "0").isdigit() else 0)

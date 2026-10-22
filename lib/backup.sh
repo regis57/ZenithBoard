@@ -11,6 +11,7 @@
 #   features.env        each feature on or off (some live outside config.env: the watchdog, the kept logs)
 #   stats/              /var/lib/zenithboard/stats, the 30 days behind /stats and the summaries
 #   social/state.json   what was posted and when the last summaries went out (no double post after a move)
+#   social/templates.txt  the owner's own post templates (0.51.0), his words
 #   graphs-xml.tar.gz   graphs1090's history, dumped to XML by its own rrd-dump.sh: readable on another architecture
 #   journal/ID/         the logs kept after a restart, when they are kept
 #   feeders.env         the networks' identities: ADSB Exchange's UUID, FlightAware's feeder ID, the FR24 sharing key
@@ -97,6 +98,7 @@ backup_make() {
   for f in $BK_FEATURES; do printf '%s=%s\n' "$f" "$(bk_feature_state "$f")"; done > "$b/features.env"
   [ -d "$STATS_DIR" ] && cp -a "$STATS_DIR" "$b/stats"
   if [ -f "$SOCIAL_DIR/state.json" ]; then mkdir -p "$b/social"; cp -p "$SOCIAL_DIR/state.json" "$b/social/"; fi
+  if [ -s "$SOCIAL_TEMPLATES" ]; then mkdir -p "$b/social"; cp -p "$SOCIAL_TEMPLATES" "$b/social/templates.txt"; fi
   # graphs1090's own way, from its README: collectd stopped so the day kept in memory is written to the card first
   if [ -d "$BK_RRD" ] && [ -x "$BK_GRAPHS_TOOLS/rrd-dump.sh" ]; then
     bk_svc stop collectd
@@ -332,6 +334,7 @@ backup_restore() {
   [ ! -f "$ZB_CONFIG" ] || cp -p "$ZB_CONFIG" "$before/config.env"
   [ ! -d "$STATS_DIR" ] || cp -a "$STATS_DIR" "$before/stats"
   [ ! -f "$SOCIAL_DIR/state.json" ] || cp -p "$SOCIAL_DIR/state.json" "$before/social-state.json"
+  [ ! -f "$SOCIAL_TEMPLATES" ] || cp -p "$SOCIAL_TEMPLATES" "$before/social-templates.txt"
 
   echo "1. Settings"
   [ ! -f "$b/settings.env" ] || settings_import "$b/settings.env" | sed 's/^/  /'
@@ -359,6 +362,10 @@ backup_restore() {
     chown -R "$ZB_USER:$ZB_USER" "$SOCIAL_DIR" 2>/dev/null || true
     bk_svc try-restart zenithboard-social
     echo "  What was posted, and when the summaries went out: back (nothing is posted twice)"
+  fi
+  if [ -f "$b/social/templates.txt" ]; then
+    install -d -m 755 "$(dirname "$SOCIAL_TEMPLATES")"; install -m 644 "$b/social/templates.txt" "$SOCIAL_TEMPLATES"
+    echo "  Your own post templates: $(grep -c . "$SOCIAL_TEMPLATES" || true), back"
   fi
   echo "3. Logs"
   mid=$(tr -d ' \n' < "$BK_MACHINE_ID" 2>/dev/null)

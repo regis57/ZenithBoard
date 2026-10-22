@@ -39,6 +39,7 @@ echo "old boot" > "$t/journal/0123456789abcdef0123456789abcdef/system.journal"
 printf '%s\n1761000000,10,100,5,6\n1761000600,11,110,6,7\n' "$STATS_HEADER" > "$t/data/stats/stats.csv"
 echo "3C6444" > "$t/data/stats/seen-2026-10-20"; echo "x" > "$t/data/stats/fleet-2026-10-20"
 echo '{"posted": ["3c6444"], "summary_daily": "2026-10-21"}' > "$t/data/social/state.json"
+mkdir -p "$t/etc"; echo '{airline} {flight}[, {from} → {to}]' > "$t/etc/social-templates.txt"      # 0.51.0
 echo "c0ffee00-1234-4abc-8def-0123456789ab" > "$t/adsbx/adsbx-uuid"
 printf 'receiver="beast-tcp"\nfr24key="ABCDEF123456"\n' > "$t/fr24feed.ini"
 printf '{\n  "sharecode": "5X2X2X2X9XaX3",\n  "latitude": "49.2"\n}\n' > "$t/pfclient-config.json"
@@ -51,7 +52,7 @@ ln -s "$t/pw" "$t/bin/piaware-config"
 out=$(cd "$t" && backup_make "$t/full.tar.gz")
 check "make: writes the file, owner-only"            '[ -f "$t/full.tar.gz" ] && [ "$(stat -c %a "$t/full.tar.gz")" = 600 ] && echo "$out" | grep -q "keep it to yourself"'
 m=$(members "$t/full.tar.gz")
-check "make: every part is in it"                    'for x in MANIFEST settings.env features.env feeders.env pfclient-config.json graphs-xml.tar.gz stats/stats.csv stats/seen-2026-10-20 social/state.json journal/0123456789abcdef0123456789abcdef/system.journal; do echo "$m" | grep -qx "$x" || exit 1; done'
+check "make: every part is in it"                    'for x in MANIFEST settings.env features.env feeders.env pfclient-config.json graphs-xml.tar.gz stats/stats.csv stats/seen-2026-10-20 social/state.json social/templates.txt journal/0123456789abcdef0123456789abcdef/system.journal; do echo "$m" | grep -qx "$x" || exit 1; done'
 mkdir -p "$t/x"; tar -C "$t/x" -xzf "$t/full.tar.gz"
 check "make: the settings without a secret"          'grep -q "^RADIUS=15$" "$t/x/zb/settings.env" && ! grep -q "never-exported" "$t/x/zb/settings.env"'
 check "make: what is on, even outside config.env"    'grep -qx "stats=on" "$t/x/zb/features.env" && grep -qx "watchdog=on" "$t/x/zb/features.env" && grep -qx "keeplogs=on" "$t/x/zb/features.env" && grep -qx "netwatch=on" "$t/x/zb/features.env" && grep -qx "social=off" "$t/x/zb/features.env"'
@@ -74,6 +75,7 @@ check "refused: a name a backup does not hold"       '! backup_show "$t/name.tar
 check "refused: not a tar at all"                    'echo nope > "$t/no.tar.gz"; ! backup_show "$t/no.tar.gz" >/dev/null 2>&1'
 
 # ---- the new card: other machine id, no data, no network installed yet, a few hours of its own statistics
+rm -f "$t/etc/social-templates.txt"
 rm -rf "$t/data" "$t/adsbx" "$t/fr24feed.ini" "$t/pfclient-config.json" "$t/sysconf/watchdog.conf" "$t/journald/50-persistent.conf" "$t/g/var/lib/collectd" "$t/g/usr/share/graphs1090/html" "$t/bin/piaware-config"
 echo fedcba9876543210fedcba9876543210 > "$t/machine-id"
 : > "$ZENITHBOARD_ETC/config.env"; cfg_set RADIUS 5; cfg_set STATS 0; cfg_set NETWATCH 0
@@ -86,6 +88,7 @@ check "restore: the position applied everywhere, not only imported" '[ "$(cat "$
 check "restore: the settings"                        '[ "$(cfg_get RADIUS)" = 15 ] && [ "$(cfg_get UNITS)" = metric ]'
 check "restore: statistics back, both cards' samples" '[ -f "$t/data/stats/seen-2026-10-20" ] && [ "$(grep -c "^17" "$t/data/stats/stats.csv")" = 3 ] && [ "$(head -1 "$t/data/stats/stats.csv")" = "$STATS_HEADER" ]'
 check "restore: what was posted (no double post)"    'grep -q 3c6444 "$t/data/social/state.json"'
+check "restore: the owner's post templates (0.51.0)"  'grep -q "{airline} {flight}" "$t/etc/social-templates.txt"'
 check "restore: the old card logs beside the new"   '[ -f "$t/journal/0123456789abcdef0123456789abcdef/system.journal" ] && echo "$out" | grep -q "journalctl -m"'
 check "restore: ADSB Exchange's UUID written now"     '[ "$(cat "$t/adsbx/adsbx-uuid")" = c0ffee00-1234-4abc-8def-0123456789ab ]'
 check "restore: networks not installed wait, root only" '[ "$(cat "$t/data/restore-pending/piaware-feeder-id")" = 11111111-2222-3333-4444-555555555555 ] && [ "$(cat "$t/data/restore-pending/fr24key")" = ABCDEF123456 ] && [ -f "$t/data/restore-pending/pfclient-config.json" ] && [ "$(stat -c %a "$t/data/restore-pending")" = 700 ] && [ "$(stat -c %a "$t/data/restore-pending/fr24key")" = 600 ]'

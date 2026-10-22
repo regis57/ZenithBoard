@@ -45,26 +45,33 @@ class ActionsTest(unittest.TestCase):
                      "config-set", "password", "post", "ddns set", "wifi on", "wifi off"):
             self.assertFalse([a for a in argvs if word in a.split() or a.startswith(word)], word)
 
-    def test_the_one_post_from_here_is_a_written_one_after_a_confirmation(self):
-        # 0.50.0, the owner's word (22 October 2026): his own words, text only; an aircraft or a summary at once stays
-        # in the terminal (no "post" above)
-        posting = [n for n, s in actions.ACTIONS.items() if s[2] and s[2][:2] == ["social", "say"]]
-        self.assertEqual(sorted(posting), ["social-say", "social-say-test"])
-        self.assertIn("ask", actions.flags("social-say"))
-        self.assertIn("--dry", actions.ACTIONS["social-say-test"][2])
-        self.assertIn("read", actions.flags("social-say-test"))
+    def test_nothing_posts_from_here(self):
+        # 0.51.0: the written post of 0.50.0 taken out at the owner's word; posting stays in the terminal
+        self.assertFalse([n for n, sp in actions.ACTIONS.items() if sp[2] and ("say" in sp[2] or "post" in sp[2])])
 
-    def test_a_written_post_is_one_argument_lines_kept(self):
-        argv = actions.build("social-say", {"text": "Bonjour\r\nle ciel de Trémery #avgeek; $(id) `id`"})
-        self.assertEqual(argv, ["social", "say", "--", "Bonjour\nle ciel de Trémery #avgeek; $(id) `id`"],
-                         "never through a shell: the text is one argument, as typed")
-        self.assertEqual(actions.build("social-say", {"text": "--dry"})[2:], ["--", "--dry"], "after --: text, not an option")
-        for bad in ("", "   ", "x" * 301, "nul\x00", "esc\x1b[2J", "lone \ud800", "private \ue000"):
-            with self.assertRaises(actions.Refused, msg=repr(bad)):
-                actions.build("social-say", {"text": bad})
-        self.assertEqual(actions.checked("social-say", {"text": "  hi\r\nthere" + " " * 4000}), {"text": "hi\nthere"},
-                         "the job file keeps the checked text: padding cannot make it too long for the helper")
-        self.assertEqual(actions.catalog()["social-say"]["params"][0]["max"], 300)
+    def test_the_posts_language_and_the_owners_templates(self):
+        # 0.51.0
+        self.assertEqual(actions.build("social-lang", {"value": "pt-BR"}), ["social", "lang", "pt-BR"])
+        self.assertEqual(actions.build("social-sentence", {"value": "factual,custom"}), ["social", "sentence", "factual,custom"])
+        text = "{flag} {airline} {flight}[, {from} → {to}]\r\n{type} at {altitude}; $(id) `id`"
+        self.assertEqual(actions.build("social-templates", {"text": text}),
+                         ["social", "template", "set", "--", "{flag} {airline} {flight}[, {from} → {to}]\n{type} at {altitude}; $(id) `id`"],
+                         "one argument, lines kept, never through a shell")
+        self.assertEqual(actions.build("social-template-try", {"text": "{airline}"})[:4], ["social", "template", "test", "--"])
+        self.assertIn("read", actions.flags("social-template-try"))
+        for name, params in (("social-lang", {"value": "xx"}), ("social-templates", {"text": "x" * 1501}),
+                             ("social-templates", {"text": "a\x00"}), ("social-sentence", {"value": "custom,mine"})):
+            with self.assertRaises(actions.Refused, msg=(name, params)):
+                actions.build(name, params)
+
+    def test_the_page_reads_the_templates_as_they_are(self):
+        d = tempfile.mkdtemp(); self.addCleanup(shutil.rmtree, d, True)
+        self.addCleanup(setattr, console, "TEMPLATES_FILE", console.TEMPLATES_FILE)
+        console.TEMPLATES_FILE = os.path.join(d, "social-templates.txt")
+        self.assertEqual(console.post_templates(), "", "none yet")
+        with open(console.TEMPLATES_FILE, "w", encoding="utf-8") as fh:
+            fh.write("{airline} {flight}\n" + "x" * 5000)
+        self.assertEqual(len(console.post_templates()), 4096, "4 KB at most")
 
     def test_the_words_of_the_posts(self):
         self.assertEqual(actions.build("social-area", {"value": "L\u2019H\u00f4pital"}), ["social", "area", "L\u2019H\u00f4pital"])
@@ -426,17 +433,6 @@ class RunnerTest(TempDirs):
         with open(os.path.join(self.dir, "out", "state.json")) as fh:
             self.assertEqual(json.load(fh)["facts"], {"version": "0.39.0", "temp_c": "51"})
         self.assertEqual(console.job_status(j, st["next"])["log"], "", "read from where the page left off")
-
-    def test_a_written_post_reaches_the_command_whole_and_the_journal_on_one_line(self):
-        j = self.job("social-say", {"text": "Line one\nline two #avgeek"})
-        self.run_helper()
-        st = console.job_status(j)
-        self.assertIn("ran: social say -- Line one\nline two #avgeek", st["log"], "the text reaches the command, its line kept (one argument: ActionsTest)")
-        self.assertTrue(st["log"].startswith("$ zenithboard social say -- Line one line two #avgeek\n"))
-        with open(os.path.join(self.dir, "out", "journal.log")) as fh:
-            lines = fh.read().splitlines()
-        self.assertEqual(len(lines), 1)
-        self.assertIn("social-say", lines[0])
 
     def test_a_failing_command_and_a_read_are_told_apart(self):
         j = self.job("health", {})

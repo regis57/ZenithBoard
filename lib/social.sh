@@ -16,6 +16,8 @@ SOCIAL_SECRETS="${ZENITHBOARD_SOCIAL_SECRETS:-${ZB_ETC:-/etc/zenithboard}/social
 SOCIAL_DIR="${ZENITHBOARD_SOCIAL_DIR:-/var/lib/zenithboard/social}"
 SOCIAL_UNIT=zenithboard-social
 SOCIAL_UNIT_DIR="${ZB_SYSTEMD_DIR:-/etc/systemd/system}"
+# 0.51.0: the owner's own post templates, one per line (no secret in it; the service reads it, root writes it)
+SOCIAL_TEMPLATES="${ZENITHBOARD_SOCIAL_TEMPLATES:-${ZB_ETC:-/etc/zenithboard}/social-templates.txt}"
 SOCIAL_PY="$ZB_HOME/flightinfo/social.py"
 
 or_text() { if [ -n "$1" ]; then printf '%s' "$1"; else printf '%s' "$2"; fi; }   # a value, or what to say when it is empty
@@ -248,13 +250,60 @@ social_set_rules() {    # social_set_rules [all|LIST]: what is worth a post, as 
   echo "What is worth a post: $(IFS=,; echo "${out[*]}"). The service takes it at its next look."
 }
 
-# ---- 0.50.0: a written post, the owner's own words, text only: no picture, no map, nothing from the receiver
-social_say() {          # social_say [--dry] [--] TEXT...
-  local a=(say)
-  if [ "${1:-}" = --dry ]; then a+=(--dry); shift; fi
-  if [ "${1:-}" = -- ]; then shift; fi
-  a+=(-- "$*")
-  if [ "$(id -u)" -ne 0 ]; then python3 "$SOCIAL_PY" "${a[@]}"; else sudo -u "$ZB_USER" python3 "$SOCIAL_PY" "${a[@]}"; fi
+# ---- 0.51.0: the posts' language (SOCIAL_LANG), English until it is set: every post, the summaries' words included
+social_py() { if [ "$(id -u)" -eq 0 ] && id "$ZB_USER" >/dev/null 2>&1 && [ "$ZB_USER" != root ]; then runuser -u "$ZB_USER" -- python3 "$SOCIAL_PY" "$@"; else python3 "$SOCIAL_PY" "$@"; fi; }
+social_set_lang() {     # social_set_lang [CODE]
+  local langs; langs=$(ZENITHBOARD_SOCIAL_TEMPLATES="$SOCIAL_TEMPLATES" python3 "$SOCIAL_PY" langs 2>/dev/null)
+  if [ -z "${1:-}" ]; then
+    echo "Language of the posts: $(cfg_get SOCIAL_LANG en)"
+    echo "Change:  sudo zenithboard social lang CODE   (one of: ${langs:-en})"; return 0
+  fi
+  case " ${langs:-en} " in *" $1 "*) ;; *) echo "Language of the posts: one of  ${langs:-en}" >&2; return 1 ;; esac
+  cfg_set SOCIAL_LANG "$1"
+  echo "Language of the posts: $1. The aircraft posts and the summaries' words from the next post; the pictures keep English. See one:  sudo zenithboard social test"
+}
+
+# ---- 0.51.0: the owner's own templates, the "custom" style: tags ZenithBoard fills in, [parts] left out when empty
+social_template() {     # social_template [list|tags|add TEXT|del N|set TEXT|test [TEXT]]
+  local what=${1:-list} n tmp
+  [ $# -eq 0 ] || shift
+  [ "${1:-}" != -- ] || shift
+  case "$what" in
+    list|"")
+      if [ ! -s "$SOCIAL_TEMPLATES" ]; then
+        echo "No template yet. Add one:  sudo zenithboard social template add '{airline} {flight}[, {from} → {to}] at {altitude}. {why}'"
+        echo "The tags:  zenithboard social template tags"; return 0
+      fi
+      echo "Your templates ($SOCIAL_TEMPLATES), one drawn at each post when \"custom\" is among the words of a post ($(cfg_get SOCIAL_SENTENCE factual)):"
+      n=0; while IFS= read -r line; do [ -n "${line// /}" ] || continue; n=$((n + 1)); printf '  %d. %s\n' "$n" "$line"; done < "$SOCIAL_TEMPLATES"
+      ZENITHBOARD_SOCIAL_TEMPLATES="$SOCIAL_TEMPLATES" python3 "$SOCIAL_PY" template-check -- "$(cat "$SOCIAL_TEMPLATES")" | grep -v ' usable\.$' || true
+      echo "Try them:  sudo zenithboard social template test" ;;
+    tags) python3 "$SOCIAL_PY" template-tags ;;
+    add|set)
+      local text="$*"
+      [ -n "${text//[[:space:]]/}" ] || { echo "No template given." >&2; return 1; }
+      if [ "$what" = set ] && [ "$text" = none ]; then text=""; fi
+      if [ -n "$text" ]; then ZENITHBOARD_SOCIAL_TEMPLATES="$SOCIAL_TEMPLATES" python3 "$SOCIAL_PY" template-check -- "$text" || return 1; fi
+      install -d -m 755 "$(dirname "$SOCIAL_TEMPLATES")"
+      [ ! -f "$SOCIAL_TEMPLATES" ] || cp -p "$SOCIAL_TEMPLATES" "$SOCIAL_TEMPLATES.bak"
+      tmp=$(mktemp "$SOCIAL_TEMPLATES.XXXXXX") || return 1
+      { if [ "$what" = add ] && [ -f "$SOCIAL_TEMPLATES" ]; then grep -v '^[[:space:]]*$' "$SOCIAL_TEMPLATES" || true; fi
+        [ -z "$text" ] || printf '%s\n' "$text" | grep -v '^[[:space:]]*$' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//'; } > "$tmp"
+      chmod 644 "$tmp"; mv -f "$tmp" "$SOCIAL_TEMPLATES"
+      echo "Templates: $(grep -c . "$SOCIAL_TEMPLATES" || true). The one before is kept as $SOCIAL_TEMPLATES.bak."
+      case ",$(cfg_get SOCIAL_SENTENCE factual)," in *,custom,*|*,random,*) ;; *) echo "To use them, add custom to the words of a post:  sudo zenithboard social sentence $(cfg_get SOCIAL_SENTENCE factual),custom" ;; esac ;;
+    del)
+      [[ ${1:-} =~ ^[0-9]{1,2}$ ]] && [ -s "$SOCIAL_TEMPLATES" ] || { echo "Which one? The numbers:  zenithboard social template" >&2; return 1; }
+      n=$(grep -c . "$SOCIAL_TEMPLATES" || true)
+      [ "$1" -ge 1 ] && [ "$1" -le "$n" ] || { echo "There are $n template(s)." >&2; return 1; }
+      cp -p "$SOCIAL_TEMPLATES" "$SOCIAL_TEMPLATES.bak"
+      tmp=$(mktemp "$SOCIAL_TEMPLATES.XXXXXX") || return 1
+      grep -v '^[[:space:]]*$' "$SOCIAL_TEMPLATES" | sed "${1}d" > "$tmp" || true
+      chmod 644 "$tmp"; mv -f "$tmp" "$SOCIAL_TEMPLATES"
+      echo "Template $1 deleted; $((n - 1)) left. The file before is kept as $SOCIAL_TEMPLATES.bak." ;;
+    test) ZENITHBOARD_SOCIAL_TEMPLATES="$SOCIAL_TEMPLATES" social_py template-test -- "$*" ;;
+    *) echo "Usage: zenithboard social template [list|tags|add TEXT|del N|set TEXT|test [TEXT]]" >&2; return 1 ;;
+  esac
 }
 
 # ---- the gap (0.20.0): none by default, every crossing posted once; `social gap 30` for half an hour at least
@@ -464,7 +513,7 @@ summary_menu() {
 }
 # 0.29.0: the shape of the post's words: factual (as before), story, board, spotter, lookup; several, comma-separated,
 # or random: one is drawn at each post. Templates filled from the flight's data; never the distance or direction.
-SOCIAL_SENTENCES="factual story board spotter lookup"
+SOCIAL_SENTENCES="factual story board spotter lookup custom"   # custom: the owner's templates (0.51.0)
 social_ticked() { case ",$(cfg_get SOCIAL_SENTENCE factual)," in *",$1,"*|*",random,"*) echo ON ;; *) echo OFF ;; esac; }
 social_set_sentence() {
   local v=${1:-} w ok=1
@@ -616,9 +665,10 @@ social_menu() {
       test "8  Try it: draw the picture and show the text, post nothing" \
       toggle "9  Switch sharing $( [ "$(social_state)" = on ] && echo OFF || echo ON )" \
       post "10 Post now, once" \
-      say "11 Write a post: your own words, text only" \
-      status "12 Status" \
-      remove "13 Remove: account, state and service" \
+      lang "11 Language of the posts: $(cfg_get SOCIAL_LANG en)" \
+      template "12 Your own templates: $(grep -c . "$SOCIAL_TEMPLATES" 2>/dev/null || echo 0)" \
+      status "13 Status" \
+      remove "14 Remove: account, state and service" \
       back "Return to the previous menu") || return 0
     case "$c" in
       setup) social_setup || true ;;
@@ -632,11 +682,32 @@ social_menu() {
           story "A Ryanair Boeing 737-800 bound for Pisa from Brussels has just crossed the sky..." "$(social_ticked story)" \
           board "✈ #RYR5ZK · EI-ENK / Brussels → Pisa / Boeing 737-800 · 10 570 m · 720 km/h" "$(social_ticked board)" \
           spotter "EI-ENK, a Ryanair Boeing 737-800, flying Brussels → Pisa as #RYR5ZK: ..." "$(social_ticked spotter)" \
-          lookup "Look up, Trémery! Ryanair #RYR5ZK is passing 10.6 km overhead..." "$(social_ticked lookup)") || continue
+          lookup "Look up, Trémery! Ryanair #RYR5ZK is passing 10.6 km overhead..." "$(social_ticked lookup)" \
+          custom "Your own templates (menu 12): $(grep -c . "$SOCIAL_TEMPLATES" 2>/dev/null || echo 0)" "$(social_ticked custom)") || continue
         picks=$(printf '%s' "$picks" | tr -d '"' | tr ' ' ',')
         [ -n "$picks" ] || picks=factual
         wt_msg "$(social_set_sentence "$picks")" 8 ;;
       weekly) summary_menu ;;
+      lang)
+        local code
+        code=$(wt_input "The language of the posts, as a code: $(python3 "$SOCIAL_PY" langs 2>/dev/null)
+
+The aircraft posts and the summaries' words; the pictures keep English." "$(cfg_get SOCIAL_LANG en)") || continue
+        wt_msg "$(social_set_lang "$code" 2>&1)" 10 ;;
+      template)
+        local tc tt
+        tc=$(wt_menu "Your own templates: posts in your words, with tags ZenithBoard fills in ({airline}, {from}, {to}, {altitude}...). A [part] is left out when a tag inside it is empty. Used when custom is ticked in 6." \
+          list "1  See them" add "2  Add one" del "3  Delete one" test "4  Try them on an aircraft overhead (posts nothing)" tags "5  The tags" back "Return to the previous menu") || continue
+        case "$tc" in
+          list) clear; social_template list; read -rp "Press Enter to continue..." _ ;;
+          add) tt=$(wt_input "The template, on one line. Example:
+{flag} {airline} {flight}[, {from} → {to}] · {type} at {altitude}. {why}" "") || continue
+               clear; social_template add "$tt"; read -rp "Press Enter to continue..." _ ;;
+          del) tt=$(wt_input "The number of the template to delete (menu 1 shows them):" "") || continue
+               clear; social_template del "$tt"; read -rp "Press Enter to continue..." _ ;;
+          test) clear; social_template test; read -rp "Press Enter to continue..." _ ;;
+          tags) clear; social_template tags; read -rp "Press Enter to continue..." _ ;;
+        esac ;;
       places)
         if [ "$(cfg_get SOCIAL_PLACES 0)" = 1 ]; then
           wt_yesno "Town names come from the region's own list.\n\nGo back to the lists shipped with ZenithBoard (and delete the region's list)?" 10 && social_set_places off >/dev/null
@@ -646,15 +717,6 @@ social_menu() {
       test) clear; social_need_tools && social_prepare_dir && sudo -u "$ZB_USER" python3 "$SOCIAL_PY" test; read -rp "Press Enter to continue..." _ ;;
       toggle) clear; if [ "$(social_state)" = on ]; then social_off; else social_on; fi; read -rp "Press Enter to continue..." _ ;;
       post) clear; social_need_tools && social_prepare_dir && sudo -u "$ZB_USER" python3 "$SOCIAL_PY" post; read -rp "Press Enter to continue..." _ ;;
-      say)
-        local text ok
-        text=$(wt_input "Your words, posted as written under @$(social_account): no picture, no map, nothing from the receiver. 300 characters at most. Hashtags (#avgeek) and links (https://...) become clickable." "") || continue
-        clear
-        if social_say --dry -- "$text"; then
-          read -rp "Post it now? Type yes to post it, Enter to leave it: " ok
-          if [ "$ok" = yes ]; then social_say -- "$text"; else echo "Nothing posted."; fi
-        fi
-        read -rp "Press Enter to continue..." _ ;;
       status) clear; social_status; read -rp "Press Enter to continue..." _ ;;
       remove) if wt_yesno "Remove social sharing: the account secret, the state and the service?" 8; then clear; social_remove; read -rp "Press Enter to continue..." _; fi ;;
       *) return 0 ;;

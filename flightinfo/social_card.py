@@ -35,6 +35,11 @@ import urllib.request
 
 from PIL import Image, ImageDraw, ImageEnhance, ImageFont, ImageOps
 
+
+def N_(text):
+    """A word of the posts' alt text, looked up in the posts' language by social.py (post_lang.py, 0.51.0)."""
+    return text
+
 W, H, M = 1500, 900, 20                      # the picture, and its margin
 COLS, ROWS = 14, 9                           # the board: 14 letters (the tablet's 16 less two, for a wider map) x 9 rows
 CW, CH = 50, 95                              # one flap
@@ -85,20 +90,20 @@ MAP_STYLES = {
     # labels stayed underneath: every town twice, a few pixels apart (seen on the real posts, EWG8QR over Nancy).
     # EOX has no OpenStreetMap layer without its labels. The roads layer is white; the light map tints it.
     "normal": {"layers": [("terrain-light_3857", "jpg"), ("streets_3857", "png")], "roads": (214, 140, 60),
-               "names": "dark", "words": "a light relief map with the main roads",
+               "names": "dark", "words": N_("a light relief map with the main roads"),
                "credit": "Map \u00a9 OpenStreetMap, EOX, GeoNames", "links": [OSM_LINK, EOX_LINK, GEONAMES_LINK],
                "credit_full": "\u00a9 OpenStreetMap contributors and others, rendering \u00a9 EOX (maps.eox.at); place names: GeoNames (CC BY 4.0)"},
     "night": {"layers": [("terrain-light_3857", "jpg"), ("streets_3857", "png")], "night": True,
-              "names": "light", "words": "a dark relief map with the main roads",
+              "names": "light", "words": N_("a dark relief map with the main roads"),
               "credit": "Map \u00a9 OpenStreetMap, EOX, GeoNames", "links": [OSM_LINK, EOX_LINK, GEONAMES_LINK],
               "credit_full": "\u00a9 OpenStreetMap contributors and others, rendering \u00a9 EOX (maps.eox.at); place names: GeoNames (CC BY 4.0)"},
     # 0.24.4: the terrain and satellite maps name the towns themselves (from GeoNames, "names"), in place of EOX's label
     # layer, which named one village in forty kilometres on a real post over Metz
-    "terrain": {"layers": [("terrain_3857", "jpg")], "names": "dark", "words": "a terrain map",
+    "terrain": {"layers": [("terrain_3857", "jpg")], "names": "dark", "words": N_("a terrain map"),
                 "credit": "Map \u00a9 OpenStreetMap and others, EOX, GeoNames", "links": [OSM_LINK, EOX_LINK, GEONAMES_LINK],
                 "credit_full": "Terrain: data \u00a9 OpenStreetMap contributors and others, rendering \u00a9 EOX (maps.eox.at); "
                                "place names: GeoNames (CC BY 4.0)"},
-    "satellite": {"layers": [("s2cloudless-%d_3857" % S2_YEAR, "jpg")], "names": "light", "words": "a satellite map",
+    "satellite": {"layers": [("s2cloudless-%d_3857" % S2_YEAR, "jpg")], "names": "light", "words": N_("a satellite map"),
                   "credit": "Map: EOxCloudless by EOX, GeoNames",
                   "links": [("EOxCloudless", "https://cloudless.eox.at"), ("EOX", "https://eox.at"), GEONAMES_LINK],
                   "credit_full": "EOxCloudless %d https://cloudless.eox.at by EOX IT Services GmbH (Contains modified Copernicus Sentinel data %d); "
