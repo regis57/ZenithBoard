@@ -87,6 +87,8 @@ SHOWN_KEYS = {
     "REGION": "world", "LAT": "", "LON": "", "ALT_M": "0", "PORT": "8080", "DDNS_PROVIDER": "none",
     "SOCIAL": "0", "SOCIAL_STYLE": "dotmap", "SOCIAL_THEME": "", "SOCIAL_UNITS": "", "SOCIAL_MAP": "normal",
     "SOCIAL_PHOTOLINK": "0", "SOCIAL_SENTENCE": "factual", "SOCIAL_GAP_MIN": "0", "SOCIAL_AREA": "",
+    "SOCIAL_RADIUS_KM": "15", "SOCIAL_RULES": "rare,military,helicopter,heavy,farthest",
+    "SOCIAL_HASHTAGS": "#ADSB #avgeek #ZenithBoard", "SOCIAL_PLACES": "0",
     "SOCIAL_DAILY": "0", "SOCIAL_DAILY_AT": "21:00", "SOCIAL_DAILY_PARTS": "1",
     "SOCIAL_WEEKLY": "0", "SOCIAL_WEEKLY_AT": "sun 19:00", "SOCIAL_WEEKLY_PARTS": "1,2,3,4",
     "SOCIAL_MONTHLY": "0", "SOCIAL_MONTHLY_AT": "1 09:00", "SOCIAL_MONTHLY_PARTS": "1,2,3,4",
@@ -458,9 +460,10 @@ def phone_signin(cfg):
 
 # --------------------------------------------------------------------------- jobs for the root helper
 def submit(name, params, by):
-    actions.build(name, params)                  # raises Refused; the helper checks it again as root
+    params = actions.checked(name, params)       # raises Refused; the helper checks it again as root
     job_id = secrets.token_hex(8)
-    body = json.dumps({"action": name, "params": params or {}, "by": by, "at": int(now())})
+    # 0.50.0: UTF-8 rather than \u escapes, so a written post of 300 emoji stays well inside the helper's 4 KB
+    body = json.dumps({"action": name, "params": params, "by": by, "at": int(now())}, ensure_ascii=False)
     tmp = os.path.join(SPOOL_DIR, "." + job_id + ".tmp")
     fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)   # root reads it; nobody else need
     with os.fdopen(fd, "w", encoding="utf-8") as fh:

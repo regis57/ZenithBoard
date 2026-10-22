@@ -131,8 +131,12 @@ social_gap_words() {
 # the radius, the gap, the rules.
 social_setup_words() {
   local area radius gap rules
-  area=$(wt_input "Where is this, in two or three words, as the posts should say it? A town name (Trémery) reads \"above Trémery\"; your own words (near Metz) are kept.\nLeave empty for no place at all. The receiver's position is never used." "$(cfg_get SOCIAL_AREA "")") || return 1
-  cfg_set SOCIAL_AREA "$area"
+  while true; do
+    area=$(wt_input "Where is this, in two or three words, as the posts should say it? A town name (Trémery) reads \"above Trémery\"; your own words (near Metz) are kept.\nLeave empty for no place at all. The receiver's position is never used." "$(cfg_get SOCIAL_AREA "")") || return 1
+    if [ -z "${area//[[:space:]]/}" ] || [ "$(social_area_clean "$area")" = none ]; then cfg_set SOCIAL_AREA ""; break; fi
+    if area=$(social_area_clean "$area"); then cfg_set SOCIAL_AREA "$area"; break; fi
+    wt_msg "Letters, digits, spaces and ' - . , only, 40 characters at most." 8
+  done
   radius=$(wt_input "Sharing radius in km: an aircraft is a candidate while it is inside it. This is separate from the wall's radius." "$(cfg_get SOCIAL_RADIUS_KM 15)") || return 1
   is_number "$radius" && cfg_set SOCIAL_RADIUS_KM "$radius"
   gap=$(wt_input "Minimum minutes between two posts. 0 = none: every aircraft crossing the radius is posted once, as it happens.\nThe same crossing is never posted twice; the return flight or the next day is a new crossing." "$(cfg_get SOCIAL_GAP_MIN 0)") || return 1
@@ -191,6 +195,66 @@ social_set_hashtags() {
   cfg_set SOCIAL_HASHTAGS "$tags"
   echo "Hashtags: $tags"
   case " $tags " in *" #avgeek "*) echo "(#avgeek becomes #helicopter or #military when one of those is posted.)" ;; esac
+}
+
+# ---- 0.50.0: the wizard's other answers one by one, so the web console can set them (the owner, 22 October 2026)
+# The place name: the owner's words ("Trémery" reads "above Trémery"; "near Metz" is kept), never the position.
+social_area_clean() {   # TEXT -> the name with its spaces tidied, or returns 1
+  python3 -c 'import re, sys
+v = " ".join(sys.argv[1].split())
+if not re.fullmatch(r"[^\W_][\w \x27\u2019.,-]{0,39}", v):
+    sys.exit(1)
+print(v)' "$1"
+}
+social_area_reads() {   # NAME -> how a post ends with it, by social.py's own rule
+  python3 -c 'import sys; sys.path.insert(0, sys.argv[1]); import social; print(social.area_words({"SOCIAL_AREA": sys.argv[2]}))' "$ZB_HOME/flightinfo" "$1" 2>/dev/null
+}
+social_set_area() {     # social_set_area [WORDS...|none]
+  local v="$*"
+  v="${v#"${v%%[![:space:]]*}"}"; v="${v%"${v##*[![:space:]]}"}"      # trimmed, so " none " is none
+  if [ -z "$v" ]; then
+    echo "Place name: $(or_text "$(cfg_get SOCIAL_AREA "")" "(none)")"
+    echo "Change:  sudo zenithboard social area Trémery   (or near Metz: two or three words, as the posts say it), or none"; return 0
+  fi
+  if [ "$v" = none ]; then cfg_set SOCIAL_AREA ""; echo "Place name: none. The posts name no place."; return 0; fi
+  v=$(social_area_clean "$v") || { echo "Place name: letters, digits, spaces and ' - . , only, 40 characters at most, starting with a letter or a digit" >&2; return 1; }
+  cfg_set SOCIAL_AREA "$v"
+  echo "Place name: $v   (the posts say: $(social_area_reads "$v"))"
+}
+social_set_radius() {   # social_set_radius [KM]: an aircraft inside it is a candidate; not the wall's radius
+  if [ -z "${1:-}" ]; then
+    echo "Sharing radius: $(cfg_get SOCIAL_RADIUS_KM 15) km"
+    echo "Change:  sudo zenithboard social radius KM   (1 to 200 km; separate from the wall's radius)"; return 0
+  fi
+  [[ $1 =~ ^[0-9]{1,3}$ ]] && [ "$((10#$1))" -ge 1 ] && [ "$((10#$1))" -le 200 ] || { echo "Sharing radius: whole kilometres, 1 to 200" >&2; return 1; }
+  cfg_set SOCIAL_RADIUS_KM "$((10#$1))"
+  echo "Sharing radius: $((10#$1)) km. The service takes it at its next look, no restart needed."
+}
+SOCIAL_RULE_WORDS="military helicopter heavy rare farthest"
+social_set_rules() {    # social_set_rules [all|LIST]: what is worth a post, as the wizard's ticks
+  local w out=() seen=" "
+  if [ -z "${1:-}" ]; then
+    echo "What is worth a post: $(cfg_get SOCIAL_RULES rare,military,helicopter,heavy,farthest)"
+    echo "Change:  sudo zenithboard social rules all   (every crossing), or some of: ${SOCIAL_RULE_WORDS// /,}"; return 0
+  fi
+  [[ ${1//[, ]/} ]] || { echo "Rules: all, or one or more of ${SOCIAL_RULE_WORDS// /, }, separated by commas" >&2; return 1; }
+  for w in ${1//,/ }; do
+    [ "$w" = all ] && { cfg_set SOCIAL_RULES all; echo "What is worth a post: all (every crossing, the special ones first). The service takes it at its next look."; return 0; }
+    social_valid_in "$w" $SOCIAL_RULE_WORDS || { echo "Rules: all, or one or more of ${SOCIAL_RULE_WORDS// /, }, separated by commas" >&2; return 1; }
+    seen+="$w "
+  done
+  for w in $SOCIAL_RULE_WORDS; do case "$seen" in *" $w "*) out+=("$w") ;; esac; done
+  cfg_set SOCIAL_RULES "$(IFS=,; echo "${out[*]}")"
+  echo "What is worth a post: $(IFS=,; echo "${out[*]}"). The service takes it at its next look."
+}
+
+# ---- 0.50.0: a written post, the owner's own words, text only: no picture, no map, nothing from the receiver
+social_say() {          # social_say [--dry] [--] TEXT...
+  local a=(say)
+  if [ "${1:-}" = --dry ]; then a+=(--dry); shift; fi
+  if [ "${1:-}" = -- ]; then shift; fi
+  a+=(-- "$*")
+  if [ "$(id -u)" -ne 0 ]; then python3 "$SOCIAL_PY" "${a[@]}"; else sudo -u "$ZB_USER" python3 "$SOCIAL_PY" "${a[@]}"; fi
 }
 
 # ---- the gap (0.20.0): none by default, every crossing posted once; `social gap 30` for half an hour at least
@@ -552,8 +616,9 @@ social_menu() {
       test "8  Try it: draw the picture and show the text, post nothing" \
       toggle "9  Switch sharing $( [ "$(social_state)" = on ] && echo OFF || echo ON )" \
       post "10 Post now, once" \
-      status "11 Status" \
-      remove "12 Remove: account, state and service" \
+      say "11 Write a post: your own words, text only" \
+      status "12 Status" \
+      remove "13 Remove: account, state and service" \
       back "Return to the previous menu") || return 0
     case "$c" in
       setup) social_setup || true ;;
@@ -581,6 +646,15 @@ social_menu() {
       test) clear; social_need_tools && social_prepare_dir && sudo -u "$ZB_USER" python3 "$SOCIAL_PY" test; read -rp "Press Enter to continue..." _ ;;
       toggle) clear; if [ "$(social_state)" = on ]; then social_off; else social_on; fi; read -rp "Press Enter to continue..." _ ;;
       post) clear; social_need_tools && social_prepare_dir && sudo -u "$ZB_USER" python3 "$SOCIAL_PY" post; read -rp "Press Enter to continue..." _ ;;
+      say)
+        local text ok
+        text=$(wt_input "Your words, posted as written under @$(social_account): no picture, no map, nothing from the receiver. 300 characters at most. Hashtags (#avgeek) and links (https://...) become clickable." "") || continue
+        clear
+        if social_say --dry -- "$text"; then
+          read -rp "Post it now? Type yes to post it, Enter to leave it: " ok
+          if [ "$ok" = yes ]; then social_say -- "$text"; else echo "Nothing posted."; fi
+        fi
+        read -rp "Press Enter to continue..." _ ;;
       status) clear; social_status; read -rp "Press Enter to continue..." _ ;;
       remove) if wt_yesno "Remove social sharing: the account secret, the state and the service?" 8; then clear; social_remove; read -rp "Press Enter to continue..." _; fi ;;
       *) return 0 ;;

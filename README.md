@@ -567,6 +567,7 @@ Off by default. Switched on, the Pi posts the aircraft worth a post — a milita
 sudo zenithboard social setup     # the Bluesky account (an app password, never the real one), the words, the picture
 sudo zenithboard social test      # draw the picture and print the text; post nothing (see it at http://<pi>:8080/social/preview)
 sudo zenithboard social on        # from now on, under your rules; off at any time
+sudo zenithboard social say 'Hello from the Moselle #avgeek'   # your own words, text only, once (0.50.0)
 ```
 
 **Summaries of the last 24 hours, the week and the last 30 days** are switches of their own, each at the day and time you choose with the posts you pick: `sudo zenithboard social summary weekly on` (off by default; `social summary weekly test` shows them first; menu *Social sharing → 7*). Aircraft heard, messages, the busiest day and hour, the airlines and models most seen, with a picture of the week by hour, then, two minutes apart, the cargo airlines and the business jets, the military aircraft by country with their flags, and general aviation (helicopters, light aircraft, gliders, drones), from the statistics; never a distance, a direction or a registration. Details: [Social sharing](https://github.com/regis57/ZenithBoard/wiki/Social-sharing#the-weeks-summary-0330-optional).

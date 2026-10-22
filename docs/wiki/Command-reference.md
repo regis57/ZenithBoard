@@ -45,6 +45,9 @@ Every `zenithboard` command, grouped by what you are trying to do. `zenithboard`
 | `zenithboard preset list` · `add NAME key=value…` · `del NAME` | yes to change | A name for a tablet's own choices (`units radius cycle theme mode flags`), kept as `PRESET_NAME` in `config.env`. That tablet opens `http://PI:8080/?p=NAME`: the preset's keys are applied at every load, what it does not name the tablet keeps. Names: a letter then up to 15 letters or digits |
 | `zenithboard social setup` | yes | The Bluesky account (an app password, never the real one), then the words and the picture. A wizard that tries the account before going on. See [Social sharing](Social-sharing) |
 | `zenithboard social words` | yes | The place name the posts carry, the sharing radius, the gap between posts, the hashtags, and what is worth a post |
+| `zenithboard social area [WORDS]` · `none` | yes to change | The place name the posts say, in your words: a name alone reads *above Trémery*, words with their own (*near Metz*) are kept. Letters, digits, spaces and `' - . ,`, 40 characters at most. Never the receiver's position. 0.50.0 |
+| `zenithboard social radius [KM]` | yes to change | The sharing radius, whole kilometres from 1 to 200: an aircraft inside it is a candidate. Not the wall's radius. Taken by the service at its next look. 0.50.0 |
+| `zenithboard social rules [all\|LIST]` | yes to change | What is worth a post: `all` (every crossing, the special ones first), or some of `military,helicopter,heavy,rare,farthest`. 0.50.0 |
 | `zenithboard social hashtags [WORD...]` | yes to change | The hashtags ending each post: `social hashtags ADSB avgeek Moselle` (the `#` is optional — unquoted, the shell would take it for a comment), `none`, or `default`. Alone: shows them |
 | `zenithboard social gap [MINUTES]` | yes to change | The least time between two posts. `0`, the default since 0.20.0, is none: every crossing of the sharing radius is posted, once. Whole minutes up to 1440; taken by the running service at its next look. Alone: shows it |
 | `zenithboard social picture` | yes | The picture: dot-matrix or split-flap, its colour, the map (a wizard) |
@@ -61,6 +64,7 @@ Every `zenithboard` command, grouped by what you are trying to do. `zenithboard`
 | `zenithboard social test [HEX]` | | Draw the picture and print the text for the best candidate (or that aircraft); post nothing. The picture is at `/social/preview` |
 | `zenithboard social on` · `off` · `status` | yes | Post the aircraft overhead as a picture of the wall (off by default). `off` keeps the account |
 | `zenithboard social post [HEX]` | | Post now, once, whatever the gap. That aircraft then counts as posted for its crossing |
+| `zenithboard social say [--dry] 'TEXT'` | | Post your own words now, as written, text only: no picture, no map, nothing from the receiver. 300 characters at most; hashtags and `http(s)://` links become clickable, `@names` stay plain text. `--dry` shows it and posts nothing. Quote the text: unquoted, the shell takes a `#` for a comment. 0.50.0 |
 | `zenithboard social check` | yes | Try the account: open a session on Bluesky |
 | `zenithboard social remove` | yes | Forget the account, stop the service, delete its state and its map tiles |
 | `zenithboard photos on` · `off` | yes | Aircraft photos from Planespotters. Off: the animated sky scene instead |

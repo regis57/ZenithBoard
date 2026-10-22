@@ -56,6 +56,14 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 input[type=text], input[type=password], input[type=number], input[type=time], select {
   font: 15px var(--mono); color: var(--ink); background: #000; border: 1px solid var(--line2); border-radius: 5px; padding: 8px 10px; min-width: 0; }
 input:focus, select:focus { border-color: var(--on); outline: none; }
+/* 0.50.0: a written post */
+textarea { font: 15px/1.45 var(--sans, system-ui); color: var(--ink); background: #000; border: 1px solid var(--line2); border-radius: 5px; padding: 10px 12px;
+  width: 100%; box-sizing: border-box; resize: vertical; min-height: 6.5em; margin-top: 4px; }
+textarea:focus { border-color: var(--on); outline: none; }
+.say-count { font: 12px var(--mono); color: var(--muted); margin-inline-end: auto; }
+.say-count.over { color: var(--bad); }
+.say-quote { white-space: pre-wrap; overflow-wrap: anywhere; border-inline-start: 2px solid var(--on); padding-inline-start: 10px; }
+.row .ctl input[type=text] { width: min(22em, 100%); }
 input[type=number] { width: 7.5em; }
 select { padding-right: 26px; }
 label { font: 600 11px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }

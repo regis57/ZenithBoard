@@ -341,7 +341,7 @@ window.ZBI18N.start({ part: "console" }, function () {
     if (!S.session) return;
     nav();
     var view = $("view"), focused = document.activeElement;
-    if (!scrollTop && focused && view.contains(focused) && /INPUT|SELECT/.test(focused.tagName)) return;   // never under the typing finger
+    if (!scrollTop && focused && view.contains(focused) && /INPUT|SELECT|TEXTAREA/.test(focused.tagName)) return;   // never under the typing finger
     var title = t((S.sections.filter(function (s) { return s[0] === S.section; })[0] || [0, "Overview"])[1]);
     $("title").textContent = title;
     document.title = t("{title} · ZenithBoard console", { title: title });
@@ -357,7 +357,7 @@ window.ZBI18N.start({ part: "console" }, function () {
     return new Promise(function (resolve) {
       openModal(h("div", null,
         h("header", null, h("h2", { text: title })),
-        h("div", { "class": "modal-body" }, (Array.isArray(text) ? text : [text]).map(function (p) { return h("p", { text: p }); })),
+        h("div", { "class": "modal-body" }, (Array.isArray(text) ? text : [text]).map(function (p) { return p && p.nodeType ? p : h("p", { text: p }); })),
         h("div", { "class": "modal-foot" },
           h("button", { type: "button", "class": "btn", text: t("Cancel"), onclick: function () { closeModal(); resolve(false); } }),
           h("button", { type: "button", "class": danger ? "danger" : "primary", text: okLabel || t("Go on"), onclick: function () { closeModal(); resolve(true); } }))));
@@ -367,7 +367,7 @@ window.ZBI18N.start({ part: "console" }, function () {
     location: [t("Change the antenna position?"), t("It is written everywhere it is stored on this Pi (the wall, and the feeders that can be set from here); the ones that cannot are named in the output. The position is never shown on the wall or in a post.")],
     graphs: ["graphs1090", t("Turning it on runs its author's installer: collectd and rrdtool from apt (signed), its files from GitHub, a few minutes. Turning it off puts back what was there before and keeps its history.")],
     "gain-step": [t("Move the gain one step?"), t("The decoder restarts with the new gain: a few seconds without aircraft. Go one step at a time, and check again after a day.")],
-    social: [t("Social sharing"), t("Switching it on starts posting the aircraft worth it to Bluesky, as set in the terminal (radius, rules, gap). Off stops the service; the account stays.")],
+    social: [t("Social sharing"), t("Switching it on starts posting the aircraft worth it to Bluesky, as set in Sharing (place name, radius, rules, gap). Off stops the service; the account stays.")],
     watchdog: [t("Hardware watchdog"), t("If the Pi freezes completely, its own chip restarts it after about 10 seconds. Off takes the setting away again.")],
     "update-quick": [t("Update ZenithBoard and the wall?"), t("Seconds. The wall restarts, so this page reconnects by itself. The feeders are left as they are.")],
     update: [t("Update everything?"), t("ZenithBoard, the decoder and every feeder, one after the other: several minutes. The wall restarts during it; this page follows. A new GitHub signing key is never accepted from here: the update says so, and it is answered over SSH.")],
@@ -621,8 +621,14 @@ window.ZBI18N.start({ part: "console" }, function () {
       return [
         card(t("Bluesky"), "share", acct ? t("Account @{account}. The account itself is set up over SSH (it asks for an app password): sudo zenithboard social setup", { account: acct }) :
           t("No Bluesky account yet. Set it up over SSH, it asks for an app password: sudo zenithboard social setup"), [
-          row(t("Post the aircraft overhead"), t("As set in the terminal: radius, rules, gap. Never a distance or a direction."), acct ? sw("social", on(c.SOCIAL)) : h("span", { "class": "state", text: t("needs an account") })),
+          row(t("Post the aircraft overhead"), t("As set below. Never a distance or a direction."), acct ? sw("social", on(c.SOCIAL)) : h("span", { "class": "state", text: t("needs an account") })),
+          // 0.50.0: the terminal wizard's answers, one by one (the owner: "no field for it")
+          row(t("Place name"), t("Two or three words, as the posts say it: a town name reads \u201cabove\u201d it; empty: no place. Never the receiver's position."),
+            textApply("social-area", c.SOCIAL_AREA, 40, t("none"), function (v) { return v.replace(/\s+/g, " ").trim() || "none"; }, "none")),
+          row(t("Sharing radius"), t("Kilometres; an aircraft inside it is a candidate. Not the wall's radius."), numberApply("social-radius", c.SOCIAL_RADIUS_KM, 1, 200)),
+          row(t("What is worth a post"), t("Everything: every crossing, the special ones first"), rulesChips(c.SOCIAL_RULES)),
           row(t("Least time between posts"), t("Minutes; 0 = every crossing posted once"), numberApply("social-gap", c.SOCIAL_GAP_MIN, 0, 1440)),
+          row(t("Town names on the maps"), t("From GeoNames, made on the Pi (a few minutes); off: the lists shipped with ZenithBoard"), sw("social-places", on(c.SOCIAL_PLACES))),
           h("div", { "class": "actions" }, btn(t("Try a post (posts nothing)"), "social-test"), h("a", { "class": "btn", href: "/social/preview", target: "_blank", rel: "noopener", text: t("Last picture ↗") }), btn(t("Status"), "social-status"))
         ], "w6"),
         card(t("The picture and the words"), "picture", null, [
@@ -633,8 +639,11 @@ window.ZBI18N.start({ part: "console" }, function () {
             [t("Normal"), t("Night"), t("Satellite"), t("Terrain"), t("None"), t("In turn")])),
           row(t("Units"), null, seg("social-units", ["wall", "metric", "imperial"], units, [t("The wall's"), t("Metric"), t("Imperial")])),
           row(t("Link to the photo page"), t("Planespotters, at the end of each post"), sw("social-photolink", on(c.SOCIAL_PHOTOLINK))),
-          row(t("Words of a post"), t("One or more; with several, one is drawn at each post"), sentenceChips(c.SOCIAL_SENTENCE || "factual"))
+          row(t("Words of a post"), t("One or more; with several, one is drawn at each post"), sentenceChips(c.SOCIAL_SENTENCE || "factual")),
+          row(t("Hashtags"), t("At the end of each post, separated by spaces (the # is optional); empty: none"),
+            textApply("social-hashtags", c.SOCIAL_HASHTAGS, 340, t("none"), function (v) { return v.replace(/[,\s]+/g, " ").trim() || "none"; }, "none"))
         ], "w6"),
+        acct ? sayCard(acct) : null,
         card(t("Summaries"), "chart", t("From the statistics, at their time on the Pi's clock; the posts go in one queue, two minutes apart. Posts: 1 the period, 2 cargo and business jets, 3 military, 4 general aviation."),
           [summaryRow("daily", t("24 hours")), summaryRow("weekly", t("The week")), summaryRow("monthly", t("30 days")),
             on(c.STATS) ? null : h("p", { "class": "note", text: t("Statistics are off: no summary can be made until they are on (Receiver).") }),
@@ -724,7 +733,7 @@ window.ZBI18N.start({ part: "console" }, function () {
             h("li", { text: t("Uninstalling, and anything that asks for a typed word") }),
             h("li", { text: t("Wi-Fi, fixed addresses (they can cut this page off)") }),
             h("li", { text: t("Passwords, tokens and keys: Bluesky, the domain name, this console's own") }),
-            h("li", { text: t("Posting to Bluesky, emptying statistics or logs, importing settings, restoring a backup") })),
+            h("li", { text: t("Posting an aircraft or a summary at once, emptying statistics or logs, importing settings, restoring a backup") })),
           h("p", { "class": "note", text: t("This page travels unencrypted on your home network (plain HTTP), like the wall. It answers home addresses only.") }),
           h("div", { "class": "actions" }, btn(t("Turn the console off"), "console-off", {}, "danger"))
         ], "w6")
@@ -754,6 +763,67 @@ window.ZBI18N.start({ part: "console" }, function () {
     var inp = h("input", { type: "number", value: value, min: min, max: max, "aria-label": (S.catalog[action] || {}).label });
     return [inp, h("button", { type: "button", "class": "btn", text: S.pending[action] ? "…" : t("Apply"), disabled: S.pending[action] ? true : null,
       onclick: function () { if (String(inp.value) !== String(value)) run(action, { value: String(inp.value) }); } })];
+  }
+  // 0.50.0: a line of text and its Set; prep turns what was typed into the value sent (empty: the word for none)
+  function textApply(action, value, max, placeholder, prep, none) {
+    var cur = String(value || "");
+    var inp = h("input", { type: "text", value: cur === none ? "" : cur, maxlength: max, placeholder: placeholder || null, "aria-label": t((S.catalog[action] || {}).label || action) });
+    return [inp, h("button", { type: "button", "class": "btn", text: S.pending[action] ? "…" : t("Set"), disabled: S.pending[action] ? true : null,
+      onclick: function () { var v = prep(inp.value); if (v !== (cur || none)) run(action, { value: v }); } })];
+  }
+  function rulesChips(cur) {
+    var five = ["military", "helicopter", "heavy", "rare", "farthest"], every = cur === "all" || cur === "any";   // "any": its name before 0.19.1
+    var picked = every ? five.slice() : String(cur || "").split(",").filter(function (w) { return five.indexOf(w) >= 0; });   // the server gives the default when unset
+    var names = { military: t("Military"), helicopter: t("Helicopters"), heavy: t("Heavies"), rare: t("Rare types"), farthest: t("Range records") };
+    var waiting = S.pending["social-rules"];
+    var chips = five.map(function (w) {
+      var lit = picked.indexOf(w) >= 0;
+      return h("button", { type: "button", "class": "chip" + (lit ? " on" : "") + (every ? " static" : ""), "aria-pressed": lit ? "true" : "false", text: names[w],
+        disabled: (every || waiting) ? true : null, onclick: function () {
+          var next = lit ? picked.filter(function (x) { return x !== w; }) : picked.concat([w]);
+          if (!next.length) return toast(t("At least one."));
+          run("social-rules", { value: five.filter(function (x) { return next.indexOf(x) >= 0; }).join(",") });
+        } });
+    });
+    chips.push(h("button", { type: "button", "class": "chip" + (every ? " on" : ""), "aria-pressed": every ? "true" : "false", text: t("Everything"), disabled: waiting ? true : null,
+      onclick: function () { run("social-rules", { value: every ? five.join(",") : "all" }); } }));
+    return h("div", { "class": "chips" }, chips);
+  }
+  // 0.50.0: a written post, the owner's own words, text only. The draft outlives the page's redraws; the Pi shows it
+  // first (Preview) and the confirmation shows it again, word for word, before it goes.
+  function sayCard(acct) {
+    var title = t("Write a post"), max = ((((S.catalog["social-say"] || {}).params || [])[0]) || {}).max || 300;
+    var ta = h("textarea", { rows: 4, dir: "auto", "aria-label": t("What to post"), placeholder: t("What to post") });
+    ta.value = S.sayDraft || "";
+    var count = h("span", { "class": "say-count" });
+    function text() { return ta.value.replace(/\r\n?/g, "\n").trim(); }
+    function size() { return Array.from(text()).length; }
+    function upd() { S.sayDraft = ta.value; count.textContent = t("{n} of {max} characters", { n: size(), max: max }); count.classList.toggle("over", size() > max); }
+    ta.addEventListener("input", upd); upd();
+    function ready() {
+      if (!size()) { toast(t("Write something first."), true); return null; }
+      if (size() > max) { toast(t("Too long: {max} characters at most.", { max: max }), true); return null; }
+      return text();
+    }
+    return card(title, "share", t("Your own words, posted at once under @{account}: no picture, no map, nothing from the receiver. Hashtags (#avgeek) and links (https://…) become clickable; @names stay plain text.", { account: acct }), [
+      ta,
+      h("div", { "class": "actions" }, count,
+        h("button", { type: "button", "class": "btn", text: S.pending["social-say-test"] ? t("Preview (posts nothing)") + "…" : t("Preview (posts nothing)"), disabled: S.pending["social-say-test"] ? true : null,
+          onclick: function () { var v = ready(); if (v !== null) run("social-say-test", { text: v }, { card: title }); } }),
+        h("button", { type: "button", "class": "primary", text: S.pending["social-say"] ? t("Post it") + "…" : t("Post it"), disabled: S.pending["social-say"] ? true : null,
+          onclick: function () {
+            var v = ready(); if (v === null) return;
+            confirmBox(t("Post this to Bluesky?"), [h("p", { "class": "say-quote", dir: "auto", text: v }), t("It goes out at once under @{account}, exactly as written. To take it back, delete it in the Bluesky app.", { account: acct })], t("Post it")).then(function (yes) {
+              if (!yes) return;
+              run("social-say", { text: v }, { confirmed: true, card: title }).then(function (j) {
+                if (!j || j.rc !== 0 || String(S.sayDraft || "").replace(/\r\n?/g, "\n").trim() !== v) return;   // a new draft typed meanwhile stays
+                S.sayDraft = "";
+                if (document.activeElement && document.activeElement.tagName === "TEXTAREA") document.activeElement.blur();
+                draw();
+              });
+            });
+          } }))
+    ], "w12");
   }
   function select(action, values, current, labels) {
     var waiting = S.pending[action];

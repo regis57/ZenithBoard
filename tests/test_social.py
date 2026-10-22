@@ -5,6 +5,7 @@ The network is not called: a fake urlopen records what would have been sent and 
 copied from its API documentation). The renderers are real: node for the dot-matrix picture, Pillow for the split-flap
 one, which is given fake map tiles.
 """
+import contextlib
 import io
 import json
 import os
@@ -1094,6 +1095,97 @@ class NetworksTest(unittest.TestCase):
         social.post_bluesky(sec, "hello", self.png, "alt", 1, 1)
         for url, hdr, data in self.sent[1:]:
             self.assertNotIn(b"aaaa-bbbb", data or b"")
+
+
+class WrittenPostTest(unittest.TestCase):
+    """0.50.0, asked for by the owner on 22 October 2026: a post in his own words, text only, from the terminal or the
+    web console. The Bluesky stand-in is NetworksTest's."""
+    SEC = {"BLUESKY_HANDLE": "zb.bsky.social", "BLUESKY_APP_PASSWORD": "aaaa-bbbb-cccc-dddd"}
+    setUp = NetworksTest.setUp
+    names = NetworksTest.names
+
+    def test_text_only_no_picture_no_language_its_hashtags_and_links(self):
+        text = "Le bilan part à 08:45 #Trémery #avgeek! Voir https://bsky.app/profile/zenithboard.bsky.social."
+        uri = social.post_bluesky_text(self.SEC, social.say_clean(text))
+        self.assertTrue(uri.startswith("at://"))
+        self.assertEqual(self.names(), ["createSession", "createRecord"], "no picture uploaded")
+        rec = json.loads(self.sent[-1][2])["record"]
+        self.assertEqual(rec["text"], text)
+        self.assertNotIn("embed", rec)
+        self.assertNotIn("langs", rec, "the owner writes in the language he likes: none declared")
+        got = [(rec["text"].encode("utf-8")[f["index"]["byteStart"]:f["index"]["byteEnd"]].decode("utf-8"), f["features"][0]) for f in rec["facets"]]
+        self.assertEqual([g[0] for g in got], ["#Trémery", "#avgeek", "https://bsky.app/profile/zenithboard.bsky.social"],
+                         "byte offsets around the é; the ! and the full stop left out")
+        self.assertEqual(got[0][1], {"$type": "app.bsky.richtext.facet#tag", "tag": "Trémery"})
+        self.assertEqual(got[2][1]["uri"], "https://bsky.app/profile/zenithboard.bsky.social")
+        for url, hdr, data in self.sent[1:]:
+            self.assertNotIn(b"aaaa-bbbb", data or b"")
+
+    def test_what_is_not_a_hashtag_or_a_link(self):
+        _, tags, links = social.say_facets("Vol#1 ok #2026 #a_b (see https://example.org/a_(b)) http:// #" + "x" * 65)
+        self.assertEqual(tags, ["#a_b"], "not inside a word, not digits alone, not longer than 64")
+        self.assertEqual(links, ["https://example.org/a_(b)"], "a closing bracket of its own kept, the sentence's left out")
+        # what the review of 0.50.0 found: a uri Bluesky would refuse (the whole post with it), facets overlapping,
+        # a tag carrying an invisible character the Bluesky app leaves out
+        facets, tags, links = social.say_facets("https:///foo https://x #x(https://a.org) #avgeek\u200b #\ufe0f\u20e3 #soft\u00adhyphen u\ufeffhttps://b.org")
+        self.assertEqual(links, ["https://a.org"])
+        self.assertEqual(tags, ["#avgeek", "#soft"])
+        ends = [(f["index"]["byteStart"], f["index"]["byteEnd"]) for f in facets]
+        self.assertTrue(all(a[1] <= b[0] for a, b in zip(ends, ends[1:])), "in order, never overlapping: %s" % ends)
+
+    def test_the_text_is_checked_before_anything_is_sent(self):
+        self.assertEqual(social.say_clean("  a\r\n\r\n\r\nb  "), "a\n\n\nb", "the lines as typed: what the confirmation showed")
+        for bad in ("", "   ", "x" * 301, "a\x00b", "bell\x07", "lone \ud800", "private \ue000"):
+            with self.assertRaises(ValueError, msg=repr(bad)):
+                social.say_clean(bad)
+        self.assertEqual(len(social.say_clean("\u00e9" * 300)), 300, "300 characters, a precomposed é counted once")
+
+    def test_a_refused_token_signs_in_again_once(self):
+        social.post_bluesky_text(self.SEC, "one")
+        self.refuse.append("com.atproto.repo.createRecord")
+        self.assertTrue(social.post_bluesky_text(self.SEC, "two").startswith("at://"))
+        self.assertEqual(self.names().count("createSession"), 2)
+
+    def run_say(self, argv, sec=None):
+        self.addCleanup(setattr, social, "account", social.account)
+        social.account = lambda: dict(sec if sec is not None else self.SEC)
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            rc = social.main(["social.py"] + argv)
+        return rc, out.getvalue()
+
+    def test_dry_shows_it_and_sends_nothing(self):
+        rc, out = self.run_say(["say", "--dry", "--", "Hello #avgeek @someone"])
+        self.assertEqual(rc, 0)
+        self.assertEqual(self.sent, [])
+        self.assertIn("Hello #avgeek @someone", out)
+        self.assertIn("Hashtags made clickable: #avgeek", out)
+        self.assertIn("@names stay plain text", out)
+        self.assertIn("Nothing posted.", out)
+
+    def test_say_posts_and_says_where(self):
+        rc, out = self.run_say(["say", "--", "--dry is only an option before the text"])
+        self.assertEqual(rc, 0)
+        self.assertEqual(json.loads(self.sent[-1][2])["record"]["text"], "--dry is only an option before the text")
+        self.assertIn("bluesky: at://", out)
+
+    def test_no_answer_is_not_said_to_be_a_failure(self):
+        # a timeout: Bluesky may have taken it, so the owner is told to look before posting it again
+        self.addCleanup(setattr, social, "post_bluesky_text", social.post_bluesky_text)
+        def slow(sec, text):
+            raise TimeoutError("timed out")
+        social.post_bluesky_text = slow
+        rc, out = self.run_say(["say", "--", "hello"])
+        self.assertEqual(rc, 1)
+        self.assertIn("may or may not be posted", out)
+
+    def test_refused_without_an_account_or_with_too_much(self):
+        rc, out = self.run_say(["say", "--", "hello"], sec={})
+        self.assertEqual((rc, self.sent), (1, []))
+        self.assertIn("no Bluesky account", out)
+        rc, out = self.run_say(["say", "--", "x" * 301])
+        self.assertEqual((rc, self.sent), (1, []))
+        self.assertIn("301 characters: 300 at most", out)
 
 
 class ClockTest(unittest.TestCase):
