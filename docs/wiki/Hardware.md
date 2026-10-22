@@ -19,6 +19,8 @@ The project's reference Pi is a Raspberry Pi 3 Model B (1 GB), outdoors, on Wi-F
 
 **The next morning** (21 October 2026, 07:56, after the 0.39.0 update): **180 MB for all the services**, 619 MB available, 190 threads, load 1.1 on four cores, 28 MB of swap used. The wall 21 MB (30 at its peak), social sharing 24 MB, Flightradar24 17 MB, FlightAware 13 MB. **Plane Finder 43 MB**, up from 27 MB the evening before: it was the one service not restarted by the update (it has run since the evening), so it grows while it runs; a figure to watch over the next days rather than a problem at 43 MB.
 
+**With ADSB Exchange's stats** (22 October 2026, 13:51, 0.52.0): `zenithboard memory` without sudo, so RSS, which counts shared pages more than once and is not comparable with the PSS figures above. **adsbexchange-stats takes 6 MB** in two processes (their loop and its `sleep`). In all: 558 MB available of 905 MB, 165 MB of swap used, 242 threads, load 0.78 on four cores. Every feed, graphs1090 (50 MB in its two services) and Tailscale (36 MB) were running too.
+
 `zenithboard health` gives the same lines on any Pi; [Reliability and diagnostics](Reliability-and-diagnostics) says how to read them.
 
 ## Which board for what
