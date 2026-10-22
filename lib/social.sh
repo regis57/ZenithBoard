@@ -301,12 +301,22 @@ summary_why() {
   [ -n "$(social_account)" ] && echo "  Bluesky: @$(social_account)" || echo "  Bluesky: no account (sudo zenithboard social setup)"
   since=$(systemctl show -p ActiveEnterTimestamp --value "$SOCIAL_UNIT" 2>/dev/null || true)
   echo "  Service: $(systemctl is-active "$SOCIAL_UNIT" 2>/dev/null || echo unknown)${since:+, since $since}"
-  v=$(journalctl -u "$SOCIAL_UNIT" --since "-2 days" --no-pager 2>/dev/null | grep -o 'running ZenithBoard [0-9.]*' | tail -1)
-  [ -z "$v" ] || echo "  It runs: ${v#running }   (this copy: $ZB_VERSION)"
+  v=$(social_running_version)
+  [ -z "$v" ] || echo "  It runs: ZenithBoard $v   (this copy: $ZB_VERSION)"
+  if social_runs_old_code; then
+    echo "  It still runs the code it started with, from before the last update: the summaries follow its rules, not this copy's."
+    echo "  Restart it:  sudo systemctl restart $SOCIAL_UNIT"
+  fi
   echo
+  # 0.49.1: the starts apart, so that a day of updates (twenty-four starts on 21 October 2026: thirty-two of the forty lines `why` showed) does not push the summary lines out
+  local j
+  j=$(journalctl -u "$SOCIAL_UNIT" --since "-2 days" --no-pager 2>/dev/null || true)
   echo "The service's lines about the summaries and its errors, the last two days:"
-  journalctl -u "$SOCIAL_UNIT" --since "-2 days" --no-pager 2>/dev/null \
-    | grep -iE 'summar|Traceback|Error|could not|running ZenithBoard' | tail -40 | sed 's/^/  /' || true
+  v=$(grep -iE 'summar|Traceback|Error|could not' <<<"$j" | grep -v 'running ZenithBoard' | tail -30 || true)
+  if [ -n "$v" ]; then sed 's/^/  /' <<<"$v"; else echo "  none"; fi
+  echo "Its starts, the last two days (each update restarts it):"
+  v=$(sed -nE 's/^([A-Z][a-z]{2} +[0-9]+ [0-9]{2}:[0-9]{2}):[0-9]{2} .*running ZenithBoard ([0-9]+[0-9.]*[0-9]).*/\1  \2/p' <<<"$j" | tail -12)
+  if [ -n "$v" ]; then sed 's/^/  /' <<<"$v"; else echo "  none"; fi
   [ "$(id -u)" -eq 0 ] || echo "(with sudo: the service's state and its whole journal)"
 }
 summary_line() {   # one line: the summary, on or off, when and which posts
@@ -497,19 +507,34 @@ social_status() {
     python3 "$SOCIAL_PY" status
   fi
   [ -f "$SOCIAL_UNIT_DIR/$SOCIAL_UNIT.service" ] || return 0
-  local st since started code
+  local st since
   st=$(systemctl is-active "$SOCIAL_UNIT" 2>/dev/null || echo unknown)
   since=$(systemctl show -p ActiveEnterTimestamp --value "$SOCIAL_UNIT" 2>/dev/null || true)
   if [ "$st" = active ] && [ -n "$since" ]; then
-    started=$(date -d "$since" +%s 2>/dev/null || echo 0)
-    code=$(stat -c %Y "$SOCIAL_PY" "$ZB_HOME/flightinfo/social_card.py" "$ZB_HOME/tools/social-render.js" "$ZB_HOME/flightinfo/static/format.js" 2>/dev/null | sort -n | tail -1)
     echo "Service: active since $since"
-    if [ "${code:-0}" -gt "${started:-0}" ] && [ "${started:-0}" -gt 0 ]; then
+    if social_runs_old_code; then
       echo "  It runs the code from before the last update. Restart it:  sudo systemctl restart $SOCIAL_UNIT"
     fi
   else
     echo "Service: $st"
   fi
+}
+# The version the service said it runs when it last started (its first journal line), or nothing.
+social_running_version() {
+  journalctl -u "$SOCIAL_UNIT" --since "-30 days" --no-pager 2>/dev/null | sed -nE 's/.*running ZenithBoard ([0-9]+[0-9.]*[0-9]).*/\1/p' | tail -1
+}
+# A running service keeps the code it started with. True when the code on disk is newer than its start, or when it
+# said another version than this copy's. Seen on the real Pi on 22 October 2026: the files were 0.49.0 and the service
+# still 0.47.0 from 00:11, so the summaries followed 0.47.0's rules.
+social_runs_old_code() {
+  local since started code v
+  [ "$(systemctl is-active "$SOCIAL_UNIT" 2>/dev/null)" = active ] || return 1
+  since=$(systemctl show -p ActiveEnterTimestamp --value "$SOCIAL_UNIT" 2>/dev/null || true)
+  started=$(date -d "$since" +%s 2>/dev/null || echo 0)
+  code=$(stat -c %Y "$SOCIAL_PY" "$ZB_HOME/flightinfo/social_week.py" "$ZB_HOME/flightinfo/social_card.py" "$ZB_HOME/tools/social-render.js" "$ZB_HOME/flightinfo/static/format.js" 2>/dev/null | sort -n | tail -1)
+  if [ "${started:-0}" -gt 0 ] && [ "${code:-0}" -gt "$started" ]; then return 0; fi
+  v=$(social_running_version)
+  [ -n "$v" ] && [ "$v" != "$ZB_VERSION" ]
 }
 
 # ---- the menu
