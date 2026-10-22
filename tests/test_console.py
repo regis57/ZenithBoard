@@ -64,6 +64,16 @@ class ActionsTest(unittest.TestCase):
             with self.assertRaises(actions.Refused, msg=(name, params)):
                 actions.build(name, params)
 
+    def test_adsb_exchange_stats(self):
+        # 0.52.0: their stats package, on and off only; it runs their script, so it says so and takes minutes
+        self.assertEqual(actions.build("adsbx-stats", {"value": "on"}), ["adsbx-stats", "on"])
+        self.assertEqual(actions.build("adsbx-stats", {"value": "off"}), ["adsbx-stats", "off"])
+        self.assertTrue({"long", "ask"} <= set(actions.flags("adsbx-stats")))
+        self.assertEqual(actions.catalog()["adsbx-stats"]["section"], "receiver")
+        for v in ("url", "status", "on;id", ""):
+            with self.assertRaises(actions.Refused, msg=v):
+                actions.build("adsbx-stats", {"value": v})
+
     def test_the_page_reads_the_templates_as_they_are(self):
         d = tempfile.mkdtemp(); self.addCleanup(shutil.rmtree, d, True)
         self.addCleanup(setattr, console, "TEMPLATES_FILE", console.TEMPLATES_FILE)

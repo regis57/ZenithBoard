@@ -35,7 +35,7 @@ BK_PF_CONFIG="${ZB_PF_CONFIG:-/etc/pfclient-config.json}"
 BK_PIAWARE_CACHE="${ZB_PIAWARE_ID_CACHE:-/var/cache/piaware/feeder_id}"
 BK_CMD="${ZB_BACKUP_CMD:-$ZB_HOME/bin/zenithboard}"
 BK_CONSOLE_OUT="${ZB_CONSOLE_DIR:-/var/lib/zenithboard/console}/out/backup.tar.gz"
-BK_FEATURES="stats graphs watchdog netwatch keeplogs patches wifi_harden logs_auto gain_log social console phone_signin"
+BK_FEATURES="stats graphs watchdog netwatch keeplogs patches wifi_harden logs_auto gain_log social console phone_signin adsbx_stats"
 BK_MAX_MB=2048
 
 bk_svc() { [ "${ZB_SKIP_SERVICES:-}" = 1 ] || systemctl "$@" >/dev/null 2>&1 || true; }
@@ -50,13 +50,14 @@ bk_feature_state() {
     logs_auto) [ "$(cfg_get LOG_AUTOCLEAN 0)" = 1 ] && echo on || echo off ;;
     social) social_state ;; console) console_state ;;
     phone_signin) [ "$(cfg_get CONSOLE_PHONE_SIGNIN 0)" = 1 ] && echo on || echo off ;;
+    adsbx_stats) declare -F adsbx_stats_state >/dev/null && adsbx_stats_state || echo off ;;
     *) echo off ;;
   esac
 }
 bk_feature_cmd() {
   case "$1" in
     wifi_harden) echo "wifi harden on" ;; logs_auto) echo "logs auto on" ;; gain_log) echo "gain log on" ;;
-    phone_signin) echo "console phone-signin on" ;; *) echo "$1 on" ;;
+    phone_signin) echo "console phone-signin on" ;; adsbx_stats) echo "adsbx-stats on" ;; *) echo "$1 on" ;;
   esac
 }
 bk_feature_label() {
@@ -64,7 +65,7 @@ bk_feature_label() {
     stats) echo "Statistics" ;; graphs) echo "graphs1090" ;; watchdog) echo "Hardware watchdog" ;; netwatch) echo "Network watchdog" ;;
     keeplogs) echo "Logs kept after a restart" ;; patches) echo "Daily security fixes" ;; wifi_harden) echo "Wi-Fi hardening" ;;
     logs_auto) echo "Daily log clean-up" ;; gain_log) echo "Gain log" ;; social) echo "Bluesky posts" ;; console) echo "Web console" ;;
-    phone_signin) echo "Computers signed in by a phone" ;; *) echo "$1" ;;
+    phone_signin) echo "Computers signed in by a phone" ;; adsbx_stats) echo "ADSB Exchange stats" ;; *) echo "$1" ;;
   esac
 }
 
@@ -392,6 +393,8 @@ backup_restore() {
       social)
         if [ ! -s "$SOCIAL_SECRETS" ]; then cfg_set SOCIAL 0; later="$later\n  sudo zenithboard social setup        (a new app password: bsky.app > Settings > Privacy and security > App passwords)"; continue; fi ;;
       wifi_harden) [ -n "$(wifi_iface 2>/dev/null)" ] || continue ;;
+      # 0.52.0: they need ADSB Exchange's feed, which a fresh card gets from menu 1; the UUID came back with step 4
+      adsbx_stats) is_adsbx || { later="$later\n  sudo zenithboard adsbx-stats on      (after ADSB Exchange: menu 1 ADSB)"; continue; } ;;
       graphs) [ ! -f "$b/graphs-xml.tar.gz" ] || { install -d -m 700 "$BK_PENDING"; install -m 600 "$b/graphs-xml.tar.gz" "$BK_PENDING/graphs-xml.tar.gz"; } ;;
     esac
     # shellcheck disable=SC2046

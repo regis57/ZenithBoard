@@ -14,6 +14,8 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=lib/common.sh
 . "$ROOT/lib/common.sh"
 . "$ROOT/lib/adsb.sh"
+# shellcheck source=lib/adsbxstats.sh
+. "$ROOT/lib/adsbxstats.sh"
 . "$ROOT/lib/flightinfo.sh"
 . "$ROOT/lib/legacy.sh"
 . "$ROOT/lib/logs.sh"

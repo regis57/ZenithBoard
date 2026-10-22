@@ -40,6 +40,27 @@ Each feeder fails on its own. A 404 from Plane Finder does not stop FlightAware 
 | **If it moves** | A warning, and no update that round |
 | **If it changes** | Run as it is: trusted, not checked. `zenithboard mlat-guard` then restores the single-MLAT rule |
 
+### ADSB Exchange's stats (0.52.0, optional)
+
+| | |
+|---|---|
+| **Fetched** | `stats.sh` (it redirects to their GitHub, then clones `adsbexchange/adsbexchange-stats` and runs its `install.sh`), downloaded and run as root by `adsbx-stats on` and at each update while it is on |
+| **Pinned** | The address (`ADSBX_STATS_URL`). Not the content. Read in full on 22 October 2026, commit 11647f2 (February 2023) |
+| **Kept current by** | Their script, run again at every update, the way their README updates it |
+| **If it moves** | `on` says so and changes nothing; an update warns, and the stats keep running as they were |
+| **If it changes** | Run as it is: trusted, not checked, like their feed's script |
+
+**What it is.** Their feed sends ADSB Exchange what your antenna hears. Their *stats package* is a second program that fills *Feed Details* on <https://www.adsbexchange.com/myip/>. Without it, that panel says *Feed UID Not Found* and *No Stats* while the feed and MLAT are fine. With it you get:
+* *ADS-B Exchange Anywhere*, their map of only the aircraft your antenna hears, viewable from anywhere (the link is at the bottom of the *myip* page, or `zenithboard adsbx-stats url`);
+* your receiver's statistics on their site;
+* the claim of the receiver under an ADSB Exchange account, if you want one. ZenithBoard never creates that account.
+
+**What it sends**, read in their code: every 5 seconds, the feed's aircraft list (`/run/adsbexchange-feed/aircraft.json`, what the feed already gives them), the feed's UUID, three signal figures (average, weakest, strongest) and the Pi's power warnings (`vcgencmd get_throttled`). It runs as the `adsbexchange` user, at the lowest priority.
+
+**What it adds**: `jq`, `bind9-host` and `bash-builtins` from apt (signed; whichever are missing), its folder `/usr/local/share/adsbexchange-stats`, the `adsbexchange-stats` service, `adsbexchange-showurl`, and the `adsbexchange` user in the video group (for `vcgencmd`). `off` takes all of that back: their uninstaller, the packages that were not there before (unless something installed since needs one, which is said), and the group. The feed's UUID stays: it is the feed's, the backup keeps it, and `on` again gives the same map.
+
+**Keep the link to yourself.** It carries the UUID, and the aircraft on the map show roughly where the antenna is. ZenithBoard prints it for `adsbx-stats url`, `status` and `on`, and the console shows it, signed in; `zenithboard status`, which is often pasted, does not.
+
 ### Flightradar24
 
 | | |

@@ -122,6 +122,8 @@ install_adsbx() {
   bash "$ax"
 }
 remove_adsbx() {
+  # 0.52.0: their stats read the feed's folder; the feed's uninstaller leaves them running, failing every two minutes
+  if declare -F adsbx_stats_off >/dev/null && { is_adsbx_stats || [ -f "$AXS_STATE" ]; }; then adsbx_stats_off; fi
   if [ -x "$ADSBX_UNINSTALL" ] || [ -f "$ADSBX_UNINSTALL" ]; then bash "$ADSBX_UNINSTALL"
   else systemctl disable --now adsbexchange-feed adsbexchange-mlat 2>/dev/null || true; fi
 }
@@ -263,7 +265,8 @@ adsb_menu() {
 
   local st_fa=OFF st_fr=OFF st_pf=OFF
   is_piaware && st_fa=ON; is_fr24 && st_fr=ON; is_planefinder && st_pf=ON
-  local -a items=(ADSBX "ADSB Exchange (mandatory)" ON FLIGHTAWARE "FlightAware (piaware)" "$st_fa" FR24 "Flightradar24" "$st_fr" PLANEFINDER "Plane Finder" "$st_pf")
+  local st_axs=OFF; is_adsbx_stats && st_axs=ON
+  local -a items=(ADSBX "ADSB Exchange (mandatory)" ON ADSBX_STATS "ADSB Exchange stats: their map of your aircraft" "$st_axs" FLIGHTAWARE "FlightAware (piaware)" "$st_fa" FR24 "Flightradar24" "$st_fr" PLANEFINDER "Plane Finder" "$st_pf")
   local st_uat=OFF
   is_uat978 && st_uat=ON
   # 978 MHz UAT is only used in the United States; a region that has it installed keeps seeing it so it can be removed
@@ -273,6 +276,8 @@ adsb_menu() {
 
   [ "$dec_now" != "$dec_sel" ] && plan+="- Decoder: ${dec_now:-none} -> $dec_sel\n"
   is_adsbx || plan+="- Install ADSB Exchange\n"
+  if [[ "$feeders" == *" ADSBX_STATS "* ]]; then is_adsbx_stats || plan+="- Install ADSB Exchange stats (every 5 s, the aircraft heard, to them)\n"
+  else is_adsbx_stats && plan+="- REMOVE ADSB Exchange stats\n"; fi
   local pair f name checker
   for pair in "FLIGHTAWARE:is_piaware" "FR24:is_fr24" "PLANEFINDER:is_planefinder"; do
     f=${pair%%:*}; checker=${pair##*:}
@@ -298,6 +303,11 @@ adsb_menu() {
     cfg_set DECODER "$dec_sel"
   fi
   is_adsbx || install_adsbx
+  if [[ "$feeders" == *" ADSBX_STATS "* ]]; then
+    is_adsbx_stats || { is_adsbx && adsbx_stats_on; } || warn "ADSB Exchange stats were not installed."
+  else
+    is_adsbx_stats && adsbx_stats_off
+  fi
   for pair in "FLIGHTAWARE:piaware" "FR24:fr24" "PLANEFINDER:planefinder"; do
     f=${pair%%:*}; name=${pair##*:}
     if [[ "$feeders" == *" $f "* ]]; then

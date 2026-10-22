@@ -367,6 +367,7 @@ window.ZBI18N.start({ part: "console" }, function () {
   var ASK = {
     location: [t("Change the antenna position?"), t("It is written everywhere it is stored on this Pi (the wall, and the feeders that can be set from here); the ones that cannot are named in the output. The position is never shown on the wall or in a post.")],
     graphs: ["graphs1090", t("Turning it on runs its author's installer: collectd and rrdtool from apt (signed), its files from GitHub, a few minutes. Turning it off puts back what was there before and keeps its history.")],
+    "adsbx-stats": [t("ADSB Exchange stats"), t("Turning it on runs ADSB Exchange's own script, a minute or two. Every 5 seconds the Pi then sends them the aircraft it hears (the list their feed already gets) and its power warnings. In return: their map of only your aircraft, from anywhere, and Feed Details on their page. Turning it off removes it and the packages it added.")],
     "gain-step": [t("Move the gain one step?"), t("The decoder restarts with the new gain: a few seconds without aircraft. Go one step at a time, and check again after a day.")],
     social: [t("Social sharing"), t("Switching it on starts posting the aircraft worth it to Bluesky, as set in Sharing (place name, radius, rules, gap). Off stops the service; the account stays.")],
     watchdog: [t("Hardware watchdog"), t("If the Pi freezes completely, its own chip restarts it after about 10 seconds. Off takes the setting away again.")],
@@ -528,10 +529,12 @@ window.ZBI18N.start({ part: "console" }, function () {
   // ---- the sections
   var SVC_NAMES = [
     ["readsb", t("Decoder (readsb)")], ["dump1090_fa", t("Decoder (dump1090-fa)")], ["dump978_fa", t("978 MHz UAT")],
-    ["adsbexchange_feed", t("ADSB Exchange")], ["piaware", t("FlightAware")], ["fr24feed", t("Flightradar24")], ["pfclient", t("Plane Finder")],
+    ["adsbexchange_feed", t("ADSB Exchange")], ["adsbexchange_stats", t("ADSB Exchange stats")], ["piaware", t("FlightAware")], ["fr24feed", t("Flightradar24")], ["pfclient", t("Plane Finder")],
     ["zenithboard_flightinfo", t("The wall")], ["zenithboard_social", t("Bluesky posts")], ["graphs1090", "graphs1090"], ["lighttpd", t("Receiver map's web server")]
   ];
   function go(section) { return function () { location.hash = "#" + section; }; }
+  // 0.52.0: the link to ADSB Exchange's map of this antenna's aircraft, only when it is theirs
+  function adsbxMap() { var u = S.facts.adsbx_map || ""; return /^https:\/\/www\.adsbexchange\.com\/api\/feeders\/\?feed=[0-9A-Fa-f-]{36}$/.test(u) ? u : null; }
 
   var SECTIONS = {
     overview: function () {
@@ -608,6 +611,8 @@ window.ZBI18N.start({ part: "console" }, function () {
           row(t("Statistics"), t("A sample every 15 minutes, 30 days kept, about 30 KB a day"), [sw("stats", on(c.STATS)), on(c.STATS) ? h("a", { href: "/stats", target: "_blank", rel: "noopener", text: t("Open ↗") }) : null]),
           row("graphs1090", t("Years of the decoder's graphs on port 8542; installed by its author's script"), [sw("graphs", f.graphs === "on"), f.graphs === "on" ? h("a", { href: "http://" + host() + ":8542/" + langQ(), target: "_blank", rel: "noopener", text: t("Open ↗") }) : null]),
           f.graphs === "on" ? row(t("graphs1090 in ZenithBoard's look"), t("A black page in the wall's colour, its graphs drawn to match; off: graphs1090's own"), sw("graphs-look", S.cfg.GRAPHS_LOOK !== "original")) : null,
+          f.svc_adsbexchange_feed !== undefined || f.adsbx_stats === "on" ? row(t("ADSB Exchange stats"), t("Their map of only your aircraft, from anywhere, and Feed Details on their page. The Pi sends them the aircraft it hears every 5 seconds."),
+            [sw("adsbx-stats", f.adsbx_stats === "on"), adsbxMap() ? h("a", { href: adsbxMap(), target: "_blank", rel: "noopener noreferrer", text: t("Open ↗") }) : null]) : null,
           row(t("Gain"), t("Check it first; then one step at a time"), [btn(t("Check"), "gain-check"), btn(t("− Down"), "gain-step", { value: "down" }, "btn", { key: "gain-step" }), btn(t("Up +"), "gain-step", { value: "up" }, "btn", { key: "gain-step" })]),
           row(t("Gain log, 24 hours"), t("One measurement every 15 minutes, as a table"), sw("gain-log", on(c.GAINLOG)))
         ], "w6"),
@@ -932,6 +937,8 @@ window.ZBI18N.start({ part: "console" }, function () {
     if (f.svc_pfclient !== undefined) list.push(page("plane", t("Plane Finder"), t("Its own page, port 30053"), "http://" + hh + ":30053/"));
     if (f.svc_fr24feed !== undefined) list.push(page("plane", t("Flightradar24"), t("Its feeder's page, port 8754"), "http://" + hh + ":8754/"));
     if (f.svc_adsbexchange_feed !== undefined) list.push(h("a", { "class": "page", href: "https://www.adsbexchange.com/myip/", target: "_blank", rel: "noopener noreferrer" }, ico("link"), h("div", null, h("b", { text: t("ADSB Exchange") }), h("span", { text: t("Your feed, on their site") }))));
+    if (adsbxMap()) list.push(h("a", { "class": "page", href: adsbxMap(), target: "_blank", rel: "noopener noreferrer" }, ico("map"), h("div", null, h("b", { text: t("Your aircraft on ADSB Exchange") }), h("span", { text: t("Their map: only what your antenna hears") }))));
+    else if (f.svc_adsbexchange_feed !== undefined) list.push(later("map", t("Your aircraft on ADSB Exchange"), t("Off · switch on in Receiver"), "receiver"));
     if (f.bluesky) {
       list.push(page("picture", t("Last post's picture"), t("What 'Try a post' drew"), "/social/preview"));
       ["2", "3", "4"].forEach(function (n) { list.push(page("picture", t("Weekly post {n}", { n: n }), ["", "", t("Cargo and business jets"), t("Military"), t("General aviation")][Number(n)], "/social/preview" + n)); });

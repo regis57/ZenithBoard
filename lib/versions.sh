@@ -2,7 +2,7 @@
 # shellcheck disable=SC2034
 # shellcheck shell=bash
 # Third-party pins. Bump here when an upstream moves; everything else reads these.
-ZB_VERSION="0.51.0"
+ZB_VERSION="0.52.0"
 
 # FlightAware APT repository package (provides piaware and dump1090-fa). FlightAware renamed it from
 # piaware-repository (9.0.1) to flightaware-apt-repository; see https://www.flightaware.com/adsb/piaware/install
@@ -28,6 +28,8 @@ TAR1090_UNINSTALL_URL="https://github.com/wiedehopf/tar1090/raw/master/uninstall
 ADSBX_FEED_URL="https://adsbexchange.com/feed.sh"
 ADSBX_UPDATE_URL="https://adsbexchange.com/feed-update.sh"
 ADSBX_UNINSTALL="/usr/local/share/adsbexchange/uninstall.sh"
+# 0.52.0: their stats package, optional (lib/adsbxstats.sh); it redirects to github.com/adsbexchange/adsbexchange-stats
+ADSBX_STATS_URL="https://adsbexchange.com/stats.sh"
 
 # Flightradar24
 TAILSCALE_PKGS="https://pkgs.tailscale.com/stable"   # 0.45.0: Tailscale's own repository (pkgs.tailscale.com/stable, read 21 October 2026)

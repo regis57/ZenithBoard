@@ -66,7 +66,7 @@ logs_usage() {
 logs_review() {     # what a user wants to look at: size, limit, and recent warnings of our services
   logs_usage
   echo; echo "Recent warnings and errors (ZenithBoard wall, decoder, feeders):"
-  local units=(-u zenithboard-flightinfo -u readsb -u dump1090-fa -u dump978-fa -u adsbexchange-feed -u piaware -u fr24feed)
+  local units=(-u zenithboard-flightinfo -u readsb -u dump1090-fa -u dump978-fa -u adsbexchange-feed -u adsbexchange-stats -u piaware -u fr24feed)
   journalctl -p warning -n 25 --no-pager "${units[@]}" 2>/dev/null || true
 }
 

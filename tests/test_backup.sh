@@ -21,7 +21,8 @@ printf '#!/bin/bash\necho "$*" >> "%s/zb.log"\n' "$t" > "$t/bin/zb"
 printf '#!/bin/bash\nif [ "$1" = -show ]; then echo 11111111-2222-3333-4444-555555555555; else echo "piaware-config $*" >> "%s/piaware.log"; fi\n' "$t" > "$t/pw"
 chmod +x "$t"/bin/* "$t/pw"
 export PATH="$t/bin:$PATH"
-for l in common stats graphs reliability patches gain logs social settings wifi console backup; do
+export ZB_AXS_ROOT="$t/axs"; mkdir -p "$t/axs/etc/systemd/system"; echo "[Service]" > "$t/axs/etc/systemd/system/adsbexchange-stats.service"   # 0.52.0: on
+for l in common adsbxstats stats graphs reliability patches gain logs social settings wifi console backup; do
   # shellcheck disable=SC1090
   . "lib/$l.sh"
 done
@@ -55,6 +56,7 @@ m=$(members "$t/full.tar.gz")
 check "make: every part is in it"                    'for x in MANIFEST settings.env features.env feeders.env pfclient-config.json graphs-xml.tar.gz stats/stats.csv stats/seen-2026-10-20 social/state.json social/templates.txt journal/0123456789abcdef0123456789abcdef/system.journal; do echo "$m" | grep -qx "$x" || exit 1; done'
 mkdir -p "$t/x"; tar -C "$t/x" -xzf "$t/full.tar.gz"
 check "make: the settings without a secret"          'grep -q "^RADIUS=15$" "$t/x/zb/settings.env" && ! grep -q "never-exported" "$t/x/zb/settings.env"'
+check "make: ADSB Exchange stats on (0.52.0)"        'grep -qx "adsbx_stats=on" "$t/x/zb/features.env"'
 check "make: what is on, even outside config.env"    'grep -qx "stats=on" "$t/x/zb/features.env" && grep -qx "watchdog=on" "$t/x/zb/features.env" && grep -qx "keeplogs=on" "$t/x/zb/features.env" && grep -qx "netwatch=on" "$t/x/zb/features.env" && grep -qx "social=off" "$t/x/zb/features.env"'
 check "make: the three identities"                   'grep -qx "ADSBX_UUID=c0ffee00-1234-4abc-8def-0123456789ab" "$t/x/zb/feeders.env" && grep -qx "PIAWARE_FEEDER_ID=11111111-2222-3333-4444-555555555555" "$t/x/zb/feeders.env" && grep -qx "FR24_KEY=ABCDEF123456" "$t/x/zb/feeders.env"'
 check "make: never the Bluesky or console secrets"   'echo "BLUESKY_APP_PASSWORD=zzz" > "$t/etc/social.env"; backup_make "$t/f2.tar.gz" >/dev/null; ! tar -xzOf "$t/f2.tar.gz" | grep -q zzz; rm -f "$t/etc/social.env"'
@@ -93,6 +95,7 @@ check "restore: the old card logs beside the new"   '[ -f "$t/journal/0123456789
 check "restore: ADSB Exchange's UUID written now"     '[ "$(cat "$t/adsbx/adsbx-uuid")" = c0ffee00-1234-4abc-8def-0123456789ab ]'
 check "restore: networks not installed wait, root only" '[ "$(cat "$t/data/restore-pending/piaware-feeder-id")" = 11111111-2222-3333-4444-555555555555 ] && [ "$(cat "$t/data/restore-pending/fr24key")" = ABCDEF123456 ] && [ -f "$t/data/restore-pending/pfclient-config.json" ] && [ "$(stat -c %a "$t/data/restore-pending")" = 700 ] && [ "$(stat -c %a "$t/data/restore-pending/fr24key")" = 600 ]'
 check "restore: what was on, switched on again"      'grep -qx "stats on" "$t/zb.log" && grep -qx "watchdog on" "$t/zb.log" && grep -qx "keeplogs on" "$t/zb.log" && grep -qx "netwatch on" "$t/zb.log" && ! grep -q "social\|console\|wifi" "$t/zb.log"'
+check "restore: ADSB Exchange stats wait for its feed" '! grep -q "adsbx-stats" "$t/zb.log" && echo "$out" | grep -q "sudo zenithboard adsbx-stats on      (after ADSB Exchange: menu 1 ADSB)"'
 check "restore: graphs1090's history waits for it"   'grep -qx "graphs on" "$t/zb.log" && [ -f "$t/data/restore-pending/graphs-xml.tar.gz" ] && echo "$out" | grep -q "waits for graphs1090"'
 check "restore: what was here kept first"            'b=$(ls -d "$t"/data/before-restore-*); grep -q "^RADIUS=5$" "$b/config.env" && grep -q 1761100000 "$b/stats/stats.csv"'
 check "restore: never prints a key"                  '! echo "$out" | grep -q "ABCDEF123456\|5X2X2X2X9XaX3\|11111111-2222"'

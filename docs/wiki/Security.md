@@ -123,6 +123,7 @@ The installer runs other people's installers, as root, straight from the network
 |---|---|
 | `readsb-install.sh` | wiedehopf/adsb-scripts on GitHub |
 | `feed.sh`, `feed-update.sh` | adsbexchange.com |
+| `stats.sh`, only with `adsbx-stats on` (0.52.0, off by default) | adsbexchange.com, then their GitHub |
 | `install_fr24_rpi.sh` | repo-feed.flightradar24.com |
 | `.deb` packages | FlightAware, Plane Finder |
 

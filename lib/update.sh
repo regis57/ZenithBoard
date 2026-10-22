@@ -260,6 +260,7 @@ zb_update_components() {
   want_c dump1090 && is_dump1090 && { log "dump1090-fa"; apt_install --only-upgrade dump1090-fa || warn "dump1090-fa update failed"; }
   if want_c adsbx && is_adsbx; then
     log "ADSB Exchange"; ax=$(zb_tmp axupdate.sh) && fetch "$ADSBX_UPDATE_URL" "$ax" && bash "$ax" || warn "ADSB Exchange update failed"
+    if is_adsbx_stats; then log "ADSB Exchange stats"; adsbx_stats_update; fi
   fi
   want_c piaware && is_piaware && { log "piaware"; apt_install --only-upgrade piaware || warn "piaware update failed"; }
   want_c fr24 && is_fr24 && { log "fr24feed"; apt_install --only-upgrade fr24feed || warn "fr24feed update failed"; }

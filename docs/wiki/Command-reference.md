@@ -89,6 +89,7 @@ A tablet can override the colour, look, units, radius, cycle and flags for itsel
 | `zenithboard gain log clear` | yes | Empty it and start again (before testing a new gain) |
 | `zenithboard region world` · `us` | yes | `us` offers the optional 978 MHz UAT receiver in the menu |
 | `zenithboard mlat-guard` | yes | Put the single-MLAT rule back, if a feeder update switched its own MLAT on |
+| `zenithboard adsbx-stats on` · `off` · `status` · `url` | yes for on and off | ADSB Exchange's stats package, off by default (0.52.0). It fills *Feed Details* on their [myip](https://www.adsbexchange.com/myip/) page, with their map of only the aircraft your antenna hears, viewable from anywhere, and your receiver's statistics. `on` needs ADSB Exchange's feed and runs their own script. Every 5 seconds the Pi then sends them the aircraft list their feed already gets, with its power warnings. `off` runs their uninstaller and removes the packages it added. `url` prints the link to your map, the feed's UUID in it: keep it to yourself. See [ADSB Exchange's stats](Providers#adsb-exchanges-stats-0520-optional) |
 
 How to read a day of the gain log, and why a quiet hour cannot judge the gain: [Gain tuning](Gain-tuning).
 
