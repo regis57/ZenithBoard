@@ -59,6 +59,8 @@ Each feeder fails on its own. A 404 from Plane Finder does not stop FlightAware 
 
 **What it adds**: `jq`, `bind9-host` and `bash-builtins` from apt (signed; whichever are missing), its folder `/usr/local/share/adsbexchange-stats`, the `adsbexchange-stats` service, `adsbexchange-showurl`, and the `adsbexchange` user in the video group (for `vcgencmd`). `off` takes all of that back: their uninstaller, the packages that were not there before (unless something installed since needs one, which is said), and the group. The feed's UUID stays: it is the feed's, the backup keeps it, and `on` again gives the same map.
 
+![The console's Receiver → Measure with ADSB Exchange's stats on and the link to their map](https://raw.githubusercontent.com/regis57/ZenithBoard/main/docs/images/console-adsbx-stats.png)
+
 **Keep the link to yourself.** It carries the UUID, and the aircraft on the map show roughly where the antenna is. ZenithBoard prints it for `adsbx-stats url`, `status` and `on`, and the console shows it, signed in; `zenithboard status`, which is often pasted, does not.
 
 ### Flightradar24
