@@ -9,17 +9,28 @@ not written below. A value is only ever one of the values listed, a number in it
 
 Left out on purpose, and done over SSH: uninstalling, Wi-Fi on/off/connect/forget/country and fixed addresses (one
 mistake cuts the Pi off the network the console is reached through), anything asking for a password, token or key
-(the Bluesky account, the domain name), posting to Bluesky, emptying statistics or logs, importing settings or
+(the Bluesky account, the domain name), posting an aircraft or a summary to Bluesky at once, emptying statistics or
+logs, importing settings or
 restoring a backup (0.42.0: a backup is made here and downloaded, but put back over SSH; the networks' keys never
 travel through the console, so its backup leaves them out),
 `config-set` (any key, any value), and the old ACARS removal.
+
+One post does go from here since 0.50.0, at the owner's word (22 October 2026): a written one, his own words as he
+typed them, text only, after a confirmation that shows them. A text value is passed as one argument, never split.
 """
 import re
+import unicodedata
 
 HHMM = r"([01]?[0-9]|2[0-3]):[0-5][0-9]"
 ON_OFF = ("on", "off")
 THEMES = ("amber", "green", "red", "white", "turquoise")
 PERIODS = ("daily", "weekly", "monthly")
+# 0.50.0: the words of the posts, as lib/social.sh checks them again (social_hashtags_clean, social_area_clean)
+HASHTAGS_RE = r"none|default|#?[A-Za-z0-9_]{1,40}( #?[A-Za-z0-9_]{1,40}){0,7}"
+AREA_RE = r"[^\W_][\w '\u2019.,-]{0,39}"
+RULES = ("military", "helicopter", "heavy", "rare", "farthest")
+RULES_RE = r"^(all|(%s)(,(%s)){0,4})$" % ("|".join(RULES), "|".join(RULES))
+SAY_MAX = 300                    # social.py's SAY_MAX: Bluesky's 300, counted in characters
 # 0.47.0: the web pages' languages, the same codes as lib/common.sh (ZB_LANG_CODES) and flightinfo/static/i18n.js; the
 # command itself refuses one this Pi has no catalogue for
 LANGS = ("en", "fr", "de", "nl", "it", "es", "pt-BR", "pl", "fi", "et", "lv", "lt", "id", "sw", "ru", "uk", "ar", "ja", "ko",
@@ -80,6 +91,14 @@ ACTIONS = {
     "social-sentence": ("sharing", "Words of a post", ["social", "sentence", "{value}"],
                      [("value", "re", r"^(random|(factual|story|board|spotter|lookup)(,(factual|story|board|spotter|lookup)){0,4})$")], ""),
     "social-gap":   ("sharing", "Least time between posts", ["social", "gap", "{value}"], [("value", "int", (0, 1440))], ""),
+    # 0.50.0: what `social words` asks, one answer at a time; and a written post, after a confirmation
+    "social-area":  ("sharing", "Place name", ["social", "area", "{value}"], [("value", "text", (40, AREA_RE))], ""),
+    "social-radius": ("sharing", "Sharing radius", ["social", "radius", "{value}"], [("value", "int", (1, 200))], ""),
+    "social-rules": ("sharing", "What is worth a post", ["social", "rules", "{value}"], [("value", "re", RULES_RE)], ""),
+    "social-hashtags": ("sharing", "Hashtags", ["social", "hashtags", "{value*}"], [("value", "text", (340, HASHTAGS_RE))], ""),
+    "social-places": ("sharing", "Town names on the maps", ["social", "places", "{value}"], [("value", "enum", ON_OFF)], "long"),
+    "social-say-test": ("sharing", "Preview a written post", ["social", "say", "--dry", "--", "{text}"], [("text", "text", (SAY_MAX, None))], "read"),
+    "social-say":   ("sharing", "Write a post", ["social", "say", "--", "{text}"], [("text", "text", (SAY_MAX, None))], "ask"),
     "summary":      ("sharing", "Summary", ["social", "summary", "{period}", "{value}"], [("period", "enum", PERIODS), ("value", "enum", ON_OFF)], ""),
     "summary-at":   ("sharing", "Summary time", ["social", "summary", "{period}", "at", "{when*}"],
                      [("period", "enum", PERIODS),
@@ -143,6 +162,12 @@ def _check(kind, rule, value):
     elif kind == "re":
         if len(value) <= 64 and re.match(rule, value):
             return value
+    elif kind == "text":                          # 0.50.0: (longest, pattern or None); lines kept, no other control
+        longest, pattern = rule
+        value = value.replace("\r\n", "\n").replace("\r", "\n")
+        if 0 < len(value) <= longest and not any(unicodedata.category(ch) == "Cc" and ch not in "\n\t" for ch in value) \
+                and (pattern is None or ("\n" not in value and re.fullmatch(pattern, value))):
+            return value
     raise Refused("not an allowed value")
 
 
@@ -198,6 +223,8 @@ def catalog():
                 item["choices"] = list(p[2])
             elif p[1] in ("int", "float"):
                 item["min"], item["max"] = p[2]
+            elif p[1] == "text":
+                item["max"] = p[2][0]
             params.append(item)
         out[name] = {"section": spec[0], "label": spec[1], "params": params, "flags": sorted(flags(name))}
     return out

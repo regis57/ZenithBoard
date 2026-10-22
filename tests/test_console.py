@@ -45,6 +45,38 @@ class ActionsTest(unittest.TestCase):
                      "config-set", "password", "post", "ddns set", "wifi on", "wifi off"):
             self.assertFalse([a for a in argvs if word in a.split() or a.startswith(word)], word)
 
+    def test_the_one_post_from_here_is_a_written_one_after_a_confirmation(self):
+        # 0.50.0, the owner's word (22 October 2026): his own words, text only; an aircraft or a summary at once stays
+        # in the terminal (no "post" above)
+        posting = [n for n, s in actions.ACTIONS.items() if s[2] and s[2][:2] == ["social", "say"]]
+        self.assertEqual(sorted(posting), ["social-say", "social-say-test"])
+        self.assertIn("ask", actions.flags("social-say"))
+        self.assertIn("--dry", actions.ACTIONS["social-say-test"][2])
+        self.assertIn("read", actions.flags("social-say-test"))
+
+    def test_a_written_post_is_one_argument_lines_kept(self):
+        argv = actions.build("social-say", {"text": "Bonjour\r\nle ciel de Trémery #avgeek; $(id) `id`"})
+        self.assertEqual(argv, ["social", "say", "--", "Bonjour\nle ciel de Trémery #avgeek; $(id) `id`"],
+                         "never through a shell: the text is one argument, as typed")
+        self.assertEqual(actions.build("social-say", {"text": "--dry"})[2:], ["--", "--dry"], "after --: text, not an option")
+        for bad in ("", "   ", "x" * 301, "nul\x00", "esc\x1b[2J"):
+            with self.assertRaises(actions.Refused, msg=repr(bad)):
+                actions.build("social-say", {"text": bad})
+        self.assertEqual(actions.catalog()["social-say"]["params"][0]["max"], 300)
+
+    def test_the_words_of_the_posts(self):
+        self.assertEqual(actions.build("social-area", {"value": "L\u2019H\u00f4pital"}), ["social", "area", "L\u2019H\u00f4pital"])
+        self.assertEqual(actions.build("social-hashtags", {"value": "#ADSB avgeek ZenithBoard"}), ["social", "hashtags", "#ADSB", "avgeek", "ZenithBoard"])
+        self.assertEqual(actions.build("social-rules", {"value": "military,rare"}), ["social", "rules", "military,rare"])
+        self.assertEqual(actions.build("social-radius", {"value": "25"}), ["social", "radius", "25"])
+        bad = [("social-area", {"value": "a;b"}), ("social-area", {"value": "two\nlines"}), ("social-area", {"value": "x" * 41}),
+               ("social-hashtags", {"value": "#a #b`id`"}), ("social-hashtags", {"value": "#a  #b"}), ("social-rules", {"value": "all,rare"}),
+               ("social-rules", {"value": "drones"}), ("social-radius", {"value": "201"}), ("social-places", {"value": "maybe"})]
+        for name, params in bad:
+            with self.assertRaises(actions.Refused, msg=(name, params)):
+                actions.build(name, params)
+        self.assertTrue({"SOCIAL_RADIUS_KM", "SOCIAL_RULES", "SOCIAL_HASHTAGS", "SOCIAL_PLACES"} <= set(console.SHOWN_KEYS))
+
     def test_catalog_never_shows_the_commands(self):
         cat = actions.catalog()
         self.assertEqual(cat["radius"]["params"][0]["choices"], ["1", "2", "5", "10", "15", "30", "50"])
@@ -392,6 +424,17 @@ class RunnerTest(TempDirs):
         with open(os.path.join(self.dir, "out", "state.json")) as fh:
             self.assertEqual(json.load(fh)["facts"], {"version": "0.39.0", "temp_c": "51"})
         self.assertEqual(console.job_status(j, st["next"])["log"], "", "read from where the page left off")
+
+    def test_a_written_post_reaches_the_command_whole_and_the_journal_on_one_line(self):
+        j = self.job("social-say", {"text": "Line one\nline two #avgeek"})
+        self.run_helper()
+        st = console.job_status(j)
+        self.assertIn("ran: social say -- Line one\nline two #avgeek", st["log"], "one argument, its line kept")
+        self.assertTrue(st["log"].startswith("$ zenithboard social say -- Line one line two #avgeek\n"))
+        with open(os.path.join(self.dir, "out", "journal.log")) as fh:
+            lines = fh.read().splitlines()
+        self.assertEqual(len(lines), 1)
+        self.assertIn("social-say", lines[0])
 
     def test_a_failing_command_and_a_read_are_told_apart(self):
         j = self.job("health", {})

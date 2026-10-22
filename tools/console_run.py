@@ -145,7 +145,7 @@ def run_job(job_id, job):
         timeout = TIMEOUT_S["long"] if "long" in flags else TIMEOUT_S[""]
         log_path = os.path.join(OUT, job_id + ".log")
         with os.fdopen(_create(log_path), "wb", buffering=0) as log:
-            log.write(("$ zenithboard %s\n" % " ".join(argv)).encode("utf-8"))
+            log.write(("$ zenithboard %s\n" % " ".join(" ".join(a.split()) for a in argv)).encode("utf-8"))
             try:
                 p = subprocess.Popen([ZB_BIN] + argv, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
                                      stderr=subprocess.STDOUT, env=_env(), cwd="/")
@@ -168,6 +168,7 @@ def run_job(job_id, job):
     if "read" in actions.flags(name):
         return                                    # looking changes nothing: the journal keeps the changes
     shown = " ".join("%s=%s" % (k, v) for k, v in sorted(params.items())) if isinstance(params, dict) else ""
+    shown = " ".join(shown.split())               # 0.50.0: a written post's lines on the journal's one line
     journal("%s  %-14s %-18s %s  %s" % (time.strftime("%Y-%m-%d %H:%M"), name, shown[:18], "ok" if rc == 0 else "rc=%s" % rc, who))
 
 

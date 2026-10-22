@@ -109,6 +109,52 @@ zenithboard logs social
 
 Several shapes, comma-separated (`story,spotter,lookup`), or `random`: one is drawn at each post. The reason the post was made comes first when the words do not already say it: `Rare visitor:`, `Heavy overhead:`, `Military traffic:`, `Helicopter:`. A range record keeps the factual words, which say "range record for 30 days" and where it was seen from rather than "overhead". A shape that lacks what it needs (an aircraft with neither airline nor type) or would pass 220 characters gives the factual text, which can be cut cleanly at Bluesky's 300. No shape ever says the distance or the direction from the receiver: with the area, they would place it. The hashtags, the map's credit and the photo link follow as before.
 
+## A written post (0.50.0)
+
+Your own words, posted as you typed them: no picture, no map, nothing read from the receiver. The automatic posts
+carry on as they are.
+
+```
+sudo zenithboard social say --dry 'Le bilan quotidien part maintenant à 08:45 #avgeek'   # shows it, posts nothing
+sudo zenithboard social say 'Le bilan quotidien part maintenant à 08:45 #avgeek'
+```
+
+Or the menu, *Social sharing → 11 Write a post*: the post is shown first and goes when you type `yes`. Or the web
+console, *Sharing → Write a post*: a box with a counter, *Preview (posts nothing)*, and *Post it*, whose confirmation
+shows the words again before they go. The draft stays while you move around the page.
+
+![The console's Write a post card: the text, its counter, and the Pi's preview (a preview against a stand-in, nothing posted)](https://raw.githubusercontent.com/regis57/ZenithBoard/main/docs/images/console-write-post.png)
+
+* **300 characters at most**, Bluesky's limit. ZenithBoard counts characters, never fewer than Bluesky's own count
+  (it counts what the eye sees as one letter, an emoji with its parts included), so a post it accepts always fits.
+* **Hashtags and links are clickable**, found the way the Bluesky app finds them. A hashtag starts after a space or at
+  the start, keeps its accents (`#Trémery`), and leaves out a full stop or an exclamation mark that follows it; digits
+  alone (`#2026`) are not one. A link is one written with `http://` or `https://`. `@names` stay plain text, because
+  a mention needs the account looked up.
+* **No language is declared** with it, so you write in the language you like. The automatic posts are in English.
+* **Quote the text in the terminal**: unquoted, the shell takes everything from a `#` on for a comment.
+* **To take one back**, delete it in the Bluesky app. ZenithBoard deletes nothing on Bluesky.
+
+It is the one post the web console can send (0.39.0 to 0.49.1 sent none, on purpose). An aircraft or a summary
+posted at once still stays in the terminal (`social post`, `social summary … post`).
+
+## The words, from the console (0.50.0)
+
+The answers of `social words` are fields in the console's *Sharing* tab, and commands of their own:
+
+| In *Sharing* | Command |
+|---|---|
+| Place name | `sudo zenithboard social area 'near Metz'` (or `none`) |
+| Sharing radius | `sudo zenithboard social radius 15` (1 to 200 km) |
+| What is worth a post | `sudo zenithboard social rules all` or `military,helicopter,heavy,rare,farthest` |
+| Least time between posts | `sudo zenithboard social gap 0` |
+| Town names on the maps | `sudo zenithboard social places on` |
+| Hashtags | `sudo zenithboard social hashtags ADSB avgeek ZenithBoard` (or `none`) |
+
+A place name is your words: letters, digits, spaces and `' - . ,`, 40 characters at most. A name alone reads
+*above Trémery*; words with their own preposition (*near Metz*, *over the Moselle*) are kept as typed. The
+receiver's position is never used.
+
 ## The week's summary (0.33.0, optional)
 
 ### The day, the week, the last 30 days (0.38.0)

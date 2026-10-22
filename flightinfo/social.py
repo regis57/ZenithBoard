@@ -28,6 +28,7 @@ photo, and the account secret (a Bluesky app password), which lives in /etc/zeni
     social.py summary-test PERIOD          the four posts of the daily, weekly or monthly summary; posts nothing (0.38.0)
     social.py summary-when                 each summary: when it last went out, when it goes next; the queue (0.48.0)
     social.py summary-post PERIOD [N]      post N (1 to 4) of that summary now
+    social.py say [--dry] TEXT             post the owner's own words, as written: no picture, no map (0.50.0)
     social.py status         what it would do right now
 
 Standard library only for the service and the network, like the rest of the wall; Pillow only for the looks with a
@@ -43,6 +44,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import unicodedata
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -1086,6 +1088,117 @@ def _post_once(ses, text, data, alt, width, height, mime, links):
     return out.get("uri", "")
 
 
+# --------------------------------------------------------------------------- a written post (0.50.0)
+# Asked for by the owner on 22 October 2026: a post in his own words, from the terminal or the web console. Text only:
+# no picture, no map, nothing read from the receiver, so nothing in it can place the antenna but what he writes.
+SAY_MAX = 300                    # Bluesky: 300 graphemes. Characters are counted here, never fewer than graphemes
+TAG_MAX = 64                     # Bluesky's longest hashtag
+_TRIM = ".,;:!?'\"’”"
+
+
+def _is_punct(ch):
+    return unicodedata.category(ch).startswith("P")
+
+
+def say_clean(text):
+    """The text as it will be posted, or raises ValueError with the reason in plain words."""
+    text = str(text or "").replace("\r\n", "\n").replace("\r", "\n").strip()
+    if not text:
+        raise ValueError("nothing to post: the text is empty")
+    bad = [ch for ch in text if unicodedata.category(ch) == "Cc" and ch not in "\n\t"]
+    if bad:
+        raise ValueError("the text holds a control character (U+%04X)" % ord(bad[0]))
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    if len(text) > SAY_MAX:
+        raise ValueError("%d characters: %d at most" % (len(text), SAY_MAX))
+    return text
+
+
+def say_facets(text):
+    """Hashtags and links of a written post as Bluesky facets, as the Bluesky app finds them: a hashtag after a space
+    or at the start, its trailing punctuation left out, not digits alone, 64 characters at most, accents kept
+    (#Trémery); a link written with http:// or https://. @names are left as plain text (each would need its account
+    looked up). Returns (facets, [tags], [links])."""
+    facets, tags, links = [], [], []
+    for m in re.finditer(r"(?:^|(?<=\s))[#\uff03](\S+)", text):
+        tag = m.group(1)
+        while tag and _is_punct(tag[-1]):
+            tag = tag[:-1]
+        if not tag or len(tag) > TAG_MAX or all(ch.isdigit() or _is_punct(ch) for ch in tag):
+            continue
+        a, b = _byte_span(text, m.start(), m.start(1) + len(tag))
+        facets.append({"index": {"byteStart": a, "byteEnd": b}, "features": [{"$type": "app.bsky.richtext.facet#tag", "tag": tag}]})
+        tags.append("#" + tag)
+    for m in re.finditer(r"(?:^|(?<=[\s(]))(https?://[^\s<>\"]+)", text):
+        uri = m.group(1)
+        while uri and (uri[-1] in _TRIM or (uri[-1] == ")" and uri.count("(") < uri.count(")"))):
+            uri = uri[:-1]
+        if len(uri) <= len("https://"):
+            continue
+        a, b = _byte_span(text, m.start(1), m.start(1) + len(uri))
+        facets.append({"index": {"byteStart": a, "byteEnd": b}, "features": [{"$type": "app.bsky.richtext.facet#link", "uri": uri}]})
+        links.append(uri)
+    return sorted(facets, key=lambda f: f["index"]["byteStart"]), tags, links
+
+
+def post_bluesky_text(sec, text):
+    """A text-only post, the session kept like the others; a token refused on the way: one new sign-in, once.
+    No language is declared: the owner writes in the language he likes."""
+    facets = say_facets(text)[0]
+
+    def once(ses):
+        record = {"$type": "app.bsky.feed.post", "text": text,
+                  "createdAt": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")}
+        if facets:
+            record["facets"] = facets
+        out = _json_request(BLUESKY_PDS + "/xrpc/com.atproto.repo.createRecord",
+                            {"repo": ses["did"], "collection": "app.bsky.feed.post", "record": record},
+                            {"Authorization": "Bearer " + ses["accessJwt"]})
+        return out.get("uri", "")
+    try:
+        return once(bluesky_session(sec))
+    except urllib.error.HTTPError as exc:
+        if not token_refused(exc):
+            raise
+    return once(bluesky_session(sec, fresh=True))
+
+
+def cmd_say(text, dry=False):
+    try:
+        text = say_clean(text)
+    except ValueError as exc:
+        print("Not posted: %s." % exc)
+        return 1
+    _, tags, links = say_facets(text)
+    print("The post, as it will read on Bluesky (%d of %d characters):" % (len(text), SAY_MAX))
+    print("")
+    for line in text.split("\n"):
+        print("  " + line)
+    print("")
+    print("Hashtags made clickable: %s" % (" ".join(tags) or "none"))
+    print("Links made clickable: %s" % (" ".join(links) or "none"))
+    if "@" in text:
+        print("(@names stay plain text: a mention would need the account looked up.)")
+    if dry:
+        print("Nothing posted.")
+        return 0
+    sec = account()
+    if not bluesky_ready(sec):
+        print("Not posted: no Bluesky account is set up (sudo zenithboard social setup).")
+        return 1
+    try:
+        uri = post_bluesky_text(sec, text)
+    except urllib.error.HTTPError as exc:
+        print("Not posted: Bluesky answered %s" % _http_error_text(exc))
+        return 1
+    except Exception as exc:
+        print("Not posted: %s" % exc)
+        return 1
+    print("bluesky: %s" % uri)
+    print("Posted under @%s. To take it back, delete it in the Bluesky app." % sec.get("BLUESKY_HANDLE", "?"))
+    return 0
+
+
 def check_bluesky(sec):
     """'ok, signed in as ...' or 'FAILED: ...'"""
     try:
@@ -1677,6 +1790,13 @@ def main(argv):
         return cmd_week(post=True, part=int(n) if n in ("1", "2", "3", "4") else 1, period=arg)
     if cmd == "status":
         return cmd_status()
+    if cmd == "say":                              # 0.50.0: say [--dry] [--] TEXT...
+        rest, dry = argv[2:], False
+        if rest and rest[0] == "--dry":
+            dry, rest = True, rest[1:]
+        if rest and rest[0] == "--":
+            rest = rest[1:]
+        return cmd_say(" ".join(rest), dry=dry)
     if cmd == "summary-when":                     # 0.48.0: for `zenithboard social summary`
         import social_week
         c, now = cfg(), time.time()

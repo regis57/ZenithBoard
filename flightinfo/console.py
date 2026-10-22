@@ -87,6 +87,8 @@ SHOWN_KEYS = {
     "REGION": "world", "LAT": "", "LON": "", "ALT_M": "0", "PORT": "8080", "DDNS_PROVIDER": "none",
     "SOCIAL": "0", "SOCIAL_STYLE": "dotmap", "SOCIAL_THEME": "", "SOCIAL_UNITS": "", "SOCIAL_MAP": "normal",
     "SOCIAL_PHOTOLINK": "0", "SOCIAL_SENTENCE": "factual", "SOCIAL_GAP_MIN": "0", "SOCIAL_AREA": "",
+    "SOCIAL_RADIUS_KM": "15", "SOCIAL_RULES": "rare,military,helicopter,heavy,farthest",
+    "SOCIAL_HASHTAGS": "#ADSB #avgeek #ZenithBoard", "SOCIAL_PLACES": "0",
     "SOCIAL_DAILY": "0", "SOCIAL_DAILY_AT": "21:00", "SOCIAL_DAILY_PARTS": "1",
     "SOCIAL_WEEKLY": "0", "SOCIAL_WEEKLY_AT": "sun 19:00", "SOCIAL_WEEKLY_PARTS": "1,2,3,4",
     "SOCIAL_MONTHLY": "0", "SOCIAL_MONTHLY_AT": "1 09:00", "SOCIAL_MONTHLY_PARTS": "1,2,3,4",
