@@ -19,7 +19,8 @@ import re
 
 import post_lang
 import server
-from post_lang import N_
+
+N_ = post_lang.N_
 
 WEEK_DAY, WEEK_HOUR = 6, 19                  # Sunday (Monday is 0), from 19:00 on the Pi's clock
 NBSP = " "

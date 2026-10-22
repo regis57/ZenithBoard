@@ -54,7 +54,7 @@ class ListTests(unittest.TestCase):
         self.assertEqual(mlp.countries_near(-9.65, 120.26, 400), ["ID"])
         self.assertEqual(mlp.countries_near(-9.65, 120.26, 600), ["ID", "TL"])
         near = mlp.countries_near(49.2489, 6.2332, 400)
-        self.assertTrue({"FR", "DE", "LU", "BE", "NL", "CH"} <= set(near), near)
+        self.assertEqual(set(), {"FR", "DE", "LU", "BE", "NL", "CH"} - set(near), near)
         self.assertNotIn("ES", near)
         # 0.27.2, the reference Pi: the Czech and British files gave no place within 400 km (nearest places of 500:
         # Deal and Dover at 408 km, Krásná at 440 km)
@@ -166,7 +166,7 @@ class MapTests(unittest.TestCase):
         mlp.write(rows, path, 49.2, 6.4, 200, ["FR"])
         tr = [[48.85 + i * 0.022, 6.48 - i * 0.003, 10000, i * 30] for i in range(25)]
         got = self.names(tr, path)
-        self.assertTrue({"Alongone", "Alongtwo", "Alongthree"} <= set(got), got)
+        self.assertEqual(set(), {"Alongone", "Alongtwo", "Alongthree"} - set(got), got)
         self.assertIn("Northcity", got, "a city of 500 000 off the track: one of the few named around it")
         small_city = os.path.join(self.d, "smallcity.tsv.gz")
         mlp.write([r if r[0] != "Northcity" else ("Northcity", r[1], r[2], 9000) for r in rows], small_city, 49.2, 6.4, 200, ["FR"])

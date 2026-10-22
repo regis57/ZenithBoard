@@ -3,7 +3,6 @@
 # rules held to Node's Intl (tests/fixtures/plurals.json, made by tools/make_post_locale.js), numbers, dates and
 # countries as CLDR writes them, the template language ([parts], {tag|cap}, French's elision), the owner's templates
 # checked, and every shipped catalogue turned into real posts and summaries that fit and leave nothing unfilled.
-import datetime
 import json
 import os
 import shutil
