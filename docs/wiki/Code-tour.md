@@ -16,6 +16,7 @@ flightinfo/static/      the wall itself: app.js, flap.js, scene.js, shapes, CSS
 flightinfo/aircraft.py  reading aircraft.json
 flightinfo/social.py    social sharing: the service that picks an aircraft and posts it to Bluesky
 flightinfo/social_card.py  the split-flap picture with its map (Pillow)
+flightinfo/post_lang.py the posts' language (0.51.0): the catalogue, CLDR's plurals, numbers, dates and countries, the templates
 flightinfo/console.py   the web console's side of the server (0.39.0): sign-in, sessions, pairing, jobs
 flightinfo/console_actions.py  the fixed list of what the console may run, read by the server and the root helper
 systemd/                the unit files

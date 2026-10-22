@@ -165,7 +165,8 @@ with plausible values is refused. Several templates rotate, in order or at rando
    Estonian, Latvian, Lithuanian, Indonesian, Russian, Ukrainian, Arabic (right to left), Japanese, Korean,
    Chinese (Simplified and Traditional). *Done, 0.48.0.* Swahili translated, offered after a native review.
 3. **The posts**: `SOCIAL_LANG`, the five post styles, the summaries and their cards, in the languages done so far;
-   **your own templates and their tags**.
+   **your own templates and their tags**. *Done, 0.51.0*, for the words: every post and summary text, the alt texts,
+   and the owner's templates (`social template`, a sixth style). The cards' labels wait for steps 4 and 5.
 4. **The dot font's letters for the pictures**: the accents of the Latin-script languages (Polish ą ę ł ś ż, the Baltic
    ā č ē ģ ī ķ ļ ņ š ū ž ė į ų, Finnish and Estonian ä ö õ…), then Cyrillic for Russian and Ukrainian. Arabic's
    pictures keep their labels in English (a 5 × 7 cell cannot join Arabic letters), like Chinese, Japanese and Korean.

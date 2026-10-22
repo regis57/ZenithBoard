@@ -9,14 +9,12 @@ not written below. A value is only ever one of the values listed, a number in it
 
 Left out on purpose, and done over SSH: uninstalling, Wi-Fi on/off/connect/forget/country and fixed addresses (one
 mistake cuts the Pi off the network the console is reached through), anything asking for a password, token or key
-(the Bluesky account, the domain name), posting an aircraft or a summary to Bluesky at once, emptying statistics or
-logs, importing settings or
+(the Bluesky account, the domain name), posting to Bluesky, emptying statistics or logs, importing settings or
 restoring a backup (0.42.0: a backup is made here and downloaded, but put back over SSH; the networks' keys never
 travel through the console, so its backup leaves them out),
 `config-set` (any key, any value), and the old ACARS removal.
 
-One post does go from here since 0.50.0, at the owner's word (22 October 2026): a written one, his own words as he
-typed them, text only, after a confirmation that shows them. A text value is passed as one argument, never split.
+A text value (0.51.0: the owner's own post templates, one per line) is passed as one argument, never split.
 """
 import re
 import unicodedata
@@ -30,7 +28,7 @@ HASHTAGS_RE = r"none|default|#?[A-Za-z0-9_]{1,40}( #?[A-Za-z0-9_]{1,40}){0,7}"
 AREA_RE = r"[^\W_][\w '\u2019.,-]{0,39}"
 RULES = ("military", "helicopter", "heavy", "rare", "farthest")
 RULES_RE = r"^(all|(%s)(,(%s)){0,4})$" % ("|".join(RULES), "|".join(RULES))
-SAY_MAX = 300                    # social.py's SAY_MAX: Bluesky's 300, counted in characters
+TEMPLATES_MAX = 1500             # 0.51.0: the owner's templates, all of them (a few lines of 260 characters at most each)
 # 0.47.0: the web pages' languages, the same codes as lib/common.sh (ZB_LANG_CODES) and flightinfo/static/i18n.js; the
 # command itself refuses one this Pi has no catalogue for
 LANGS = ("en", "fr", "de", "nl", "it", "es", "pt-BR", "pl", "fi", "et", "lv", "lt", "id", "sw", "ru", "uk", "ar", "ja", "ko",
@@ -89,16 +87,18 @@ ACTIONS = {
     "social-map":   ("sharing", "Map", ["social", "map", "{value}"], [("value", "enum", ("normal", "night", "satellite", "terrain", "none", "rotate"))], ""),
     "social-photolink": ("sharing", "Photo link", ["social", "photolink", "{value}"], [("value", "enum", ON_OFF)], ""),
     "social-sentence": ("sharing", "Words of a post", ["social", "sentence", "{value}"],
-                     [("value", "re", r"^(random|(factual|story|board|spotter|lookup)(,(factual|story|board|spotter|lookup)){0,4})$")], ""),
+                     [("value", "re", r"^(random|(factual|story|board|spotter|lookup|custom)(,(factual|story|board|spotter|lookup|custom)){0,5})$")], ""),
+    # 0.51.0: the posts' language, and the owner's own templates (one per line; "none" for none), tried before they go
+    "social-lang":  ("sharing", "Language of the posts", ["social", "lang", "{value}"], [("value", "enum", LANGS)], ""),
+    "social-templates": ("sharing", "Your own templates", ["social", "template", "set", "--", "{text}"], [("text", "text", (TEMPLATES_MAX, None))], ""),
+    "social-template-try": ("sharing", "Try the templates", ["social", "template", "test", "--", "{text}"], [("text", "text", (TEMPLATES_MAX, None))], "read"),
     "social-gap":   ("sharing", "Least time between posts", ["social", "gap", "{value}"], [("value", "int", (0, 1440))], ""),
-    # 0.50.0: what `social words` asks, one answer at a time; and a written post, after a confirmation
+    # 0.50.0: what `social words` asks, one answer at a time
     "social-area":  ("sharing", "Place name", ["social", "area", "{value}"], [("value", "text", (40, AREA_RE))], ""),
     "social-radius": ("sharing", "Sharing radius", ["social", "radius", "{value}"], [("value", "int", (1, 200))], ""),
     "social-rules": ("sharing", "What is worth a post", ["social", "rules", "{value}"], [("value", "re", RULES_RE)], ""),
     "social-hashtags": ("sharing", "Hashtags", ["social", "hashtags", "{value*}"], [("value", "text", (340, HASHTAGS_RE))], ""),
     "social-places": ("sharing", "Town names on the maps", ["social", "places", "{value}"], [("value", "enum", ON_OFF)], "long"),
-    "social-say-test": ("sharing", "Preview a written post", ["social", "say", "--dry", "--", "{text}"], [("text", "text", (SAY_MAX, None))], "read"),
-    "social-say":   ("sharing", "Write a post", ["social", "say", "--", "{text}"], [("text", "text", (SAY_MAX, None))], "ask"),
     "summary":      ("sharing", "Summary", ["social", "summary", "{period}", "{value}"], [("period", "enum", PERIODS), ("value", "enum", ON_OFF)], ""),
     "summary-at":   ("sharing", "Summary time", ["social", "summary", "{period}", "at", "{when*}"],
                      [("period", "enum", PERIODS),

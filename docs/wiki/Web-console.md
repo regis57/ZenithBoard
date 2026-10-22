@@ -99,7 +99,7 @@ One section on screen at a time: a side bar on a computer, tabs at the bottom of
 | Overview | Up time, temperature and power warnings, memory, card; each service running or not; links to every page this Pi serves (the wall, `/stats`, the receiver map, graphs1090, Plane Finder, Flightradar24, the post pictures) and to the ones it can serve once switched on |
 | Wall | Look, colour, units, radius, seconds per aircraft; photos, routes, the receiver map's database, the monthly data refresh |
 | Receiver | Region, antenna position, statistics, graphs1090, the gain (check, one step down or up), the gain log, status |
-| Sharing | Bluesky on or off; the place name, the sharing radius, what is worth a post, the gap, the town names on the maps (0.50.0); the picture (look, colour, map, units, photo link, the words, the hashtags); *Write a post*, your own words after a confirmation (0.50.0); the three summaries (on or off, day and time, which posts, a try); *Try a post* and the pictures |
+| Sharing | Bluesky on or off; the place name, the sharing radius, what is worth a post, the gap, the town names on the maps (0.50.0); the picture (look, colour, map, units, photo link, the words, the hashtags, the posts' language, 0.51.0); *Your own templates*, with the tags a click away and a try (0.51.0); the three summaries (on or off, day and time, which posts, a try); *Try a post* and the pictures |
 | Reliability | Hardware and network watchdogs, logs kept after a restart, Wi-Fi hardening, daily security fixes, daily log clean-up; health, memory, logs |
 | System | Update ZenithBoard and the wall, update everything; the pages' language (0.47.0); Tailscale (0.46.0: connect, its sign-in link as a button, disconnect, the console over it, its addresses; removing it stays in the terminal); a backup to make, download and delete (0.42.0, without the networks' identities: [Backup and restore](Backup-and-restore#from-the-web-console)); network, Wi-Fi and domain name status; who is signed in, pairing a phone; the security check; turning the console off |
 
@@ -128,8 +128,8 @@ Click one of the last jobs to read what it printed: it opens at the top of the d
 
 **Only in the terminal, on purpose:** uninstalling and anything that asks for a typed word; Wi-Fi on, off, networks,
 country, and fixed addresses (one mistake cuts the Pi off the network the page comes through); passwords, tokens and
-keys (the Bluesky account, the domain name, the console's own); posting an aircraft or a summary at once (a written
-post, your own words, is the one exception since 0.50.0, behind a confirmation that shows them); emptying statistics or logs;
+keys (the Bluesky account, the domain name, the console's own); posting to Bluesky (0.50.0 had a written post here; the
+owner had it taken out in 0.51.0); emptying statistics or logs;
 importing settings or restoring a backup; `config-set`. An update never accepts a new GitHub signing key from the console: it says so, and
 the key is answered over SSH.
 

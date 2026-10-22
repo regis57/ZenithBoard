@@ -121,8 +121,9 @@ ZenithBoard $ZB_VERSION - ADSB Flight Info
   zenithboard social test [HEX]         draw the picture and print the text, post nothing (see it at /social/preview)
   zenithboard social on|off|status      post the aircraft overhead as a picture of the wall (off by default)
   zenithboard social post [HEX]         post now, once
-  zenithboard social say [--dry] 'TEXT' post your own words now, text only (--dry: show it, post nothing; quote it, a # starts a shell comment)
   zenithboard social area [WORDS|none]  the place name the posts say (above Trémery, near Metz); never the position
+  zenithboard social lang [CODE]        the posts' language: en (the default), fr, de, es... the pictures keep English
+  zenithboard social template [list|tags|add TEXT|del N|set TEXT|test [TEXT]]   your own post templates (the "custom" style)
   zenithboard social radius [KM]        the sharing radius, 1 to 200 km (not the wall's)
   zenithboard social rules [all|LIST]   what is worth a post: all, or some of military,helicopter,heavy,rare,farthest
   zenithboard social check              try the account
@@ -360,8 +361,9 @@ case "${1:-}" in
       on)     root_or_die; social_on ;;
       off)    root_or_die; social_off ;;
       test)   root_or_zb; social_need_tools && social_prepare_dir && { [ "$(id -u)" -ne 0 ] && python3 "$SOCIAL_PY" test "${3:-}" || sudo -u "$ZB_USER" python3 "$SOCIAL_PY" test "${3:-}"; } ;;
-      say)    root_or_zb; shift 2; social_say "$@" ;;
       area)   [ -z "${*:3}" ] || root_or_die; social_set_area "${@:3}" ;;
+      lang)   [ -z "${3:-}" ] || root_or_die; social_set_lang "${3:-}" ;;
+      template|templates) case "${3:-list}" in list|tags|test) ;; *) root_or_die ;; esac; social_template "${@:3}" ;;
       radius) [ -z "${3:-}" ] || root_or_die; social_set_radius "${3:-}" ;;
       rules)  [ -z "${3:-}" ] || root_or_die; social_set_rules "${3:-}" ;;
       post)   root_or_zb; social_need_tools && social_prepare_dir && { [ "$(id -u)" -ne 0 ] && python3 "$SOCIAL_PY" post "${3:-}" || sudo -u "$ZB_USER" python3 "$SOCIAL_PY" post "${3:-}"; } ;;
@@ -378,7 +380,7 @@ case "${1:-}" in
       check)  root_or_die; python3 "$SOCIAL_PY" check ;;
       status) social_status ;;
       remove) root_or_die; social_remove ;;
-      *) die "Usage: zenithboard social setup|words|hashtags [WORD...]|gap [MINUTES]|picture|look dotmap|flap|alternate|colour NAME|units metric|imperial|wall|photolink on|off|places on|off|sentence LIST|summary daily|weekly|monthly on|off|at TIME|parts LIST|test|post[2-4]|map NAME|area WORDS|radius KM|rules LIST|on|off|test [HEX]|post [HEX]|say [--dry] TEXT|check|status|remove" ;;
+      *) die "Usage: zenithboard social setup|words|hashtags [WORD...]|gap [MINUTES]|picture|look dotmap|flap|alternate|colour NAME|units metric|imperial|wall|photolink on|off|places on|off|sentence LIST|summary daily|weekly|monthly on|off|at TIME|parts LIST|test|post[2-4]|map NAME|area WORDS|radius KM|rules LIST|lang CODE|template ...|on|off|test [HEX]|post [HEX]|check|status|remove" ;;
     esac ;;
   patches)
     case "${2:-status}" in

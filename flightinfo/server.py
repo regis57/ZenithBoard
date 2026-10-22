@@ -27,7 +27,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.50.0"
+VERSION = "0.51.0"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -1071,6 +1071,7 @@ def build_planes(data, lat, lon, radius_km, airlines=None, photo_lookup=None, de
             "gs_kt": ac.get("gs"),
             "track": ac.get("track"),
             "vrate_fpm": ac.get("baro_rate", ac.get("geom_rate")),
+            "squawk": ac.get("squawk"),                     # 0.51.0: the {squawk} of the owner's post templates
             "distance_km": round(dist, 2),
             "bearing": round(bearing_deg(lat, lon, ac["lat"], ac["lon"])),
             "photo": photo,

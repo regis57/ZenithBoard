@@ -17,7 +17,9 @@ import datetime
 import os
 import re
 
+import post_lang
 import server
+from post_lang import N_
 
 WEEK_DAY, WEEK_HOUR = 6, 19                  # Sunday (Monday is 0), from 19:00 on the Pi's clock
 NBSP = " "
@@ -36,9 +38,9 @@ THEME_HEX = {"amber": "#ffb000", "green": "#39ff6a", "red": "#ff3b30", "white": 
 #   weekly   one weekday at HH:MM, the seven days ending that day (Sunday 19:00 since 0.33.0)
 #   monthly  one day of the month (1 to 28, so that every month has it) at HH:MM, the thirty days ending that day
 PERIODS = {
-    "daily": {"days": 1, "key": "SOCIAL_DAILY", "at": "21:00", "parts": "1", "word": "The last 24 hours"},
-    "weekly": {"days": 7, "key": "SOCIAL_WEEKLY", "at": "sun 19:00", "parts": "1,2,3,4", "word": "The week"},
-    "monthly": {"days": 30, "key": "SOCIAL_MONTHLY", "at": "1 09:00", "parts": "1,2,3,4", "word": "The last 30 days"},
+    "daily": {"days": 1, "key": "SOCIAL_DAILY", "at": "21:00", "parts": "1", "word": N_("The last 24 hours")},
+    "weekly": {"days": 7, "key": "SOCIAL_WEEKLY", "at": "sun 19:00", "parts": "1,2,3,4", "word": N_("The week")},
+    "monthly": {"days": 30, "key": "SOCIAL_MONTHLY", "at": "1 09:00", "parts": "1,2,3,4", "word": N_("The last 30 days")},
 }
 ORDER = ("monthly", "weekly", "daily")      # when two fall at the same time, the longer goes first
 WEEKDAYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
@@ -359,47 +361,78 @@ def first_full_week(fleet_from):
 
 
 # --------------------------------------------------------------------------- words
-def number(n):
-    """3 412, with a space that does not break, as the posts write altitudes."""
-    return "{:,}".format(int(n)).replace(",", NBSP)
+# 0.51.0: the summaries' words in the posts' language (SOCIAL_LANG, post_lang.py); each function takes it as L,
+# English when it is not given. The pictures keep English this release: they call these without L.
+EN = post_lang.get("en")
+UNKNOWN_NAMES = (N_("Unknown type"), N_("Helicopter, type unknown"), N_("Light aircraft, type unknown"),
+                 N_("Glider, type unknown"), N_("Balloon or airship"), N_("Drone"))       # server.MISC_UNKNOWN's, and the lists' own
 
 
-def messages_words(n):
+def number(n, L=None):
+    """3 412, with a space that does not break, as the posts write altitudes (0.51.0: 3.412 in German)."""
+    return (L or EN).num(int(n))
+
+
+def millions(n, L=None):
+    """58.7 for 58 700 000 (58,7 in French); 58 for 58 000 000."""
+    s = ("%.1f" % (n / 1e6)).rstrip("0").rstrip(".")
+    return s if (L or EN).code == "en" else s.replace(".", (L.loc.get("decimal") or "."))
+
+
+def messages_words(n, L=None):
+    """"58.7 million" (the pictures, English), as before 0.51.0."""
     if n >= 1e6:
-        return "%s million" % ("%.1f" % (n / 1e6)).rstrip("0").rstrip(".")
+        return "%s million" % millions(n)
     return number(n)
 
 
-def span_words(dates):
-    a, b = (datetime.date.fromisoformat(x) for x in (dates[0], dates[-1]))
-    if a.month == b.month:
-        return "%d–%d %s" % (a.day, b.day, MONTHS[b.month - 1])
-    return "%d %s – %d %s" % (a.day, MONTHS[a.month - 1], b.day, MONTHS[b.month - 1])
+def messages_phrase(n, L=None):
+    """"58.7 million messages", "3 412 messages": the words of the posts. Japanese, Korean and Chinese count in tens of
+    thousands: 5870万件 rather than 58.7 million (post_lang.Lang.myriad)."""
+    L = L or EN
+    if L.myriad(n):
+        return L.tn(int(n), "{n} messages", "{n} messages", n=L.myriad(n))
+    if n >= 1e6:
+        return L.tn(int(n // 1e6), "{n} million messages", "{n} million messages", n=millions(n, L))   # "1,2 million de messages"
+    return L.tn(n, "{n} messages", "{n} messages")
 
 
-def period_words(w):
+def aircraft_phrase(n, L=None):
+    return (L or EN).tn(n, "{n} aircraft", "{n} aircraft")
+
+
+def span_words(dates, L=None):
+    return (L or EN).span(dates[0], dates[-1])
+
+
+def period_words(w, L=None):
     """"14–20 October", or for the daily summary "the last 24 hours" (0.38.0)."""
-    return "the last 24 hours" if w.get("period") == "daily" else span_words(w["dates"])
+    return (L or EN).t("the last 24 hours") if w.get("period") == "daily" else span_words(w["dates"], L)
 
 
-def short_date(d):
-    d = datetime.date.fromisoformat(d)
-    return "%d %s" % (d.day, MONTHS[d.month - 1])
+def short_date(d, L=None):
+    return (L or EN).day_month(d)
 
 
-def day_name(d):
-    return DAYS[datetime.date.fromisoformat(d).weekday()]
+def day_name(d, L=None):
+    return (L or EN).weekday(d)
 
 
-def _ranked(label, pairs, n):
-    return "%s: %s." % (label, ", ".join("%s (%s)" % (name, number(k)) for name, k in pairs[:n])) if pairs else None
+def model_name(name, L=None):
+    """A model as the lists say it: "Unknown type" and the like in the posts' language, a real name as it is."""
+    return (L or EN).t(name) if name in UNKNOWN_NAMES else name
 
 
-def _fit_lines(head, parts, tags, fit):
+def _ranked(label, pairs, n, L=None):
+    L = L or EN
+    return L.t("{label}: {list}.", label=label, list=L.join(["%s (%s)" % (model_name(name, L), number(k, L)) for name, k in pairs[:n]])) if pairs else None
+
+
+def _fit_lines(head, parts, tags, fit, L=None):
     """head, then the parts: a part is a line, or (label, pairs) drawn as a ranked list. The lists go down from three
     names to one before any line is dropped, and lines are dropped from the end, so the hashtags stay whole."""
     def lines(n):
-        return [x for x in ((p if isinstance(p, str) else _ranked(p[0], p[1], n)) for p in parts) if x]
+        return [x for x in ((p if isinstance(p, str) else _ranked(p[0], p[1], n, L)) for p in parts) if x]
 
     def size(ls):
         return len("\n".join([head] + ls + ([tags] if tags else [])))
@@ -414,51 +447,60 @@ def _fit_lines(head, parts, tags, fit):
 
 def text(w, c, area, tags, fit):
     """The post: the head always; the busiest times, the airlines, the models and the posts while they fit beside the
-    hashtags. No distance, ever."""
-    word = PERIODS[w.get("period") or "weekly"]["word"]
+    hashtags. No distance, ever. In the posts' language (SOCIAL_LANG, 0.51.0); area as the posts say it."""
+    L = post_lang.of(c)
+    word = L.t(PERIODS[w.get("period") or "weekly"]["word"])
     if w.get("period") == "daily":
-        head = "%s%s: %s aircraft, %s messages." % (word, (" " + area) if area else "", number(w["aircraft"]),
-                                                    messages_words(w["messages"]))
+        head = L.t("{period}[ {area}]: {aircraft}, {messages}.", period=word, area=area,
+                   aircraft=aircraft_phrase(w["aircraft"], L), messages=messages_phrase(w["messages"], L))
     else:
-        head = "%s%s, %s: %s aircraft, %s messages." % (word, (" " + area) if area else "", span_words(w["dates"]),
-                                                       number(w["aircraft"]), messages_words(w["messages"]))
+        head = L.t("{period}[ {area}], {span}: {aircraft}, {messages}.", period=word, area=area, span=span_words(w["dates"], L),
+                   aircraft=aircraft_phrase(w["aircraft"], L), messages=messages_phrase(w["messages"], L))
     parts = []
     bd, bh = w.get("best_day"), w.get("busiest_hour")
     if bd and bh is not None:
-        parts.append("Busiest: %s (%s aircraft) and %02d:00." % (day_name(bd[0]), number(bd[1]), bh))
+        parts.append(L.t("Busiest: {day} ({aircraft}) and {hour}.", day=day_name(bd[0], L), aircraft=aircraft_phrase(bd[1], L),
+                         hour="%02d:00" % bh))
     elif bd:
-        parts.append("Busiest: %s (%s aircraft)." % (day_name(bd[0]), number(bd[1])))
+        parts.append(L.t("Busiest: {day} ({aircraft}).", day=day_name(bd[0], L), aircraft=aircraft_phrase(bd[1], L)))
     elif bh is not None:
-        parts.append("Busiest hour: %02d:00." % bh)
-    parts.append(("Airlines", w.get("airlines") or []))
-    parts.append(("Models", w.get("models") or []))          # 0.35.0
+        parts.append(L.t("Busiest hour: {hour}.", hour="%02d:00" % bh))
+    parts.append((L.t("Airlines"), w.get("airlines") or []))
+    parts.append((L.t("Models"), w.get("models") or []))          # 0.35.0
     if w.get("posted"):
-        parts.append("Posted here: %s crossing%s." % (number(w["posted"]), "" if w["posted"] == 1 else "s"))
-    return _fit_lines(head, parts, tags, fit)
+        parts.append(L.tn(w["posted"], "Posted here: {n} crossing.", "Posted here: {n} crossings."))
+    return _fit_lines(head, parts, tags, fit, L)
 
 
-def alt(w, area):
-    kind = {"daily": "Daily", "weekly": "Weekly", "monthly": "Thirty-day"}[w.get("period") or "weekly"]
-    bits = ["%s summary card for %s%s" % (kind, period_words(w), (" " + area) if area else ""),
-            "%s aircraft heard and %s messages decoded" % (number(w["aircraft"]), messages_words(w["messages"]))]
+ALT_KIND = {"daily": N_("Daily summary card for {period}[ {area}]"), "weekly": N_("Weekly summary card for {period}[ {area}]"),
+            "monthly": N_("Thirty-day summary card for {period}[ {area}]")}
+ALT_PICTURE = {"daily": N_("A row of the 24 hours, brighter where more aircraft were overhead."),
+               "weekly": N_("A grid of the seven days by hour, brighter where more aircraft were overhead."),
+               "monthly": N_("A column of dots for each of the thirty days, taller where more aircraft were heard.")}
+
+
+def alt(w, area, L=None):
+    L = L or EN
+    period = w.get("period") or "weekly"
+    bits = [L.t(ALT_KIND[period], period=period_words(w, L), area=area),
+            L.t("{aircraft} heard and {messages} decoded", aircraft=aircraft_phrase(w["aircraft"], L), messages=messages_phrase(w["messages"], L))]
     if w.get("best_day"):
-        bits.append("busiest day %s with %s aircraft" % (day_name(w["best_day"][0]), number(w["best_day"][1])))
+        bits.append(L.t("busiest day {day} with {aircraft}", day=day_name(w["best_day"][0], L), aircraft=aircraft_phrase(w["best_day"][1], L)))
     if w.get("busiest_hour") is not None:
-        bits.append("busiest hour %02d:00" % w["busiest_hour"])
-    s = ", ".join(bits) + "." + {"daily": " A row of the 24 hours, brighter where more aircraft were overhead.",
-                                 "weekly": " A grid of the seven days by hour, brighter where more aircraft were overhead.",
-                                 "monthly": " A column of dots for each of the thirty days, taller where more aircraft were heard."
-                                 }[w.get("period") or "weekly"]
+        bits.append(L.t("busiest hour {hour}", hour="%02d:00" % w["busiest_hour"]))
+    s = L.t("{sentence}.", sentence=L.join(bits)) + " " + L.t(ALT_PICTURE[period])
     if w.get("airlines"):
-        s += " The airlines most seen, as bars: " + ", ".join("%s %d" % (n, k) for n, k in w["airlines"]) + "."
+        s += " " + L.t("The airlines most seen, as bars: {list}.", list=L.join(["%s %d" % (n, k) for n, k in w["airlines"]]))
     if w.get("models"):
-        s += " Beside them, the models most seen: " + ", ".join("%s %d" % (n, k) for n, k in w["models"]) + "."
+        s += " " + L.t("Beside them, the models most seen: {list}.", list=L.join(["%s %d" % (model_name(n, L), k) for n, k in w["models"]]))
     return s
 
 
 PARTS = (1, 2, 3, 4)          # 0.36.0: the week; cargo and business jets; military; helicopters, light aircraft, gliders
-MISC_SHOWN = (("heli", "Helicopters", "HELICOPTERS"), ("light", "Light aircraft", "LIGHT AIRCRAFT"),
-              ("glider", "Gliders", "GLIDERS"), ("other", "Drones and balloons", "DRONES AND BALLOONS"))
+MISC_SHOWN = (("heli", N_("Helicopters"), "HELICOPTERS"), ("light", N_("Light aircraft"), "LIGHT AIRCRAFT"),
+              ("glider", N_("Gliders"), "GLIDERS"), ("other", N_("Drones and balloons"), "DRONES AND BALLOONS"))
+MISC_COUNT = {"heli": (N_("{n} helicopter"), N_("{n} helicopters")), "light": (N_("{n} light aircraft"), N_("{n} light aircraft")),
+              "glider": (N_("{n} glider"), N_("{n} gliders")), "other": (N_("{n} drone or balloon"), N_("{n} drones and balloons"))}
 
 
 def misc_lists(w):
@@ -532,61 +574,67 @@ def _plural(n, one, many=None):
     return "%s %s" % (number(n), one if n == 1 else (many or one + "s"))
 
 
-def text_second(w, area, tags, fit):
+def text_second(w, area, tags, fit, L=None):
     """Cargo airlines and business jets: the head always, the lists while they fit."""
-    head = "Cargo and business jets%s, %s: %s cargo aircraft, %s." % (
-        (" " + area) if area else "", period_words(w), number(w.get("cargo_total", 0)),
-        _plural(w.get("bizjet_total", 0), "business jet"))
-    return _fit_lines(head, [("Cargo", w.get("cargo") or []), ("Business jets", w.get("bizjets") or [])], tags, fit)
+    L = L or EN
+    head = L.t("Cargo and business jets[ {area}], {period}: {cargo}, {bizjets}.", area=area, period=period_words(w, L),
+               cargo=L.tn(w.get("cargo_total", 0), "{n} cargo aircraft", "{n} cargo aircraft"),
+               bizjets=L.tn(w.get("bizjet_total", 0), "{n} business jet", "{n} business jets"))
+    return _fit_lines(head, [(L.t("Cargo"), w.get("cargo") or []), (L.t("Business jets"), w.get("bizjets") or [])], tags, fit, L)
 
 
-def text_military(w, area, tags, fit):
+def text_military(w, area, tags, fit, L=None):
     """Military aircraft: by country, the most represented first, each with its models."""
+    L = L or EN
     mil = w.get("military") or []
-    head = "Military aircraft%s, %s: %s from %s." % ((" " + area) if area else "", period_words(w),
-                                                    _plural(w.get("military_total", 0), "aircraft", "aircraft"),
-                                                    _plural(len(mil), "country", "countries"))
-    return _fit_lines(head, [(e["country"], e["models"]) for e in mil], tags, fit)
+    head = L.t("Military aircraft[ {area}], {period}: {aircraft} from {countries}.", area=area, period=period_words(w, L),
+               aircraft=aircraft_phrase(w.get("military_total", 0), L), countries=L.tn(len(mil), "{n} country", "{n} countries"))
+    return _fit_lines(head, [(L.country(e.get("cc"), e["country"]), e["models"]) for e in mil], tags, fit, L)
 
 
-def text_misc(w, area, tags, fit):
+def text_misc(w, area, tags, fit, L=None):
+    L = L or EN
     m = misc_lists(w)
-    counts = [_plural(m[g]["total"], one.lower().rstrip("s") if g != "other" else "drone or balloon",
-                      one.lower() if g != "other" else "drones and balloons")
-              for g, one, _ in MISC_SHOWN if (m.get(g) or {}).get("total")]
-    head = "General aviation%s, %s: %s." % ((" " + area) if area else "", period_words(w),
-                                                                  ", ".join(counts))
-    return _fit_lines(head, [(one, m[g]["models"]) for g, one, _ in MISC_SHOWN if (m.get(g) or {}).get("total")], tags, fit)
+    shown = [g for g, _, _ in MISC_SHOWN if (m.get(g) or {}).get("total")]
+    counts = [L.tn(m[g]["total"], MISC_COUNT[g][0], MISC_COUNT[g][1]) for g in shown]
+    head = L.t("General aviation[ {area}], {period}: {counts}.", area=area, period=period_words(w, L), counts=L.join(counts))
+    return _fit_lines(head, [(L.t(label), m[g]["models"]) for g, label, _ in MISC_SHOWN if g in shown], tags, fit, L)
 
 
-def alt_second(w, area):
-    s = "Weekly card of the cargo airlines and business jets, %s%s: %s cargo aircraft and %s business jets." % (
-        period_words(w), (" " + area) if area else "", number(w.get("cargo_total", 0)), number(w.get("bizjet_total", 0)))
+def alt_second(w, area, L=None):
+    L = L or EN
+    s = L.t("Weekly card of the cargo airlines and business jets, {period}[ {area}]: {cargo} and {bizjets}.", period=period_words(w, L),
+            area=area, cargo=L.tn(w.get("cargo_total", 0), "{n} cargo aircraft", "{n} cargo aircraft"),
+            bizjets=L.tn(w.get("bizjet_total", 0), "{n} business jets", "{n} business jets"))
     if w.get("cargo"):
         cm = w.get("cargo_models") or {}
-        s += " Cargo airlines, as bars, each with the model it flew most: " + ", ".join(
-            "%s %d%s" % (n, k, (" (mostly %s, %d)" % tuple(cm[n])) if n in cm else "") for n, k in w["cargo"]) + "."
+        s += " " + L.t("Cargo airlines, as bars, each with the model it flew most: {list}.", list=L.join([
+            "%s %d%s" % (n, k, (" " + L.t("(mostly {model}, {n})", model=model_name(cm[n][0], L), n=cm[n][1])) if n in cm else "")
+            for n, k in w["cargo"]]))
     if w.get("bizjets"):
-        s += " Business jets by make and model, as bars: " + ", ".join("%s %d" % (n, k) for n, k in w["bizjets"]) + "."
+        s += " " + L.t("Business jets by make and model, as bars: {list}.", list=L.join(["%s %d" % (n, k) for n, k in w["bizjets"]]))
     if w.get("bizjet_countries"):
-        s += " The countries they are registered in, with their flags: " + ", ".join(
-            "%s %d" % (server.country_name(c), k) for c, k in w["bizjet_countries"]) + "."
+        s += " " + L.t("The countries they are registered in, with their flags: {list}.", list=L.join([
+            "%s %d" % (L.country(c, server.country_name(c)), k) for c, k in w["bizjet_countries"]]))
     return s
 
 
-def alt_military(w, area):
-    return "Weekly card of the military aircraft, %s%s: %s. By country, with its flag, the most represented first: %s." % (
-        period_words(w), (" " + area) if area else "", _plural(w.get("military_total", 0), "aircraft", "aircraft"),
-        "; ".join("%s %d (%s)" % (e["country"], e["total"], ", ".join("%s %d" % (n, k) for n, k in e["models"][:3]))
-                  for e in w.get("military") or []))
+def alt_military(w, area, L=None):
+    L = L or EN
+    return L.t("Weekly card of the military aircraft, {period}[ {area}]: {aircraft}. By country, with its flag, the most represented first: {list}.",
+               period=period_words(w, L), area=area, aircraft=aircraft_phrase(w.get("military_total", 0), L),
+               list=L.join(["%s %d (%s)" % (L.country(e.get("cc"), e["country"]), e["total"],
+                                            L.join(["%s %d" % (model_name(n, L), k) for n, k in e["models"][:3]]))
+                            for e in w.get("military") or []], "{a}; {b}"))
 
 
-def alt_misc(w, area):
+def alt_misc(w, area, L=None):
+    L = L or EN
     m = misc_lists(w)
-    groups = ["%s: %d (%s)." % (one, m[g]["total"], ", ".join("%s %d" % (n, k) for n, k in m[g]["models"]))
-              for g, one, _ in MISC_SHOWN if (m.get(g) or {}).get("total")]
-    return "Weekly card of the helicopters, light aircraft, gliders, drones and balloons, %s%s. %s" % (
-        period_words(w), (" " + area) if area else "", " ".join(groups))
+    groups = [L.t("{label}: {n} ({list}).", label=L.t(label), n=m[g]["total"], list=L.join(["%s %d" % (model_name(n, L), k) for n, k in m[g]["models"]]))
+              for g, label, _ in MISC_SHOWN if (m.get(g) or {}).get("total")]
+    return L.t("Weekly card of the helicopters, light aircraft, gliders, drones and balloons, {period}[ {area}]. {groups}",
+               period=period_words(w, L), area=area, groups=" ".join(groups))
 
 
 FLAG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "flags")
