@@ -173,7 +173,7 @@ A part between `[` and `]` is left out when a tag inside it is empty: an aircraf
 
 **No tag gives a distance, a direction from the antenna or a place near it.** The templates cannot give the receiver's
 position away any more than the built-in words. A tag the list does not have is refused when the template is saved,
-and so is a `[` left open. So is a template that would pass 260 characters filled with long names: Bluesky takes 300,
+and so is a `[` left open. So is a template that would pass 250 characters filled with long names: Bluesky takes 300,
 and the map's credit needs the rest. A template too long for one aircraft gives the factual words for that one.
 
 ```

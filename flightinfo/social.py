@@ -677,6 +677,9 @@ def fit_post(body, credit, tags):
     tags = " ".join(words)
     while len(join(body, credit, tags)) > POST_MAX and " \u00b7 " in body:
         body = body.rsplit(" \u00b7 ", 1)[0]
+    over = len(join(body, credit, tags)) - POST_MAX
+    if over > 0 and len(body) > over + 1:       # 0.51.0: still too long (an owner's template): the body gives way, with "…"
+        body = body[:len(body) - over - 1].rstrip() + "\u2026"
     return join(body, credit, tags)[:POST_MAX]
 
 
@@ -860,24 +863,31 @@ def post_text(p, c, why=None, credit=None, photo=None, shape=None):
     if why in ("rare", "heavy"):                 # 0.29.0: the reason, said first (the others already say theirs)
         text = L.t(OPENINGS[why], post=text)
     shape = shape or sentence_for(c)
-    custom_tags = False
-    if shape != "factual":
-        styled = styled_text(shape, p, c, why)
-        if styled:
-            text = styled
-            custom_tags = shape == "custom" and "{hashtags" in " ".join(custom_templates(c))
-    tags = str(c.get("SOCIAL_HASHTAGS", "")).strip()
-    if tags.lower() == "none" or custom_tags:   # set so: no hashtags at all, not even #helicopter; or a template placed them
-        tags = ""
-    if heli and tags:
-        tags = tags.replace("#avgeek", "#helicopter") if "#avgeek" in tags else tags + " #helicopter"
-    if p.get("military") and tags:
-        tags = tags.replace("#avgeek", "#military") if "#avgeek" in tags else tags + " #military"
+    placed = False
+    if shape == "custom":                        # 0.51.0: any aircraft, the owner's words; the one drawn says where its tags go
+        mine, template = custom_pick(p, c, why, L)
+        if mine:
+            text, placed = mine, "{hashtags" in template
+    elif shape != "factual":
+        text = styled_text(shape, p, c, why) or text
+    tags = "" if placed else post_hashtags(p, c)    # a template that placed them has them once
     if photo:                                    # the photo line only when the text fits whole beside it
         with_photo = fit_post(text, "\n".join(x for x in (credit, photo) if x), tags.strip())
         if with_photo.startswith(text + "\n") or with_photo == text:
             return with_photo
     return fit_post(text, credit, tags.strip())
+
+
+def post_hashtags(p, c):
+    """The hashtags as set, #avgeek turned #helicopter or #military when it is one; none when set so (not even those)."""
+    tags = str(c.get("SOCIAL_HASHTAGS", "")).strip()
+    if tags.lower() == "none":
+        return ""
+    if p.get("shape") == "heli" and tags:
+        tags = tags.replace("#avgeek", "#helicopter") if "#avgeek" in tags else tags + " #helicopter"
+    if p.get("military") and tags:
+        tags = tags.replace("#avgeek", "#military") if "#avgeek" in tags else tags + " #military"
+    return tags
 
 
 # --------------------------------------------------------------------------- the owner's own templates (0.51.0)
@@ -886,7 +896,7 @@ def post_text(p, c, why=None, credit=None, photo=None, shape=None):
 # like the styles. No tag gives a distance, a direction from the antenna or a place near it: the templates cannot give
 # the receiver's position away any more than the built-in words.
 TEMPLATES_FILE = os.environ.get("ZENITHBOARD_SOCIAL_TEMPLATES") or "/etc/zenithboard/social-templates.txt"
-TEMPLATE_MAX = 260               # a filled template longer than this gives the factual words (room for the map's credit)
+TEMPLATE_MAX = 250               # a filled template longer than this gives the factual words (room for the longest map credit, 46)
 TEMPLATE_TAGS = ("flight", "callsign", "airline", "airline_country", "flag", "registration", "reg_country", "type",
                  "type_code", "category", "from", "to", "from_code", "to_code", "altitude", "speed", "climb", "heading",
                  "squawk", "why", "area", "time", "date", "photo", "tracker", "hashtags")
@@ -900,7 +910,7 @@ COMPASS = (N_("north"), N_("north-east"), N_("east"), N_("south-east"), N_("sout
 def custom_templates(c=None):
     """The owner's templates that can be used, in their order (an unusable line is left out, said by `template`)."""
     try:
-        with open(TEMPLATES_FILE, encoding="utf-8") as fh:
+        with open(TEMPLATES_FILE, encoding="utf-8", errors="replace") as fh:   # a byte not UTF-8 never stops a post
             lines = [x.strip() for x in fh.read().splitlines()]
     except OSError:
         return []
@@ -958,7 +968,6 @@ def template_values(p, c, why, L, now=None):
     heading = L.t(COMPASS[int((float(track) % 360 + 22.5) // 45) % 8]) if isinstance(track, (int, float)) else ""
     hexc = str(p.get("hex") or "").lower()
     photo = str(p.get("photo_link") or "") if server.cfg_bool(c, "SOCIAL_PHOTOLINK", "0") and PHOTO_PAGE.match(str(p.get("photo_link") or "")) else ""
-    tags = str(c.get("SOCIAL_HASHTAGS", "")).strip()
     squawk = str(p.get("squawk") or "")
     return {
         "flight": r.get("flight_iata") or flight, "callsign": flight, "airline": airline,
@@ -972,7 +981,7 @@ def template_values(p, c, why, L, now=None):
         "why": L.t(WHY_WORDS[why]) if why in WHY_WORDS else "", "area": area_words(c, L),
         "time": time.strftime("%H:%M", time.localtime(now)), "date": L.day_month(datetime.date.fromtimestamp(now or time.time())),
         "photo": photo, "tracker": ("https://globe.adsbexchange.com/?icao=" + hexc) if re.match(r"^[0-9a-f]{6}$", hexc) else "",
-        "hashtags": "" if tags.lower() == "none" else tags,
+        "hashtags": post_hashtags(p, c),
     }
 
 
@@ -983,14 +992,19 @@ def fill_template(template, p, c, why, L, now=None):
     return "\n".join(x for x in lines if x)
 
 
-def custom_text(p, c, why, L, now=None, rng=random):
-    """The owner's words for this aircraft, one of his templates drawn; None when there is none or it is too long
-    (the factual words then)."""
+def custom_pick(p, c, why, L, now=None, rng=random):
+    """(the owner's words for this aircraft, the template drawn), or (None, None) when there is none or it is too
+    long (the factual words then)."""
     templates = custom_templates(c)
     if not templates:
-        return None
-    text = fill_template(rng.choice(templates), p, c, why, L, now)
-    return text if text and len(text) <= TEMPLATE_MAX else None
+        return None, None
+    template = rng.choice(templates)
+    text = fill_template(template, p, c, why, L, now)
+    return (text, template) if text and len(text) <= TEMPLATE_MAX else (None, None)
+
+
+def custom_text(p, c, why, L, now=None, rng=random):
+    return custom_pick(p, c, why, L, now, rng)[0]
 
 
 # long names, for a template's length when it is saved: an aircraft that gives every tag a long value
@@ -1854,7 +1868,7 @@ def cmd_template_test(text=None):
 def custom_templates_all():
     """Every line of the templates file, usable or not (for `template test`)."""
     try:
-        with open(TEMPLATES_FILE, encoding="utf-8") as fh:
+        with open(TEMPLATES_FILE, encoding="utf-8", errors="replace") as fh:
             return [x.strip() for x in fh.read().splitlines() if x.strip()]
     except OSError:
         return []

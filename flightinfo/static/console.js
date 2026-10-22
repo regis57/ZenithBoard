@@ -868,7 +868,13 @@ window.ZBI18N.start({ part: "console" }, function () {
           onclick: function () {
             var v = text();
             run("social-templates", { text: v || "none" }, { card: title }).then(function (j) {
-              if (j && j.rc === 0) { S.tplDraft = null; S.templates = v; if (document.activeElement && document.activeElement.tagName === "TEXTAREA") document.activeElement.blur(); draw(); }
+              if (!j || j.rc !== 0) return;
+              S.templates = v;
+              if (S.tplDraft === null || S.tplDraft === undefined || text() === v) {   // a draft typed meanwhile stays
+                S.tplDraft = null;
+                if (document.activeElement && document.activeElement.tagName === "TEXTAREA") document.activeElement.blur();
+              }
+              draw();
             });
           } }))
     ], "w12");

@@ -275,7 +275,7 @@ social_template() {     # social_template [list|tags|add TEXT|del N|set TEXT|tes
         echo "The tags:  zenithboard social template tags"; return 0
       fi
       echo "Your templates ($SOCIAL_TEMPLATES), one drawn at each post when \"custom\" is among the words of a post ($(cfg_get SOCIAL_SENTENCE factual)):"
-      n=0; while IFS= read -r line; do [ -n "${line// /}" ] || continue; n=$((n + 1)); printf '  %d. %s\n' "$n" "$line"; done < "$SOCIAL_TEMPLATES"
+      n=0; while IFS= read -r line; do [ -n "${line//[[:space:]]/}" ] || continue; n=$((n + 1)); printf '  %d. %s\n' "$n" "$line"; done < "$SOCIAL_TEMPLATES"
       ZENITHBOARD_SOCIAL_TEMPLATES="$SOCIAL_TEMPLATES" python3 "$SOCIAL_PY" template-check -- "$(cat "$SOCIAL_TEMPLATES")" | grep -v ' usable\.$' || true
       echo "Try them:  sudo zenithboard social template test" ;;
     tags) python3 "$SOCIAL_PY" template-tags ;;
@@ -294,7 +294,7 @@ social_template() {     # social_template [list|tags|add TEXT|del N|set TEXT|tes
       case ",$(cfg_get SOCIAL_SENTENCE factual)," in *,custom,*|*,random,*) ;; *) echo "To use them, add custom to the words of a post:  sudo zenithboard social sentence $(cfg_get SOCIAL_SENTENCE factual),custom" ;; esac ;;
     del)
       [[ ${1:-} =~ ^[0-9]{1,2}$ ]] && [ -s "$SOCIAL_TEMPLATES" ] || { echo "Which one? The numbers:  zenithboard social template" >&2; return 1; }
-      n=$(grep -c . "$SOCIAL_TEMPLATES" || true)
+      n=$(grep -vc '^[[:space:]]*$' "$SOCIAL_TEMPLATES" || true)
       [ "$1" -ge 1 ] && [ "$1" -le "$n" ] || { echo "There are $n template(s)." >&2; return 1; }
       cp -p "$SOCIAL_TEMPLATES" "$SOCIAL_TEMPLATES.bak"
       tmp=$(mktemp "$SOCIAL_TEMPLATES.XXXXXX") || return 1

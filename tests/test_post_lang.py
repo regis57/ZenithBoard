@@ -167,6 +167,17 @@ class EveryLanguageTest(unittest.TestCase):
             a = social.alt_text(RYR, c, [(0, 0, 0, 0), (0, 0, 0, 600)], "flap", {"map_words": "a satellite map", "credit_full": "EOX"})
             self.assertNotIn("{", a, code)
 
+    def test_every_map_described_in_every_language(self):
+        # found in review: "a plain dark background" was not in any catalogue
+        import social_card
+        words = [st["words"] for st in social_card.MAP_STYLES.values() if st["words"]] + ["a plain dark background"]
+        for code in self.langs():
+            if code == "en":
+                continue
+            L = post_lang.get(code)
+            for w in words:
+                self.assertIn(w, L.words, (code, w))
+
     def test_summaries(self):
         for code in self.langs():
             c = dict(SOCIAL_AREA="Trémery", SOCIAL_LANG=code)

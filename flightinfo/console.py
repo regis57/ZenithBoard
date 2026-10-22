@@ -460,7 +460,7 @@ TEMPLATES_FILE = os.environ.get("ZENITHBOARD_SOCIAL_TEMPLATES") or "/etc/zenithb
 def post_templates():
     """0.51.0: the owner's own post templates, as the file has them (his words, no secret), for Sharing to edit."""
     try:
-        with open(TEMPLATES_FILE, encoding="utf-8") as fh:
+        with open(TEMPLATES_FILE, encoding="utf-8", errors="replace") as fh:
             return fh.read(4096)
     except OSError:
         return ""

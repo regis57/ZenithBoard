@@ -1155,6 +1155,38 @@ class CustomTemplateTest(unittest.TestCase):
         self.write("{airline}[, {from} → {to}][, squawk {squawk}].")
         self.assertEqual(social.post_text(dict(self.RYR, route={}), self.C, None).split("\n")[0], "Ryanair.")
 
+    def test_the_template_drawn_says_where_the_hashtags_go(self):
+        # found in review (0.51.0): the check looked at every template, so one without {hashtags} lost them
+        self.write("{airline} {flight} {hashtags}", "{airline} {flight}, no tags")
+        import random as r
+        self.addCleanup(setattr, social.random, "choice", r.choice)
+        social.random.choice = lambda seq: seq[min(1, len(seq) - 1)]      # the style (one), then the second template
+        self.assertEqual(social.post_text(self.RYR, self.C, None).split("\n"), ["Ryanair RYR5ZK, no tags", "#ADSB #avgeek"])
+        social.random.choice = lambda seq: seq[0]
+        heli = dict(self.RYR, shape="heli")
+        self.assertEqual(social.post_text(heli, self.C, None), "Ryanair RYR5ZK #ADSB #helicopter", "the template's hashtags as the line's")
+
+    def test_any_aircraft_takes_the_template(self):
+        self.write("[{registration} ]{category}[ at {altitude}]")
+        bare = {"hex": "abc123", "flight": "", "registration": "D-EABC", "alt_ft": 3000}
+        self.assertEqual(social.post_text(bare, self.C, None).split("\n")[0], "D-EABC aircraft at 910\u00a0m")
+
+    def test_the_maps_credit_is_never_cut(self):
+        # found in review: a long template and the terrain map's credit (46 characters) went past 300, and the cut
+        # took the credit's end, and its link
+        credit = "Map \u00a9 OpenStreetMap and others, EOX, GeoNames"
+        t = social.fit_post("x" * 280, credit, "#ADSB")
+        self.assertLessEqual(len(t), 300)
+        self.assertTrue(t.endswith("\n" + credit), t[-60:])
+        self.assertIn("\u2026", t)
+        self.assertLessEqual(social.TEMPLATE_MAX + 1 + len(credit), 300)
+
+    def test_a_file_not_in_utf8_never_stops_a_post(self):
+        with open(self.path, "wb") as fh:
+            fh.write(b"{airline} caf\xe9\n")
+        self.assertTrue(social.post_text(self.RYR, self.C, None).startswith("Ryanair caf"))
+        self.assertTrue(social.post_text(self.RYR, dict(self.C, SOCIAL_SENTENCE="factual"), None).startswith("Flight Ryanair"))
+
     def test_no_usable_template_is_the_factual_words(self):
         self.write("{airline} {nope}", "{airline}[ {from}")
         self.assertEqual(social.custom_templates(self.C), [])
@@ -1170,11 +1202,13 @@ class CustomTemplateTest(unittest.TestCase):
         self.assertIn("custom", social.sentences_of({"SOCIAL_SENTENCE": "random"}))
 
     def test_no_tag_gives_the_receiver_away(self):
-        v = social.template_values(dict(self.RYR, track=135, vrate_fpm=900, squawk="7700"), self.C, "rare", social.post_lang.get("en"))
+        v = social.template_values(dict(self.RYR, track=135, vrate_fpm=900, squawk="7700", lat=49.2077, lon=6.2183),
+                                   dict(self.C, LAT="49.2401", LON="6.1985"), "rare", social.post_lang.get("en"))
         self.assertEqual(sorted(v), sorted(social.TEMPLATE_TAGS))
         self.assertEqual((v["heading"], v["climb"], v["squawk"], v["category"]), ("south-east", "climbing", "7700", "airliner"))
         for value in v.values():
             self.assertNotIn("6.2", value)
+            self.assertNotIn("49.2", value, "neither the aircraft's position nor the receiver's")
             self.assertNotIn("300", value.replace("#", ""), "the bearing, 300, nowhere")
         self.assertFalse({"distance", "bearing", "lat", "lon", "position"} & set(social.TEMPLATE_TAGS))
 

@@ -144,5 +144,6 @@
  "a light relief map with the main roads": "주요 도로가 표시된 밝은 음영 기복도",
  "a dark relief map with the main roads": "주요 도로가 표시된 어두운 음영 기복도",
  "a terrain map": "지형도",
- "a satellite map": "위성 지도"
+ "a satellite map": "위성 지도",
+ "a plain dark background": "단색의 어두운 배경"
 }

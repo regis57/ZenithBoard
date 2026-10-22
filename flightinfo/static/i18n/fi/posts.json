@@ -156,5 +156,6 @@
  "a light relief map with the main roads": "vaalea korkokuvakartta pääteineen",
  "a dark relief map with the main roads": "tumma korkokuvakartta pääteineen",
  "a terrain map": "maastokartta",
- "a satellite map": "satelliittikartta"
+ "a satellite map": "satelliittikartta",
+ "a plain dark background": "tasainen tumma tausta"
 }

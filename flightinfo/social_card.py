@@ -683,7 +683,7 @@ def _info(w, h, size, shown):
     """What the post and the alt text say about the map actually shown: none of it shown, nothing credited."""
     st = MAP_STYLES.get(shown) or MAP_STYLES["none"]
     return {"width": w, "height": h, "bytes": size, "map": shown, "credit": st["credit"], "links": list(st["links"]),
-            "credit_full": st["credit_full"], "map_words": st["words"] or "a plain dark background"}
+            "credit_full": st["credit_full"], "map_words": st["words"] or N_("a plain dark background")}
 
 
 def _user_agent(user_agent):
