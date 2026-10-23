@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.53.6
+- **CI now runs every test.** Its list of shell suites is written by hand on purpose, and five were never on it: the web console's, the backup's, Tailscale's, ADSB Exchange's stats and the translations' (`tests/test_i18n.sh`, the one that fails when a string is missing in a language). The five green checks on a pull request did not cover them. They are on the list now.
+- **A test file left off the list fails `tests/test_docs.sh`**, for the shell and the JavaScript tests alike, so the list keeps its visible diff without being able to drift again. Found by the audit of 22-23 October 2026, which several independent reviewers reported.
 ## 0.53.5
 - **The 41 translations *à trancher* settled** (the owner, 23 October 2026: the first proposal of each). They cover 18 languages. Examples:
   - *Großraumflugzeuge* for heavies in German, *Wide-body* in Italian;

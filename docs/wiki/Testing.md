@@ -72,7 +72,7 @@ PATH="$STUB_DIR:$PATH"
 
 Copy the nearest existing file; they all share a shape. A shell test sets up a temporary directory and its stubs, sources the module, runs a case, compares against an expected string, and counts failures. Keep each case's name on the same line as its command — a missing space there produces an unbound-variable error that looks like a bug in the module rather than in the test.
 
-Then add the file to `.github/workflows/ci.yml`. It is a list, not a glob, on purpose: a new test is visible in the diff.
+Then add the file to `.github/workflows/ci.yml`. It is a list, not a glob, on purpose: a new test is visible in the diff. `tests/test_docs.sh` fails for any `tests/test_*.sh` or `tests/test_*.js` that the list leaves out, so forgetting this step is caught (0.53.6; five suites had gone unrun in CI since 0.39.0).
 
 ## What else runs in CI
 
