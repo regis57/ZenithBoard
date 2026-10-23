@@ -83,7 +83,7 @@ At the foot of the gear panel sits one grey line: the version the wall is runnin
 
 ## Staying up
 
-The page refreshes itself. It polls `/api/planes` for the aircraft inside the radius, cycles through them at `CYCLE_SECONDS` each, keeps the screen awake, and reloads itself if the Pi restarts — so a power cut ends with the wall back on screen and nobody touching the tablet. If the decoder stops answering it says **NO DATA – RECEIVER NOT RESPONDING** instead of showing stale aircraft.
+The page refreshes itself. It polls `/api/planes` for the aircraft inside the radius, cycles through them at `CYCLE_SECONDS` each, keeps the screen awake, and reloads itself if the Pi restarts — so a power cut ends with the wall back on screen and nobody touching the tablet. If the decoder stops answering it says **NO DATA – RECEIVER NOT RESPONDING – CHECK THE DECODER** instead of showing stale aircraft. If it is the tablet that no longer reaches the Pi (three polls in a row fail: the Wi-Fi, the Pi restarting) it says **NO ANSWER – THE TABLET LOST THE PI – CHECK THE WI-FI** (0.54.4; before, it blamed the decoder). After a minute of that it tries to reload itself, but only once the Pi answers again: a reload with the network still down would leave the browser's own error page on the wall.
 
 It also respects `prefers-reduced-motion`: with that set in the browser, the flap animation and the scene stop moving.
 

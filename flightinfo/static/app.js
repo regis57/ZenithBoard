@@ -161,8 +161,14 @@
   function buildScreen() {
     var g = blank(), u = units();
     if (error || !planes.length) scroll.stop();            // nothing with a long name on screen: stop moving
+    if (error === "offline") {
+      // 0.54.4: it is the tablet that lost the Pi (three polls failed: Wi-Fi, the Pi restarting), which the old screen
+      // blamed on the decoder; and "RECEIVER NOT RESPONDING" (137 dots) was wider than the wall (128) and cut at both ends
+      textCenter(g, "NO ANSWER", 8, 2); textCenter(g, "THE TABLET LOST", 32, 1); textCenter(g, "THE PI", 41, 1); textCenter(g, "CHECK THE WI-FI", 54, 1);
+      return { g: g, sig: "offline", plane: null, lines: ["", centered("NO ANSWER"), "", centered("THE TABLET"), centered("LOST THE PI"), "", centered("CHECK THE"), centered("WI-FI")] };
+    }
     if (error) {
-      textCenter(g, "NO DATA", 8, 2); textCenter(g, "RECEIVER NOT RESPONDING", 36, 1); textCenter(g, "CHECK THE DECODER", 48, 1);
+      textCenter(g, "NO DATA", 8, 2); textCenter(g, "RECEIVER NOT", 32, 1); textCenter(g, "RESPONDING", 41, 1); textCenter(g, "CHECK THE DECODER", 54, 1);
       return { g: g, sig: "error", plane: null, lines: ["", centered("NO DATA"), "", centered("RECEIVER NOT"), centered("RESPONDING"), "", centered("CHECK THE"), centered("DECODER")] };
     }
     var p = planes.filter(function (x) { return x.hex === curHex; })[0];
@@ -410,7 +416,9 @@
       show(buildScreen(), switched);
     }).catch(function () {
       if (++failures === 3) { error = "offline"; show(buildScreen(), false); }
-      if (failures >= 30 && failures % 30 === 0) location.reload();                            // self-heal
+      // self-heal, 0.54.4: only when the Pi answers again. A reload with the network still down meets the browser's own
+      // error page, and a tablet on the wall stays there until someone touches it
+      if (failures >= 30 && failures % 30 === 0) fetch("/api/health", { cache: "no-store" }).then(function (r) { if (r.ok) location.reload(); }).catch(function () {});
     });
   }
   function loadServerConfig() {

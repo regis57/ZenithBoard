@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.54.4
+From the 22-23 October audit, the wall on the tablet (one *high* and one *medium* finding that the earlier batches had left).
+- **The wall no longer blames the decoder when it is the tablet that lost the Pi.** Three failed polls in a row (the Wi-Fi, the Pi restarting) showed *NO DATA – RECEIVER NOT RESPONDING – CHECK THE DECODER*, which sent people to a decoder that was fine. It now says **NO ANSWER – THE TABLET LOST THE PI – CHECK THE WI-FI**. The decoder's own screen is unchanged in meaning.
+- **That old screen was cut at both ends.** *RECEIVER NOT RESPONDING* is 137 dots wide and the wall has 128: it is now on two lines. A test now measures every centred text of the wall against its width.
+- **The wall no longer reloads into the browser's error page.** After a minute without an answer it reloaded itself; with the network still down that left the browser's own error page on the tablet until someone touched it. It reloads now only once the Pi answers.
+- Both screens were drawn in headless Chromium from the real server before this release (the one without data, the one with the poll refused).
 ## 0.54.3
 Low-severity findings of the 22-23 October audit that go together: **screens that point to the wrong place or contradict each other**, in the terminal menu. Nothing on the web console changes, so no translation either.
 - **Menu paths that do not exist any more.** Nine screens said *menu 1 ADSB* (the entry is *1 ADS-B → 1 Decoder and networks*), or *Settings > Network > Wi-Fi*, *Network > Fixed IP*, *4 Domain name*; the restore's two lines about graphs1090 sent the novice to two different menus. Each now names the entry that is there. `tests/test_menus.sh` fails if one comes back.
