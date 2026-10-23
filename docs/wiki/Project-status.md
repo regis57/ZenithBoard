@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **22 October 2026**, version **0.54.7**.
+Last updated: **23 October 2026**, version **0.54.7**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -57,6 +57,73 @@ Treat these as likely-working rather than known-working, and please report what 
 * FlightAware and Flightradar24 keep your antenna position on their own websites. `zenithboard location` cannot change that for you; it tells you where to go.
 * The airline name list covers about ninety airlines. Since 0.17.0 the rest are named from the route lookup once one of their flights has been looked up; with routes off they show the callsign.
 * Routes are looked up by callsign, not by flight. A callsign can be reused for the other direction. The filter drops the impossible answers; it cannot invent the right one.
+
+## Audit of 22-23 October 2026: what is left
+
+The audit (build, tests, security, novice journeys, translations) ran on 0.53.3. Everything of high and medium severity is shipped (0.53.6 to 0.54.7, see the CHANGELOG), and so is most of the low severity. What follows is the rest, **in batches that go together**, each batch one pull request with its tests, docs and (for the web console) its translations into every language in the same commit.
+
+**Before starting a batch:** read the CHANGELOG from 0.54.7 up, `git log`, and the open pull requests; then grep each item below in the code. Line numbers are those of 0.53.3 and have moved; an item already fixed is crossed out of this list in the same pull request that fixes the rest. The owner's standing instruction (23 October 2026): do the low-severity findings batch by batch, novice journeys first, merge each through the squash merge, report once per batch.
+
+**Batch 1: the console's words** (translated into the 21 languages, `python3 tools/i18n.py sync LANG`, `review`, `check`)
+- The *Summaries* card turns them on with no account and sharing off, and says nothing (`console.js` ~1218, and the wizard's step 7): one note.
+- *Try a post* on an empty sky ends in *exit 1* with a *The picture* button that leads to a bare *not found*: the button only when the exit code is 0 (also in the drawer, ~1093); the 404 of `/social/preview` explained; the wiki's advice in `social.py` ~1697.
+- The line *Everything: every crossing* under the five default rules is static (`console.js` ~671): show it only when the rule is `every`.
+- *Seven short steps* sits under a header counting 9 screens (`console.js` ~1166, comment ~1130): a `{n}` placeholder.
+- Phone sign-in: *The code is out of date.* has no button after five renewals (`console.js` ~251); a computer signed in by a phone is listed *password* (`console.js` ~1007, `console.py` ~703): *by phone*; a pairing link made in the browser dies when the wall restarts and the 401 names only the terminal (`console.py` ~744); the pairing window names Safari for every phone.
+- Saving an emptied templates field runs `social template set -- none` with no confirmation, beside the Delete button that asks (`console.js` ~919): route it to the delete.
+- *Menu 1 ADSB* in three console strings (`console.js` ~1138, 1163, 1192) and in the README (lines ~456, 673): *1 ADS-B → 1 Decoder and networks*.
+- `social` and `social-look` are not `long` in `console_actions.py` (~83), though the first activation may install Node and Pillow: not measured; check on the Pi first.
+- Enter in a text or number field of the console does nothing (`console.js` ~808, 814, `summaryRow`): one helper, no new string, a line in the wiki.
+- Optional (a majority of the reviewers against): the *Finish setting up* card counting stats off and no watchdog as gaps (`console.js` ~1135); the off `/stats` page offering only the SSH command (`stats.html` ~30); the gear panel pointing at `zenithboard config` (`index.html` ~38).
+
+**Batch 2: the Bluesky menu and wizard, in the terminal** (English only)
+- The Bluesky menu has 14 entries plus *Return*, which falls under the fold (`social.sh` ~664, 678): at least *Return* first or a shorter header, ideally grouped like the console; a test counting the entries of every `wt_menu`.
+- *Remove* is a plain yes/no that destroys the secret, the state and the places, one line above *Return* (`social.sh` ~732): a typed word, and the entry moved.
+- The *Words and rules* wizard saves each answer as it goes (`social.sh` ~139): keep them in locals and write at the end.
+- The posts' language is typed as a code (`social.sh` ~700): a named menu shared with the language menu; a refusal says *Nothing was changed.*
+- The last page of the wizard names commands and not the entries 8 and 9 (`social.sh` ~603).
+- Optional: changing only the app password replays the two wizards (`social.sh` ~123); `stats on` announces `/stats` with no wall installed (`stats.sh` ~48); the log selectors offer *978 MHz UAT* and *Bluesky posts* on a Pi without them: `logs uat` and `logs social` say *not installed* (`menus.sh` ~273).
+
+**Batch 3: Esc, numbers and the last menu details, in the terminal**
+- Esc on *Photos*, *Routes*, *Refresh* and *Offline database* cuts the function with no word (`menus.sh` ~208-216; the same shape in `wifi.sh` ~321 and `social.sh` ~725): `0` yes, `1` no, anything else goes on, and a line saying what is now set.
+- *Seconds per aircraft* only checks `is_number` (`menus.sh` ~192, `bin/zenithboard` ~329): 0, -3 and 600 pass, `10s` is dropped in silence; one `valid_cycle` (2 to 60) in `common.sh`.
+- Every gain step prints *so 48.0 became 48.0*, and an Up at the maximum restarts the decoder for nothing (`gain.sh` ~78): say *Already at the maximum*, no restart.
+- *Ctrl+C stops it* is false from the menu: with no trap the installer closes (`tailscale.sh` ~87).
+- *Split-flap* then Esc on the colour writes the mode and shows it on the wall with no restart and no *Saved* (`menus.sh` ~169, `install.sh` ~131).
+- *Uninstall everything*: two questions under one yes/no and a comment promising a file that is never offered (`install.sh` ~168); the last yes/no does not name `social.env` and the console's hash, nor say that `/var/lib/zenithboard` stays (~190).
+- *Make* and *Restore* appear twice in the *Show, list, delete* sub-menu (`backup.sh` ~452): five entries under a title promising three; adjust `test_menus.sh` and `test_install.sh`.
+- *Reload the page* said by the language menu while the browser keeps its own choice (`console.sh` ~233); *en* shown where the command says *not chosen yet* (~246).
+
+**Batch 4: the wall** (preview the screens in headless Chromium first)
+- The *Radius* list shows 1 km when the radius (12, say) is not a preset (`app.js` ~426): add the current value.
+- *Seconds per aircraft* keeps 0 or -5 displayed while the Pi's value applies, and 600 is accepted (`app.js` ~453): bound to 2..60 and call `fillPanel()` again.
+- The Planespotters `link` is not validated: a `javascript:` or foreign site becomes the credit's href (`server.py` ~1229, `app.js` ~132). Keep it only if `photo_url_allowed(link)`; `rel="noopener noreferrer"` on `#photolink` and `referrerpolicy="no-referrer"` on `#photo` (`index.html`). Fix the test that sends `"link": "y"`.
+- The CGNAT glob of `ddns.sh` (~152) warns for `100.7.x` and `100.10.x`: `net_valid_ip` then `net_same_subnet "$pub" 100.64.0.0 10`, and a test for `ddns_status`.
+
+**Batch 5: robustness and the tools** (terminal, English)
+- `cfg_set` and `cfg_del` copy from `/tmp` with `install`, with no rename and no lock: `config.env` can be cut by a power loss, and two writers can lose a setting (`common.sh` ~43, 51): a temporary file in the same folder, `mv -f`, perhaps `flock`.
+- `flightinfo.sh` ~34 removes `flightinfo`, `lib` and `bin`, then copies without checking: an interrupted `cp` leaves `/opt/zenithboard` empty. At least `|| { err …; return 1; }` with the repair command.
+- `gpg` is not installed in the preamble (`install.sh` ~59): without it `zb_verify_source` says *the commit is not signed*, which is false. Install it, and give that case its own reason.
+- `tools/check-links.sh` ~18 does not watch `GRAPHS1090_INSTALL_URL`, `GITHUB_SIGNING_KEY_URL` and one concrete Tailscale file; `test_versions.sh` should check them for https.
+- `acars remove` returns *Nothing left* before cleaning the `ACARS_*` keys of `config.env` (`legacy.sh` ~29).
+- `health` says nothing of the clock (`lib/reliability.sh`, `timedatectl`); optional `After=time-sync.target` in the social unit.
+- `tools/i18n.py` ~365: a CSV saved by Excel in ANSI crashes `apply` with a `UnicodeDecodeError`: catch it, read as `cp1252` or say so; *CSV UTF-8* in `Translating.md`.
+- Comments that are wrong: *root script* in `zenithboard-stats.service` ~19 (it runs as `zenithboard`), the title *Flightradar24* on the Tailscale line of `versions.sh` ~34, the same in gain-log and wifi.
+- Optional: `console pair` installing `qrencode` on demand (`console.sh` ~143); a clock behind `CONSOLE_EPOCH` killing a new session (`console.py` ~272).
+
+**Batch 6: the tests** (a green suite proves the logic, not the hardware; these make the logic proof wider)
+- *Medium*: `tests/test_security.sh` ~58 redefines `sec_units`, so the console's exclusion, the *no service* branch and the WARN on a readable `console.env` never run (use `ZB_SYSTEMD_DIR`, also in `logs.sh` ~49, `reliability.sh` ~60, `flightinfo.sh` ~8 so that `test_logs_uat.sh` stops writing the real `/etc/systemd/system` when run as root); `zb_apply_location` writes `/etc/default/…` and `/etc/pfclient-config.json` in hard-coded paths (`adsb.sh` ~333): `ZB_DEFAULT_DIR`, `ZB_PF_CONFIG`, then check the dump1090 `sed`, `ALTITUDE "…m"` and Plane Finder's JSON; no test goes through the wall's `_planes` handler (`server.py` ~2008: `SHOW_PHOTOS`, `SHOW_ROUTES`, demo, `hex` filter, `no_data`) nor through a real HTTP request to `/console` (login cookie, 413, 405, backup download); `bin/zenithboard` ~564's dispatcher is never run: a `tests/test_command.sh` replaying the argv of every `ACTIONS` entry as a plain user (the light version checks `argv[0]` against the `case` labels).
+- *Low*: `test_social.sh` ~190 reads the real `/etc/zenithboard` (export `ZENITHBOARD_CONFIG` and `ZENITHBOARD_SOCIAL_SECRETS`), ~162 *node absent* fails wherever node is in `/usr/bin`; `test_units.sh` ~29 lists nine units by hand (walk `systemd/zenithboard-*.service`, `EXEMPT=(console)`); `test_docs.sh` ~16's class `[a-z|-]` misses a name with a digit (`[a-z0-9|-]`); `console_run.py` ~36's timeout, log cap, `KEEP_JOBS` and journal rotation are never exercised; `adsb_menu` (plan, REMOVE, the US UAT rule, `zb_mlat_guard`) has no test; the `nmcli` stub never fails (`wifi_apply`, `wifi_connect`, `wifi_forget`); the Tailscale stub prints nothing (`ts_state`, `tailscale_where`, `console_state_lines`); `cmd_post`, `summary-when --facts`, `template-tags` and `publish_week` have no test (`cmd_post` caused a double post in 0.19.2); `preview.png` against `.jpg` and the 404 of `/demo/`; one flag file per country code; `console signout` keeping the hash and raising the epoch; the *draft* languages held back by `web_langs()`; `translateDom` and `rebuild` in `i18n.js`; `test_gain.sh` ~58 accepts one or two `--gain` where exactly one is right; `test_legacy.sh` ~37 fails on a leftover `acars/__pycache__` (`! ls acars/*.py acars/*.sh`), and the `sleep` of `test_settings.sh`, `test_stats.sh` and the `qrencode` check of `test_console.sh` depend on the machine; `zb_update_components` is never run end to end (a light test with every `is_*` false: *Update finished*, exit 0); `test_social.py` ~1577 looks in the whole system tmp folder.
+
+**Batch 7: the docs** (no version bump)
+- `Testing.md` ~12 and `README.md` ~691: the shellcheck line leaves out `tools/*.sh`; `python3-pil fonts-dejavu-core` are needed or the split-flap tests are skipped; *well under a minute* is about a minute and a half.
+- `Project-status.md` (lines 48, 51) and `Web-console.md` ~240-242 still say that graphs1090, the console's `.path` unit, the root helper and the iPhone pairing never ran on the Pi; the field log of 21 October says they did. Keep *update from the page* and *restore* as not seen.
+- *Checked as you type* (`Fresh-install.md` ~117, `Web-console.md` ~31): the position is checked when Next is pressed.
+- `Backup-and-restore.md` ~63: *6 Backup → 3 Show, list, delete older backups → 4 Delete the older ones*; `Moving-to-a-new-card.md` ~100 (*step 4* of *Start here*) and ~102 and `The-menu.md` ~44 (*System → Signed in → Pair a phone*), `menus.sh` ~125 the same.
+- `console.py` ~19's docstring says 12 h and 30 days, the constants (~50-53) say a week and a year; `Command-reference.md` ~189 says *30 days* for a paired phone.
+- `Security.md` ~48 and `Configuration-reference.md` ~24: `BIND_ADDRESS=127.0.0.1` for a reverse proxy makes every visitor look like 127.0.0.1, which gets round `ALLOW_FROM`, the console's network check and the per-address limiter: say the proxy must filter. `Web-console.md` ~202: the lost phone's first step is revoking that one device in the console, then *Sign out the others*.
+
+**Decided against (the reviewers' majority), unless something new shows up:** moving the security updates line in the console; a clock-generation counter for sessions; the QR on a tiny link; the framing headers of the wall without a CSP check in Chromium; a `tests/lib.sh` shared harness (each suite stands alone on purpose); a full menu-walk suite for the network screens; `time.sleep(0.4)` of `console.py`; `flags.js` having no `module.exports`; the RTL literals spread over four files.
 
 ## Field log
 
