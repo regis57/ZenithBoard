@@ -177,4 +177,12 @@ check "uninstall everything: the stats even without the feed" 'grep -q "if is_ad
 check "menu 1: an untick finishes what an attempt left"   'grep -q "Finish removing ADSB Exchange stats" lib/adsb.sh && grep -q "elif is_adsbx_stats || \[ -f \"\$AXS_STATE\" \]; then" lib/adsb.sh'
 check "status never prints the UUID (it is pasted in chats)" '! sed -n "/^cmd_status()/,/^}/p" bin/zenithboard | grep -q "adsbx_stats_url\|adsbx_stats_where"'
 
+# ---- 0.54.2: what to type into ADSB Exchange's own boxes (they ask the position again, and want 180m, not 180 or 180 m)
+cfg_set LAT 49.11930; cfg_set LON 6.17570; cfg_set ALT_M 180.4
+ans=$(adsbx_answers)
+check "ADSB Exchange's boxes: the position as set, the altitude glued to its unit" 'printf "%s" "$ans" | grep -q "latitude:   49.11930" && printf "%s" "$ans" | grep -q "longitude:  6.17570" && printf "%s" "$ans" | grep -q "altitude:   180m" && printf "%s" "$ans" | grep -q "not 180 m"'
+cfg_set ALT_M -12
+check "ADSB Exchange's boxes: a negative altitude is whole metres too" 'adsbx_answers | grep -q "altitude:   -12m"'
+check "ADSB Exchange's boxes: shown in a screen, not an echo their dialogs draw over" 'sed -n "/^install_adsbx()/,/^}/p" lib/adsb.sh | grep -q "wt_msg \"\$(adsbx_answers)\""'
+
 [ "$fail" = 0 ] && echo "ALL OK"; exit "$fail"

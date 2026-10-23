@@ -298,7 +298,13 @@ window.ZBI18N.start({ part: "console" }, function () {
       // the language chosen at the first visit becomes the Pi's default, for the browsers that choose none (0.47.0)
       if (!S.cfg.CONSOLE_LANG && I.saved() && S.catalog["console-lang"]) run("console-lang", { value: I.lang() }, { quiet: true, confirmed: true });
       if (S.approveId) { var aid = S.approveId; S.approveId = null; approveComputer(aid); }
-      else if (!S.session.wizard_done) wizard();
+      else if (!S.session.wizard_done) {
+        // 0.54.2: on a card where the console was just switched on there is no reading of the Pi yet (the helper writes it
+        // when it first runs): the steps opened on an empty one and said there was no decoder, no network, no watchdog.
+        // Wait for the first reading (25 s at most, then open on what there is), and read it again.
+        var first = !S.factsAt && S.refreshed ? Promise.race([S.refreshed, new Promise(function (res) { setTimeout(res, 25000); })]).then(loadState) : Promise.resolve();
+        first.then(function () { if (!S.session.wizard_done && !S.wizardOpen) wizard(); });
+      }
     });
   }
   function loadState() {
@@ -311,7 +317,7 @@ window.ZBI18N.start({ part: "console" }, function () {
       theme(S.cfg.THEME);
       // the overview's facts are read as root by the helper after each change; older than two minutes: again
       if (!S.factsAt || Date.now() / 1000 - S.factsAt > 120) {
-        if (!S.refreshing) { S.refreshing = true; run("refresh", {}, { quiet: true }).then(function () { S.refreshing = false; }); }
+        if (!S.refreshing) { S.refreshing = true; S.refreshed = run("refresh", {}, { quiet: true }).then(function () { S.refreshing = false; }); }
       }
       draw();
     }).catch(function () { /* the wall restarting: the next poll draws */ });

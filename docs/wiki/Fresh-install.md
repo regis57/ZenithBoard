@@ -87,7 +87,7 @@ graphs lived on the card only):
     Then the decoder and the networks: keep **readsb**, leave the dongle's serial number empty if you have one dongle,
     tick where to feed. ADSB Exchange is always on. Each network's own installer runs in turn and asks its own
     questions:
-    * **ADSB Exchange**: a station name and your position; it prints a link to see your feed.
+    * **ADSB Exchange**: a station name and your position; it prints a link to see your feed. Its boxes take no default, so ZenithBoard shows a screen first with the values to type (0.54.2): a short word for the name (not `0`), the latitude and longitude already set on this Pi, and the altitude in whole metres **with the unit glued on: `180m`**, not `180` and not `180 m` (their box asks again, without a word, for anything else).
     * **FlightAware**: prints a **claim link**; open it on your computer, signed in to FlightAware, to attach the
       station to your account.
     * **Flightradar24**: its sign-up asks for an e-mail, or your **sharing key** if you already feed; the screen says
@@ -113,7 +113,7 @@ graphs lived on the card only):
 17. **Open `http://zenithboard.local:8080/console`** on your computer (or the address `console on` printed) and sign
     in with the console password. Its version is written at the bottom of the page, linked to its release notes.
 18. **The first steps** open by themselves the first time, nine short screens; nothing changes before the last one:
-    1. *Welcome*: what this Pi is, its decoder, which networks it feeds.
+    1. *Welcome*: what this Pi is, its decoder, which networks it feeds. On a card where the console was just switched on, the page first waits (a few seconds) for the Pi's first reading, so these lines are true when they appear (0.54.2; before, they could say *no decoder* and *nobody yet* right after Start here).
     2. *Where the antenna is*: region, units, and the position, checked as you type (latitude −90 to 90, longitude
        −180 to 180, altitude in metres).
     3. *The wall*: its look, its colour, its radius.
