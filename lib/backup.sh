@@ -323,6 +323,15 @@ backup_restore() {
   b="$st/zb"
   bk_describe "$b"
   echo
+  # 0.53.8: the console's copy leaves the networks' identities out. Restored on a card with no network yet, every network
+  # starts as a new station, and nothing said so before the typed word (the audit of 22-23 October 2026)
+  if [ "$(bk_get KIND "$b/MANIFEST")" = console ] && ! { declare -F is_adsbx >/dev/null && is_adsbx; } && ! { declare -F is_piaware >/dev/null && is_piaware; } \
+     && ! { declare -F is_fr24 >/dev/null && is_fr24; } && ! { declare -F is_planefinder >/dev/null && is_planefinder; }; then
+    echo
+    echo "!! This is the console's copy: it holds no network identity, so ADSB Exchange, FlightAware, Flightradar24 and"
+    echo "   Plane Finder would each start as a NEW station here. Moving to a new card? Make the full backup on the old one first:"
+    echo "   sudo zenithboard backup make"
+  fi
   echo "Restoring replaces this Pi's settings, statistics and posting history with the backup's (what is here now is"
   echo "kept first, see below), switches on again what was on, and gives the networks their identities back."
   echo "Switch the old card OFF first: two receivers with the same identities is one too many (Plane Finder blocks it)."

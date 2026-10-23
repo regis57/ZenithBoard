@@ -56,7 +56,7 @@ for setting up, not for every visit: once a browser or a phone is signed in, it 
   `sudo zenithboard console pair`. Scan the code with the phone's camera within five minutes: the link works once and
   keeps the phone signed in as long as it opens the console once a month (a year at most). No password is needed. The code is drawn dark on its own white square with its
   margin, on the page and in the terminal (`qrencode`, when installed, is told both colours), so it scans on a black
-  background. Add the page to the home screen from Safari's *Share* menu to open it in one tap.
+  background. A QR code opens in the phone's browser, never inside an app added to the home screen: on an iPhone, sign in inside that app with the console password (see the table under *The console as an app*).
 * **A computer, signed in by a phone** (0.40.0, off by default, asked for by the owner):
   `sudo zenithboard console phone-signin on`, or *System → Signed in* in the console, or the menu. The computer's
   sign-in page then shows, under the password, a QR code and a four-digit code. Scan the QR code with a phone already
@@ -83,7 +83,7 @@ dots) and its own window. *System → The console as an app* says how, for the b
 
 | Where | How |
 |---|---|
-| iPhone, iPad (Safari) | Share → *Add to Home Screen*: full screen, its own icon. Sign in once more inside it (iOS keeps an app's cookies apart) |
+| iPhone, iPad (Safari) | Share → *Add to Home Screen*: full screen, its own icon. Sign in once more inside it **with the console password**: iOS keeps an app's cookies apart, and a QR code opens in Safari, not in the app. A phone paired by QR code only (no password) must have one chosen first: `sudo zenithboard console password` (0.53.8: the card and the pairing window used to tell it to add the page from Safari and say nothing of this) |
 | Android (Chrome) | ⋮ → *Add to Home screen* |
 | A computer | Chrome: ⋮ → *Cast, save, and share* → *Install page as app*. Edge: ⋯ → *Apps* → *Install this site as an app*. Safari on a Mac: *File* → *Add to Dock* |
 

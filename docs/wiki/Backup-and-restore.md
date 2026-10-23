@@ -139,6 +139,8 @@ networks' identities**: keys never travel through the console, which runs as an 
 on your home network. It keeps one backup at a time, readable by the wall's user only, in the console's own folder;
 each download is written in the console's audit log.
 
+**The console's copy is for keeping, not for moving.** It leaves the networks' identities out, so on a card with no network yet every network would start as a new station. The console's card says so (0.53.8), and so does `backup restore` before it asks for the typed word, when it is given that file on such a card. To move to a new card, make the full backup in the terminal: `sudo zenithboard backup make`.
+
 **Restoring (the import) is done in the terminal**, never from the console: the card says so, with the command.
 A restore replaces settings and data, runs the installers of
 what was on, and asks for a typed word, like every step that cannot be taken back in one click.

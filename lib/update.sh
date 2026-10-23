@@ -271,6 +271,7 @@ zb_update_components() {
   if want_c flightinfo && is_flightinfo; then
     log "FlightInfo"; ensure_zb_user          # also repairs the folder modes of older installs
     systemctl daemon-reload; install -m 644 "$ZB_HOME/systemd/zenithboard-flightinfo.service" /etc/systemd/system/; systemctl daemon-reload; restart_flightinfo
+    graphs_look_keep      # 0.53.8: graphs1090's page keeps its own copy of the catalogues and the language list; `update quick` left it on the old ones
     data_refresh_apply
     [ "$(cfg_get AUTO_DATA_REFRESH 1)" != 1 ] || data_refresh_now || warn "aircraft data refresh failed (kept the previous data)"
   fi

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.53.8
+From the 22-23 October audit: two promises the console made that its own file could not keep, and two lists that had fallen behind.
+- **The console's Backup card no longer offers its file for a new card.** It said *to keep, or to start a new card where this one stopped*; the file it makes leaves the networks' identities out (keys never travel through a browser), so on a bare card ADSB Exchange, FlightAware, Flightradar24 and Plane Finder would each start as a new station. The card says so now. And `backup restore` says it too, before the typed word, when it is given a console copy on a card with no network yet; the *Start here* question names the full backup. A full backup is not told anything.
+- **An iPhone's installed app cannot be signed in by a QR code**: a QR code opens in Safari, the app keeps its own cookies. The card told an iPhone to add the page from Safari and *sign in once more inside it*, and the pairing window said *add it to the home screen from Safari*, to a phone that was paired without a password and had no way to sign in the app. The card now says to use the console password (and to choose one first when there is none), and the pairing window no longer suggests it.
+- **The menu's *Language of the web pages* offers all 21 languages.** It named 14: Polish, Finnish, Estonian, Latvian, Lithuanian, Swahili and Arabic were missing, though `console lang pl` took them. Arabic is named in Latin letters there: whiptail neither shapes nor reverses Arabic.
+- **`update quick` keeps graphs1090's page in step.** The page holds its own copy of the catalogues and the list of languages; the quick update refreshed the wall and left that copy behind (the full update and `console lang` did not).
+- Three console strings changed and are translated into every language; the review sheets are regenerated.
 ## 0.53.7
 From the 22-23 October audit, three places where the menu or the update said *done* when it was not:
 - **The words wizard no longer says *Saved.* after a refusal.** *Sharing radius* and *Minimum minutes between posts* took anything: a letter was dropped in silence, and 0, 500 or -5 were kept. They follow the commands' own rules now (`social radius`: whole kilometres, 1 to 200; `social gap`: whole minutes, 0 to 1440) and ask again with the reason.

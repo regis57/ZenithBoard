@@ -26,6 +26,7 @@ fail=0
 check() { if eval "$2"; then echo "ok   $1"; else echo "FAIL $1"; fail=1; fi; }
 
 check "off at first"                                  '[ "$(console_state)" = off ] && ! console_has_password'
+check "the language menu names every language the Pi has (0.53.8: it named 14 of 21)" 'for c in $(zb_langs); do case " $CONSOLE_LANG_NAMES " in *" $c:"*) ;; *) echo "no name for $c"; exit 1 ;; esac; done'
 check "the default is written as off"                 'grep -qx "CONSOLE=0" lib/common.sh'
 
 out=$(printf 'short\nshort\n' | console_password 2>&1)
