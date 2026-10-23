@@ -185,4 +185,18 @@ cfg_set ALT_M -12
 check "ADSB Exchange's boxes: a negative altitude is whole metres too" 'adsbx_answers | grep -q "altitude:   -12m"'
 check "ADSB Exchange's boxes: shown in a screen, not an echo their dialogs draw over" 'sed -n "/^install_adsbx()/,/^}/p" lib/adsb.sh | grep -q "wt_msg \"\$(adsbx_answers)\""'
 
+# ---- 0.54.5: menu 1 after a restore: the networks the backup fed are ticked; a screen backed out of is said so
+BK_PENDING="$t/pend"; BK_DATA="$t/bkdata"; mkdir -p "$BK_PENDING" "$BK_DATA"
+echo 11111111-2222-3333-4444-555555555555 > "$BK_PENDING/piaware-feeder-id"; echo ABCDEF123456 > "$BK_PENDING/fr24key"; : > "$BK_DATA/adsbx-stats-wanted"
+is_piaware() { return 1; }; is_fr24() { return 1; }; is_planefinder() { return 1; }; is_region_us() { return 1; }; is_uat978() { return 1; }   # a bare card
+wt_radio() { echo readsb; }; wt_input() { echo ""; }
+wt_check() { printf '%s\n' "$@" > "$t/check.args"; return 1; }      # the checklist, backed out of
+adsb_menu
+state_of() { awk -v tag="$1" 'prev == tag { want = 1 } want && ($0 == "ON" || $0 == "OFF") { print; exit } { prev = $0 }' "$t/check.args"; }
+check "menu 1 after a restore: FlightAware and Flightradar24 ticked, Plane Finder not" '[ "$(state_of FLIGHTAWARE)" = ON ] && [ "$(state_of FR24)" = ON ] && [ "$(state_of PLANEFINDER)" = OFF ]'
+check "menu 1 after a restore: ADSB Exchange stats ticked too, and the list says why" '[ "$(state_of ADSBX_STATS)" = ON ] && grep -q "Ticked already: the networks your backup fed" "$t/check.args"'
+check "menu 1: a checklist backed out of is flagged for Start here" '[ "$ADSB_CANCELLED" = 1 ]'
+rm -f "$BK_PENDING"/* "$BK_DATA/adsbx-stats-wanted"; adsb_menu
+check "menu 1 on an ordinary Pi: nothing ticked that is not installed, no mention of a backup" '[ "$(state_of FLIGHTAWARE)" = OFF ] && ! grep -q "Ticked already" "$t/check.args"'
+
 [ "$fail" = 0 ] && echo "ALL OK"; exit "$fail"

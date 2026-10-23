@@ -60,13 +60,18 @@ start_here() {
   wt_msg "The first installation, step by step:\n\n  1. A backup from another card, if you have one\n  2. ADS-B: the decoder, ADSB Exchange, and the other networks you want\n  3. The wall, for the tablet\n  4. What is worth switching on: a list, all ticked, untick at will\n  5. The web console: you finish in your browser\n\nA step already done is skipped. Each one can be done again later from its own menu." 18 || return 0
   # 1 · a backup
   if [ -z "$(installed_decoder)" ] && wt_yesno "Are you moving from another card, with a ZenithBoard backup file?\n\n(Made on the old card with: menu 6 Backup, or  sudo zenithboard backup make. The console's copy leaves the networks' identities out: it is not the one to move with.)" 12; then
-    start_restore || return 0
+    # 0.54.5: a backup step left (Esc, a wrong path) used to end Start here, four screens back; the rest goes on without it
+    start_restore || wt_msg "Going on without a backup. Start here again later puts one back, if the card is still bare." 8
   fi
   # 2 · ADS-B
   if [ -z "$(installed_decoder)" ] || ! is_adsbx; then
     wt_msg "ADS-B first: the decoder that reads the dongle, and ADSB Exchange (always fed: it runs the one MLAT client; MLAT locates aircraft that send no position, by comparing when several receivers heard them). On the next screens tick the other networks you want: FlightAware, Flightradar24, Plane Finder. Their installers are theirs and ask their own questions in the terminal (a station name, an e-mail, a key): the screen tells you what to answer.\n\nA backup restored a moment ago gave each network its identity back: they find it by themselves." 16 || return 0
     adsb_menu
-    [ -n "$(installed_decoder)" ] || { wt_msg "No decoder is installed, so the rest waits: the wall and the console need one.\n\nCome back to Start here when the line above it says why (usually no internet)." 11; return 0; }
+    if [ -z "$(installed_decoder)" ]; then
+      if [ -n "${ADSB_CANCELLED:-}" ]; then wt_msg "You left the ADS-B step before the end, so no decoder is installed and the rest waits: the wall and the console need one.\n\nChoose Start here again to do it." 11
+      else wt_msg "No decoder is installed, so the rest waits: the wall and the console need one.\n\nCome back to Start here when the line above it says why (usually no internet)." 11; fi
+      return 0
+    fi
   fi
   # 3 · the wall
   if ! is_flightinfo; then
@@ -85,7 +90,7 @@ start_restore() {
   f=$(ls -t "$home"/zenithboard-backup-*.tar.gz 2>/dev/null | head -1)
   wt_msg "The backup file must be on this Pi, in your home folder ($home).\n\nFrom a Windows computer, the simplest is WinSCP (winscp.net, free): connect to this Pi (SFTP, its address $(local_ip), your user and password) and drag the file into the folder it opens on. From a Mac or Linux:  scp FILE ${SUDO_USER:-pi}@$(local_ip):\n\n$( [ -n "$f" ] && echo "Found: $f" || echo "No backup there yet: copy it now, then press OK.")" 17 || return 1
   f=$(wt_input "The backup file to put back (its full path):" "$(ls -t "$home"/zenithboard-backup-*.tar.gz 2>/dev/null | head -1)") || return 1
-  [ -f "$f" ] || { wt_msg "No such file: $f\n\nNothing was changed. Copy it in your home folder and try again." 9; return 1; }
+  [ -f "$f" ] || { wt_msg "No such file: $f\n\nNothing was changed. Copy it in your home folder and come back to Start here, or go on without it." 10; return 1; }
   clear; backup_restore "$f"; menu_pause
   return 0
 }
@@ -119,7 +124,12 @@ start_console() {
   if [ "$(console_state)" != on ]; then
     wt_yesno "Last step: the web console, the same settings from a browser or a phone on your home network. You finish there: its first steps check what is left, it pairs your phone, and it shows every service.\n\nIt has its own password, chosen now (10 characters at least, asked twice).\n\nSwitch it on?" 15 || return 0
     clear
-    console_has_password || console_password || { menu_pause; return 0; }
+    # 0.54.5: a mistyped confirmation ended Start here at the main menu with the console off and no address shown
+    until console_has_password; do
+      console_password && break
+      wt_yesno "The password was not saved (the two did not match, or it was too short).\n\nTry again?" 9 || { menu_pause; return 0; }
+      clear
+    done
     console_on; menu_pause
   fi
   wt_msg "Done. Open the web console on your computer or phone:\n\n    http://$(local_ip):$(cfg_get PORT 8080)/console\n\nSign in with the console password. Then:\n  - its first steps (they open by themselves) check what is left\n  - System → Pair a phone\n  - Bluesky, if you post: menu 7 Options here (it asks for an app password)\n\nThe tablet: http://$(local_ip):$(cfg_get PORT 8080)/" 19

@@ -96,6 +96,7 @@ check "again: straight to the main menu"            '[ "$rc" = 0 ] && [ "$(head 
 # ---- the wizard interrupted: nothing half-written is taken as done
 rm -f "$t/etc/config.env"
 run cancelled ok CANCEL
+check "cancel in the wizard says what happened and how to come back (0.54.5: it said nothing)" 'grep -q "Stopped before the first questions were all answered" "$t/cancelled.out" && grep -q "sudo ./install.sh" "$t/cancelled.out"'
 check "cancel in the wizard: exit 0, no position saved, asked again next time" '[ "$rc" = 0 ] && ! grep -q "^LAT=." "$t/etc/config.env" && ! grep -q "^menu" "$t/cancelled.screens"'
 run resumed ok world metric 49.1 6.1 0 10 0
 check "the wizard runs again after a cancel"        '[ "$rc" = 0 ] && grep -q "^LAT=49.1$" "$t/etc/config.env" && grep -q "^menu	ZenithBoard" "$t/resumed.screens"'
@@ -115,6 +116,9 @@ check "no menu but the main one has more than seven entries and its way out" 'gr
 run startbackup start ok yes ok CANCEL 0
 check "start: a backup first, WinSCP named, cancel changes nothing" '[ "$rc" = 0 ] && grep -q "^yesno	Are you moving from another card" "$t/startbackup.screens" && grep -q "WinSCP" "$t/startbackup.screens" && [ "$(grep -c "^menu	ZenithBoard" "$t/startbackup.screens")" = 2 ]'
 run startadsb start ok no ok CANCEL 0
+check "start: a backup step left goes on without it, not out of Start here (0.54.5)" 'grep -q "Going on without a backup" lib/menus.sh && grep -q "start_restore ||" lib/menus.sh'
+check "start: a mistyped console password is asked again, not the end of Start here (0.54.5)" 'sed -n "/^start_console()/,/^}/p" lib/menus.sh | grep -q "until console_has_password" && sed -n "/^start_console()/,/^}/p" lib/menus.sh | grep -q "Try again?"'
+check "start: leaving the ADS-B step is not called a missing internet (0.54.5)" 'grep -q "You left the ADS-B step before the end" lib/menus.sh && grep -q "ADSB_CANCELLED" lib/adsb.sh'
 check "start: ADS-B next, and without a decoder the rest waits" '[ "$rc" = 0 ] && grep -q "^msgbox	ADS-B first" "$t/startadsb.screens" && grep -q "^radiolist	ADS-B decoder" "$t/startadsb.screens" && grep -q "the rest waits" "$t/startadsb.screens" && ! grep -q "web console, the same settings" "$t/startadsb.screens"'
 check "start: the console comes after the wall, the list before it" 'awk "/^start_here\(\)/,/^}/" lib/menus.sh | grep -n "is_flightinfo\|start_recommended\|start_console" | tr "\n" " " | grep -q "is_flightinfo.*start_recommended.*start_console"'
 check "outside: the safe way first, the dangers named, port 22 never" 'grep -q "Only the first is safe" lib/menus.sh && grep -q "NEVER forward port 22" lib/menus.sh && grep -q "tailscale_menu" lib/menus.sh && grep -q "100.64.0.0/10" lib/tailscale.sh'
