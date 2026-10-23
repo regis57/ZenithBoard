@@ -15,7 +15,7 @@ ZenithBoard does not make FlightAware, ADSB Exchange, Flightradar24 or Plane Fin
 | changes its signing key | The key is refused until its fingerprint is checked | Update, once the new fingerprint is in |
 | changes what its installer *does* | **Not detected.** See [What cannot be seen coming](#what-cannot-be-seen-coming) | Nothing automatic can help here |
 
-Each feeder fails on its own. A 404 from Plane Finder does not stop FlightAware from updating: `zenithboard update` warns, carries on to the next component, and still ends with `Update finished`. Afterwards, `zenithboard status` says what is really running.
+Each feeder fails on its own. A 404 from Plane Finder does not stop FlightAware from updating: `zenithboard update` warns, carries on to the next component, and still ends with `Update finished`. If it is the ZenithBoard code itself that could not be pulled, the update says **`Update NOT complete`** instead and exits 1 (0.53.7; before, it said *finished* and the console showed *done* on the old version). Afterwards, `zenithboard status` says what is really running.
 
 ---
 

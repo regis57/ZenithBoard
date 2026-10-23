@@ -132,17 +132,25 @@ social_gap_words() {
 # The words of the posts: the area named in them (the owner's words, never derived from the antenna's position),
 # the radius, the gap, the rules.
 social_setup_words() {
-  local area radius gap rules
+  local area radius gap rules said
   while true; do
     area=$(wt_input "Where is this, in two or three words, as the posts should say it? A town name (Trémery) reads \"above Trémery\"; your own words (near Metz) are kept.\nLeave empty for no place at all. The receiver's position is never used." "$(cfg_get SOCIAL_AREA "")") || return 1
     if [ -z "${area//[[:space:]]/}" ] || [ "$(social_area_clean "$area")" = none ]; then cfg_set SOCIAL_AREA ""; break; fi
     if area=$(social_area_clean "$area"); then cfg_set SOCIAL_AREA "$area"; break; fi
     wt_msg "Letters, digits, spaces and ' - . , only, 40 characters at most." 8
   done
-  radius=$(wt_input "Sharing radius in km: an aircraft is a candidate while it is inside it. This is separate from the wall's radius." "$(cfg_get SOCIAL_RADIUS_KM 15)") || return 1
-  is_number "$radius" && cfg_set SOCIAL_RADIUS_KM "$radius"
-  gap=$(wt_input "Minimum minutes between two posts. 0 = none: every aircraft crossing the radius is posted once, as it happens.\nThe same crossing is never posted twice; the return flight or the next day is a new crossing." "$(cfg_get SOCIAL_GAP_MIN 0)") || return 1
-  is_number "$gap" && cfg_set SOCIAL_GAP_MIN "$gap"
+  # 0.53.7: the same rules as the commands (social radius, social gap); the wizard used to drop a bad value in silence,
+  # take 0, 500 or -5, and say "Saved." after it
+  while true; do
+    radius=$(wt_input "Sharing radius in km: an aircraft is a candidate while it is inside it. This is separate from the wall's radius." "$(cfg_get SOCIAL_RADIUS_KM 15)") || return 1
+    if said=$(social_set_radius "$radius" 2>&1); then break; fi
+    wt_msg "$said" 8
+  done
+  while true; do
+    gap=$(wt_input "Minimum minutes between two posts. 0 = none: every aircraft crossing the radius is posted once, as it happens.\nThe same crossing is never posted twice; the return flight or the next day is a new crossing." "$(cfg_get SOCIAL_GAP_MIN 0)") || return 1
+    if said=$(social_set_gap "$gap" 2>&1); then break; fi
+    wt_msg "$said" 8
+  done
   local tags
   while true; do
     tags=$(wt_input "Hashtags at the end of each post, separated by spaces (the # is optional). none for no hashtags.\n#avgeek becomes #helicopter or #military when one of those is posted." "$(cfg_get SOCIAL_HASHTAGS "$SOCIAL_TAGS_DEFAULT")") || return 1
@@ -604,10 +612,23 @@ social_setup_picture() {
 }
 social_rule_on() { [ "$1" = all ] && case ",$(cfg_get SOCIAL_RULES "")," in *",all,"*|*",any,"*) echo ON; return ;; esac; case ",$(cfg_get SOCIAL_RULES "$(python3 -c 'import sys; sys.path.insert(0, sys.argv[1]); import social; print(social.DEFAULTS["SOCIAL_RULES"])' "$ZB_HOME/flightinfo")")," in *",$1,"*) echo ON ;; *) echo OFF ;; esac; }
 
+social_try_account() { python3 "$SOCIAL_PY" check 2>&1; }      # "bluesky: ok, signed in as ..." or "bluesky: FAILED: ..."; a function so the tests can stand in for Bluesky
+
 social_on() {
   [ -n "$(social_account)" ] || { echo "No Bluesky account yet: run  sudo zenithboard social setup  first."; return 1; }
   social_need_tools || return 1
   social_prepare_dir || { echo "Could not make $SOCIAL_DIR"; return 1; }
+  # 0.53.7: the account is tried before it is switched on. A refused app password used to give "Social sharing is ON"
+  # and only the journal knew; an unreachable Bluesky (the Pi offline for now) is said and does not stop it
+  local tried; tried=$(social_try_account)
+  if printf '%s' "$tried" | grep -q -E 'FAILED: (400|401|403) '; then
+    echo "$tried"
+    echo "Bluesky refused this account, so sharing was NOT switched on. Check the handle and the app password with  sudo zenithboard social setup  and try again."
+    return 1
+  elif printf '%s' "$tried" | grep -q FAILED; then
+    echo "$tried"
+    echo "!! Bluesky could not be reached just now, so the account was not checked. Sharing is switched on anyway: posts wait for the network."
+  fi
   cfg_set SOCIAL 1; social_install_units
   echo "Social sharing is ON: Bluesky @$(social_account), radius $(cfg_get SOCIAL_RADIUS_KM) km, once per crossing, gap between posts: $(social_gap_words), rules: $(cfg_get SOCIAL_RULES)."
   echo "Watch it:  zenithboard logs social      Stop it:  sudo zenithboard social off"

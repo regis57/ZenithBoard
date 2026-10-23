@@ -118,4 +118,15 @@ is_flightinfo() { return 1; }                      # no wall installed: the chec
 PATH="$T/bin:$PATH" zb_wall_check > "$T/out.txt" 2>&1
 check "wall: none installed, nothing done" "$(cat "$T/restart.log")$(cat "$T/out.txt")" ""
 
+# ---- 0.53.7: an update whose code pull failed does not end "Update finished" with exit 0
+mkdir -p "$T/home/bin" "$T/badsrc"
+G init -q -b main "$T/badsrc"; printf 'exit 0\n' > "$T/badsrc/install.sh"; echo "$T/badsrc" > "$T/home/.source"
+printf '#!/bin/bash\necho "flag=${ZB_CODE_NOT_UPDATED:-none}"\n' > "$T/home/bin/zenithboard"; chmod +x "$T/home/bin/zenithboard"
+res=$(ZB_HOME="$T/home" zb_update 2>&1)
+check "a failed code pull is carried to the end of the update" "$(printf '%s' "$res" | grep -c "flag=$ZB_VERSION")" "1"
+res=$(ZB_CODE_NOT_UPDATED=0.1.0 zb_update_verdict 2>&1); rc=$?
+check "verdict: code not updated says so and exits 1" "$rc:$(printf '%s' "$res" | grep -c 'Update NOT complete.*still version 0.1.0'):$(printf '%s' "$res" | grep -c 'Update finished')" "1:1:0"
+res=$(unset ZB_CODE_NOT_UPDATED; zb_update_verdict 2>&1); rc=$?
+check "verdict: code updated says finished and exits 0" "$rc:$(printf '%s' "$res" | grep -c 'Update finished')" "0:1"
+
 exit $fail

@@ -145,7 +145,19 @@ check "gap: under ten is kept (no floor)"          'social_set_gap 3 >/dev/null 
 check "gap: nonsense changes nothing"              '! social_set_gap -5 2>/dev/null && ! social_set_gap 1.5 2>/dev/null && ! social_set_gap 99999 2>/dev/null && ! social_set_gap "1;rm" 2>/dev/null && ! social_set_gap 2000 2>/dev/null && [ "$(cfg_get SOCIAL_GAP_MIN)" = 8 ]'
 check "hashtags: alone, it shows them"             'social_set_hashtags | grep -q "Hashtags: #ADSB #avgeek #ZenithBoard"'
 
+# ---- the words wizard (0.53.7): the commands' own rules, asked again until they are met, never "Saved." after a refusal
+printf '%s\n' "" abc 0 500 -5 20 x -5 1500 10 none > "$t/answers"; : > "$t/msgs.log"
+(       # a subshell: the stand-ins for the screens are not left behind for the checks below
+  wt_input() { local a; a=$(head -1 "$t/answers"); sed -i 1d "$t/answers"; printf '%s' "$a"; }
+  wt_msg() { printf '%s\n' "$1" >> "$t/msgs.log"; }
+  whiptail() { echo '"military"' >&2; }       # the rules checklist answers on stderr, as whiptail does
+  social_setup_words
+)
+check "wizard: a bad radius is asked again, then kept"   '[ "$(cfg_get SOCIAL_RADIUS_KM)" = 20 ] && [ "$(grep -c "whole kilometres" "$t/msgs.log")" = 4 ]'
+check "wizard: a bad gap is asked again, then kept"      '[ "$(cfg_get SOCIAL_GAP_MIN)" = 10 ] && [ "$(grep -c "whole minutes" "$t/msgs.log")" = 3 ]'
+
 # ---- on / off / remove
+social_try_account() { echo "bluesky: ok, signed in as zb.bsky.social"; }      # Bluesky itself is not reached from a test
 out=$(social_on)
 check "on: setting, service enabled, says the rules" '[ "$(cfg_get SOCIAL)" = 1 ] && grep -q "enable zenithboard-social.service" "$t/systemctl.log" && printf "%s" "$out" | grep -q "rules:" && printf "%s" "$out" | grep -q "@zb.bsky.social"'
 : > "$t/systemctl.log"; social_install_units
@@ -153,6 +165,15 @@ check "update: the running service is restarted, not just enabled" 'grep -q "res
 check "on: unit installed, state folder made"      '[ -f "$t/sysd/zenithboard-social.service" ] && [ -d "$ZENITHBOARD_SOCIAL_DIR" ]'
 check "on: node present, apt not called"           '[ ! -f "$t/apt.log" ]'
 social_off >/dev/null
+# 0.53.7: the account is tried before sharing is switched on
+social_try_account() { echo "bluesky: FAILED: 401 {\"error\":\"AuthenticationRequired\"}"; }
+out=$(social_on 2>&1); rc=$?
+check "on: a refused account is not switched on"   '[ "$rc" = 1 ] && [ "$(cfg_get SOCIAL 0)" = 0 ] && printf "%s" "$out" | grep -q "refused this account, so sharing was NOT switched on"'
+social_try_account() { echo "bluesky: FAILED: <urlopen error [Errno -3] Temporary failure in name resolution>"; }
+out=$(social_on 2>&1); rc=$?
+check "on: an unreachable Bluesky is said, and sharing goes on" '[ "$rc" = 0 ] && [ "$(cfg_get SOCIAL)" = 1 ] && printf "%s" "$out" | grep -q "could not be reached just now"'
+social_off >/dev/null
+social_try_account() { echo "bluesky: ok, signed in as zb.bsky.social"; }
 check "off: setting, unit gone, secrets kept"      '[ "$(cfg_get SOCIAL)" = 0 ] && [ ! -f "$t/sysd/zenithboard-social.service" ] && [ -f "$SOCIAL_SECRETS" ]'
 social_remove >/dev/null
 check "remove: secrets and state gone"             '[ ! -f "$SOCIAL_SECRETS" ] && [ -z "$(social_account)" ] && [ ! -d "$ZENITHBOARD_SOCIAL_DIR" ]'

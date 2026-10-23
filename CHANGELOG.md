@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.53.7
+From the 22-23 October audit, three places where the menu or the update said *done* when it was not:
+- **The words wizard no longer says *Saved.* after a refusal.** *Sharing radius* and *Minimum minutes between posts* took anything: a letter was dropped in silence, and 0, 500 or -5 were kept. They follow the commands' own rules now (`social radius`: whole kilometres, 1 to 200; `social gap`: whole minutes, 0 to 1440) and ask again with the reason.
+- **`social on` tries the account first.** A refused app password used to give *Social sharing is ON* and only `zenithboard logs social` knew. Now Bluesky's refusal (400, 401 or 403) stops it, nothing is switched on, and it says what to do. Bluesky not reachable just now (the Pi offline for a while) is said and does not stop it: the posts wait for the network.
+- **An update whose ZenithBoard code could not be pulled no longer ends *Update finished*.** The components were updated, but the first screen afterwards was the old version, with exit 0 and a *done* toast in the console. It now says *Update NOT complete*, names the version it is still on, and exits 1.
+- The wiki's wizard table said the gap defaulted to 120 minutes with ten as a floor: it has been 0, no floor, since 0.20.0. Corrected.
 ## 0.53.6
 - **CI now runs every test.** Its list of shell suites is written by hand on purpose, and five were never on it: the web console's, the backup's, Tailscale's, ADSB Exchange's stats and the translations' (`tests/test_i18n.sh`, the one that fails when a string is missing in a language). The five green checks on a pull request did not cover them. They are on the list now.
 - **A test file left off the list fails `tests/test_docs.sh`**, for the shell and the JavaScript tests alike, so the list keeps its visible diff without being able to drift again. Found by the audit of 22-23 October 2026, which several independent reviewers reported.
