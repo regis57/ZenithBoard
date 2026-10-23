@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **22 October 2026**, version **0.53.4**.
+Last updated: **22 October 2026**, version **0.53.5**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -64,6 +64,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 23 October 2026, 08:21 | The owner on the 41 rows *à trancher*: take the first proposal. 0.53.5 does, all 41, each checked to keep the English's placeholders and tags |
 | 23 October 2026, 08:01 | The owner sent reviewed sheets for all 20 languages (194 rows, 153 with a correction). After `--dry`, 149 corrections were taken, 2 left out (one inexact, one an instruction), and 3 done by hand from the reviewers' notes. The 41 rows marked *à trancher* wait for his word. The first `--dry` also found a bug in `tools/i18n.py`: the sheet reader guessed `doublequote=False` from the header line, so plural rows came out ending in `""}`. Four catalogues were broken that way before the tests caught it; they were put back and applied again with the reader fixed (0.53.4) |
 | 22 October 2026, 23:35 | The owner, from his phone, on his own template in the console: saved, it shows and joins the posts' rotation; how to take it out, an emptied field or a button? Both worked already (an emptied field saved deletes them; unticking *your own* keeps them unused), but he asked for a real button. 0.53.3: *Delete them all* and *Put back the previous ones*, each asked first, in the console and the menu, and `social template undo`. Seen also: his template wrote *at* in a French post; a template's own words are his and are not translated |
 | 22 October 2026, 21:24 | The owner: *publish Swahili*. Held back since 0.48.0 for a native review that has not come; 0.53.1 offers it for the web pages and the posts, its sheet left open for a Swahili speaker's corrections. The `draft.txt` mechanism stays, for a language to hold back later |

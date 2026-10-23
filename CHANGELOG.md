@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.53.5
+- **The 41 translations *à trancher* settled** (the owner, 23 October 2026: the first proposal of each). They cover 18 languages. Examples:
+  - *Großraumflugzeuge* for heavies in German, *Wide-body* in Italian;
+  - *Exit-Code*, *kod wyjścia* and *код выхода* for an exit code;
+  - *publication active* for Bluesky's state in French;
+  - Polish's distinct aircraft as a plural on the statistics page.
+
+  Each one keeps the English's placeholders and tags.
+- **A test that failed depending on the time.** The check that a post never shows the distance looked for "6.2", which a Finnish or Indonesian post made at 06:2x contains ("klo 06.26"). It now looks for that number alone.
+
 ## 0.53.4
 - **The reviewers' corrections in 20 languages** (sheets sent by the owner, 23 October 2026). 149 corrections were taken after a `--dry` check against the English. Among them:
   - French: "1,2 million de messages" (the singular below 2), "Un des deux watchdogs est désactivé", "Rien de capté", "Les 24 dernières heures" wherever the old order remained, and a space that does not break before `: ; ? !` throughout the console;

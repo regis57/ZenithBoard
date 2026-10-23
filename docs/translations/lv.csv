@@ -465,7 +465,7 @@ console-463,console,console.js,Waiting: {job} runs first ({n} before this one). 
 console-464,console,console.js,Waiting: {job} runs first. The Pi does one change at a time.,Gaida: vispirms tiek izpildīts uzdevums {job}. Pi vienlaikus veic tikai vienu izmaiņu.,,
 console-465,console,console.js,exit {rc},izejas kods {rc},,
 console-466,console,console.js,The last jobs,Pēdējie uzdevumi,,
-console-467,console,console.js,ok,labi,,
+console-467,console,console.js,ok,OK,,
 console-468,console,console.js,Nothing run from the console yet.,No konsoles vēl nekas nav palaists.,,
 console-469,console,console.js,Changes (the root helper's journal),Izmaiņas (root palīgprogrammas žurnāls),,
 console-470,console,console.js,None yet.,Vēl nav.,,

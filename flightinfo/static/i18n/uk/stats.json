@@ -51,7 +51,7 @@
  "Drones and balloons": "Дрони й аеростати",
  "(military)": "(військовий)",
  ", near {city} ({km} km)": ", поблизу міста {city} ({km} km)",
- ", {km} km from {city}": ", за {km} km від міста {city}",
+ ", {km} km from {city}": ", за {km} км від міста {city}",
  "the last 30 days": "за останні 30 днів",
  "{n} samples of 15 minutes since {since}, 30 days kept · {period}": "Вимірювань (раз на 15 хвилин) з {since}: {n}; дані зберігаються 30 днів · {period}",
  "distinct aircraft, {period}, a floor": "унікальні літаки {period}, мінімальна оцінка",

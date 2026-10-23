@@ -94,8 +94,8 @@
  "Airlines": "Mashirika ya ndege",
  "Models": "Modeli",
  "Posted here: {n} crossings.": {
-  "one": "Iliyochapishwa hapa: ndege {n}.",
-  "other": "Zilizochapishwa hapa: ndege {n}."
+  "one": "Iliyochapishwa hapa: ndege {n} iliyovuka.",
+  "other": "Zilizochapishwa hapa: ndege {n} zilizovuka."
  },
  "Daily summary card for {period}[ {area}]": "Kadi ya muhtasari wa siku, {period}[ {area}]",
  "Weekly summary card for {period}[ {area}]": "Kadi ya muhtasari wa wiki, {period}[ {area}]",

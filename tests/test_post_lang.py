@@ -165,7 +165,9 @@ class EveryLanguageTest(unittest.TestCase):
                 for shape in social.SENTENCES:
                     t = social.post_text(p, c, why, shape=shape)
                     self.assertFilled(t, (code, shape, why, t))
-                    self.assertNotIn("6.2", t, "never the distance")
+                    # not a bare "6.2": Finnish and Indonesian write 06:26 as "06.26" (0.52.1), so a post made
+                    # at 06:2x failed here on GitHub (0.53.5); the distance is 6.2 not preceded by a digit
+                    self.assertNotRegex(t, r"(?<![\d.])6[.,]2(?!\d)", "never the distance")
                     self.assertTrue(t.rstrip().endswith("#ZenithBoard"), (code, shape, t))
             t = social.post_text(dict(RYR, distance_km=332), c, "farthest")
             self.assertFilled(t, (code, "record", t))

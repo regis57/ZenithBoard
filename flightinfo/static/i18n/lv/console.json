@@ -465,7 +465,7 @@
  "Waiting: {job} runs first. The Pi does one change at a time.": "Gaida: vispirms tiek izpildīts uzdevums {job}. Pi vienlaikus veic tikai vienu izmaiņu.",
  "exit {rc}": "izejas kods {rc}",
  "The last jobs": "Pēdējie uzdevumi",
- "ok": "labi",
+ "ok": "OK",
  "Nothing run from the console yet.": "No konsoles vēl nekas nav palaists.",
  "Changes (the root helper's journal)": "Izmaiņas (root palīgprogrammas žurnāls)",
  "None yet.": "Vēl nav.",
