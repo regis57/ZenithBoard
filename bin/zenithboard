@@ -184,7 +184,8 @@ cmd_status() {
   show_state "FlightInfo wall" is_flightinfo zenithboard-flightinfo
   if is_graphs; then show_state "graphs1090 (port $GRAPHS_PORT)" true graphs1090; fi
   local n; n=$(mlat_count)
-  if [ "${n:-0}" -le 1 ]; then echo "MLAT clients running: ${n:-0}  ${C_G}(OK: max 1)${C_0}"; else echo "MLAT clients running: $n  ${C_R}(too many! run: sudo zenithboard mlat-guard)${C_0}"; fi
+  if [ "${n:-0}" = 0 ] && is_adsbx; then echo "MLAT clients running: 0  ${C_Y}(none: ADSB Exchange's MLAT is not running, see: zenithboard logs)${C_0}"
+  elif [ "${n:-0}" -le 1 ]; then echo "MLAT clients running: ${n:-0}  ${C_G}(OK: max 1)${C_0}"; else echo "MLAT clients running: $n  ${C_R}(too many! run: sudo zenithboard mlat-guard)${C_0}"; fi
   local j; j=$(decoder_json)
   if [ -f "$j" ]; then echo "Aircraft in decoder right now: $(grep -o '"hex"' "$j" | wc -l)"; fi
   if is_uat978 && [ -f /run/skyaware978/aircraft.json ]; then echo "Aircraft on 978 MHz right now:  $(grep -o '"hex"' /run/skyaware978/aircraft.json | wc -l)"; fi
@@ -420,7 +421,7 @@ case "${1:-}" in
       on)     root_or_die; adsbx_stats_on ;;
       off)    root_or_die; adsbx_stats_off ;;
       status) adsbx_stats_status ;;
-      url)    adsbx_stats_url || die "No ADSB Exchange UUID on this Pi: install ADSB Exchange first (menu 1 ADSB)." ;;
+      url)    adsbx_stats_url || die "No ADSB Exchange UUID on this Pi: install ADSB Exchange first (menu 1 ADS-B → 1 Decoder and networks)." ;;
       *) die "Usage: zenithboard adsbx-stats on|off|status|url" ;;
     esac ;;
   update)

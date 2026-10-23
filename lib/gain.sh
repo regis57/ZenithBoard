@@ -68,7 +68,7 @@ gain_restart() { [ "${ZB_SKIP_SERVICES:-}" = 1 ] || systemctl restart "$1"; }
 # gain_set VALUE|max|default
 gain_set() {
   local d v="$1" g
-  d=$(gain_decoder); [ -n "$d" ] || { err "No decoder installed yet: use menu 1 ADSB first."; return 1; }
+  d=$(gain_decoder); [ -n "$d" ] || { err "No decoder installed yet: use menu 1 ADS-B → 1 Decoder and networks first."; return 1; }
   if [ "$v" = default ]; then g=default
   else g=$(gain_nearest "$v") || { err "Gain must be a number in dB (0 to $GAIN_MAX), 'max' or 'default'. Steps: $GAIN_STEPS"; return 1; }
   fi
@@ -118,7 +118,7 @@ gain_verdict() {
 
 gain_check() {
   local d cur n acc strong km sig peak pct
-  d=$(gain_decoder); [ -n "$d" ] || { echo "No decoder installed yet: use menu 1 ADSB first."; return 1; }
+  d=$(gain_decoder); [ -n "$d" ] || { echo "No decoder installed yet: use menu 1 ADS-B → 1 Decoder and networks first."; return 1; }
   cur=$(gain_current "$d")
   echo "Decoder: $d     Gain: $(gain_label "$cur")     Checked: $(date '+%Y-%m-%d %H:%M')"
   if ! n=$(gain_numbers "$d") || [ -z "$n" ]; then echo "No statistics yet ($(gain_stats "$d") missing). Wait a minute after (re)starting the decoder."; return 1; fi
@@ -223,7 +223,7 @@ gain_log_status() {
 gain_menu() {
   local c d cur v
   d=$(gain_decoder)
-  if [ -z "$d" ]; then wt_msg "No decoder installed yet.\n\nInstall one first in menu 1 ADSB." 10; return 0; fi
+  if [ -z "$d" ]; then wt_msg "No decoder installed yet.\n\nInstall one first in menu 1 ADS-B → 1 Decoder and networks." 10; return 0; fi
   while true; do
     cur=$(gain_current "$d")
     c=$(wt_menu "Gain: how much the dongle amplifies the radio signal ($d).\n\nNow: $(gain_label "$cur")\n\nStart with the maximum. Lower it only if the check says the receiver is overloaded. Nothing changes by itself." \

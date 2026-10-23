@@ -68,7 +68,7 @@ graphs_on() {
   if is_graphs; then
     echo "graphs1090 is already on (version $(graphs_version)):"; graphs_urls; return 0
   fi
-  [ -n "$(installed_decoder)" ] || { err "graphs1090 draws the decoder's statistics: install a decoder first (menu 1 ADSB)."; return 1; }
+  [ -n "$(installed_decoder)" ] || { err "graphs1090 draws the decoder's statistics: install a decoder first (menu 1 ADS-B → 1 Decoder and networks)."; return 1; }
   graphs_has_lighttpd || {
     err "graphs1090's pages are served by lighttpd, which comes with the receiver map (tar1090, installed with readsb, or FlightAware's SkyAware). lighttpd is not installed: nothing was changed."
     return 1; }

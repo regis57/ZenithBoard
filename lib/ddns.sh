@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Domain name for your wall (menu 3 Connectivity -> 4 Domain name, and `zenithboard ddns ...`).
+# Domain name for your wall (menu 3 Connectivity -> 5 A domain name for your home, and `zenithboard ddns ...`).
 #
 # Most home internet connections change their public address from time to time. A dynamic-DNS service gives you a free
 # name (for example myplanes.duckdns.org) and this Pi tells the service its current address every 5 minutes, so the name
@@ -173,7 +173,7 @@ ddns_test() {
 ddns_links() {   # the addresses once the router forwards the ports
   local h port; h=$(cfg_get DDNS_HOST); port=$(cfg_get PORT 8080)
   echo "ZenithBoard wall : http://$h:$port/"
-  echo "Receiver map     : http://$h$(ddns_map_path)   (port 80)"
+  echo "Receiver map     : home network only, http://$(local_ip)$(ddns_map_path)   (port 80 is never forwarded: no guard, it shows your antenna)"
   ddns_reach_note
 }
 # A name is the first step to being reachable from the internet, so this is where it is said plainly what the
@@ -195,7 +195,7 @@ ddns_guide() {
   wt_scroll "WHICH SERVICE?  All three are free.\n\n DuckDNS (duckdns.org)  - the simplest. Sign in with Google, GitHub... pick a name such as myplanes -> myplanes.duckdns.org. It gives you a token. Never expires.\n\n No-IP (noip.com)  - the best known. Create an account, then a free hostname, then (Dynamic DNS > DDNS Keys) a DDNS key: a user name + password just for updates. The free plan asks you to confirm the hostname regularly (about once a month, by e-mail or button) or the name is released.\n\n FreeDNS (freedns.afraid.org)  - many domains to choose from. Create an account, add a Subdomain (type A), then open Dynamic DNS: copy the 'Direct URL' (or just its last part, the token).\n\nIf unsure: DuckDNS."
 }
 ddns_how_to_reach() {
-  wt_scroll "A NAME ALONE OPENS NOTHING.\n\nTo reach your Pi from outside, three things:\n 1. A name that follows your home address (this menu).\n 2. A FIXED address for the Pi (Network > Fixed IP) so the router always sends traffic to the same machine.\n 3. In your router (often called 'port forwarding' or 'NAT'): forward a port to the Pi.\n      the wall: port $(cfg_get PORT 8080) -> the Pi, port $(cfg_get PORT 8080)\n      the receiver map (tar1090, optional): port 80 -> the Pi, port 80\n\nPRIVACY: these pages have no password and no encryption, and they show where your antenna is.\n\nThe wall answers your home network only (ALLOW_FROM=private): a forwarded port gets a 403 from the internet until you run: sudo zenithboard config-set ALLOW_FROM any  (or a VPN's range). The receiver map on port 80 has no such guard: forward it only if you want it public.\n\nThe private way to reach both from outside is a VPN (Tailscale / WireGuard): no port to open.\n\nSome providers share one public address between many homes (CGNAT): no port can be opened then. 'Status' tells you."
+  wt_scroll "A NAME ALONE OPENS NOTHING.\n\nTo reach your Pi from outside, three things:\n 1. A name that follows your home address (this menu).\n 2. A FIXED address for the Pi (3 Connectivity → 2 A fixed address) so the router always sends traffic to the same machine.\n 3. In your router (often called 'port forwarding' or 'NAT'): forward a port to the Pi.\n      the wall: port $(cfg_get PORT 8080) -> the Pi, port $(cfg_get PORT 8080)\n      NEVER port 22 (the Pi's login) or port 80 (the receiver map: no guard, it shows your antenna)\n\nPRIVACY: these pages have no password and no encryption, and they show where your antenna is.\n\nThe wall answers your home network only (ALLOW_FROM=private): a forwarded port gets a 403 from the internet until you run: sudo zenithboard config-set ALLOW_FROM any  (or a VPN's range). The receiver map on port 80 has no such guard and shows where your antenna is: never forward it.\n\nThe private way to reach both from outside is a VPN (Tailscale / WireGuard): no port to open.\n\nSome providers share one public address between many homes (CGNAT): no port can be opened then. 'Status' tells you."
 }
 ddns_setup() {
   local p h u="" s
@@ -210,7 +210,7 @@ ddns_setup() {
     freedns) s=$(wt_pass "FreeDNS token, or the whole 'Direct URL' from the Dynamic DNS page. Typed hidden, stored root-only.") || return 0 ;;
   esac
   local out rc; out=$(ddns_set "$p" "$h" "$u" "$s"); rc=$?
-  if [ "$rc" -eq 0 ]; then wt_msg "$out\n\nThe Pi now refreshes it every 5 minutes, also after a reboot.\n\n$(ddns_links)\n\nNext: a fixed address for the Pi, then port forwarding in your router (read 'How to reach it')." 18
+  if [ "$rc" -eq 0 ]; then wt_scroll "$out\n\nThe Pi now refreshes it every 5 minutes, also after a reboot.\n\nNEXT: read menu 3 'From outside your home, safely' before opening anything: a VPN (Tailscale) needs no port at all.\n\n$(ddns_links)"
   else wt_msg "$out" 10; fi
 }
 ddns_menu() {

@@ -134,7 +134,7 @@ social_gap_words() {
 social_setup_words() {
   local area radius gap rules said
   while true; do
-    area=$(wt_input "Where is this, in two or three words, as the posts should say it? A town name (Trémery) reads \"above Trémery\"; your own words (near Metz) are kept.\nLeave empty for no place at all. The receiver's position is never used." "$(cfg_get SOCIAL_AREA "")") || return 1
+    area=$(wt_input "Where is this, in two or three words, as the posts should say it? A town name (Trémery) reads \"above Trémery\"; your own words (near Metz) are kept.\nLeave empty for no place at all. The receiver's position is never used.\nThe posts are public: a town or a region says enough, not your village." "$(cfg_get SOCIAL_AREA "")") || return 1
     if [ -z "${area//[[:space:]]/}" ] || [ "$(social_area_clean "$area")" = none ]; then cfg_set SOCIAL_AREA ""; break; fi
     if area=$(social_area_clean "$area"); then cfg_set SOCIAL_AREA "$area"; break; fi
     wt_msg "Letters, digits, spaces and ' - . , only, 40 characters at most." 8
@@ -224,7 +224,7 @@ social_set_area() {     # social_set_area [WORDS...|none]
   v="${v#"${v%%[![:space:]]*}"}"; v="${v%"${v##*[![:space:]]}"}"      # trimmed, so " none " is none
   if [ -z "$v" ]; then
     echo "Place name: $(or_text "$(cfg_get SOCIAL_AREA "")" "(none)")"
-    echo "Change:  sudo zenithboard social area Trémery   (or near Metz: two or three words, as the posts say it), or none"; return 0
+    echo "Change:  sudo zenithboard social area Trémery   (or near Metz: two or three words, as the posts say it), or none. The posts are public: a town or a region, not your village"; return 0
   fi
   if [ "$v" = none ]; then cfg_set SOCIAL_AREA ""; echo "Place name: none. The posts name no place."; return 0; fi
   v=$(social_area_clean "$v") || { echo "Place name: letters, digits, spaces and ' - . , only, 40 characters at most, starting with a letter or a digit" >&2; return 1; }

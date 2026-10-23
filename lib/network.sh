@@ -171,7 +171,7 @@ net_ask_static() {   # net_ask_static UUID -> sets NET_IP NET_PREFIX NET_GW NET_
 
 net_static_menu() {
   local u action n cur
-  net_has_nm || { wt_msg "A fixed address is set through NetworkManager (default on Raspberry Pi OS Bookworm and newer). It is not running on this Pi.\n\nThe Wi-Fi menu can install it (Settings > Network > Wi-Fi)." 12; return 0; }
+  net_has_nm || { wt_msg "A fixed address is set through NetworkManager (default on Raspberry Pi OS Bookworm and newer). It is not running on this Pi.\n\nThe Wi-Fi menu can install it (3 Connectivity → 1 Wi-Fi)." 12; return 0; }
   wt_msg "$(net_wired_note)\n\nThis does not change which connection is used: only the address of the one you pick." 13
   u=$(net_pick_profile) || return 0
   n=$(net_profiles | awk -F'\t' -v u="$u" '$1==u {print $3}'); cur=$(net_profile_summary "$u")
@@ -192,7 +192,8 @@ net_static_menu() {
         wt_msg "The address was saved but the connection could not be restarted with it. Check with  zenithboard net status.  To undo:  sudo zenithboard net dhcp" 11
       fi ;;
     dhcp)
-      wt_yesno "Go back to an automatic address for '$n'?\n\nThe router will give the Pi an address (it may be a different one)." 10 || return 0
-      net_apply_dhcp "$u" && wt_msg "Automatic address restored. Look at 'zenithboard status' for the new address." 9 || wt_msg "Could not restore it. Check  zenithboard net status." 8 ;;
+      local drop=""; net_session_uses "$u" && drop="\n\nYou are connected to the Pi through this connection: the session will drop. Find the Pi again at zenithboard.local, or in your router's list of devices, and open a new session there."
+      wt_yesno "Go back to an automatic address for '$n'?\n\nThe router will give the Pi an address (it may be a different one).$drop" 13 || return 0
+      net_apply_dhcp "$u" && wt_msg "Automatic address restored.\n\nThe new address: zenithboard.local, or your router's list of devices (on the Pi: zenithboard status)." 10 || wt_msg "Could not restore it. Check  zenithboard net status." 8 ;;
   esac
 }

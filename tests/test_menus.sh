@@ -12,6 +12,11 @@ fail=0
 check() { if eval "$2"; then echo "ok   $1"; else echo "FAIL $1"; fail=1; fi; }
 printf '#!/bin/bash\necho "$*" > %s/args\n' "$t" > "$t/whiptail"; chmod +x "$t/whiptail"; PATH="$t:$PATH"
 
+# 0.54.3: no screen names a menu that is gone or one level short (the audit of 22-23 October 2026 found nine of them)
+check "no screen says 'menu 1 ADSB' alone: the entry is ADS-B, then 1 Decoder and networks" '! grep -rn "menu 1 ADSB" lib bin install.sh | grep -v "menu 1 ADSB-"'
+check "no screen names the old Settings > Network paths" '! grep -rn "Settings > Netwo\|Network > Fixed IP\|4 Domain name" lib install.sh'
+check "the network screens agree on port 80: never forwarded" '! grep -n "forward it only if you want it public\|port 80 -> the Pi" lib/ddns.sh && grep -q "NEVER port 22" lib/ddns.sh && grep -q "NEVER forward port 22" lib/menus.sh'
+check "back to automatic (DHCP) warns when the session is on that connection" 'sed -n "/dhcp)/,/;;/p" lib/network.sh | grep -q "net_session_uses"'
 wt_menu "Settings" network "Network" logs "Logs" back "Return to the previous menu"
 check "menu with a Back entry: no Cancel button"    'grep -q -- "--nocancel" "$t/args"'
 wt_menu "Main" 1 "ADSB" 0 "Exit"

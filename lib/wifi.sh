@@ -255,7 +255,7 @@ wifi_require_on() { wifi_radio_on || { wt_msg "Wi-Fi is OFF. Turn it on first (f
 
 wifi_confirm_session_risk() {   # $1 = what is about to happen
   wifi_session_on_wifi || return 0
-  wt_yesno "You are probably connected to this Pi through Wi-Fi.\n\n$1 may cut your connection. An Ethernet cable keeps you safe.\n\nContinue?" 12
+  wt_yesno "You are probably connected to this Pi through Wi-Fi.\n\n$1 may cut your connection. An Ethernet cable keeps you safe.\n\nIf it does: the Pi comes back at zenithboard.local, or in your router's list of devices, and you open a new SSH session there.\n\nContinue?" 15
 }
 
 wifi_ask_password() {   # wifi_ask_password "SSID" -> prints the password ("" = open network)

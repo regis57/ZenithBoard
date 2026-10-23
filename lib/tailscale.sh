@@ -143,7 +143,8 @@ tailscale_console() {   # tailscale_console on|off
   case "${1:-}" in
     on) cfg_set CONSOLE_TAILSCALE 1
         echo "The web console now answers Tailscale's addresses too ($TS_RANGE), by address or by its Tailscale name (*.ts.net):"
-        echo "only devices signed in to your Tailscale account reach it, and Tailscale encrypts the way. Its password still applies." ;;
+        echo "only devices signed in to your Tailscale account reach it, and Tailscale encrypts the way. Its password still applies."
+        [ "$(ts_state)" = on ] || echo "!! Tailscale is not connected on this Pi yet ($(ts_state)), so nothing reaches it that way until it is: sudo zenithboard tailscale on" ;;
     off) cfg_set CONSOLE_TAILSCALE 0; echo "The web console answers your home network only again." ;;
     *) err "Usage: zenithboard tailscale console on|off"; return 1 ;;
   esac
