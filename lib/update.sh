@@ -234,10 +234,11 @@ zb_update() {
   [ -f "$ZB_HOME/.source" ] && src=$(cat "$ZB_HOME/.source")
   if [ "$pull" = 1 ] && [ -n "$src" ] && [ -d "$src/.git" ]; then
     log "Updating ZenithBoard from GitHub ($src), current version $old"
-    zb_sync_source "$src" || warn "The ZenithBoard code was NOT updated: staying on version $old."
+    zb_sync_source "$src" || { warn "The ZenithBoard code was NOT updated: staying on version $old."; export ZB_CODE_NOT_UPDATED="$old"; }
     bash "$src/install.sh" --deploy                      # copy the new files to /opt/zenithboard
   elif [ "$pull" = 1 ]; then
     warn "Original download folder not found: skipping the ZenithBoard code update (git clone it again to get the newest version)."
+    export ZB_CODE_NOT_UPDATED="$old"
   fi
   if [ "$only" = 1 ]; then
     local rest=(); for c in "${names[@]}"; do [ "$c" = zenithboard ] || rest+=("$c"); done
@@ -289,6 +290,16 @@ zb_update_components() {
   if [ "$(cfg_get SOCIAL 0)" = 1 ]; then social_install_units; fi
   zb_mlat_guard
   zb_wall_check
+  zb_update_verdict
+}
+
+# 0.53.7: an update whose code pull failed used to end "Update finished", exit 0, and the console toasted "done": the
+# first screen after it was the old version. The components were still updated, so it says that, and exits 1.
+zb_update_verdict() {
+  if [ -n "${ZB_CODE_NOT_UPDATED:-}" ]; then
+    warn "Update NOT complete: the components were updated, but the ZenithBoard code was not (still version $ZB_CODE_NOT_UPDATED). Read what is said above, fix it, and run the update again."
+    return 1
+  fi
   log "Update finished. Check:  zenithboard status"
 }
 

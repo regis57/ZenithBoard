@@ -64,7 +64,7 @@ Every `zenithboard` command, grouped by what you are trying to do. `zenithboard`
 | `zenithboard social units metric` · `imperial` · `wall` | yes | The posts' units, picture and text (m, km/h, km or ft, knots, mi), or the wall's own `UNITS` (the default). 0.24.3 |
 | `zenithboard social map NAME` · `rotate` | yes | The map of the dotmap and flap looks: normal, night, satellite, terrain, none, or the four maps in turn |
 | `zenithboard social test [HEX]` | | Draw the picture and print the text for the best candidate (or that aircraft); post nothing. The picture is at `/social/preview` |
-| `zenithboard social on` · `off` · `status` | yes | Post the aircraft overhead as a picture of the wall (off by default). `off` keeps the account |
+| `zenithboard social on` · `off` · `status` | yes | Post the aircraft overhead as a picture of the wall (off by default). `on` tries the account first (0.53.7): a refused app password stops it, with what to do; Bluesky not reachable just now is said and sharing goes on, the posts waiting for the network. `off` keeps the account |
 | `zenithboard social post [HEX]` | | Post now, once, whatever the gap. That aircraft then counts as posted for its crossing |
 | `zenithboard social check` | yes | Try the account: open a session on Bluesky |
 | `zenithboard social remove` | yes | Forget the account, stop the service, delete its state and its map tiles |

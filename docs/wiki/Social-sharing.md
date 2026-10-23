@@ -49,8 +49,8 @@ Give the handle and paste the app password (typed blind, as a password); the wiz
 | Question | What it is for | Default |
 |---|---|---|
 | Where is this? | The place named at the end of the posts. Your words: a town name (`Trémery`) reads *above Trémery*, words that start with their own preposition (`near Metz`, `over the Moselle`) are kept. The receiver's position is never used. A small village narrows your home down to a few kilometres; a city, a department or a region does not | nothing |
-| Sharing radius | An aircraft is a candidate while inside it. Separate from the wall's radius | 15 km |
-| Minimum minutes between posts | So the account is not a firehose. Ten at least: a declared bot that posts every minute is what gets reported, so a smaller value is used as ten | 120 |
+| Sharing radius | An aircraft is a candidate while inside it. Separate from the wall's radius. Whole kilometres, 1 to 200: anything else is refused and asked again (0.53.7; before, it was dropped without a word and the wizard still said *Saved.*) | 15 km |
+| Minimum minutes between posts | **0 = none: every crossing of the radius is posted, once** (the default since 0.20.0). Whole minutes, 0 to 1440; anything else is refused and asked again (0.53.7). There is no floor: this row said ten at least and 120 until 0.53.7, which has not been true since 0.20.0 | 0 |
 | Hashtags | Ending every post. Change them any time with `sudo zenithboard social hashtags ADSB avgeek Moselle` — the `#` is optional, and left out the shell cannot take it for a comment; `none` for none at all, `default` for the three | `#ADSB #avgeek #ZenithBoard` |
 | What is worth a post | See the rules below | rare, military, helicopter, heavy, farthest |
 
