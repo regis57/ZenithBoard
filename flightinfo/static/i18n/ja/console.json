@@ -348,7 +348,7 @@
  "Wi-Fi networks, fixed addresses and the domain name's key stay in the terminal (sudo zenithboard menu → 3 Connectivity): one mistake there cuts the Pi off the network this page comes through.": "Wi-Fiネットワーク、固定アドレス、ドメイン名の鍵の設定はターミナルで行います（sudo zenithboard menu → 3 Connectivity）。設定を1つ誤るだけで、このページの通信経路であるネットワークからPiが切り離されてしまうためです。",
  "On: reachable from anywhere by the devices of your Tailscale account, no port opened.": "オン：ポートを開放せずに、Tailscaleアカウントのデバイスからどこでもアクセスできます。",
  "Off. The wall, the statistics and graphs1090 from anywhere, with no port opened: your phone or computer joins your own Tailscale network (a free account on tailscale.com, its app on the phone).": "オフ。ポートを開放せずに、表示板、統計、graphs1090にどこからでもアクセスできます。お使いのスマートフォンやコンピューターをご自身のTailscaleネットワークに参加させるだけです（tailscale.comの無料アカウントと、スマートフォン用アプリが必要）。",
- "Connected": "接続",
+ "Connected": "接続中",
  "Off: the Pi leaves your Tailscale network; it stays installed and signed in": "オフ：PiはTailscaleネットワークから離脱しますが、インストールとサインインの状態は維持されます",
  "The first time it installs Tailscale (minutes), then its sign-in link appears below: open it, sign in to your account, approve the Pi": "初回はTailscaleをインストールし（数分）、下にサインインリンクが表示されます。リンクを開いてアカウントにサインインし、Piを承認してください",
  "The console over Tailscale too": "Tailscale経由でもコンソールを利用",

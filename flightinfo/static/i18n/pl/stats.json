@@ -60,7 +60,12 @@
  "on {day} at {time}": "{day} o {time}",
  "Busiest day": "Dzień największego ruchu",
  "Busiest hour": "Godzina największego ruchu",
- "{n} distinct aircraft": "różne samoloty: {n}",
+ "{n} distinct aircraft": {
+  "one": "{n} różny samolot",
+  "few": "{n} różne samoloty",
+  "many": "{n} różnych samolotów",
+  "other": "{n} różnych samolotów"
+ },
  "{n} aircraft with a position, on average": "samoloty z pozycją, średnio: {n}",
  "Farthest, {period}": "Najdalej, {period}",
  "No details written down in this period yet: the next sample, on the quarter hour, does it.": "W tym okresie nie zapisano jeszcze szczegółów: zrobi to następna próbka, o pełnym kwadransie.",

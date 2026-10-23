@@ -111,8 +111,9 @@ sibling key…") is refused for its placeholders: it is done by hand, after read
   * Russian: "за последнюю {n} минуту" in both track captions;
   * Indonesian: "tanda panggil" for callsign everywhere;
   * French: "24 dernières heures" in the three places that still said "dernières 24".
-* **41 rows marked *à trancher***, one reviewer out of two, with no correction filled in, are not applied. They wait
-  for the owner's word.
+* **41 rows marked *à trancher***, one reviewer out of two, with no correction filled in, were not applied at first.
+  The owner chose their first proposal the same morning; it went into 0.53.5 after the same placeholder check.
+  Two are plural entries (Polish's distinct aircraft on the statistics page, Swahili's posted crossings).
 
 ## For developers
 

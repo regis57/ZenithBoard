@@ -373,7 +373,7 @@ console-371,console,"console.js, console_actions.py",Security check,Turvakontrol
 console-372,console,console.js,"Only in the terminal, on purpose",Meelega ainult terminalis,,
 console-373,console,console.js,"Uninstalling, and anything that asks for a typed word","Desinstallimine ja kõik, mis nõuab sõna sisestamist",,
 console-374,console,console.js,"Wi-Fi, fixed addresses (they can cut this page off)","Wi-Fi, staatilised aadressid (need võivad selle lehe ühenduse katkestada)",,
-console-375,console,console.js,"Passwords, tokens and keys: Bluesky, the domain name, this console's own","Paroolid, tõendid ja võtmed: Bluesky, domeeninimi, selle konsooli oma",,
+console-375,console,console.js,"Passwords, tokens and keys: Bluesky, the domain name, this console's own","Paroolid, pääsuload ja võtmed: Bluesky, domeeninimi, selle konsooli oma",,
 console-376,console,console.js,"Posting to Bluesky, emptying statistics or logs, importing settings, restoring a backup","Postitamine Bluesky kontole, statistika või logide tühjendamine, seadete importimine, varukoopia taastamine",,
 console-377,console,console.js,"This page travels unencrypted on your home network (plain HTTP), like the wall. It answers home addresses only.","See leht liigub teie koduvõrgus krüpteerimata (tavaline HTTP), nagu ka tabloo. Leht vastab ainult koduvõrgu aadressidele.",,
 console-378,console,"console.js, console_actions.py",Turn the console off,Lülita konsool välja,,

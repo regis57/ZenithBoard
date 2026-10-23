@@ -22,7 +22,7 @@
  "Models most seen <span>· distinct aircraft</span>": "Meest geziene types <span>· unieke vliegtuigen</span>",
  "Cargo and business jets": "Vrachtvliegtuigen en zakenjets",
  "cargo aircraft": "vrachtvliegtuigen",
- "Cargo airlines · most seen model": "Vrachtmaatschappijen · meest gezien type",
+ "Cargo airlines · most seen model": "Vrachtmaatschappijen · meest geziene type",
  "business jets": "zakenjets",
  "Make and model": "Merk en type",
  "countries": "landen",
@@ -42,7 +42,7 @@
   "one": "{n} vliegtuig",
   "other": "{n} vliegtuigen"
  },
- "None heard in this period.": "Geen ontvangen in deze periode.",
+ "None heard in this period.": "Geen enkele ontvangen in deze periode.",
  "Helicopters": "Helikopters",
  "Light aircraft": "Lichte vliegtuigen",
  "Gliders": "Zweefvliegtuigen",

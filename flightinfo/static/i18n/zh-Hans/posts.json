@@ -116,9 +116,7 @@
  "{n} gliders": {
   "other": "{n} 架滑翔机"
  },
- "{n} drones and balloons": {
-  "other": "{n} 架无人机和气球"
- },
+ "{n} drones and balloons": "{n} 个无人机和气球",
  "Cargo and business jets[ {area}], {period}: {cargo}, {bizjets}.": "{period}[ {area}]的货机与公务机：{cargo}，{bizjets}。",
  "{n} cargo aircraft": {
   "other": "{n} 架货机"
