@@ -32,7 +32,7 @@ ZenithBoard runs as root on a machine in your home, listens on your network, and
 
 | Surface | Reachable from | Notes |
 |---|---|---|
-| The wall, port 8080 | Home networks (`ALLOW_FROM=private`) | No login: it is meant to be opened by a tablet with no keyboard. Anyone outside the private ranges gets a 403, forwarded port or not |
+| The wall, port 8080 | Home networks (`ALLOW_FROM=private`) | No login: it is meant to be opened by a tablet with no keyboard. Anyone outside the private ranges gets a 403, forwarded port or not. Since 0.54.0 the data answers only to the Pi's own names too (DNS rebinding, see the table below) |
 | `/api/planes`, `/api/config` | Same | Aircraft in range, and display settings. **The antenna's exact position is never sent** |
 | tar1090, port 80 | Same | Installed by readsb, not by ZenithBoard |
 | Plane Finder, port 30053 | Same | Its own setup page |
@@ -171,6 +171,7 @@ Kept as a record, because a security page that only lists what is fine is not be
 | 0.12.2 | CodeQL | The 0.12.1 line-break filter was not recognisable as a protection | Every header from a fixed table |
 | 0.12.3 | A real Pi asking at every update | GitHub's key file has its expired key first; only that one was recorded | All usable keys recorded, expired ones never |
 | 0.12.4 | The wall itself | The host check left out `plnspttrs.net`, where the pictures actually are, so every photo was refused in silence | Both domains allowed; the test uses the real answer |
+| 0.54.0 | The audit of 22-23 October 2026 | The wall's data answered any name once the address was a home one: a page on another site pointing its own name at the Pi (*DNS rebinding*) could read `/api/planes` from a browser on the home network, aircraft positions and distances, from which the antenna's position follows | `/api/*` and `/social/preview*` answer only to an address, a local name, the Pi's own name, `DDNS_HOST` or a name in `CONSOLE_HOSTS` (the console's rule); not asked when `ALLOW_FROM=any`. A router's own name (`pi.fritz.box`) is added with `config-set CONSOLE_HOSTS` |
 | 0.15.0 | Reading the code again | The wall answered anyone, forwarded port included; Grafana kept `admin`/`admin`; five timers ran as root with no sandbox; the Pi installed no security fixes by itself | `ALLOW_FROM=private`; a generated Grafana password; every unit sandboxed; `zenithboard patches`; `zenithboard security` to check all of it |
 | 0.16.1 | The first `zenithboard security` on a real Pi | An older install still had the unsandboxed `data-refresh` unit (score 9.6): updates installed new unit files only for features that were switched on, never refreshing the ones already there. The same port was listed twice; feeder ports were unrecognised | Every update now refreshes every ZenithBoard unit file the Pi has; ports listed once; decoder and feeder ports recognised |
 | 0.16.2+ | CodeQL, on `main` | An `except OSError: pass` in the statistics reader: the deliberate fallback (keep the running count when a day file is gone) was indistinguishable from a forgotten error | The fallback is an explicit return value, same behaviour |

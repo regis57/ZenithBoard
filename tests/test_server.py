@@ -696,6 +696,52 @@ class WhoMayReadTest(unittest.TestCase):
         self.assertEqual(server.DEFAULTS["ALLOW_FROM"], "private")
         self.assertEqual(server.DEFAULTS["BIND_ADDRESS"], "0.0.0.0")
 
+    def test_a_name_that_is_not_the_pis_gets_nothing_of_the_wall_data(self):
+        # 0.54.0: DNS rebinding. The request comes from a home browser (a private address) with the attacker's own name
+        # as Host: /api/planes would give the aircraft's positions, and the antenna's follows.
+        import http.client, tempfile, threading
+        with tempfile.NamedTemporaryFile("w", suffix=".env", delete=False) as fh:
+            fh.write("ALLOW_FROM=private\nDDNS_HOST=zb.duckdns.org\nCONSOLE_HOSTS=pi.fritz.box\n")
+            cfgpath = fh.name
+        old_cfg = server.CONFIG_FILE
+        server.CONFIG_FILE = cfgpath
+        server._cfg_cache.update(mtime=None)
+        httpd = server.WallServer(("127.0.0.1", 0), server.Handler)
+        port = httpd.server_address[1]
+        threading.Thread(target=httpd.serve_forever, daemon=True).start()
+        try:
+            def get(path, host="default"):
+                c = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                if host is None:
+                    c.putrequest("GET", path, skip_host=True); c.endheaders()
+                else:
+                    c.request("GET", path, headers={} if host == "default" else {"Host": host})
+                r = c.getresponse(); body = r.read(); c.close()
+                return r.status, body
+            for path in ("/api/planes", "/api/stats", "/api/config", "/api/farthest", "/social/preview"):
+                status, body = get(path, "evil.example.com")
+                self.assertEqual(status, 403, path)
+                self.assertIn(b"CONSOLE_HOSTS", body)
+                self.assertNotIn(b"planes", body)
+            self.assertEqual(get("/api/planes", "evil.example.com:8080")[0], 403)
+            self.assertEqual(get("/api/planes", "192.168.1.196:8080")[0], 200, "the Pi's address")
+            self.assertEqual(get("/api/planes")[0], 200, "127.0.0.1, as the statistics timer asks")
+            self.assertEqual(get("/api/planes", "localhost:8080")[0], 200)
+            self.assertEqual(get("/api/planes", "zenithboard.local")[0], 200, "mDNS")
+            self.assertEqual(get("/api/planes", "zb.duckdns.org")[0], 200, "the owner's DDNS name")
+            self.assertEqual(get("/api/planes", "pi.fritz.box")[0], 200, "a name listed in CONSOLE_HOSTS")
+            self.assertEqual(get("/api/planes", None)[0], 200, "no Host header: not a browser")
+            self.assertEqual(get("/", "evil.example.com")[0], 200, "the page itself holds nothing of the antenna's")
+            with open(cfgpath, "w") as fh:
+                fh.write("ALLOW_FROM=any\n")
+            os.utime(cfgpath, (time.time() + 5, time.time() + 5))
+            self.assertEqual(get("/api/planes", "evil.example.com")[0], 200, "opened to everyone on purpose")
+        finally:
+            httpd.shutdown(); httpd.server_close()
+            server.CONFIG_FILE = old_cfg
+            server._cfg_cache.update(mtime=None)
+            os.unlink(cfgpath)
+
     def test_the_running_server_refuses_with_403(self):
         # The real server, on the loopback address. 127.0.0.1 is private, so the default lets it in; a list that
         # leaves the loopback out must turn the same request away with a 403 and not with a crash.

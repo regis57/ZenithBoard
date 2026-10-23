@@ -176,6 +176,9 @@ uninstall_all() {
   gain_log_remove_units
   stats_remove_units
   console_remove_units
+  # 0.54.0: the Bluesky service was left running (and enabled) by "uninstall everything". Off, not removed: the account
+  # goes with the settings if they are deleted below, and stays with them if they are kept
+  [ "$(social_state)" != on ] || social_off >/dev/null
   [ -z "$(acars_leftovers)" ] || acars_remove --yes
   if is_graphs || [ -f "$GRAPHS_STATE" ]; then graphs_off; fi
   is_flightinfo && remove_flightinfo
