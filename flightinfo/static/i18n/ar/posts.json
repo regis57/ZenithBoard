@@ -8,7 +8,7 @@
  "Heavy overhead: {post}": "طائرة ثقيلة في الأجواء: {post}",
  "Helicopter: {post}": "مروحية: {post}",
  "New 30-day range record: {post}": "رقم قياسي جديد للمدى خلال 30 يومًا: {post}",
- "military {type}": "طائرة {type} عسكرية",
+ "military {type}": "طائرة عسكرية من طراز {type}",
  "military helicopter": "مروحية عسكرية",
  "military": "طائرة عسكرية",
  "{airline} {type}": "طائرة {type} لشركة {airline}",
@@ -55,7 +55,7 @@
  "level": "في طيران مستوٍ",
  "Split-flap flight board": "لوحة رحلات بألواح قلّابة",
  "Dot-matrix flight board": "لوحة رحلات بمصفوفة نقطية",
- "registration {registration}": "التسجيل {registration}",
+ "registration {registration}": "رقم التسجيل {registration}",
  "from {from} to {to}": "من {from} إلى {to}",
  "Beside it, {map} with the aircraft's track over the last {n} minutes, north up.": {
   "zero": "بجانبها {map} تُظهر مسار الطائرة خلال آخر {n} دقيقة، والشمال في الأعلى.",
@@ -164,7 +164,7 @@
   "many": "{n} من المسيّرات والمناطيد",
   "other": "{n} من المسيّرات والمناطيد"
  },
- "Cargo and business jets[ {area}], {period}: {cargo}, {bizjets}.": "طائرات الشحن ورجال الأعمال[ {area}]، {period}: {cargo}، {bizjets}.",
+ "Cargo and business jets[ {area}], {period}: {cargo}, {bizjets}.": "طائرات الشحن وطائرات رجال الأعمال[ {area}]، {period}: {cargo}، {bizjets}.",
  "{n} cargo aircraft": {
   "zero": "{n} طائرة شحن",
   "one": "طائرة شحن واحدة",

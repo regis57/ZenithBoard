@@ -1,7 +1,7 @@
 {
  "above {place}": "{place} 상공",
  "seen from {place}": "{place}에서 수신",
- "over {distance} out": "{distance} 이상 떨어진 곳",
+ "over {distance} out": "{distance} 이상",
  "Photo: {name} / Planespotters": "사진: {name} / Planespotters",
  "Rare visitor: {post}": "보기 드문 항공기: {post}",
  "Military traffic: {post}": "군용기: {post}",
@@ -18,7 +18,7 @@
  "[{area|cap} at {time}]": "[{area}, {time}]",
  "[{altitude}][ {area}][ at {speed}]": "[{area}][ 고도 {altitude}][ 속도 {speed}]",
  "[{registration}, ]{what|a}[, flying {from} → {to}][ as {callsign}][: {rest}].": "[{registration}, ]{what}[, {from} → {to} 운항][, 호출부호 {callsign}][: {rest}].",
- "Look up[, {place}]! {who} is passing[ {height}] overhead[ on its way from {from} to {to}].": "[{place} 여러분, ]하늘을 올려다보세요![ {from}발 {to}행] {who} 편이[ 고도 {height}로] 머리 위를 지나고 있습니다.",
+ "Look up[, {place}]! {who} is passing[ {height}] overhead[ on its way from {from} to {to}].": "[{place} 여러분, ]하늘을 올려다보세요![ {from}발 {to}행] {who}, 지금[ 고도 {height}로] 머리 위를 지나고 있습니다.",
  "Military flight[ {callsign}]": "군용기[ {callsign}]",
  "Flight {airline}[ {callsign}]": "{airline} 항공편[ {callsign}]",
  "Helicopter[ {ident}]": "헬리콥터[ {ident}]",

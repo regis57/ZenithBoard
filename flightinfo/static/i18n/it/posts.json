@@ -1,7 +1,7 @@
 {
  "above {place}": "sopra {place}",
  "seen from {place}": "visto da {place}",
- "over {distance} out": "oltre {distance} di distanza",
+ "over {distance} out": "oltre {distance}",
  "Photo: {name} / Planespotters": "Foto: {name} / Planespotters",
  "Rare visitor: {post}": "Visitatore raro: {post}",
  "Military traffic: {post}": "Traffico militare: {post}",
@@ -150,7 +150,7 @@
  },
  "Cargo": "Cargo",
  "Business jets": "Business jet",
- "Military aircraft[ {area}], {period}: {aircraft} from {countries}.": "Aerei militari[ {area}], {period}: {aircraft} da {countries}.",
+ "Military aircraft[ {area}], {period}: {aircraft} from {countries}.": "Aerei militari[ {area}], {period}: {aircraft} di {countries}.",
  "{n} countries": {
   "one": "{n} paese",
   "many": "{n} paesi",
@@ -165,8 +165,8 @@
  "Weekly card of the military aircraft, {period}[ {area}]: {aircraft}. By country, with its flag, the most represented first: {list}.": "Immagine settimanale degli aerei militari, {period}[ {area}]: {aircraft}. Per paese, con la sua bandiera, dal più rappresentato: {list}.",
  "{label}: {n} ({list}).": "{label}: {n} ({list}).",
  "Weekly card of the helicopters, light aircraft, gliders, drones and balloons, {period}[ {area}]. {groups}": "Immagine settimanale di elicotteri, aerei leggeri, alianti, droni e aerostati, {period}[ {area}]. {groups}",
- "a light relief map with the main roads": "una mappa in rilievo chiara con le strade principali",
- "a dark relief map with the main roads": "una mappa in rilievo scura con le strade principali",
+ "a light relief map with the main roads": "una mappa chiara con il rilievo e le strade principali",
+ "a dark relief map with the main roads": "una mappa scura con il rilievo e le strade principali",
  "a terrain map": "una mappa del rilievo",
  "a satellite map": "una mappa satellitare",
  "a plain dark background": "uno sfondo scuro uniforme"

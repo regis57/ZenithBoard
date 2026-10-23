@@ -94,6 +94,26 @@ changed meaning is not). Rows found inexact are left out with `--skip ID,ID` (th
 loses a placeholder or a tag (and names the row), and writes the sheet again with the new translations. Then the usual
 release: the change, its tests, a version, the PR. On the Pi: `cd ~/ZenithBoard && sudo zenithboard update quick`.
 
+A plural row (*posts [plural: one]*) carries the whole entry in its translation column, `{"one": …}` with its quotes
+doubled by the CSV. Since 0.53.4 `apply` reads those right. Before, the corrections of such rows came out ending in
+`""}`, so a `--dry` that shows that is a reason to stop. A row whose *correction* is an instruction ("also fix the
+sibling key…") is refused for its placeholders: it is done by hand, after reading it, or left out.
+
+**The first review, 23 October 2026 (0.53.4).** Sheets for all 20 languages came back with 194 rows (153 with a correction):
+* **149 corrections taken** after `--dry`. Most fix the case after a number (Polish, Ukrainian), the hour written
+  the language's way (Japanese, Finnish, Indonesian), one term used everywhere ("callsign", "aircraft"), the menu's own
+  names (Menü, menú, меню), and French's space that does not break before `: ; ? !`.
+* **Left out:**
+  * Chinese (Simplified) fix-1, inexact: the look-up post already reads "正在 10.7公里 高空", and the proposal lost
+    "at that height".
+  * Traditional Chinese fix-6, an instruction about spaces around `{what}`: waiting for a decision.
+* **Done by hand, from their notes:**
+  * Russian: "за последнюю {n} минуту" in both track captions;
+  * Indonesian: "tanda panggil" for callsign everywhere;
+  * French: "24 dernières heures" in the three places that still said "dernières 24".
+* **41 rows marked *à trancher***, one reviewer out of two, with no correction filled in, are not applied. They wait
+  for the owner's word.
+
 ## For developers
 
 * The English text is the key: in the pages' scripts every word shown goes through `t("…")` (`tn(n, "one", "other")`

@@ -97,7 +97,7 @@
  "Off.": "Desativadas.",
  "On, waiting for the first sample.": "Ativadas, aguardando a primeira amostra.",
  "Could not read /api/stats.": "Não foi possível ler /api/stats.",
- "STATISTICS": "STATISTICS",
+ "STATISTICS": "ESTATISTICAS",
  "the last 24 hours": "últimas 24 horas",
  "the last 7 days": "últimos 7 dias",
  "aircraft with a position, on average": "aeronaves com posição, em média",

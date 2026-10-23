@@ -1,7 +1,7 @@
 {
  "above {place}": "boven {place}",
  "seen from {place}": "gezien vanuit {place}",
- "over {distance} out": "meer dan {distance} ver",
+ "over {distance} out": "op meer dan {distance} afstand",
  "Photo: {name} / Planespotters": "Foto: {name} / Planespotters",
  "Rare visitor: {post}": "Zeldzame gast: {post}",
  "Military traffic: {post}": "Militair verkeer: {post}",
@@ -58,8 +58,8 @@
  "registration {registration}": "registratie {registration}",
  "from {from} to {to}": "van {from} naar {to}",
  "Beside it, {map} with the aircraft's track over the last {n} minutes, north up.": {
-  "one": "Ernaast {map} met de vliegroute van het toestel in de laatste minuut, met het noorden boven.",
-  "other": "Ernaast {map} met de vliegroute van het toestel in de laatste {n} minuten, met het noorden boven."
+  "one": "Ernaast {map}, met daarop de vliegroute van het toestel over de laatste minuut, noorden boven.",
+  "other": "Ernaast {map}, met daarop de vliegroute van het toestel over de laatste {n} minuten, noorden boven."
  },
  "Beside it, the aircraft's track over the last {n} minutes, north up.": {
   "one": "Ernaast de vliegroute van het toestel in de laatste minuut, met het noorden boven.",

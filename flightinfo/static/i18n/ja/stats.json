@@ -51,7 +51,7 @@
  "{n} samples of 15 minutes since {since}, 30 days kept · {period}": "{since}以降の15分ごとの記録{n}件（30日間保存） · {period}",
  "distinct aircraft, {period}, a floor": "機体数（重複なし）、{period}、最低値",
  "nothing yet": "まだなし",
- "busiest hour {hour}:00, {n}": "最多の時間帯：{hour}:00台（{n}件）",
+ "busiest hour {hour}:00, {n}": "最多の時間帯：{hour}時台（{n}件）",
  "on {day} at {time}": "{day} {time}",
  "Busiest day": "最多の日",
  "Busiest hour": "最多の時間帯",

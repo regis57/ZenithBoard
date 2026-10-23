@@ -43,7 +43,7 @@
   "many": "{n} avions",
   "other": "{n} avions"
  },
- "None heard in this period.": "Aucun entendu sur cette période.",
+ "None heard in this period.": "Rien de capté sur cette période.",
  "Helicopters": "Hélicoptères",
  "Light aircraft": "Avions légers",
  "Gliders": "Planeurs",
@@ -98,7 +98,7 @@
  "On, waiting for the first sample.": "Activées, en attente du premier relevé.",
  "Could not read /api/stats.": "Impossible de lire /api/stats.",
  "STATISTICS": "STATISTIQUES",
- "the last 24 hours": "les dernières 24 heures",
+ "the last 24 hours": "les 24 dernières heures",
  "the last 7 days": "les 7 derniers jours",
  "aircraft with a position, on average": "avions avec une position, en moyenne",
  "distinct aircraft per day, a floor": "avions distincts par jour, un minimum"

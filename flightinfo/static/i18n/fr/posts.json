@@ -68,7 +68,7 @@
   "other": "À côté, la trajectoire de l'avion sur les {n} dernières minutes, le nord en haut."
  },
  "Map: {credit}.": "Carte : {credit}.",
- "The last 24 hours": "Les dernières 24 heures",
+ "The last 24 hours": "Les 24 dernières heures",
  "The week": "La semaine",
  "The last 30 days": "Les 30 derniers jours",
  "Unknown type": "Type inconnu",
@@ -82,13 +82,17 @@
   "many": "{n} messages",
   "other": "{n} messages"
  },
- "{n} million messages": "{n} millions de messages",
+ "{n} million messages": {
+  "other": "{n} millions de messages",
+  "one": "{n} million de messages",
+  "many": "{n} millions de messages"
+ },
  "{n} aircraft": {
   "one": "{n} avion",
   "many": "{n} avions",
   "other": "{n} avions"
  },
- "the last 24 hours": "les dernières 24 heures",
+ "the last 24 hours": "les 24 dernières heures",
  "{label}: {list}.": "{label} : {list}.",
  "{period}[ {area}]: {aircraft}, {messages}.": "{period}[ {area}] : {aircraft}, {messages}.",
  "{period}[ {area}], {span}: {aircraft}, {messages}.": "{period}[ {area}], {span} : {aircraft}, {messages}.",
