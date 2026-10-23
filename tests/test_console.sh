@@ -28,6 +28,10 @@ check() { if eval "$2"; then echo "ok   $1"; else echo "FAIL $1"; fail=1; fi; }
 check "off at first"                                  '[ "$(console_state)" = off ] && ! console_has_password'
 check "the language menu names every language the Pi has (0.53.8: it named 14 of 21)" 'for c in $(zb_langs); do case " $CONSOLE_LANG_NAMES " in *" $c:"*) ;; *) echo "no name for $c"; exit 1 ;; esac; done'
 check "the first steps wait for the first reading of the Pi (0.54.2: they opened on an empty one)" 'grep -q "S.refreshed = run(\"refresh\"" flightinfo/static/console.js && grep -q "Promise.race(\[S.refreshed" flightinfo/static/console.js'
+check "the sign-in page says what to do when the password is forgotten (0.54.7)" 'grep -q "Forgotten it? Over SSH on the Pi" flightinfo/static/console.html'
+check "the pairing window says the phone must be on the home Wi-Fi (0.54.7)" 'grep -q "The phone must be on your home Wi-Fi" flightinfo/static/console.js'
+check "a page of the old version reloads itself after an update (0.54.7)" 'grep -q "r.data.version !== was) location.reload()" flightinfo/static/console.js'
+check "a failed command points at what it printed, not only at Activity (0.54.7)" 'grep -q "Read what it printed beside the button, or in Activity" flightinfo/static/console.js'
 check "the default is written as off"                 'grep -qx "CONSOLE=0" lib/common.sh'
 
 out=$(printf 'short\nshort\n' | console_password 2>&1)

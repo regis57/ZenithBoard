@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.54.7
+Low-severity findings of the 22-23 October audit on the web console's words, **translated once into the 20 languages** (five strings; the sheets are regenerated).
+- **A forgotten password has a line on the sign-in page**: over SSH, `sudo zenithboard console password` (a new one; every browser and phone is signed out). It said *Wrong password.* and its only help was about phones.
+- **The pairing window says the phone must be on the home Wi-Fi**, not mobile data, not a guest network: a scan from outside failed with no word from ZenithBoard.
+- **A full card is not the helper's fault.** Starting a change on a full card said *Turn the console on again*; it now says the card is full and which commands show what takes the room.
+- **A command that fails points at what it printed**: *Read what it printed beside the button, or in Activity*, not only *See Activity*.
+- **The Tailscale switch says what it waits for**: your account and its app ready, up to an hour for the sign-in, other changes waiting behind it, and how to give up.
+- **After an update the page of the old version reloads itself** once the wall answers with the new one. It kept showing the old version everywhere and never said to reload.
 ## 0.54.6
 Low-severity findings of the 22-23 October audit that go together: **updating, and finding out why something is wrong**, in the terminal.
 - **A key refused at the first question stops the update there.** It led straight into a second question (*Install it anyway?*) that a novice cannot judge, and the update then went on. Now: *Not trusted, so ZenithBoard was NOT updated*, with what to check on GitHub and the command to start again. A key that could not be fetched (no gpg, no internet) is not called a refusal.

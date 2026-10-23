@@ -406,6 +406,22 @@ class HandleTest(TempDirs):
         self.assertEqual(self.req("POST", "/console/api/run", {"action": "uninstall"}, cookie=tok, headers={"X-ZB-CSRF": csrf}).code, 400)
         self.assertEqual(os.listdir(os.path.join(self.dir, "state", "spool")), [])
 
+    def test_a_full_card_is_said_and_not_blamed_on_the_helper(self):
+        # 0.54.7: submit() failing with ENOSPC told the owner to "turn the console on again"
+        import errno
+        tok, csrf = self.login()
+        run = {"action": "radius", "params": {"value": "15"}}
+        old = console.submit
+        self.addCleanup(setattr, console, "submit", old)
+        console.submit = lambda *a, **k: (_ for _ in ()).throw(OSError(errno.ENOSPC, "No space left on device"))
+        r = self.req("POST", "/console/api/run", run, cookie=tok, headers={"X-ZB-CSRF": csrf})
+        self.assertEqual(r.code, 503)
+        self.assertIn("The card is full", r.body["error"])
+        self.assertNotIn("console on", r.body["error"], "not the helper's fault")
+        console.submit = lambda *a, **k: (_ for _ in ()).throw(OSError(errno.EACCES, "Permission denied"))
+        r = self.req("POST", "/console/api/run", run, cookie=tok, headers={"X-ZB-CSRF": csrf})
+        self.assertIn("console on", r.body["error"], "any other error keeps its advice")
+
     def test_too_many_tries(self):
         for _ in range(console.FAIL_FREE):
             self.req("POST", "/console/api/login", {"password": "nope"})

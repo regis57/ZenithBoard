@@ -20,6 +20,7 @@ sessions that end (12 h for a password, 30 days for a paired phone, sooner when 
 or `console signout` end at once; strict security headers on every page.
 """
 import base64
+import errno
 import hashlib
 import hmac
 import ipaddress
@@ -793,6 +794,8 @@ class Console(object):
             except actions.Refused as e:
                 return Reply(400, {"error": "Not allowed here: %s" % e})
             except OSError as e:
+                if e.errno == errno.ENOSPC:       # 0.54.7: a full card was reported as the helper's fault
+                    return Reply(503, {"error": "The card is full: nothing more can be written. Over SSH on the Pi: zenithboard health, then zenithboard logs usage and zenithboard backup list"})
                 return Reply(503, {"error": "Could not hand the job over (%s). Turn the console on again: sudo zenithboard console on" % e.strerror})
             return Reply(200, {"job": job})
         if api == "pair":
