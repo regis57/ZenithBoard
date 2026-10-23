@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.54.6
+Low-severity findings of the 22-23 October audit that go together: **updating, and finding out why something is wrong**, in the terminal.
+- **A key refused at the first question stops the update there.** It led straight into a second question (*Install it anyway?*) that a novice cannot judge, and the update then went on. Now: *Not trusted, so ZenithBoard was NOT updated*, with what to check on GitHub and the command to start again. A key that could not be fetched (no gpg, no internet) is not called a refusal.
+- **`update quick` really is without apt.** It was documented as *no apt, in seconds* and ran `apt-get update` every time; only the components apt itself upgrades (dump1090, piaware, fr24) need it now.
+- **A gone download folder says what to do**: the path, and the two commands to get it back, instead of *git clone it again*.
+- **A failing feeder has a log to read**: `zenithboard logs adsbexchange|piaware|fr24|planefinder` (the status screen's own names); one that is not installed says so rather than printing journalctl's bare *-- No entries --*. The MLAT line in `status` points there.
+- **Health explains itself**: *free some space* says where (the logs, the backups, graphs1090's history); with the logs not kept it says how to turn them on in each of the three ways, and *no earlier boot* says why. One name, *Logs kept after a restart (keeplogs)*, in the screen, the menu, the command and the README (it was also *Saved logs*).
+- **`graphs1090` is in the list of names `update only` takes**, in the usage line and the Command reference.
 ## 0.54.5
 Low-severity findings of the 22-23 October audit that go together: **the first hour, in *Start here***, where one wrong step threw the novice out or left them guessing.
 - **After a restore, the networks the backup fed are ticked** in *ADS-B → Decoder and networks* (FlightAware, Flightradar24, Plane Finder, and ADSB Exchange's stats). Their identities were waiting for exactly that step, and the list started with everything unticked, as if the backup had said nothing. The screen says *Ticked already: the networks your backup fed.*

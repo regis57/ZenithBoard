@@ -86,7 +86,7 @@ zb_trust_setup() {
   echo "It shows a key ID: it must be the LAST 16 characters of one of the lines above."
   if [ -t 0 ]; then
     read -rp "Trust these keys for future updates? [y/N] " a
-    case "$a" in y|Y|o|O) ;; *) echo "Not trusted. The update will ask again."; return 1 ;; esac
+    case "$a" in y|Y|o|O) ;; *) echo "Not trusted. The update will ask again."; ZB_TRUST_DECLINED=1; return 1 ;; esac
   else
     warn "Nothing to answer here (not a terminal): run the update by hand once to confirm the key."
     return 1
@@ -101,8 +101,15 @@ zb_verify_source() {
   local dir="$1" ref="$2" st signer stored verdict a
   [ "$(cfg_get UPDATE_VERIFY 1)" = 1 ] || return 0
   stored=$(zb_trust_stored)
+  ZB_TRUST_DECLINED=
   [ -n "$stored" ] || zb_trust_setup || true
   stored=$(zb_trust_stored)
+  # 0.54.6: a key refused at the first question led straight into a second one ("Install it anyway?") that a novice cannot
+  # judge, and the update then went on. Refused once is refused: stop, and say how to start again.
+  if [ -n "${ZB_TRUST_DECLINED:-}" ] && [ -z "$stored" ]; then
+    echo "Not trusted, so ZenithBoard was NOT updated. Check the key on GitHub (the Verified badge beside a commit) and run  sudo zenithboard update  again."
+    return 1
+  fi
   read -r st signer <<<"$(zb_signature "$dir" "$ref")"
   verdict=$(zb_verify_decide "${st:-N}" "${signer:-}" "$stored")
   # 0.12.0 and 0.12.1 recorded only the FIRST key of GitHub's file, which is its old, expired key. The current
@@ -237,7 +244,8 @@ zb_update() {
     zb_sync_source "$src" || { warn "The ZenithBoard code was NOT updated: staying on version $old."; export ZB_CODE_NOT_UPDATED="$old"; }
     bash "$src/install.sh" --deploy                      # copy the new files to /opt/zenithboard
   elif [ "$pull" = 1 ]; then
-    warn "Original download folder not found: skipping the ZenithBoard code update (git clone it again to get the newest version)."
+    warn "The download folder${src:+ $src} is gone, so ZenithBoard itself was not updated. Get it back, then update again:"
+    warn "  git clone https://github.com/regis57/ZenithBoard.git ${src:-~/ZenithBoard} && sudo ${src:-~/ZenithBoard}/install.sh --deploy"
     export ZB_CODE_NOT_UPDATED="$old"
   fi
   if [ "$only" = 1 ]; then
@@ -254,7 +262,9 @@ zb_update_components() {
   want_c() { if [ "$only" = 0 ]; then return 0; fi; local x; for x in "${sel[@]}"; do [ "$x" = "$1" ] && return 0; done; return 1; }
   log "ZenithBoard $ZB_VERSION: updating installed components"
   ! want_c fr24 || [ -z "$(fr24_source_file)" ] || fr24_repair_key || warn "Flightradar24 signing key not refreshed (see above)."
-  apt-get update -qq
+  # 0.54.6: `update quick` is documented as "no apt, in seconds" and ran apt-get update on every call; only the components
+  # that apt itself upgrades need it (readsb, ADSB Exchange and Plane Finder fetch their own scripts and packages)
+  if { want_c dump1090 && is_dump1090; } || { want_c piaware && is_piaware; } || { want_c fr24 && is_fr24; }; then apt-get update -qq; fi
   if want_c readsb && is_readsb; then
     log "readsb"; rb=$(zb_tmp readsb-install.sh) && fetch "$READSB_INSTALL_URL" "$rb" && bash "$rb" || warn "readsb update failed"
   fi

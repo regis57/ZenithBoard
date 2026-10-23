@@ -482,7 +482,7 @@ zenithboard update list                        # what is installed (and its vers
 sudo zenithboard update only readsb flightinfo # just those two
 ```
 
-Names: `zenithboard` (the ZenithBoard code itself), `readsb`, `dump1090`, `adsbx`, `piaware`, `fr24`, `planefinder`, `flightinfo`. Only what is installed is offered.
+Names: `zenithboard` (the ZenithBoard code itself), `readsb`, `dump1090`, `adsbx`, `piaware`, `fr24`, `planefinder`, `flightinfo`, `graphs1090`. Only what is installed is offered.
 
 **Which version do I have?** `zenithboard version` (also shown at the top of the menu and in `zenithboard status`). After an update it should show the newest version listed in the [changelog](CHANGELOG.md); if the update could not fetch the code it prints `NOT updated: staying on version ...`. On a tablet the version is in the gear panel — with a link to the statistics page beside it while statistics are on — and at the foot of the statistics page, each linked to that version's release notes on GitHub — a link, not a lookup: nothing is asked of GitHub unless you tap it.
 
@@ -544,7 +544,7 @@ Every service writes to the system journal, which already limits itself (up to 1
 | **Automatic cleaning** (off by default): every day, messages older than 7 days are removed, so the last 7 days are always there | `sudo zenithboard logs auto on` · `off` · `status` |
 | **Delete everything now** | `sudo zenithboard logs clean` |
 
-The limit applies to all system logs (it is a journald setting, written to `/etc/systemd/journald.conf.d/zenithboard.conf`). To read a service's log: `zenithboard logs flightinfo|decoder|uat|social`.
+The limit applies to all system logs (it is a journald setting, written to `/etc/systemd/journald.conf.d/zenithboard.conf`). To read a service's log: `zenithboard logs flightinfo|adsbexchange|piaware|fr24|planefinder|decoder|uat|social`.
 
 ---
 
@@ -586,14 +586,14 @@ A Pi that runs for months can freeze or lose its network at night. Everything he
 | What | What it does | Menu / command |
 |---|---|---|
 | **Health check** | One screen: power (under-voltage), temperature, free memory, card space, **whether the previous boot ended normally or abruptly** (freeze, crash, power cut), and problems seen in the system logs (power, card, USB, out of memory) | `zenithboard health` |
-| **Saved logs** | The system log normally lives in memory and is **lost at every restart**, so after a freeze there is nothing to read. This keeps it on the card, capped at 50 MB (a size limit set in the Logs menu still applies) | `sudo zenithboard keeplogs on\|off` |
+| **Logs kept after a restart** (`keeplogs`) | The system log normally lives in memory and is **lost at every restart**, so after a freeze there is nothing to read. This keeps it on the card, capped at 50 MB (a size limit set in the Logs menu still applies) | `sudo zenithboard keeplogs on\|off` |
 | **Hardware watchdog** | The Pi's own chip restarts it about 10 seconds after a **complete freeze** | `sudo zenithboard watchdog on\|off` |
 | **Network watchdog** | Every 2 minutes the Pi checks that it can reach **your router**. After about 6 minutes without it the network is restarted; after about 12 minutes the Pi restarts. Never more than one restart every 3 hours (no restart loop if the router is simply off), and never in the first 10 minutes after a start | `sudo zenithboard netwatch on\|off\|status` |
 
 * **Why two watchdogs?** The hardware one only helps when the whole Pi is frozen. On a Raspberry Pi 3 (and 3B+) the Ethernet port sits on the same internal USB hub as the USB ports, so a weak power supply or a misbehaving dongle can take the network down while the Pi itself keeps running: only the network watchdog catches that.
 * **On Wi-Fi it also writes what the Wi-Fi sees** into the log when a check fails (is your saved network visible and how strongly, how many other networks are in range), and after about 8 minutes it switches the Wi-Fi radio off and on before restarting the Pi. Read it with `journalctl -t zenithboard-netwatch` or `zenithboard health`. If your network is *not visible* at night, look for a Wi-Fi schedule or a restart on your router.
 * **It only looks at your router.** An internet outage alone (your provider) restarts nothing, since a restart would not fix it. Each decision is written to the system log (`journalctl -t zenithboard-netwatch`).
-* **Find the cause after a freeze:** with *Saved logs* on, run `zenithboard health` after the restart. "Previous boot: ended ABRUPTLY" with an *under-voltage* line points to the power supply or cable (official 5 V supply, short cable; a powered USB hub for the dongle). Errors about the card (`mmc`, `ext4`) point to a worn SD card.
+* **Find the cause after a freeze:** with *Logs kept after a restart* on, run `zenithboard health` after the restart. "Previous boot: ended ABRUPTLY" with an *under-voltage* line points to the power supply or cable (official 5 V supply, short cable; a powered USB hub for the dongle). Errors about the card (`mmc`, `ext4`) point to a worn SD card.
 * **Honest status:** the tests cover the decisions (when it restarts the network, when it restarts the Pi and when it refuses to), the files written and the health screen with sample data. They do not freeze a real Pi.
 
 ## Web console: settings from a browser or a phone (optional, a test)

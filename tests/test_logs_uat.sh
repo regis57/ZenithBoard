@@ -91,4 +91,15 @@ check "it points at the tar1090 uninstaller"              'grep -q "tar1090" <<<
 check "it never downloads a page that does not exist"     '! grep -qi "readsb-uninstall" <<<"$out"'
 unset -f is_readsb is_dump1090
 
+# ---- 0.54.6: a failing feeder had no log to read; one that is not installed says so, not journalctl's bare "-- No entries --"
+mkdir -p "$t/lb" "$t/letc"; touch "$t/letc/config.env"
+printf '#!/bin/bash\nif [ "$1" = list-unit-files ]; then [ "$2" = fr24feed.service ] && echo "fr24feed.service enabled"; exit 0; fi\nexit 0\n' > "$t/lb/systemctl"
+printf '#!/bin/bash\necho "journalctl $*"\n' > "$t/lb/journalctl"; chmod +x "$t/lb/systemctl" "$t/lb/journalctl"
+out=$(ZENITHBOARD_ETC="$t/letc" PATH="$t/lb:$PATH" bash bin/zenithboard logs piaware 2>&1)
+check "logs piaware: not installed, said so" 'grep -q "piaware is not installed on this Pi" <<<"$out" && ! grep -q "journalctl" <<<"$out"'
+out=$(ZENITHBOARD_ETC="$t/letc" PATH="$t/lb:$PATH" bash bin/zenithboard logs fr24 2>&1)
+check "logs fr24: installed, its service's journal" 'grep -q "journalctl -u fr24feed" <<<"$out"'
+out=$(ZENITHBOARD_ETC="$t/letc" PATH="$t/lb:$PATH" bash bin/zenithboard logs adsbexchange 2>&1)
+check "logs adsbexchange: the unit the status screen names" 'grep -q "adsbexchange-feed is not installed" <<<"$out"'
+
 exit "$fail"

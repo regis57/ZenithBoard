@@ -142,7 +142,7 @@ ZenithBoard $ZB_VERSION - ADSB Flight Info
   zenithboard update only NAME...       update just those (e.g. readsb flightinfo)
   zenithboard mlat-guard                re-enforce a single MLAT client
   zenithboard adsbx-stats on|off|status|url   ADSB Exchange's stats: their map of only your aircraft, Feed Details on their page (off by default)
-  zenithboard logs [flightinfo|decoder|uat|social]   show the last 100 lines of a service
+  zenithboard logs [flightinfo|decoder|uat|social|adsbexchange|piaware|fr24|planefinder]   show the last 100 lines of a service
   zenithboard logs usage|review         size of the system logs / size + recent warnings
   zenithboard logs limit MB|default     cap the size of the system logs (10-2000 MB)
   zenithboard logs clean                delete ALL logs now
@@ -184,7 +184,7 @@ cmd_status() {
   show_state "FlightInfo wall" is_flightinfo zenithboard-flightinfo
   if is_graphs; then show_state "graphs1090 (port $GRAPHS_PORT)" true graphs1090; fi
   local n; n=$(mlat_count)
-  if [ "${n:-0}" = 0 ] && is_adsbx; then echo "MLAT clients running: 0  ${C_Y}(none: ADSB Exchange's MLAT is not running, see: zenithboard logs)${C_0}"
+  if [ "${n:-0}" = 0 ] && is_adsbx; then echo "MLAT clients running: 0  ${C_Y}(none: ADSB Exchange's MLAT is not running, see: zenithboard logs adsbexchange)${C_0}"
   elif [ "${n:-0}" -le 1 ]; then echo "MLAT clients running: ${n:-0}  ${C_G}(OK: max 1)${C_0}"; else echo "MLAT clients running: $n  ${C_R}(too many! run: sudo zenithboard mlat-guard)${C_0}"; fi
   local j; j=$(decoder_json)
   if [ -f "$j" ]; then echo "Aircraft in decoder right now: $(grep -o '"hex"' "$j" | wc -l)"; fi
@@ -428,7 +428,7 @@ case "${1:-}" in
     case "${2:-}" in
       list) zb_update_list ;;
       quick) root_or_die; if is_flightinfo; then zb_update --only zenithboard flightinfo; else zb_update --only zenithboard; fi ;;
-      only) root_or_die; [ -n "${3:-}" ] || die "Usage: sudo zenithboard update only NAME...   (names: zenithboard readsb dump1090 adsbx piaware fr24 planefinder flightinfo; see: zenithboard update list)"; shift 2; zb_update --only "$@" ;;
+      only) root_or_die; [ -n "${3:-}" ] || die "Usage: sudo zenithboard update only NAME...   (names: zenithboard readsb dump1090 adsbx piaware fr24 planefinder flightinfo graphs1090; see: zenithboard update list)"; shift 2; zb_update --only "$@" ;;
       *) root_or_die; zb_update "${2:-}" ;;
     esac ;;
   update-components) root_or_die; shift; zb_update_components "$@" ;;
@@ -457,7 +457,7 @@ case "${1:-}" in
   health) health_check ;;
   memory|threads) python3 "$ZB_HOME/tools/memory_report.py" ;;
   watchdog) case "${2:-status}" in on) root_or_die; watchdog_on ;; off) root_or_die; watchdog_off ;; status) echo "Hardware watchdog: $(watchdog_state)" ;; *) die "Usage: zenithboard watchdog on|off|status" ;; esac ;;
-  keeplogs) case "${2:-status}" in on) root_or_die; keeplogs_on ;; off) root_or_die; keeplogs_off ;; status) echo "Saved logs: $(keeplogs_state)" ;; *) die "Usage: zenithboard keeplogs on|off|status" ;; esac ;;
+  keeplogs) case "${2:-status}" in on) root_or_die; keeplogs_on ;; off) root_or_die; keeplogs_off ;; status) echo "Logs kept after a restart: $(keeplogs_state)" ;; *) die "Usage: zenithboard keeplogs on|off|status" ;; esac ;;
   netwatch) case "${2:-status}" in on) root_or_die; netwatch_on ;; off) root_or_die; netwatch_off ;; run) root_or_die; netwatch_run ;; status) netwatch_status ;; *) die "Usage: zenithboard netwatch on|off|status" ;; esac ;;
   gain)
     case "${2:-check}" in
@@ -543,7 +543,12 @@ case "${1:-}" in
       flightinfo) journalctl -u zenithboard-flightinfo -n 100 --no-pager ;;
       social) journalctl -u zenithboard-social -n 100 --no-pager ;;
       decoder) journalctl -u "$(cfg_get DECODER readsb)" -n 100 --no-pager ;;
-      *) die "Usage: zenithboard logs [flightinfo|decoder|uat|social]" ;;
+      # 0.54.6: a feeder that fails had no log to read: the names are the ones `status` uses
+      adsbexchange|piaware|fr24|planefinder)
+        u=$(case "${2:-}" in adsbexchange) echo adsbexchange-feed ;; piaware) echo piaware ;; fr24) echo fr24feed ;; planefinder) echo pfclient ;; esac)
+        if systemctl list-unit-files "$u.service" 2>/dev/null | grep -q "^$u.service"; then journalctl -u "$u" -n 100 --no-pager
+        else echo "$u is not installed on this Pi: nothing to show."; fi ;;
+      *) die "Usage: zenithboard logs [flightinfo|decoder|uat|social|adsbexchange|piaware|fr24|planefinder]" ;;
     esac ;;
   console)
     case "${2:-status}" in

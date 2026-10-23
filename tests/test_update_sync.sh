@@ -129,4 +129,10 @@ check "verdict: code not updated says so and exits 1" "$rc:$(printf '%s' "$res" 
 res=$(unset ZB_CODE_NOT_UPDATED; zb_update_verdict 2>&1); rc=$?
 check "verdict: code updated says finished and exits 0" "$rc:$(printf '%s' "$res" | grep -c 'Update finished')" "0:1"
 
+# ---- 0.54.6: `update quick` is documented as "no apt": apt-get update only for a component that apt itself upgrades
+check "apt-get update only when dump1090, piaware or fr24 is concerned" "$(sed -n '/^zb_update_components()/,/^}/p' "$HERE/lib/update.sh" | grep -c 'if { want_c dump1090 && is_dump1090; } || { want_c piaware && is_piaware; } || { want_c fr24 && is_fr24; }; then apt-get update -qq; fi')" "1"
+check "and no unconditional apt-get update is left" "$(sed -n '/^zb_update_components()/,/^}/p' "$HERE/lib/update.sh" | grep -c '^  apt-get update')" "0"
+res=$(ZB_HOME="$T/gone" zb_update 2>&1)
+check "a gone download folder prints the path and the commands, not just 'clone it again'" "$(printf '%s' "$res" | grep -c 'git clone https://github.com/regis57/ZenithBoard.git')" "1"
+
 exit $fail
