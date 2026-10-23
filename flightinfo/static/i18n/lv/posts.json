@@ -1,6 +1,6 @@
 {
  "above {place}": "virs {place}",
- "seen from {place}": "novērošanas vieta {place}",
+ "seen from {place}": "redzams no {place}",
  "over {distance} out": "vairāk nekā {distance}",
  "Photo: {name} / Planespotters": "Foto: {name} / Planespotters",
  "Rare visitor: {post}": "Rets viesis: {post}",
@@ -58,9 +58,9 @@
  "registration {registration}": "reģistrācijas numurs {registration}",
  "from {from} to {to}": "maršruts {from} – {to}",
  "Beside it, {map} with the aircraft's track over the last {n} minutes, north up.": {
-  "zero": "Blakus {map} ar gaisa kuģa trajektoriju pēdējo {n} minūšu laikā, ziemeļi augšā.",
-  "one": "Blakus {map} ar gaisa kuģa trajektoriju pēdējās {n} minūtes laikā, ziemeļi augšā.",
-  "other": "Blakus {map} ar gaisa kuģa trajektoriju pēdējo {n} minūšu laikā, ziemeļi augšā."
+  "zero": "Blakus {map}, kurā redzama gaisa kuģa trajektorija pēdējo {n} minūšu laikā, ziemeļi augšā.",
+  "one": "Blakus {map}, kurā redzama gaisa kuģa trajektorija pēdējās {n} minūtes laikā, ziemeļi augšā.",
+  "other": "Blakus {map}, kurā redzama gaisa kuģa trajektorija pēdējo {n} minūšu laikā, ziemeļi augšā."
  },
  "Beside it, the aircraft's track over the last {n} minutes, north up.": {
   "zero": "Blakus gaisa kuģa trajektorija pēdējo {n} minūšu laikā, ziemeļi augšā.",
@@ -108,7 +108,7 @@
  "A row of the 24 hours, brighter where more aircraft were overhead.": "24 stundu rinda, gaišāka tur, kur pāri lidoja vairāk gaisa kuģu.",
  "A grid of the seven days by hour, brighter where more aircraft were overhead.": "Septiņu dienu režģis pa stundām, gaišāks tur, kur pāri lidoja vairāk gaisa kuģu.",
  "A column of dots for each of the thirty days, taller where more aircraft were heard.": "Punktu stabiņš katrai no trīsdesmit dienām, augstāks tur, kur uztverts vairāk gaisa kuģu.",
- "{aircraft} heard and {messages} decoded": "uztvertie gaisa kuģi un atkodētie ziņojumi: {aircraft}, {messages}",
+ "{aircraft} heard and {messages} decoded": "uztvertie gaisa kuģi un dekodētie ziņojumi: {aircraft}, {messages}",
  "busiest day {day} with {aircraft}": "noslogotākā diena: {day} ({aircraft})",
  "busiest hour {hour}": "noslogotākā stunda: plkst. {hour}",
  "The airlines most seen, as bars: {list}.": "Biežāk redzētās aviokompānijas stabiņos: {list}.",

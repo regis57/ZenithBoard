@@ -77,7 +77,7 @@
  "Day": "День",
  "Hour": "Час",
  "With a position": "С координатами",
- "Farthest km": "Макс. дальность, km",
+ "Farthest km": "Макс. дальность, км",
  "Off.": "Выключена.",
  "On, waiting for the first sample.": "Включена, ожидание первого замера.",
  "Could not read /api/stats.": "Не удалось прочитать /api/stats.",

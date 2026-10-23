@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.53.4
+- **The reviewers' corrections in 20 languages** (sheets sent by the owner, 23 October 2026). 149 corrections were taken after a `--dry` check against the English. Among them:
+  - French: "1,2 million de messages" (the singular below 2), "Un des deux watchdogs est désactivé", "Rien de capté", "Les 24 dernières heures" wherever the old order remained, and a space that does not break before `: ; ? !` throughout the console;
+  - Polish and Ukrainian: counts in the right case after the number;
+  - Japanese, Finnish and Indonesian: the busiest hour written the language's way;
+  - Indonesian: one word for the callsign everywhere;
+  - German, Spanish and Russian: the menu's own name;
+  - Latvian, Dutch and Ukrainian: the track captions;
+  - Swahili: its first corrections.
+- **Left out:** one correction found inexact (Chinese, Simplified) and one that is an instruction about spacing (Chinese, Traditional). Three reviewers' notes were done by hand (Russian, Indonesian, French). The 41 rows marked *à trancher* are not applied: they wait for the owner. Details: wiki [Translating](https://github.com/regis57/ZenithBoard/wiki/Translating).
+- **`tools/i18n.py apply` reads a sheet's doubled quotes right.** From the header line alone, Python's CSV sniffer also guessed `doublequote=False`, and a plural row's corrections came out ending in `""}`. Only the delimiter is guessed now. A test holds it.
+
 ## 0.53.3
 - **A real button to delete your templates** (the owner, 22 October 2026). *Sharing → Your own templates → Delete them all* in the console, asked first; *4 Delete them all* in the menu; `sudo zenithboard social template set none`. The posts go on with the other words ticked, the factual ones when none is left. Before, emptying the field and saving did it, and nothing said so.
 - **And one to put them back**: every change keeps the templates before it as `.bak`. *Put back the previous ones* (console, shown while there is something to put back), *5 Put back* (menu), or `sudo zenithboard social template undo`. Today's templates take the `.bak`'s place, so a put-back can be undone too.

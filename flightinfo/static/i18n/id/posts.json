@@ -133,7 +133,7 @@
   "other": "{n} negara"
  },
  "General aviation[ {area}], {period}: {counts}.": "Penerbangan umum[ {area}], {period}: {counts}.",
- "Weekly card of the cargo airlines and business jets, {period}[ {area}]: {cargo} and {bizjets}.": "Kartu maskapai kargo dan jet bisnis, {period}[ {area}]: {cargo} dan {bizjets}.",
+ "Weekly card of the cargo airlines and business jets, {period}[ {area}]: {cargo} and {bizjets}.": "Kartu mingguan maskapai kargo dan jet bisnis, {period}[ {area}]: {cargo} dan {bizjets}.",
  "Cargo airlines, as bars, each with the model it flew most: {list}.": "Maskapai kargo, dalam diagram batang, masing-masing dengan tipe yang paling sering diterbangkannya: {list}.",
  "(mostly {model}, {n})": "(terutama {model}, {n})",
  "Business jets by make and model, as bars: {list}.": "Jet bisnis menurut merek dan tipe, dalam diagram batang: {list}.",

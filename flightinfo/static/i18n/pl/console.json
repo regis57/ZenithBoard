@@ -114,7 +114,7 @@
  "Sign computers in with a phone": "Logowanie komputerów telefonem",
  "When on, a computer's sign-in page shows a QR code. A phone already signed in scans it, sees the computer, its address and a four-digit code, and says yes: the computer is signed in, no password. Off again: computers use the password.": "Po włączeniu strona logowania komputera pokazuje kod QR. Zalogowany już telefon skanuje go, widzi komputer, jego adres i czterocyfrowy kod, po czym zatwierdza: komputer zostaje zalogowany bez hasła. Po wyłączeniu komputery logują się hasłem.",
  "Delete all your templates?": "Usunąć wszystkie Twoje szablony?",
- "The posts go on with the other words you ticked (factual when none is left). They are kept on the Pi: Put back brings them again.": "Posty idą dalej z pozostałymi zaznaczonymi słowami (rzeczowy, jeśli nic nie zostanie). Zostają zachowane na Pi: Przywróć sprowadza je z powrotem.",
+ "The posts go on with the other words you ticked (factual when none is left). They are kept on the Pi: Put back brings them again.": "Wpisy będą dalej publikowane z pozostałymi zaznaczonymi wariantami tekstu wpisu (rzeczowy, gdy żaden nie zostanie). Pozostają zachowane na Pi: Przywróć sprowadza je z powrotem.",
  "Put back your previous templates?": "Przywrócić poprzednie szablony?",
  "The templates before the last change come back; today's are kept in their place, so it can be undone too.": "Wracają szablony sprzed ostatniej zmiany; dzisiejsze są zachowane na ich miejscu, więc i to można cofnąć.",
  "Delete the console's backup?": "Usunąć kopię zapasową konsoli?",

@@ -17,7 +17,7 @@
  "{what|a|cap}[ bound for {to} from {from}] has just crossed the sky[ {area}][, {altitude} up].[ {callsign}]": "Um {what}[ em rota de {from} para {to}] acaba de cruzar o céu[ {area}][, a {altitude} de altitude].[ {callsign}]",
  "[{area|cap} at {time}]": "[{area|cap} às {time}]",
  "[{altitude}][ {area}][ at {speed}]": "[{altitude}][ {area}][ a {speed}]",
- "[{registration}, ]{what|a}[, flying {from} → {to}][ as {callsign}][: {rest}].": "[{registration}, ]{what|cap}[, voo {from} → {to}][ com o indicativo {callsign}][: {rest}].",
+ "[{registration}, ]{what|a}[, flying {from} → {to}][ as {callsign}][: {rest}].": "{what|cap}[ ({registration})][, voo {from} → {to}][ com o indicativo {callsign}][: {rest}].",
  "Look up[, {place}]! {who} is passing[ {height}] overhead[ on its way from {from} to {to}].": "Olhe para cima[, {place}]! Passando agora sobre você: {who}[, a {height} de altitude][, em rota de {from} para {to}].",
  "Military flight[ {callsign}]": "Voo militar[ {callsign}]",
  "Flight {airline}[ {callsign}]": "Voo {airline}[ {callsign}]",
@@ -82,7 +82,11 @@
   "many": "{n} mensagens",
   "other": "{n} mensagens"
  },
- "{n} million messages": "{n} milhões de mensagens",
+ "{n} million messages": {
+  "other": "{n} milhões de mensagens",
+  "one": "{n} milhão de mensagens",
+  "many": "{n} milhões de mensagens"
+ },
  "{n} aircraft": {
   "one": "{n} aeronave",
   "many": "{n} aeronaves",
@@ -92,7 +96,7 @@
  "{label}: {list}.": "{label}: {list}.",
  "{period}[ {area}]: {aircraft}, {messages}.": "{period}[ {area}]: {aircraft}, {messages}.",
  "{period}[ {area}], {span}: {aircraft}, {messages}.": "{period}[ {area}], {span}: {aircraft}, {messages}.",
- "Busiest: {day} ({aircraft}) and {hour}.": "Pico: {day} ({aircraft}) e {hour}.",
+ "Busiest: {day} ({aircraft}) and {hour}.": "Pico: {day} ({aircraft}) e às {hour}.",
  "Busiest: {day} ({aircraft}).": "Pico: {day} ({aircraft}).",
  "Busiest hour: {hour}.": "Horário de pico: {hour}.",
  "Airlines": "Companhias",

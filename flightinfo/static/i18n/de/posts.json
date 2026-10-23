@@ -20,7 +20,7 @@
  "[{registration}, ]{what|a}[, flying {from} → {to}][ as {callsign}][: {rest}].": "[{registration}, ]{what}[, Flug {from} → {to}][ unter dem Rufzeichen {callsign}][: {rest}].",
  "Look up[, {place}]! {who} is passing[ {height}] overhead[ on its way from {from} to {to}].": "Schau nach oben[, {place}]! Gerade über dir: {who}[ in {height} Höhe][, unterwegs von {from} nach {to}].",
  "Military flight[ {callsign}]": "Militärflug[ {callsign}]",
- "Flight {airline}[ {callsign}]": "Flug {airline}[ {callsign}]",
+ "Flight {airline}[ {callsign}]": "{airline}[, Flug {callsign}]",
  "Helicopter[ {ident}]": "Hubschrauber[ {ident}]",
  "Flight {callsign}": "Flug {callsign}",
  "Aircraft[ {registration}]": "Flugzeug[ {registration}]",

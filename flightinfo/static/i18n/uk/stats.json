@@ -38,7 +38,12 @@
  "The same numbers as a table": "Ті самі дані у вигляді таблиці",
  "A sample every 15 minutes misses an aircraft that crossed in less, so an aircraft count is a floor, never a total. Messages are what the receiver decoded. Everything on this page follows the period chosen at the top. The lists count each aircraft once in the period: airlines by callsign, models from the aircraft database, countries from the aircraft's address. An airline's flag is the country it is based in (cargo and airline lists checked against a published source), else the one its aircraft are registered in. <a>The wall</a> · <code>zenithboard stats</code> prints the same in the terminal. Cities: <a>GeoNames</a>, CC BY 4.0. Flags: <a>country-flag-icons</a>, MIT.": "Вимірювання раз на 15 хвилин пропускає літак, що пролетів швидше, тож кількість літаків — це нижня межа, а не повне число. Повідомлення — це те, що декодував приймач. Усе на цій сторінці відповідає періоду, обраному вгорі. У списках кожен літак рахується один раз за період: авіакомпанії — за позивним, моделі — за базою даних літаків, країни — за ICAO-адресою літака. Прапор авіакомпанії — це країна, де вона базується (списки вантажних та інших авіакомпаній звірено з опублікованим джерелом), інакше — країна реєстрації її літаків. <a>Табло</a> · <code>zenithboard stats</code> показує те саме в терміналі. Міста: <a>GeoNames</a>, CC BY 4.0. Прапори: <a>country-flag-icons</a>, MIT.",
  "no sample": "немає вимірювань",
- "{n} aircraft": "літаків: {n}",
+ "{n} aircraft": {
+  "other": "{n} літака",
+  "one": "{n} літак",
+  "few": "{n} літаки",
+  "many": "{n} літаків"
+ },
  "None heard in this period.": "За цей період жодного не зафіксовано.",
  "Helicopters": "Гелікоптери",
  "Light aircraft": "Легкі літаки",

@@ -473,7 +473,7 @@
  "The antenna's position is not set": "Antenni asukoht on määramata",
  "No decoder yet: sudo zenithboard menu → 1 ADSB": "Dekoodrit veel pole: sudo zenithboard menu → 1 ADSB",
  "Statistics are off": "Statistika on väljas",
- "The watchdogs are not both on": "Mõlemad valvurid pole sisse lülitatud",
+ "The watchdogs are not both on": "Valvuritest pole mõlemad sisse lülitatud",
  "Welcome to the console": "Tere tulemast konsooli",
  "ZenithBoard's settings from this browser. The menu and the zenithboard command stay as they are; each change here runs the same command, and you see what it prints.": "ZenithBoardi seadistamine sellest brauserist. Menüü ja käsk zenithboard jäävad samaks; iga muudatus siin käivitab sama käsu ja te näete, mida see väljastab.",
  "This Pi: {model}, ZenithBoard {version}": "See Pi: {model}, ZenithBoard {version}",

@@ -55,6 +55,10 @@ cp -r "$t/cat" "$t/cat-skip"
 ZB_I18N_DIR="$t/cat-skip" ZB_I18N_REVIEW_DIR="$t/rev3" python3 tools/i18n.py apply "$t/fr.csv" --skip "$skip" > "$t/skip.out" 2>&1
 check "apply --skip: a proposal found inaccurate is not taken, and said" 'grep -q "\"Make a backup\": \"Faire une sauvegarde\"" "$t/cat-skip/fr/console.json" && grep -q "checked and not taken" "$t/skip.out"'
 ZB_I18N_DIR="$t/cat" ZB_I18N_REVIEW_DIR="$t/rev2" python3 tools/i18n.py apply "$t/fr.csv" > "$t/apply.out" 2>&1
+# 0.53.4: a reviewer's sheet with a plural row: the translation column holds JSON, its quotes doubled in the CSV
+printf '%s\n' 'id,page,where,english,translation,correction,comment' \
+  'fix-1,posts [plural: one],,{n} million messages,"{""one"": ""x"", ""other"": ""{n} millions de messages""}",{n} million de messages,"[plural] say ""1,2 million""."' > "$t/plural.csv"
+check "a sheet's doubled quotes are read as one (a plural row read whole)" 'python3 -c "import sys; sys.path.insert(0, \"tools\"); import i18n; r = i18n.read_sheet(\"$t/plural.csv\")[0]; assert r[\"correction\"] == \"{n} million de messages\", r; assert r[\"translation\"].startswith(\"{\\\"one\\\": \\\"x\\\"\"), r; assert r[\"comment\"] == \"[plural] say \\\"1,2 million\\\".\", r"'
 check "apply: the correction is taken, the old catalogue kept as .bak" 'grep -q "\"Make a backup\": \"Créer une sauvegarde\"" "$t/cat/fr/console.json" && [ -f "$t/cat/fr/console.json.bak" ]'
 check "apply: a correction losing {name} is refused, and said" 'grep -q "\"{name} is signed in.\": \"{name} est connecté.\"" "$t/cat/fr/console.json" && grep -q "refused: keep the same" "$t/apply.out"'
 check "apply: the sheet is written again with the new translation" 'grep -q "Make a backup,Créer une sauvegarde" "$t/rev2/fr.csv"'

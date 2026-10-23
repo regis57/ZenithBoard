@@ -364,11 +364,14 @@ def cmd_review(lang):
 def read_sheet(path):
     with open(path, encoding="utf-8-sig", newline="") as fh:
         text = fh.read()
+    # only the delimiter is guessed (a spreadsheet may save with ; or a tab). From the header line alone the sniffer
+    # also guesses doublequote=False, and then a quoted "" stays doubled: on 23 October 2026 a reviewer's sheet with
+    # plural rows ({"one": …} in the translation column) gave corrections that ended in ""} (0.53.4)
     try:
-        dialect = csv.Sniffer().sniff(text.split("\n", 1)[0], delimiters=",;\t")
+        delimiter = csv.Sniffer().sniff(text.split("\n", 1)[0], delimiters=",;\t").delimiter
     except csv.Error:
-        dialect = csv.excel
-    return list(csv.DictReader(io.StringIO(text), dialect=dialect))
+        delimiter = ","
+    return list(csv.DictReader(io.StringIO(text), dialect=csv.excel, delimiter=delimiter))
 
 
 def cmd_apply(path, dry=False, skip=()):

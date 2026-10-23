@@ -526,7 +526,7 @@
  "Still to do: {list}.": "待完成：{list}。",
  "Receiver map's database": "接收机地图数据库",
  "Computers signed in by the phone": "经手机登录的电脑",
- "Antenna position: {lat}, {lon}, {alt} m": "天线位置：{lat}, {lon}，海拔 {alt} m",
+ "Antenna position: {lat}, {lon}, {alt} m": "天线位置：{lat}，{lon}，海拔 {alt} m",
  "Latitude: a number between -90 and 90, e.g. 49.1193": "纬度：-90 到 90 之间的数字，例如 49.1193",
  "Longitude: a number between -180 and 180, e.g. 6.1757": "经度：-180 到 180 之间的数字，例如 6.1757",
  "Altitude: metres above the sea, e.g. 180": "海拔：高于海平面的米数，例如 180",
