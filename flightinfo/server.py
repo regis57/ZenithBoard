@@ -27,7 +27,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.53.8"
+VERSION = "0.54.0"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -764,6 +764,18 @@ def client_allowed(addr, policy):
     if ip is None:
         return False
     return any(ip in n for n in nets)
+
+
+def wall_host_ok(cfg, host):
+    """0.54.0: the wall's data answers only to a name that is the Pi's own (the console's rule, console.host_ok). A page
+    on another site that points its own name at the Pi (DNS rebinding) reaches it from a home browser, passes the
+    address check above, and could read /api/planes: the aircraft's positions and distances, from which the antenna's
+    position follows. A browser always sends the Host header; none sent is not a browser. Not asked when the owner
+    opened the wall to everyone (ALLOW_FROM=any): then any name is meant to reach it."""
+    if allowed_networks(cfg.get("ALLOW_FROM", "private")) is None or not str(host or "").strip():
+        return True
+    extra = ",".join(x for x in (cfg.get("CONSOLE_HOSTS", ""), cfg.get("DDNS_HOST", "")) if x and x != "none")
+    return console.host_ok(host, extra, console.tailscale_ok(cfg))
 
 
 def radius_to_km(radius, units):
@@ -1965,6 +1977,9 @@ class Handler(BaseHTTPRequestHandler):
         cfg = load_config()
         if not client_allowed(self.client_address[0], cfg.get("ALLOW_FROM", "private")):
             return self._send(403, b"This wall answers its own network only (ALLOW_FROM).", "text/plain")
+        if (path.startswith("/api/") or path.startswith("/social/preview")) and not wall_host_ok(cfg, self.headers.get("Host")):
+            return self._send(403, b"Open the wall by the Pi's address (hostname -I), its own name or a name of yours listed in "
+                                   b"CONSOLE_HOSTS:  sudo zenithboard config-set CONSOLE_HOSTS your.name", "text/plain")
         if path == "/console" or path.startswith("/console/"):
             return self._console(cfg, url)
         if path.startswith("/static/console") or path.startswith("/static/vendor/"):

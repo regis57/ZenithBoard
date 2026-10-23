@@ -67,6 +67,7 @@ run() {   # run NAME answers... -> stdout+stderr in $t/NAME.out, the screens in 
 INSTALL_ARGS=()
 
 # ---- the flags
+check "uninstall everything stops the Bluesky service too (0.54.0: it was left running)" 'sed -n "/^uninstall_all()/,/^}/p" install.sh | grep -q "social_off"'
 check "--help prints the usage and names --help"   'out=$(bash install.sh --help) && echo "$out" | grep -q -- "--help" && echo "$out" | grep -q -- "--uninstall-all"'
 check "--version prints the version"               '[ "$(bash install.sh --version)" = "ZenithBoard $(. lib/versions.sh; echo "$ZB_VERSION")" ]'
 check "an unknown flag is refused with the usage"  '! bash install.sh --bogus >/dev/null 2>&1 && bash install.sh --bogus 2>&1 | grep -q Usage'
