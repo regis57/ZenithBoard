@@ -384,7 +384,7 @@ window.ZBI18N.start({ part: "console" }, function () {
     "social-templates-delete": [t("Delete all your templates?"), t("The posts go on with the other words you ticked (factual when none is left). They are kept on the Pi: Put back brings them again.")],
     "social-templates-undo": [t("Put back your previous templates?"), t("The templates before the last change come back; today's are kept in their place, so it can be undone too.")],
     "backup-delete": [t("Delete the console's backup?"), t("Only the copy kept here for download: the files you already downloaded, and the Pi itself, are not touched.")],
-    tailscale: [t("Tailscale"), t("Switching it on installs Tailscale the first time (from its own repository, a few minutes), then prints a sign-in link in this card: open it, sign in to YOUR Tailscale account, approve the Pi. The wall then answers your Tailscale devices too. Off disconnects the Pi from your Tailscale network; it stays installed. The wall restarts either way: this page reconnects by itself.")],
+    tailscale: [t("Tailscale"), t("Switching it on installs Tailscale the first time (from its own repository, a few minutes), then prints a sign-in link in this card: open it, sign in to YOUR Tailscale account, approve the Pi. The wall then answers your Tailscale devices too. Off disconnects the Pi from your Tailscale network; it stays installed. The wall restarts either way: this page reconnects by itself. Have your Tailscale account ready (tailscale.com, free) and its app on your phone: the switch waits up to an hour for the sign-in, and other changes wait behind it. To give up, switch it off.")],
     "tailscale-console": [t("The console over Tailscale"), t("On: the devices signed in to your Tailscale account can open this console too (encrypted by Tailscale; the password still applies). Off: your home network only. The wall restarts: this page reconnects by itself.")],
     "console-off": [t("Turn the console off?"), t("Its pages stop answering at once, this one included. Turn it on again over SSH: sudo zenithboard console on")]
   };
@@ -466,7 +466,13 @@ window.ZBI18N.start({ part: "console" }, function () {
         if (j.action === "refresh" && !j.quiet) toast(t("Read again."));
         if (!j.quiet && spec.flags.indexOf("read") < 0) {
           if (ok) toast(t("{job}: done.", { job: j.label }));
-          else toast(j.error ? t("{job}: refused ({why})", { job: j.label, why: t(j.error) }) : t("{job}: it did not work. See Activity.", { job: j.label }), true);
+          else toast(j.error ? t("{job}: refused ({why})", { job: j.label, why: t(j.error) }) : t("{job}: it did not work. Read what it printed beside the button, or in Activity.", { job: j.label }), true);
+        }
+        // 0.54.7: after an update the page kept showing the old version everywhere and never said to reload; the wall
+        // restarts, so it is asked once it answers again, and the page is reloaded when the version is not the one it has
+        if (ok && j.action.indexOf("update") === 0 && S.session && S.session.version) {
+          var was = S.session.version;
+          setTimeout(function () { api("session").then(function (r) { if (r.ok && r.data && r.data.version && r.data.version !== was) location.reload(); }).catch(function () {}); }, 6000);
         }
         setTimeout(loadState, 1200); setTimeout(loadState, 5000);      // the helper reads the Pi's facts again after a job
         if (S.activityOpen) loadActivity();
@@ -1040,6 +1046,7 @@ window.ZBI18N.start({ part: "console" }, function () {
         h("header", null, h("h2", { text: t("Pair a phone") }), h("button", { type: "button", "class": "ghost", "aria-label": t("Close"), text: "×", onclick: stop })),
         h("div", { "class": "modal-body" }, local ? h("p", { "class": "err", text: t("This page was opened as {host}: a phone cannot reach that. Open the console at the Pi's address to pair one.", { host: location.hostname }) }) : null,
           box, count, status,
+          h("p", { "class": "qr-note", text: t("The phone must be on your home Wi-Fi: not mobile data, not a guest network.") }),
           h("p", { "class": "qr-note", text: t("It works once, within five minutes. The phone then stays signed in as long as it opens the console once a month.") }))));
       var timer = setInterval(tickPair, 1000), poll = setInterval(checkPair, 2000);
       function tickPair() {

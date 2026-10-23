@@ -148,6 +148,12 @@ Click one of the last jobs to read what it printed: it opens at the top of the d
   showed it (that one is already signed in), nor another device later. Each browser has its own sign-in: the password,
   or its own QR code.
 * **A computer can be signed in by a phone** (0.40.0, off by default): see below.
+* **Forgotten password, full card, failed command, update (0.54.7).** The sign-in page says how to get a new password
+  (`sudo zenithboard console password`: every browser and phone is signed out). The pairing window says the phone must be
+  on the home Wi-Fi. A change that cannot be written because the card is full says so, with `zenithboard health`,
+  `logs usage` and `backup list`, instead of *Turn the console on again*. A command that fails points at what it printed
+  beside the button or in *Activity*. After an update the page of the old version reloads itself once the wall answers
+  with the new one.
 
 **Only in the terminal, on purpose:** uninstalling and anything that asks for a typed word; Wi-Fi on, off, networks,
 country, and fixed addresses (one mistake cuts the Pi off the network the page comes through); passwords, tokens and
