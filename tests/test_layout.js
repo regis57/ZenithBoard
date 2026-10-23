@@ -59,3 +59,19 @@ console.log("layout ok: gear bottom-right clear of photo and drawing on " + scre
   assert.ok(!/0404e2|data-theme="blue"/.test(css), "the dark blue is gone from style.css");
 }
 console.log("tablet colour: ok");
+
+// ---- 0.54.4: what the wall writes in dots has to fit in the 128 dots of the wall, and the tablet says what is wrong
+{
+  const GW = Number(js.match(/var GW = (\d+)/)[1]);
+  let n = 0;
+  for (const m of js.matchAll(/textCenter\(g, "([^"]*)", (\d+), (\d)\)/g)) {
+    const scale = Number(m[3]), width = (m[1].length * 6 - 1) * scale;
+    assert.ok(width <= GW, `"${m[1]}" is ${width} dots wide at scale ${scale}: the wall has ${GW}, it would be cut at both ends`);
+    n++;
+  }
+  assert.ok(n >= 8, "the centred texts were found (" + n + ")");
+  assert.ok(/error === "offline"/.test(js) && /CHECK THE WI-FI/.test(js), "a tablet that lost the Pi does not blame the decoder");
+  assert.ok(/CHECK THE DECODER/.test(js), "a receiver that does not answer still names the decoder");
+  assert.ok(/failures % 30 === 0\) fetch\("\/api\/health"/.test(js), "the self-heal reload waits for the Pi to answer");
+  console.log("wall texts fit, and say what is wrong: ok (" + n + " centred texts)");
+}

@@ -666,6 +666,7 @@ The processes, the files each one reads and writes, and the timers are set out i
 | Symptom | Try |
 |---|---|
 | Wall says **NO DATA – RECEIVER NOT RESPONDING** | `zenithboard status` — is the decoder running? `zenithboard logs decoder`. Dongle plugged in? |
+| Wall says **NO ANSWER – THE TABLET LOST THE PI** | The decoder is not the problem: the tablet cannot reach the Pi. Is the tablet on the home Wi-Fi? Is the Pi on? It comes back by itself when the Pi answers. |
 | Wall says NO FLIGHTS for a long time | Raise the radius (`sudo zenithboard radius 30`). Check `zenithboard status` for the aircraft count. |
 | Wall opens but looks cropped | Use the gear → **Full screen**, or *Add to Home Screen*. |
 | Two MLAT clients in `status` | `sudo zenithboard mlat-guard` |
