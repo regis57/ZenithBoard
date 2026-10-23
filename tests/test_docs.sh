@@ -46,4 +46,11 @@ check "The-menu and Moving-to-a-new-card linked from the sidebar" 'grep -q "(The
 check "every menu picture the docs show is in docs/images" 'for f in $(grep -ho "docs/images/menu-[a-z]*\.png" README.md docs/wiki/*.md | sort -u); do [ -f "$f" ] || exit 1; done'
 check "the move names WinSCP and the typed word" 'grep -q "WinSCP" docs/wiki/Moving-to-a-new-card.md && grep -q "RESTORE" docs/wiki/Moving-to-a-new-card.md'
 
+# ---- 0.53.6: CI runs every test file. Its list is written by hand on purpose (a new test shows in the diff), so a file
+# left off it fails here instead of going unrun: five suites, the console's and the translations' among them, were
+# never run there between 0.39.0 and 0.53.5
+for f in tests/test_*.sh tests/test_*.js; do
+  check "CI runs $f" 'grep -qF "$f" .github/workflows/ci.yml'
+done
+
 [ "$fail" = 0 ] && echo "ALL OK" || { echo "SOME FAILED"; exit 1; }

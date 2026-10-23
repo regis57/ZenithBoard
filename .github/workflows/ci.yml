@@ -40,6 +40,11 @@ jobs:
           bash tests/test_legacy.sh
           bash tests/test_graphs.sh
           bash tests/test_install.sh
+          bash tests/test_console.sh
+          bash tests/test_backup.sh
+          bash tests/test_tailscale.sh
+          bash tests/test_adsbx_stats.sh
+          bash tests/test_i18n.sh
       - name: JavaScript tests
         run: |
           node tests/test_format.js
