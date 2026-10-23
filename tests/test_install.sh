@@ -108,7 +108,9 @@ check "the wall menu says look and colour together"  'grep "^menu	The wall" "$t/
 run settings 3 back 0
 check "main menu: Start here, then seven subjects"   'grep "^menu	ZenithBoard" "$t/settings.screens" | head -1 | grep -q "\[start 1 2 3 4 5 6 7 0 \]" && grep -q "Start here" README.md'
 check "connectivity: Wi-Fi on with no network reads \"not connected\", not \"ON, \"" 'grep "^menu	Connectivity" "$t/settings.screens" | grep -q "Wi-Fi: ON, not connected"'
-check "no menu has more than seven entries and its way out" '! grep -h "^menu" "$t"/*.screens | grep -o "\[[^]]*\]" | awk "{ if (NF > 9) exit 1 }" && [ "$(grep -c "^      [a-z0-9]* \"[0-9]  " lib/menus.sh)" -gt 20 ]'
+# 0.54.1: this check was inverted (a leading "!" on the awk), so it passed only because the main menu broke the rule it
+# states. The main menu has Start here, seven subjects and Exit (nine entries); every other menu seven and its way out.
+check "no menu but the main one has more than seven entries and its way out" 'grep -h "^menu" "$t"/*.screens | grep -v "^menu	ZenithBoard" | grep -o "\[[^]]*\]" | awk "{ if (NF > 9) exit 1 }" && [ "$(grep -c "^      [a-z0-9]* \"[0-9]  " lib/menus.sh)" -gt 20 ]'
 # ---- 0.44.0: Start here, in its order: a backup first if any (WinSCP said), then ADS-B; nothing goes on without a decoder
 run startbackup start ok yes ok CANCEL 0
 check "start: a backup first, WinSCP named, cancel changes nothing" '[ "$rc" = 0 ] && grep -q "^yesno	Are you moving from another card" "$t/startbackup.screens" && grep -q "WinSCP" "$t/startbackup.screens" && [ "$(grep -c "^menu	ZenithBoard" "$t/startbackup.screens")" = 2 ]'

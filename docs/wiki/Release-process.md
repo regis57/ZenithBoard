@@ -19,7 +19,7 @@ lib/versions.sh        ZB_VERSION="0.12.3"
 flightinfo/server.py   VERSION = "0.12.3"
 ```
 
-Both, always, identical. `tests/test_versions.sh` fails if they drift — the server prints its own version to the wall, and a wall claiming a version it is not makes every bug report misleading.
+Both, always, identical. `tests/test_versions.sh` fails if they drift, and since 0.54.1 if `docs/wiki/Home.md` or `Project-status.md` says another version (before, it only checked the shape of the number) — the server prints its own version to the wall, and a wall claiming a version it is not makes every bug report misleading.
 
 ## The changelog
 
