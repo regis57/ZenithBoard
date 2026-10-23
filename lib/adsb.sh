@@ -261,26 +261,35 @@ install_planefinder() {
 remove_planefinder() { systemctl disable --now pfclient 2>/dev/null || true; apt_remove pfclient; }
 
 # ------------------------------------------------------------------ menu 1
+# shellcheck disable=SC2034  # ADSB_CANCELLED is read by start_here (lib/menus.sh)
 adsb_menu() {
   local dec_now dec_sel feeders plan="" dev
+  ADSB_CANCELLED=      # 0.54.5: Start here says "you left" for a screen backed out of, and "no internet" only for a real failure
   dec_now=$(installed_decoder)
   local rs="OFF" ds="OFF"
   case "${dec_now:-readsb}" in dump1090-fa) ds=ON ;; *) rs=ON ;; esac
   dec_sel=$(wt_radio "ADS-B decoder.\n\nreadsb is recommended (what ADSB Exchange, tar1090 and most feeders expect).\ndump1090-fa also works; every feeder reads the same Beast port 30005." \
-      readsb "readsb (recommended)" "$rs" dump1090-fa "dump1090-fa (FlightAware)" "$ds") || return 0
+      readsb "readsb (recommended)" "$rs" dump1090-fa "dump1090-fa (FlightAware)" "$ds") || { ADSB_CANCELLED=1; return 0; }
 
-  dev=$(wt_input "ADS-B dongle serial number (or index).\nLeave empty if you have a single dongle.\nNeeded when a 2nd dongle is used for 978 MHz UAT." "$(cfg_get ADSB_SDR)") || return 0
+  dev=$(wt_input "ADS-B dongle serial number (or index).\nLeave empty if you have a single dongle.\nNeeded when a 2nd dongle is used for 978 MHz UAT." "$(cfg_get ADSB_SDR)") || { ADSB_CANCELLED=1; return 0; }
   cfg_set ADSB_SDR "$dev"
 
   local st_fa=OFF st_fr=OFF st_pf=OFF
   is_piaware && st_fa=ON; is_fr24 && st_fr=ON; is_planefinder && st_pf=ON
   local st_axs=OFF; is_adsbx_stats && st_axs=ON
+  # 0.54.5: after a restore on a new card, the networks the backup fed are ticked: their identities wait in restore-pending/
+  # for exactly this step, and the list used to start with everything unticked, as if the backup had said nothing
+  local pend="${BK_PENDING:-/nonexistent}" ticked=""
+  [ -f "$pend/piaware-feeder-id" ] && { st_fa=ON; ticked=1; }
+  [ -f "$pend/fr24key" ] && { st_fr=ON; ticked=1; }
+  [ -f "$pend/pfclient-config.json" ] && { st_pf=ON; ticked=1; }
+  [ -f "${BK_DATA:-/nonexistent}/adsbx-stats-wanted" ] && { st_axs=ON; ticked=1; }      # a mark of its own: restore-pending/ must stay empty once the networks are in
   local -a items=(ADSBX "ADSB Exchange (mandatory)" ON ADSBX_STATS "ADSB Exchange stats: their map of your aircraft" "$st_axs" FLIGHTAWARE "FlightAware (piaware)" "$st_fa" FR24 "Flightradar24" "$st_fr" PLANEFINDER "Plane Finder" "$st_pf")
   local st_uat=OFF
   is_uat978 && st_uat=ON
   # 978 MHz UAT is only used in the United States; a region that has it installed keeps seeing it so it can be removed
   if is_region_us || is_uat978; then items+=(UAT978 "978 MHz UAT (USA only, needs a 2nd dongle)" "$st_uat"); fi
-  feeders=$(wt_check "Where do you want to share your data?\n\nADSB Exchange is mandatory (it owns the single MLAT client).\nUnchecking an installed feeder REMOVES it." "${items[@]}") || return 0
+  feeders=$(wt_check "Where do you want to share your data?\n\nADSB Exchange is mandatory (it owns the single MLAT client).\nUnchecking an installed feeder REMOVES it.${ticked:+\n\nTicked already: the networks your backup fed.}" "${items[@]}") || { ADSB_CANCELLED=1; return 0; }
   feeders=" ${feeders//\"/} ADSBX "
 
   [ "$dec_now" != "$dec_sel" ] && plan+="- Decoder: ${dec_now:-none} -> $dec_sel\n"
@@ -300,7 +309,7 @@ adsb_menu() {
   local n_extra=0; for f in FLIGHTAWARE FR24 PLANEFINDER; do [[ "$feeders" == *" $f "* ]] && n_extra=$((n_extra+1)); done
   if is_low_mem && [ "$n_extra" -gt 2 ]; then plan+="\nNOTE: $(mem_total_mb) MB RAM is low for $n_extra extra feeders: consider fewer.\n"; fi
   [ -z "$plan" ] && plan="Nothing to change. (Feeders and MLAT policy will simply be re-checked.)\n"
-  wt_yesno "Planned changes:\n\n$plan\nContinue?" 18 || return 0
+  wt_yesno "Planned changes:\n\n$plan\nContinue?" 18 || { ADSB_CANCELLED=1; return 0; }
 
   clear
   if [ "$dec_now" != "$dec_sel" ]; then
@@ -332,7 +341,7 @@ adsb_menu() {
   fi
   zb_mlat_guard
   echo; log "ADSB step finished. Check everything with:  zenithboard status"
-  read -rp "Press Enter to return to the menu..." _
+  rm -f "${BK_DATA:-/nonexistent}/adsbx-stats-wanted"; read -rp "Press Enter to continue..." _
 }
 
 # ------------------------------------------------------------------ position: update it EVERYWHERE it is stored

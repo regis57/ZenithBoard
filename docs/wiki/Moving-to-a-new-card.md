@@ -74,7 +74,7 @@ Pi, connect with PuTTY, bring the system up to date. Two tips:
    3. It proposes the file: **OK**. It shows what the backup holds, then asks you to **type `RESTORE`** (in capitals)
       and Enter. It puts back your settings, your position everywhere it is used, what was switched on, your
       statistics, your logs, and the networks' identities.
-   4. **ADS-B**: keep *readsb*, leave the dongle's serial number empty, and **tick the same networks as before**. Each
+   4. **ADS-B**: keep *readsb*, leave the dongle's serial number empty, and **tick the same networks as before**. Since 0.54.5 the ones your backup fed are already ticked (FlightAware, Flightradar24, Plane Finder, and ADSB Exchange's stats), and the screen says so; check the list rather than rebuild it. Each
       network's own installer runs and asks its questions:
       * *ADSB Exchange*: a station name and your position (as before). It keeps your old station by itself.
       * *FlightAware*: nothing to claim, your station comes back by itself.

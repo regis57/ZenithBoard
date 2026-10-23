@@ -77,7 +77,7 @@ graphs lived on the card only):
     ```
     It installs `whiptail` and `curl` if they are missing; on a 1 GB board it says once what the board is good for.
 12. **The first questions** (once): the region (*everywhere else*, or the United States for 978 MHz), the units, the
-    antenna's position (latitude, longitude, altitude in metres; a typo is asked again), the wall's radius. Then the
+    antenna's position (latitude, longitude, altitude in metres; a typo is asked again), the wall's radius. Esc on any of them stops the installer with a line saying so: what you answered is kept and the questions come again at the next `sudo ./install.sh` (0.54.5; it used to stop without a word). Then the
     main menu: choose **Start here** ([every screen](The-menu)). It does steps 13 to 16 in this order, and skips what
     is done already. **Do them in this order**: the web console is a page of the wall, and the wall needs the decoder.
 

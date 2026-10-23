@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.54.5
+Low-severity findings of the 22-23 October audit that go together: **the first hour, in *Start here***, where one wrong step threw the novice out or left them guessing.
+- **After a restore, the networks the backup fed are ticked** in *ADS-B → Decoder and networks* (FlightAware, Flightradar24, Plane Finder, and ADSB Exchange's stats). Their identities were waiting for exactly that step, and the list started with everything unticked, as if the backup had said nothing. The screen says *Ticked already: the networks your backup fed.*
+- **A backup step left no longer ends *Start here*.** A wrong path or Esc threw the novice back to the main menu, four screens before where they were; it now says it goes on without a backup and does.
+- **A mistyped console password is asked again** (*Try again?*) instead of ending *Start here* at the main menu with the console off and no address shown.
+- **Backing out of an ADS-B screen is not called a missing internet.** *Start here* now says you left the step and to choose it again; the *usually no internet* line stays for a decoder that failed to install. The step ends with *Press Enter to continue*, not *to return to the menu* when *Start here* goes on.
+- **Esc at one of the first questions** (region, units, position) stops the installer with a line saying what is kept and how to start again, instead of nothing.
 ## 0.54.4
 From the 22-23 October audit, the wall on the tablet (one *high* and one *medium* finding that the earlier batches had left).
 - **The wall no longer blames the decoder when it is the tablet that lost the Pi.** Three failed polls in a row (the Wi-Fi, the Pi restarting) showed *NO DATA – RECEIVER NOT RESPONDING – CHECK THE DECODER*, which sent people to a decoder that was fine. It now says **NO ANSWER – THE TABLET LOST THE PI – CHECK THE WI-FI**. The decoder's own screen is unchanged in meaning.

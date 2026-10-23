@@ -403,7 +403,7 @@ backup_restore() {
         if [ ! -s "$SOCIAL_SECRETS" ]; then cfg_set SOCIAL 0; later="$later\n  sudo zenithboard social setup        (a new app password: bsky.app > Settings > Privacy and security > App passwords)"; continue; fi ;;
       wifi_harden) [ -n "$(wifi_iface 2>/dev/null)" ] || continue ;;
       # 0.52.0: they need ADSB Exchange's feed, which a fresh card gets from menu 1; the UUID came back with step 4
-      adsbx_stats) is_adsbx || { later="$later\n  sudo zenithboard adsbx-stats on      (after ADSB Exchange: menu 1 ADS-B → 1 Decoder and networks)"; continue; } ;;
+      adsbx_stats) is_adsbx || { install -d -m 755 "$BK_DATA"; : > "$BK_DATA/adsbx-stats-wanted"; later="$later\n  sudo zenithboard adsbx-stats on      (after ADSB Exchange: menu 1 ADS-B → 1 Decoder and networks)"; continue; } ;;
       graphs) [ ! -f "$b/graphs-xml.tar.gz" ] || { install -d -m 700 "$BK_PENDING"; install -m 600 "$b/graphs-xml.tar.gz" "$BK_PENDING/graphs-xml.tar.gz"; } ;;
     esac
     # shellcheck disable=SC2046

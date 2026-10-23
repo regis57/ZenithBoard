@@ -82,13 +82,16 @@ hardware_notice() {
   return 0
 }
 
+# 0.54.5: Esc at one of the first questions ended the installer with nothing said
+wizard_stop() { echo "Stopped before the first questions were all answered. The ones you answered are kept, and the questions come again at the next start:  sudo ./install.sh  (later: sudo zenithboard menu)"; exit 0; }
+
 first_run_wizard() {
   grep -q '^LAT=.' "$ZB_CONFIG" && grep -q '^LON=.' "$ZB_CONFIG" && return 0
-  wt_msg "Welcome to ZenithBoard - ADSB Flight Info.\n\nA few questions first:\n  1. Your region (decides whether 978 MHz UAT is offered)\n  2. Units (metric or imperial)\n  3. Where your antenna is\n  4. The default detection radius\n\nThen the menu: 'Start here' takes you through the rest, step by step. Moving from another card with a backup? Answer these anyway: the backup puts its own back." 18 || exit 0
-  settings_region || exit 0
+  wt_msg "Welcome to ZenithBoard - ADSB Flight Info.\n\nA few questions first:\n  1. Your region (decides whether 978 MHz UAT is offered)\n  2. Units (metric or imperial)\n  3. Where your antenna is\n  4. The default detection radius\n\nThen the menu: 'Start here' takes you through the rest, step by step. Moving from another card with a backup? Answer these anyway: the backup puts its own back." 18 || wizard_stop
+  settings_region || wizard_stop
   [ "$(cfg_get REGION world)" != us ] || cfg_set UNITS imperial     # a sensible start for the US; the next screen lets you change it
-  settings_units || exit 0
-  settings_location || exit 0
+  settings_units || wizard_stop
+  settings_location || wizard_stop
   local r; r=$(pick_radius) && cfg_set RADIUS "$r"
 }
 
