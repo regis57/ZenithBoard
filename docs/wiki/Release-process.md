@@ -8,7 +8,7 @@
 |---|---|
 | **Patch** (0.10.2 → 0.10.3) | A fix, a wording change, a small improvement to something that exists |
 | **Minor** (0.10.x → 0.11.0) | A new feature, a new menu, a new command |
-| **Major** | Reserved for 1.0, which means "validated on real hardware, no caveats in [Project status](Project-status)": the caveats lifted one by one, two to four weeks hands-off, a fresh install from the README alone, and an update from an old release untouched. The list, kept up to date, is in [Roadmap → What 1.0 takes](Roadmap#what-10-takes) |
+| **Major** | Reserved for 1.0, which means "validated on real hardware, no caveats in [Project status](Project-status)": the caveats lifted one by one, two to four weeks hands-off, and a fresh install from the README alone. The list, kept up to date, is in [Roadmap → What 1.0 takes](Roadmap#what-10-takes) |
 
 Most releases are patches. When in doubt it is a patch.
 

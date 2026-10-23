@@ -71,6 +71,8 @@ check "profiles: type names"      'printf "%s\n" "$out" | grep -q "^u1	ethernet	
 check "profiles: colon in name"   'printf "%s\n" "$out" | grep -q "^u2	wifi	Home:Net$"'
 
 # ---- domain name: configs
+cfg_set DDNS_HOST myplanes.duckdns.org; local_ip() { echo 192.168.1.50; }
+check "the links never offer the receiver map from outside (0.54.3)" 'ddns_links | grep -q "Receiver map     : home network only" && ! ddns_links | grep -q "http://myplanes.duckdns.org/tar1090"'
 check "host ok"                  'ddns_valid_host myplanes.duckdns.org'
 check "host: space refused"      '! ddns_valid_host "my planes.org"'
 check "host: injection refused"  '! ddns_valid_host "a.org&token=x"'

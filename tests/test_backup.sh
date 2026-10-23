@@ -91,7 +91,10 @@ check "restore: the console's copy on a bare card says it is not the one to move
 out=$(echo no | backup_restore "$t/full.tar.gz" 2>&1)
 check "restore: a full backup is not warned"          '! echo "$out" | grep -q "console.s copy"'
 zb_apply_location() { echo "$*" > "$t/location.applied"; }      # 0.44.0: the position goes everywhere it is stored
+cfg_set TAILSCALE 1; ts_installed() { return 1; }        # 0.54.3: a card that used Tailscale, and has none yet
 out=$(echo RESTORE | backup_restore "$t/full.tar.gz" 2>&1)
+check "restore: Tailscale used before and not installed here is said, with the command" 'echo "$out" | grep -q "sudo zenithboard tailscale on"'
+
 check "restore: the position applied everywhere, not only imported" '[ "$(cat "$t/location.applied" 2>/dev/null)" = "49.1193 6.1757 180" ]'
 check "restore: the settings"                        '[ "$(cfg_get RADIUS)" = 15 ] && [ "$(cfg_get UNITS)" = metric ]'
 check "restore: statistics back, both cards' samples" '[ -f "$t/data/stats/seen-2026-10-20" ] && [ "$(grep -c "^17" "$t/data/stats/stats.csv")" = 3 ] && [ "$(head -1 "$t/data/stats/stats.csv")" = "$STATS_HEADER" ]'
@@ -101,7 +104,7 @@ check "restore: the old card logs beside the new"   '[ -f "$t/journal/0123456789
 check "restore: ADSB Exchange's UUID written now"     '[ "$(cat "$t/adsbx/adsbx-uuid")" = c0ffee00-1234-4abc-8def-0123456789ab ]'
 check "restore: networks not installed wait, root only" '[ "$(cat "$t/data/restore-pending/piaware-feeder-id")" = 11111111-2222-3333-4444-555555555555 ] && [ "$(cat "$t/data/restore-pending/fr24key")" = ABCDEF123456 ] && [ -f "$t/data/restore-pending/pfclient-config.json" ] && [ "$(stat -c %a "$t/data/restore-pending")" = 700 ] && [ "$(stat -c %a "$t/data/restore-pending/fr24key")" = 600 ]'
 check "restore: what was on, switched on again"      'grep -qx "stats on" "$t/zb.log" && grep -qx "watchdog on" "$t/zb.log" && grep -qx "keeplogs on" "$t/zb.log" && grep -qx "netwatch on" "$t/zb.log" && ! grep -q "social\|console\|wifi" "$t/zb.log"'
-check "restore: ADSB Exchange stats wait for its feed" '! grep -q "adsbx-stats" "$t/zb.log" && echo "$out" | grep -q "sudo zenithboard adsbx-stats on      (after ADSB Exchange: menu 1 ADSB)"'
+check "restore: ADSB Exchange stats wait for its feed" '! grep -q "adsbx-stats" "$t/zb.log" && echo "$out" | grep -q "sudo zenithboard adsbx-stats on      (after ADSB Exchange: menu 1 ADS-B → 1 Decoder and networks)"'
 check "restore: graphs1090's history waits for it"   'grep -qx "graphs on" "$t/zb.log" && [ -f "$t/data/restore-pending/graphs-xml.tar.gz" ] && echo "$out" | grep -q "waits for graphs1090"'
 check "restore: what was here kept first"            'b=$(ls -d "$t"/data/before-restore-*); grep -q "^RADIUS=5$" "$b/config.env" && grep -q 1761100000 "$b/stats/stats.csv"'
 check "restore: never prints a key"                  '! echo "$out" | grep -q "ABCDEF123456\|5X2X2X2X9XaX3\|11111111-2222"'

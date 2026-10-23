@@ -230,7 +230,7 @@ In the menu, **Help me choose** explains these three, **Set up** asks for the na
 **A name alone opens nothing.** To reach the Pi from outside you also need:
 
 1. a **fixed address** for the Pi (the previous section), so the router always sends traffic to the same machine;
-2. **port forwarding** in your router (often under *NAT* or *Port forwarding*): forward port **8080** to the Pi's port 8080 for the **ZenithBoard wall** (`http://myplanes.duckdns.org:8080/`), and/or port **80** to the Pi's port 80 for the **tar1090 map** (`http://myplanes.duckdns.org/tar1090/`, or `/adsbx/`). Choose one, or both.
+2. **port forwarding** in your router (often under *NAT* or *Port forwarding*): forward port **8080** to the Pi's port 8080 for the **ZenithBoard wall** (`http://myplanes.duckdns.org:8080/`). **Not port 80** (the tar1090 map has no guard and shows where your antenna is) and never port 22: the menu says the same.
 
 > **Privacy and safety.** These pages have **no password and no encryption**. The tar1090 map shows **where your antenna is**, and the wall shows distances from it. Forward only what you want to be public, or keep everything private with a VPN such as [Tailscale](https://tailscale.com/) or WireGuard (nothing to open).
 

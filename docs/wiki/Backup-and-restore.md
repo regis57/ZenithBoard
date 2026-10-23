@@ -60,7 +60,7 @@ asks for `RESTORE`. Each new backup is also read back once written (a full card 
 * **From the terminal or the menu**: where you said, by default the current folder (the menu: your home folder),
   named `zenithboard-backup-HOST-YYYYMMDD-HHMM.tar.gz`. The name sorts in time order; `backup list` shows them newest
   first with their size. Nothing deletes them by itself: `backup clean --keep 3` deletes all but the three newest
-  (it lists them and asks you to type `delete`), or the menu, *Back up everything → Delete the older ones*. They are
+  (it lists them and asks you to type `delete`), or the menu, *6 Backup → 3 Show, list, delete older backups*. They are
   your files: `rm` works too.
 * **From the console**: one copy only, `/var/lib/zenithboard/console/out/backup.tar.gz`, replaced by the next one,
   so it never piles up; *Delete it* (or `sudo zenithboard backup delete --console`) frees its room on the card. Its

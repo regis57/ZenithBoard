@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.54.3
+Low-severity findings of the 22-23 October audit that go together: **screens that point to the wrong place or contradict each other**, in the terminal menu. Nothing on the web console changes, so no translation either.
+- **Menu paths that do not exist any more.** Nine screens said *menu 1 ADSB* (the entry is *1 ADS-B → 1 Decoder and networks*), or *Settings > Network > Wi-Fi*, *Network > Fixed IP*, *4 Domain name*; the restore's two lines about graphs1090 sent the novice to two different menus. Each now names the entry that is there. `tests/test_menus.sh` fails if one comes back.
+- **Port 80 said two ways.** One screen told how to forward the receiver map's port 80, the next said never to. It is *never* everywhere (port 22 too), in the domain-name help, its links and the README. The link line for the map now says it is for the home network.
+- **Back to automatic (DHCP) warns like the fixed address does**: if you are connected through that connection the session drops, and the screen says where to find the Pi again (`zenithboard.local`, or the router's list of devices). The same sentence is in the Wi-Fi warning.
+- **The domain-name success box scrolls** (its last lines were cut off), and its *Next* comes first and points at *From outside your home, safely*, not at port forwarding.
+- **`tailscale console on` says when Tailscale is not connected** (it used to say the console now answers Tailscale's addresses, to nothing).
+- **A restore on a card that has no Tailscale says so**: the settings come back with Tailscale on, the program and its sign-in do not; the command is in *Still to do*.
+- **MLAT is explained in *Start here*, and zero is not *OK***: `zenithboard status` showed *0 (OK: max 1)* when ADSB Exchange's MLAT was not running.
+- **The place name prompt says the posts are public**: a town or a region, not your village (it was in the wiki only).
+- **Roadmap**: *an update from an old release* is no longer a condition of 1.0 (the owner, 23 October 2026: he is the only one who has installed it, so an update from a release nobody runs proves nothing).
 ## 0.54.2
 The last two *medium* findings of the 22-23 October audit, both in the first hour of a new card.
 - **The console's first steps no longer open on an empty reading.** Right after *Start here* the Pi had never been read by the console's helper, and the steps said *no decoder*, *nobody yet*, every network *not installed* and every watchdog off, sending the novice back to the terminal for something that was there. The page now waits for the first reading (25 seconds at most, then it opens on what it has) before the first screen.

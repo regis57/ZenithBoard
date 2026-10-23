@@ -86,7 +86,7 @@ adsbx_stats_where() {
 
 adsbx_stats_on() {
   if is_adsbx_stats; then echo "ADSB Exchange stats are already on."; adsbx_stats_where; return 0; fi
-  is_adsbx || { err "ADSB Exchange's stats read what its feed receives: install ADSB Exchange first (menu 1 ADSB). Nothing was changed."; return 1; }
+  is_adsbx || { err "ADSB Exchange's stats read what its feed receives: install ADSB Exchange first (menu 1 ADS-B → 1 Decoder and networks). Nothing was changed."; return 1; }
   # what `off` puts back: whether the adsbexchange user was in the video group; the packages are noted as they come
   [ -f "$AXS_STATE" ] || { axs_state_set VIDEO "$(axs_in_video && echo 1 || echo 0)"; axs_state_set ADDED ""; }
   log "Installing ADSB Exchange's stats package (their script: a minute or two)"
@@ -149,7 +149,7 @@ adsbx_stats_status() {
   elif is_adsbx; then
     echo "ADSB Exchange stats: OFF. Their map of only your aircraft, and Feed Details on their page: sudo zenithboard adsbx-stats on"
   else
-    echo "ADSB Exchange stats: OFF (they need ADSB Exchange's feed first: menu 1 ADSB)"
+    echo "ADSB Exchange stats: OFF (they need ADSB Exchange's feed first: menu 1 ADS-B → 1 Decoder and networks)"
   fi
 }
 

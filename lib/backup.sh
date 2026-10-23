@@ -403,17 +403,21 @@ backup_restore() {
         if [ ! -s "$SOCIAL_SECRETS" ]; then cfg_set SOCIAL 0; later="$later\n  sudo zenithboard social setup        (a new app password: bsky.app > Settings > Privacy and security > App passwords)"; continue; fi ;;
       wifi_harden) [ -n "$(wifi_iface 2>/dev/null)" ] || continue ;;
       # 0.52.0: they need ADSB Exchange's feed, which a fresh card gets from menu 1; the UUID came back with step 4
-      adsbx_stats) is_adsbx || { later="$later\n  sudo zenithboard adsbx-stats on      (after ADSB Exchange: menu 1 ADSB)"; continue; } ;;
+      adsbx_stats) is_adsbx || { later="$later\n  sudo zenithboard adsbx-stats on      (after ADSB Exchange: menu 1 ADS-B → 1 Decoder and networks)"; continue; } ;;
       graphs) [ ! -f "$b/graphs-xml.tar.gz" ] || { install -d -m 700 "$BK_PENDING"; install -m 600 "$b/graphs-xml.tar.gz" "$BK_PENDING/graphs-xml.tar.gz"; } ;;
     esac
     # shellcheck disable=SC2046
     if "$BK_CMD" $(bk_feature_cmd "$feat") > "$st/out" 2>&1; then echo "  $(bk_feature_label "$feat"): on"
     else failed="$failed\n  sudo zenithboard $(bk_feature_cmd "$feat")      # $(tail -1 "$st/out")"; fi
   done
+  # 0.54.3: the settings come back with TAILSCALE=1, the program and its sign-in do not
+  if [ "$(cfg_get TAILSCALE 0)" = 1 ] && declare -F ts_installed >/dev/null && ! ts_installed; then
+    later="$later\n  sudo zenithboard tailscale on        (Tailscale is not on this card: it installs and signs in to your own account again)"
+  fi
   ! declare -F graphs_look_keep >/dev/null || graphs_look_keep         # the look and the wall's colour of the backup
   if [ -f "$BK_PENDING/graphs-xml.tar.gz" ]; then
     if is_graphs; then bk_pending_apply graphs | sed 's/^ *//; s/^/  /'
-    else later="$later\n  graphs1090's history waits for graphs1090: it comes back by itself with  sudo zenithboard graphs on  (after menu 2)"; fi
+    else later="$later\n  graphs1090's history waits for graphs1090: it comes back by itself with  sudo zenithboard graphs on  (after ADS-B: menu 1 ADS-B → 1 Decoder and networks, then tick graphs1090)"; fi
   fi
   rm -rf "$st"
   echo

@@ -64,7 +64,7 @@ start_here() {
   fi
   # 2 · ADS-B
   if [ -z "$(installed_decoder)" ] || ! is_adsbx; then
-    wt_msg "ADS-B first: the decoder that reads the dongle, and ADSB Exchange (always fed: it runs the one MLAT client). On the next screens tick the other networks you want: FlightAware, Flightradar24, Plane Finder. Their installers are theirs and ask their own questions in the terminal (a station name, an e-mail, a key): the screen tells you what to answer.\n\nA backup restored a moment ago gave each network its identity back: they find it by themselves." 16 || return 0
+    wt_msg "ADS-B first: the decoder that reads the dongle, and ADSB Exchange (always fed: it runs the one MLAT client; MLAT locates aircraft that send no position, by comparing when several receivers heard them). On the next screens tick the other networks you want: FlightAware, Flightradar24, Plane Finder. Their installers are theirs and ask their own questions in the terminal (a station name, an e-mail, a key): the screen tells you what to answer.\n\nA backup restored a moment ago gave each network its identity back: they find it by themselves." 16 || return 0
     adsb_menu
     [ -n "$(installed_decoder)" ] || { wt_msg "No decoder is installed, so the rest waits: the wall and the console need one.\n\nCome back to Start here when the line above it says why (usually no internet)." 11; return 0; }
   fi
