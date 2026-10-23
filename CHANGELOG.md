@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.54.2
+The last two *medium* findings of the 22-23 October audit, both in the first hour of a new card.
+- **The console's first steps no longer open on an empty reading.** Right after *Start here* the Pi had never been read by the console's helper, and the steps said *no decoder*, *nobody yet*, every network *not installed* and every watchdog off, sending the novice back to the terminal for something that was there. The page now waits for the first reading (25 seconds at most, then it opens on what it has) before the first screen.
+- **ADSB Exchange's own boxes: a screen with what to type.** Their installer asks the position again (it takes no default) and refuses an altitude that is not whole metres or feet with the unit glued to the number: `180m`, not `180`, not `180 m`, without saying why. ZenithBoard's note before it printed `180 m` (the very form the box refuses) and their full-screen dialogs drew over it anyway. It is now a screen of its own, kept until OK, with the name rule, the latitude and longitude already set, and the altitude in the form their box takes (rounded to whole metres). Shown in a plain list when there is no screen.
 ## 0.54.1
 From the 22-23 October audit: claims in the docs and in the tests that were not true, corrected, with no change on the Pi.
 - **`tests/test_versions.sh` now checks what the docs said it checked.** *Testing* and *Release process* said it fails when the version numbers drift; it only checked that the number had the shape x.y.z. It now compares `lib/versions.sh` with the wall server's `VERSION`, `docs/wiki/Home.md` and `docs/wiki/Project-status.md`.

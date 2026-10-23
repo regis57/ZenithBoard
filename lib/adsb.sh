@@ -113,12 +113,21 @@ remove_decoder() {
 }
 
 # ------------------------------------------------------------------ feeders
+# 0.54.2: what to type into ADSB Exchange's own boxes, which ask the position again (they take no default) and refuse an
+# altitude that is not whole metres or feet with the unit glued to it: "180m", not "180" and not "180 m" (the old line
+# here printed "180 m", the very form their box refuses, and a dialog drew over it anyway)
+adsbx_answers() {
+  local alt; alt=$(awk -v a="$(cfg_get ALT_M 0)" 'BEGIN { printf "%.0f", a }')
+  printf 'Its boxes ask, in this order:\n  - a name for its MLAT map (a short word of your own, not 0)\n  - latitude:   %s\n  - longitude:  %s\n  - altitude:   %sm   (the unit glued to the number: not %s, not %s m)\n\nThese are the values already set on this Pi.' \
+    "$(cfg_get LAT)" "$(cfg_get LON)" "$alt" "$alt" "$alt"
+}
 install_adsbx() {
   log "Installing ADSB Exchange feeder (mandatory base layer, owns the single MLAT client)"
   echo "    The ADSB Exchange script will now ask for a station name and your position."
-  echo "    Latitude/longitude: $(cfg_get LAT) / $(cfg_get LON)   Altitude: $(cfg_get ALT_M 0) m"
   local ax; ax=$(zb_tmp axfeed.sh) || return 1
   fetch "$ADSBX_FEED_URL" "$ax" || return 1
+  if [ -t 0 ] && command -v whiptail >/dev/null 2>&1; then wt_msg "$(adsbx_answers)" 15      # a screen they cannot draw over, kept until OK
+  else adsbx_answers | sed 's/^/    /'; echo; fi
   bash "$ax"
 }
 remove_adsbx() {
