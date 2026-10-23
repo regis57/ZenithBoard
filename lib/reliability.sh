@@ -182,7 +182,7 @@ health_card() {
   [ -n "$disk" ] && bytes=$(lsblk -n -d -b -o SIZE "/dev/$disk" 2>/dev/null | head -1)
   [[ "${bytes:-}" =~ ^[0-9]+$ ]] && card=" (the card: $(gb "$bytes"))"
   if [ "$pct" -ge 90 ]; then
-    echo "Card:         ${pct}% full: $(gb "$used") used of $(gb "$size"), $(gb "$avail") free$card: free some space"
+    echo "Card:         ${pct}% full: $(gb "$used") used of $(gb "$size"), $(gb "$avail") free$card: free some space: the logs (zenithboard logs usage; menu 4 Troubleshoot), the backups in your home folder (zenithboard backup list), graphs1090's history"
   else
     echo "Card:         ${pct}% full: $(gb "$used") used of $(gb "$size"), $(gb "$avail") free$card"
   fi
@@ -208,7 +208,7 @@ health_check() {
     lines=$(journalctl -t zenithboard-netwatch -n 6 --no-pager -o short 2>/dev/null | grep -v '^-- ' || true)
     if [ -n "$lines" ]; then echo "Network watchdog, its last lines:"; sed 's/^/    /' <<<"$lines"; else echo "Network watchdog: has never needed to act (no lines in the logs)"; fi
   fi
-  echo "Saved logs:   $(keeplogs_state) $( [ "$(keeplogs_state)" = on ] || echo '(logs are lost at every restart: turn it on to find the cause of the next freeze)')"
+  echo "Logs kept after a restart (keeplogs): $(keeplogs_state) $( [ "$(keeplogs_state)" = on ] || echo '(the logs are lost at every restart. To find the cause of the next freeze: sudo zenithboard keeplogs on, or menu 4 Troubleshoot, or the console'"'"'s Reliability page)')"
   boots=$(journalctl --list-boots 2>/dev/null | grep -c . || true)
   if [ "${boots:-0}" -ge 2 ]; then
     prev=$(journalctl -b -1 -n 40 --no-pager 2>/dev/null)
@@ -219,7 +219,7 @@ health_check() {
       journalctl -b -1 -n 8 --no-pager 2>/dev/null | zb_mask_ids | sed 's/^/    /'       # 0.52.0: no station's UUID
     fi
   else
-    echo "Previous boot: no earlier boot in the logs"
+    echo "Previous boot: no earlier boot in the logs$( [ "$(keeplogs_state)" = on ] || echo ' (logs kept after a restart are off)')"
   fi
   echo
   echo "Problems seen in the system logs (this boot and the previous one):"
@@ -232,14 +232,14 @@ health_check() {
 reliability_menu() {
   local c
   while true; do
-    c=$(wt_menu "Reliability: what to do when the Pi freezes or loses its network\n\nHardware watchdog: $(watchdog_state)    Network watchdog: $(netwatch_state)    Saved logs: $(keeplogs_state)\n\nAll off until you turn them on; each can be turned off again." \
-      keeplogs "Saved logs (read the cause after a freeze): $(keeplogs_state)" \
+    c=$(wt_menu "Reliability: what to do when the Pi freezes or loses its network\n\nHardware watchdog: $(watchdog_state)    Network watchdog: $(netwatch_state)    Logs kept after a restart: $(keeplogs_state)\n\nAll off until you turn them on; each can be turned off again." \
+      keeplogs "Logs kept after a restart (read the cause after a freeze): $(keeplogs_state)" \
       watchdog "Hardware watchdog (restarts a frozen Pi): $(watchdog_state)" \
       netwatch "Network watchdog (restarts a Pi that lost its network): $(netwatch_state)" \
       back "Return to the previous menu") || return 0
     case "$c" in
       keeplogs)
-        if [ "$(keeplogs_state)" = on ]; then wt_yesno "Saved logs are ON.\n\nTurn them OFF? (after a restart the logs would be lost again)" 10 && { clear; keeplogs_off; read -rp "Press Enter to continue..." _; }
+        if [ "$(keeplogs_state)" = on ]; then wt_yesno "Logs kept after a restart are ON.\n\nTurn them OFF? (after a restart the logs would be lost again)" 10 && { clear; keeplogs_off; read -rp "Press Enter to continue..." _; }
         else wt_yesno "Keep the system logs after a restart?\n\nUp to 50 MB on the card. After a freeze you can read what happened just before it." 11 && { clear; keeplogs_on; read -rp "Press Enter to continue..." _; }; fi ;;
       watchdog)
         if [ "$(watchdog_state)" = on ]; then wt_yesno "The hardware watchdog is ON.\n\nTurn it OFF?" 8 && { clear; watchdog_off; read -rp "Press Enter to continue..." _; }

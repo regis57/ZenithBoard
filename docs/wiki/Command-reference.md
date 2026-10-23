@@ -136,6 +136,7 @@ All three are off until you turn them on. How they decide, and how to read a bad
 |---|---|---|
 | `zenithboard logs` | | The wall's own service, last 100 lines |
 | `zenithboard logs decoder` · `uat` · `social` | | The last 100 lines of that service |
+| `zenithboard logs adsbexchange` · `piaware` · `fr24` · `planefinder` | | The last 100 lines of that feeder's service (0.54.6: a failing feeder had no log to read); one that is not installed says so |
 | `zenithboard logs usage` | | How much space the system logs take |
 | `zenithboard logs review` | | Size, plus the recent warnings |
 | `zenithboard logs limit MB` · `default` | yes | Cap the system logs, 10–2000 MB |
@@ -149,7 +150,7 @@ All three are off until you turn them on. How they decide, and how to read a bad
 | `sudo zenithboard update` | yes | **The normal way to update.** ZenithBoard first — after checking the signature on the new code, see below — then the decoder and the feeders |
 | `zenithboard update quick` | yes | ZenithBoard and the wall only, in seconds: the code is pulled, the wall restarted, the feeders left as they are (no `apt`). The menu's first Update entry since 0.21.0 |
 | `zenithboard update list` | | What is installed, and the names `update only` accepts |
-| `zenithboard update only NAME…` | yes | Just those, e.g. `readsb flightinfo`. Names: `zenithboard readsb dump1090 adsbx piaware fr24 planefinder flightinfo` |
+| `zenithboard update only NAME…` | yes | Just those, e.g. `readsb flightinfo`. Names: `zenithboard readsb dump1090 adsbx piaware fr24 planefinder flightinfo graphs1090` |
 | `zenithboard data update` | yes | Refresh the aircraft-model list now |
 | `zenithboard data status` | | When it was last refreshed |
 | `zenithboard data auto on` · `off` | yes | The monthly refresh (on by default) |

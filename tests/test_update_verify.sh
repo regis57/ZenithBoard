@@ -98,6 +98,19 @@ mk_git "G $NEWK"
 check "once both are recorded: silent"       'out=$(zb_verify_source "$t" origin/main 2>&1); [ -z "$out" ]'
 printf '%s\n' "$KEY" > "$t/var/trust/signer.fpr"
 
+# ---- 0.54.6: a key refused at the first question stops the update there; no second question about "installing anyway"
+mv "$t/var/trust/signer.fpr" "$t/var/trust/signer.fpr.keep"
+mk_git "N "
+zb_trust_setup() { ZB_TRUST_DECLINED=1; return 1; }       # what it does when the answer is no (that needs a terminal)
+out=$(zb_verify_source "$t" origin/main 2>&1); rc=$?
+check "a key refused at the first question stops the update, and says how to start again" '[ "$rc" = 1 ] && grep -q "ZenithBoard was NOT updated" <<<"$out" && grep -q "sudo zenithboard update" <<<"$out"'
+check "and does not ask the second question a novice cannot judge" '! grep -qi "anyway" <<<"$out"'
+zb_trust_setup() { return 1; }                              # gpg missing or GitHub unreachable: not a refusal, the old way
+out=$(zb_verify_source "$t" origin/main 2>&1)
+check "a key that could not be fetched is not called a refusal" '! grep -q "Not trusted, so" <<<"$out"'
+unset -f zb_trust_setup; . lib/update.sh
+mv "$t/var/trust/signer.fpr.keep" "$t/var/trust/signer.fpr"
+
 # ---- the way out, for a fork or your own branch
 cfg_set UPDATE_VERIFY 0
 mk_git "N "
