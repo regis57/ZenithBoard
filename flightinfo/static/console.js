@@ -562,7 +562,7 @@ window.ZBI18N.start({ part: "console" }, function () {
         p.prompt(); p.userChoice.then(function (c) { if (c && c.outcome === "accepted") INSTALL.done = true; draw(); });
       } })));
       body.push(h("ul", { "class": "ticks" },
-        h("li", { "class": ios ? "here" : null, text: t("iPhone or iPad, in Safari: Share → Add to Home Screen. It opens full screen, with its own icon; sign in once more inside it.") }),
+        h("li", { "class": ios ? "here" : null, text: t("iPhone or iPad, in Safari: Share → Add to Home Screen. It opens full screen, with its own icon. A QR code opens in Safari, not in the app: sign in inside it with the console password (choose one first if there is none: sudo zenithboard console password).") }),
         h("li", { "class": android ? "here" : null, text: t("Android, in Chrome: ⋮ → Add to Home screen.") }),
         h("li", { "class": !ios && !android ? "here" : null, text: t("A computer, in Chrome: ⋮ → Cast, save, and share → Install page as app. In Edge: ⋯ → Apps → Install this site as an app. In Safari on a Mac: File → Add to Dock.") })));
       if (!window.isSecureContext) body.push(h("p", { "class": "note", text: t("The Install button that browsers show by themselves needs an https address; this Pi answers in plain http on your home network, so their menu does it instead. Same console, same password.") }));
@@ -726,7 +726,7 @@ window.ZBI18N.start({ part: "console" }, function () {
             h("button", { type: "button", "class": "btn", text: t("First steps again"), onclick: function () { S.openWizard(); } })),
           h("p", { "class": "note", text: t("ZenithBoard {version} runs here. The release notes: ", { version: S.session.version || "" }) }, h("a", { href: "https://github.com/regis57/ZenithBoard/releases", target: "_blank", rel: "noopener noreferrer", text: t("GitHub ↗") }))
         ], "w6"),
-        card(t("Backup"), "out", t("One file with the settings, the features that are on, the statistics, what was posted, graphs1090's history and the kept logs: to keep, or to start a new card where this one stopped."), [
+        card(t("Backup"), "out", t("One file with the settings, the features that are on, the statistics, what was posted, graphs1090's history and the kept logs: to keep. It leaves the networks' identities out, so it is not the one to move to a new card."), [
           h("div", { "class": "actions" }, btn(t("Make a backup"), "backup", {}, "primary"),
             S.backup ? h("a", { "class": "btn", href: "/console/api/backup", download: "", text: t("Download it") }) : null,
             S.backup ? btn(t("Delete it"), "backup-delete", {}, "danger") : null),
@@ -1034,7 +1034,7 @@ window.ZBI18N.start({ part: "console" }, function () {
         h("header", null, h("h2", { text: t("Pair a phone") }), h("button", { type: "button", "class": "ghost", "aria-label": t("Close"), text: "×", onclick: stop })),
         h("div", { "class": "modal-body" }, local ? h("p", { "class": "err", text: t("This page was opened as {host}: a phone cannot reach that. Open the console at the Pi's address to pair one.", { host: location.hostname }) }) : null,
           box, count, status,
-          h("p", { "class": "qr-note", text: t("It works once, within five minutes. The phone then stays signed in as long as it opens the console once a month. Add it to the home screen from Safari's Share menu to open it in one tap.") }))));
+          h("p", { "class": "qr-note", text: t("It works once, within five minutes. The phone then stays signed in as long as it opens the console once a month.") }))));
       var timer = setInterval(tickPair, 1000), poll = setInterval(checkPair, 2000);
       function tickPair() {
         var left = Math.max(0, Math.round((until - Date.now()) / 1000));

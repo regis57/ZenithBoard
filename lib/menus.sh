@@ -59,7 +59,7 @@ main_menu() {
 start_here() {
   wt_msg "The first installation, step by step:\n\n  1. A backup from another card, if you have one\n  2. ADS-B: the decoder, ADSB Exchange, and the other networks you want\n  3. The wall, for the tablet\n  4. What is worth switching on: a list, all ticked, untick at will\n  5. The web console: you finish in your browser\n\nA step already done is skipped. Each one can be done again later from its own menu." 18 || return 0
   # 1 · a backup
-  if [ -z "$(installed_decoder)" ] && wt_yesno "Are you moving from another card, with a ZenithBoard backup file?\n\n(Made on the old card with: menu 6 Backup, or  sudo zenithboard backup make)" 10; then
+  if [ -z "$(installed_decoder)" ] && wt_yesno "Are you moving from another card, with a ZenithBoard backup file?\n\n(Made on the old card with: menu 6 Backup, or  sudo zenithboard backup make. The console's copy leaves the networks' identities out: it is not the one to move with.)" 12; then
     start_restore || return 0
   fi
   # 2 · ADS-B

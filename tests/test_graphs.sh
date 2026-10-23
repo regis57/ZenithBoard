@@ -125,6 +125,7 @@ check "original: page and settings as they were"       'cmp -s "$t/index.before"
 rm -f "$L/usr/share/graphs1090/html/index.html"
 check "look: refused when graphs1090 is not there"     '! look graphs_look zenithboard >/dev/null 2>&1'
 check "look: kept after graphs1090 is updated or the colour changes" 'grep -q "graphs_look_keep" lib/graphs.sh && grep -q "graphs_look_keep" bin/zenithboard'
+check "look: update quick keeps it too (0.53.8: the wall's step left graphs1090's copy of the catalogues behind)" 'sed -n "/if want_c flightinfo/,/^  fi/p" lib/update.sh | grep -q "graphs_look_keep"'
 check "look: graphs1090 sources its settings after its colour schemes (the hook this relies on)" 'grep -q "colorscheme" lib/graphs.sh'
 
 [ "$fail" = 0 ] && echo "ALL OK"; exit "$fail"

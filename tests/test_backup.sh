@@ -84,6 +84,12 @@ echo fedcba9876543210fedcba9876543210 > "$t/machine-id"
 mkdir -p "$t/data/stats"; printf '%s\n1761100000,12,120,7,8\n' "$STATS_HEADER" > "$t/data/stats/stats.csv"
 
 check "restore: anything but RESTORE changes nothing" 'echo no | backup_restore "$t/full.tar.gz" >/dev/null 2>&1; [ "$(cfg_get RADIUS)" = 5 ] && [ ! -e "$t/data/stats/seen-2026-10-20" ]'
+# 0.53.8: the console's copy holds no network identity: on a card with no network yet it is said before the typed word,
+# and a full backup is not told that
+out=$(echo no | backup_restore "$t/console/out/backup.tar.gz" 2>&1)
+check "restore: the console's copy on a bare card says it is not the one to move with" 'echo "$out" | grep -q "This is the console.s copy: it holds no network identity" && echo "$out" | grep -q "backup make" && [ "$(cfg_get RADIUS)" = 5 ]'
+out=$(echo no | backup_restore "$t/full.tar.gz" 2>&1)
+check "restore: a full backup is not warned"          '! echo "$out" | grep -q "console.s copy"'
 zb_apply_location() { echo "$*" > "$t/location.applied"; }      # 0.44.0: the position goes everywhere it is stored
 out=$(echo RESTORE | backup_restore "$t/full.tar.gz" 2>&1)
 check "restore: the position applied everywhere, not only imported" '[ "$(cat "$t/location.applied" 2>/dev/null)" = "49.1193 6.1757 180" ]'

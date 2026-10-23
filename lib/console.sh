@@ -208,10 +208,13 @@ console_state_lines() {
 
 # 0.47.0: the language of the web pages (the console, the statistics, graphs1090's page) for every browser that has
 # not chosen its own with the flag at the top. Empty until chosen: the console then asks at its first visit.
+# 0.53.8: the menu named 14 of the 21 languages (the seven added since 0.48.0 were missing, though `console lang pl` took
+# them). Arabic is written in Latin letters here: whiptail does not shape or reverse Arabic, which would come out broken.
+CONSOLE_LANG_NAMES="en:English fr:Français de:Deutsch nl:Nederlands it:Italiano es:Español pt-BR:Português_(Brasil) pl:Polski fi:Suomi et:Eesti lv:Latviešu lt:Lietuvių id:Bahasa_Indonesia sw:Kiswahili ru:Русский uk:Українська ar:Arabic ja:日本語 ko:한국어 zh-Hans:简体中文 zh-Hant:繁體中文"
 console_lang_menu() {
-  local c args=() names="en:English fr:Français de:Deutsch nl:Nederlands it:Italiano es:Español pt-BR:Português_(Brasil) id:Bahasa_Indonesia ru:Русский uk:Українська ja:日本語 ko:한국어 zh-Hans:简体中文 zh-Hant:繁體中文" n
+  local c args=() n
   for c in $(zb_langs); do
-    for n in $names; do [ "${n%%:*}" = "$c" ] && args+=("$c" "${n#*:}"); done
+    for n in $CONSOLE_LANG_NAMES; do [ "${n%%:*}" = "$c" ] && args+=("$c" "${n#*:}"); done
   done
   args=("${args[@]//_/ }")
   c=$(wt_menu "Language of the web pages (the console, the statistics, graphs1090's page) for every browser that has not chosen its own with the flag at the top. This menu and what the Pi prints stay in English.\n\nNow: $(cfg_get CONSOLE_LANG en)" "${args[@]}" back "Return to the previous menu") || return 0
