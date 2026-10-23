@@ -8,6 +8,7 @@
   - Polish's distinct aircraft as a plural on the statistics page.
 
   Each one keeps the English's placeholders and tags.
+- **A test that failed depending on the time.** The check that a post never shows the distance looked for "6.2", which a Finnish or Indonesian post made at 06:2x contains ("klo 06.26"). It now looks for that number alone.
 
 ## 0.53.4
 - **The reviewers' corrections in 20 languages** (sheets sent by the owner, 23 October 2026). 149 corrections were taken after a `--dry` check against the English. Among them:
