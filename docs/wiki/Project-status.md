@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **22 October 2026**, version **0.54.0**.
+Last updated: **22 October 2026**, version **0.54.1**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -44,7 +44,7 @@ Treat these as likely-working rather than known-working, and please report what 
 | 978 MHz UAT (United States) | No US hardware has run it |
 | Fixed IP address | The `nmcli` calls are tested; a real address change was not run. Keep a keyboard and screen at hand |
 | The farthest aircraft named on `/stats` | Written in 0.22.0 and run against the real server with a made-up decoder; the real sky, the real route answers and the thread's cost on a Pi 3 are still to be seen |
-| A fresh install from the README | `install.sh` has been run end to end in a container against a scripted whiptail and stand-ins (0.21.1, `tests/test_install.sh`): flags, wizard, every menu, the deployed wall answering, the uninstall. A blank card on a real Pi has not been done |
+| A fresh install from the README | `install.sh` has been run end to end in a container against a scripted whiptail and stand-ins (0.21.1, `tests/test_install.sh`): flags, wizard, every menu it can reach. Not by that test: the deployed wall answering (`curl` is a stand-in there; the server has its own tests) and the uninstall (a source check only; corrected 0.54.1, it was credited with both). A blank card on a real Pi has not been done |
 | graphs1090 (0.32.0, optional) | Its author's installer was read in full and `on`/`off` tested against stand-ins; never run on a Pi |
 | The summaries posted by the service (0.33.0–0.38.0) | `weekly test` ran on the Pi; the first scheduled one went out on 21 October 2026 (daily, 09:20), post 1 only, its lists left out by the rule fixed in 0.40.4. The daily and thirty-day summaries and the queue shared by all of them (0.38.0) are tested with a simulated clock only. The first weekly post is due on Sunday 25 October 19:00 if switched on; the airline lists cover a whole week from 1 November |
 | Posts 2 to 4 and the page's lists with real data over weeks | Cargo by callsign prefix (40 operators checked against published sources), military by database mark and address block, countries by ICAO address block: checked on made-up and tar1090-db data; a month of the real sky is still to come |

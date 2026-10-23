@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.54.1
+From the 22-23 October audit: claims in the docs and in the tests that were not true, corrected, with no change on the Pi.
+- **`tests/test_versions.sh` now checks what the docs said it checked.** *Testing* and *Release process* said it fails when the version numbers drift; it only checked that the number had the shape x.y.z. It now compares `lib/versions.sh` with the wall server's `VERSION`, `docs/wiki/Home.md` and `docs/wiki/Project-status.md`.
+- **A menu-size check that was upside down.** *No menu has more than seven entries* had a stray `!`, so it passed only because the main menu broke the rule it states. Fixed: the main menu (Start here, seven subjects, Exit) is set apart, every other menu is held to seven entries and its way out.
+- **Project-status** credited `tests/test_install.sh` with the deployed wall answering and the uninstall; it does neither (`curl` is a stand-in there, the uninstall is a source check). Said as it is.
+- **Web console, troubleshooting**: Tailscale is *refused by design* said a line that 0.46.0 made false; it is refused until `sudo zenithboard tailscale console on`.
 ## 0.54.0
 From the 22-23 October audit, the one finding that touches the rule *the receiver's position is never given away*:
 - **The wall's data answers only to the Pi's own names.** The wall checked where a request came from, not the name it was addressed by. A page on another site that points its own name at the Pi (*DNS rebinding*) is read by a browser on your home network, comes from a private address, and could ask `/api/planes`: the aircraft's positions and distances, from which the antenna's position follows. `/api/*` and `/social/preview*` now answer to an address, a local name (`*.local`, `*.lan`, `*.home.arpa`…), the Pi's own name, your `DDNS_HOST`, or a name listed in `CONSOLE_HOSTS` (the console's rule), and give anything else a 403 that says how to add a name. The tablet by the Pi's address, `127.0.0.1` (the statistics timer), `localhost`, `zenithboard.local` and a request with no Host header (not a browser) are unchanged. **If you open the wall by a name your router gives the Pi (`pi.fritz.box`), add it once:** `sudo zenithboard config-set CONSOLE_HOSTS pi.fritz.box`. Not asked at all when `ALLOW_FROM=any`: then any name is meant to reach it.

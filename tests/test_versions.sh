@@ -16,4 +16,9 @@ check "FlightAware repo package is flightaware-apt-repository_<version>_all.deb"
 check "the old piaware-repository name is gone from the pinned URL" '[[ "$FA_REPO_URL" != *piaware-repository* ]]'
 check "Plane Finder packages match their pinned versions" '[[ "$PF_URL_ARMHF" == *"_${PF_VERSION_ARMHF}_armhf.deb" && "$PF_URL_ARM64" == *"_${PF_VERSION_ARM64}_arm64.deb" ]]'
 check "ZenithBoard version looks like x.y.z" '[[ "$ZB_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]'
+# 0.54.1: the docs said this test fails when the version numbers drift; it only checked the shape. The places CLAUDE.md
+# step 3 names must now say the same version as lib/versions.sh.
+check "the wall server says the same version"        '[ "$(sed -n "s/^VERSION = \"\(.*\)\"$/\1/p" "$HERE/flightinfo/server.py")" = "$ZB_VERSION" ]'
+check "the wiki's home page says the same version"   'grep -q "^Current version: \*\*$ZB_VERSION\*\*" "$HERE/docs/wiki/Home.md"'
+check "Project-status says the same version"         'grep -q "version \*\*$ZB_VERSION\*\*" "$HERE/docs/wiki/Project-status.md"'
 exit "$fail"
