@@ -88,6 +88,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 25 October 2026, 13:51 CET | **The hands-off clock starts** (the owner): the reference Pi on 0.99.0, left alone from now. Two weeks on 8 November, four on 22 November. The same minute, CodeQL's two notes on the tests (a file read without `with`, in `tests/test_server.py`) fixed in the tests alone: nothing for the Pi, the clock goes on |
 | 25 October 2026, 13:42 | **Feature freeze** (the owner): 0.99.0, the release candidate for 1.0, the same code as 0.55.2; fixes only from now on, features wait for 1.1. The hands-off weeks start when the reference Pi runs 0.99.0 and is left alone: their start date goes here |
 | 25 October 2026, 13:31 | What 1.0 takes, reviewed with the owner: graphs1090, the farthest aircraft and the daily and weekly summaries seen on the Pi; UAT marked experimental, outside 1.0; a feature freeze (0.99.x) before the hands-off weeks; earliest late November. [Roadmap](Roadmap#what-10-takes) |
 | 25 October 2026, 13:10 | The owner's screenshot of *Sharing → Summaries*: links to posts 2 to 4, none to post 1 (*All summaries* runs the terminal's test). 0.55.2 links post 1, from a picture of its own |
