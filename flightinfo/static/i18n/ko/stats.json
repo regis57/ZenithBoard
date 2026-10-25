@@ -11,6 +11,7 @@
  "30 days": "30일",
  "Loading…": "불러오는 중…",
  "Statistics are off. They cost about 30 KB a day on the card and are collected every 15 minutes once you turn them on:": "통계가 꺼져 있습니다. 켜면 15분마다 수집되며 SD 카드에서 하루 약 30KB를 사용합니다. 켜는 명령:",
+ "Or in the web console: Receiver → Statistics. Or in the menu: 7 Options → 1 Statistics.": "또는 웹 콘솔에서: 수신기 → 통계. 또는 메뉴에서: 7 Options → 1 Statistics.",
  "Then come back here. <a>The wall</a>.": "그런 다음 이 페이지로 돌아오세요. <a>전광판</a>.",
  "Statistics are on, but there is no sample yet: the first one comes on the next quarter hour. <a>The wall</a>.": "통계가 켜져 있지만 아직 샘플이 없습니다. 첫 샘플은 다음 15분 주기에 수집됩니다. <a>전광판</a>.",
  "Aircraft": "항공기",

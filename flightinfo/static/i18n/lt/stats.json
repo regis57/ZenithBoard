@@ -11,6 +11,7 @@
  "30 days": "30 dienų",
  "Loading…": "Įkeliama…",
  "Statistics are off. They cost about 30 KB a day on the card and are collected every 15 minutes once you turn them on:": "Statistika išjungta. Ji užima apie 30 KB kortelėje per dieną; ją įjungus, duomenys renkami kas 15 minučių:",
+ "Or in the web console: Receiver → Statistics. Or in the menu: 7 Options → 1 Statistics.": "Arba žiniatinklio konsolėje: Imtuvas → Statistika. Arba meniu: 7 Options → 1 Statistics.",
  "Then come back here. <a>The wall</a>.": "Tada grįžkite čia. <a>Švieslentė</a>.",
  "Statistics are on, but there is no sample yet: the first one comes on the next quarter hour. <a>The wall</a>.": "Statistika įjungta, bet matavimų dar nėra: pirmasis bus atliktas prasidėjus kitam valandos ketvirčiui. <a>Švieslentė</a>.",
  "Aircraft": "Orlaiviai",

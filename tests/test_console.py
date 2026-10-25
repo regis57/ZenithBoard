@@ -93,6 +93,9 @@ class ActionsTest(unittest.TestCase):
         self.assertEqual(actions.build("adsbx-stats", {"value": "off"}), ["adsbx-stats", "off"])
         self.assertEqual(set(), {"long", "ask"} - set(actions.flags("adsbx-stats")))
         self.assertEqual(actions.catalog()["adsbx-stats"]["section"], "receiver")
+        # 0.54.15: the gain log switched on in the console is read there too, as a read
+        self.assertEqual(actions.build("gain-log-show", {}), ["gain", "log", "show"])
+        self.assertIn("read", actions.flags("gain-log-show"))
         # 0.54.8: switching sharing or the picture on may install Node or Pillow first, longer than the five minutes
         self.assertIn("long", actions.flags("social"))
         self.assertIn("long", actions.flags("social-look"))
@@ -281,6 +284,24 @@ class SessionsTest(TempDirs):
         self.assertIsNotNone(s.get(tok))
         rec["seen"] -= console.PAIRED_IDLE_S + 1
         self.assertIsNone(s.get(tok))
+
+    def test_a_lost_phone_takes_what_it_signed_in(self):
+        # 0.54.15 (the audit of 22-23 October 2026): signing out a lost phone left the computers it said yes to, and the
+        # phones paired with codes it made, signed in
+        s = console.Sessions()
+        mac, rm = s.create("password", "Mac")
+        phone, rp = s.create("paired", "iPhone")
+        pc, rpc = s.create("approved", "Windows", by=rp["id"])
+        tab, rt = s.create("paired", "iPad", by=rpc["id"])           # and one that one signed in in turn
+        self.assertEqual(s.revoke(sid=rp["id"]), 3)
+        self.assertIsNone(s.get(phone)); self.assertIsNone(s.get(pc)); self.assertIsNone(s.get(tab))
+        self.assertIsNotNone(s.get(mac), "the others stay")
+
+    def test_the_signer_is_noted_through_a_pairing_and_a_yes(self):
+        c = console.Console()
+        tok, link = c.pairs.make("iPhone ab12cd34")
+        self.assertEqual(c.pairs.redeem(tok, "iPad"), "iPhone ab12cd34")
+        self.assertFalse(c.pairs.redeem(tok, "iPad"), "once")
 
     def test_revoke_the_others(self):
         s = console.Sessions()

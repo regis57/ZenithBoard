@@ -11,6 +11,7 @@
  "30 days": "30 يومًا",
  "Loading…": "جارٍ التحميل…",
  "Statistics are off. They cost about 30 KB a day on the card and are collected every 15 minutes once you turn them on:": "الإحصاءات معطّلة. تشغل نحو 30 كيلوبايت يوميًا على بطاقة الذاكرة، وتُجمع كل 15 دقيقة بعد تفعيلها:",
+ "Or in the web console: Receiver → Statistics. Or in the menu: 7 Options → 1 Statistics.": "أو في وحدة التحكم على الويب: الاستقبال ← الإحصاءات. أو في القائمة: 7 Options → 1 Statistics.",
  "Then come back here. <a>The wall</a>.": "ثم عُد إلى هنا. <a>اللوحة</a>.",
  "Statistics are on, but there is no sample yet: the first one comes on the next quarter hour. <a>The wall</a>.": "الإحصاءات مفعّلة، لكن لا توجد عيّنة بعد: تصل الأولى عند تمام ربع الساعة التالي. <a>اللوحة</a>.",
  "Aircraft": "الطائرات",

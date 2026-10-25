@@ -11,6 +11,7 @@
  "30 days": "30 天",
  "Loading…": "加载中…",
  "Statistics are off. They cost about 30 KB a day on the card and are collected every 15 minutes once you turn them on:": "统计已关闭。开启后每 15 分钟采集一次，每天在 SD 卡上约占用 30 KB。开启命令：",
+ "Or in the web console: Receiver → Statistics. Or in the menu: 7 Options → 1 Statistics.": "或在网页控制台：接收机 → 统计。或在菜单中：7 Options → 1 Statistics。",
  "Then come back here. <a>The wall</a>.": "然后回到此页面。<a>显示墙</a>。",
  "Statistics are on, but there is no sample yet: the first one comes on the next quarter hour. <a>The wall</a>.": "统计已开启，但还没有采样：第一次采样将在下一个 15 分钟整点进行。<a>显示墙</a>。",
  "Aircraft": "飞机",

@@ -11,6 +11,7 @@
  "30 days": "30 дней",
  "Loading…": "Загрузка…",
  "Statistics are off. They cost about 30 KB a day on the card and are collected every 15 minutes once you turn them on:": "Статистика выключена. Она занимает около 30 КБ в сутки на SD-карте; после включения данные собираются каждые 15 минут:",
+ "Or in the web console: Receiver → Statistics. Or in the menu: 7 Options → 1 Statistics.": "Или в веб-консоли: Приёмник → Статистика. Или в меню: 7 Options → 1 Statistics.",
  "Then come back here. <a>The wall</a>.": "Затем вернитесь сюда. <a>Табло</a>.",
  "Statistics are on, but there is no sample yet: the first one comes on the next quarter hour. <a>The wall</a>.": "Статистика включена, но замеров ещё нет: первый появится в течение 15 минут. <a>Табло</a>.",
  "Aircraft": "Воздушные суда",

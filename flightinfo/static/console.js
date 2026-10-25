@@ -665,7 +665,7 @@ window.ZBI18N.start({ part: "console" }, function () {
           f.svc_adsbexchange_feed !== undefined || f.adsbx_stats === "on" ? row(t("ADSB Exchange stats"), t("Their map of only your aircraft, from anywhere, and Feed Details on their page. The Pi sends them the aircraft it hears every 5 seconds."),
             [sw("adsbx-stats", f.adsbx_stats === "on"), adsbxMap() ? h("a", { href: adsbxMap(), target: "_blank", rel: "noopener noreferrer", text: t("Open ↗") }) : null]) : null,
           row(t("Gain"), t("Check it first; then one step at a time"), [btn(t("Check"), "gain-check"), btn(t("− Down"), "gain-step", { value: "down" }, "btn", { key: "gain-step" }), btn(t("Up +"), "gain-step", { value: "up" }, "btn", { key: "gain-step" })]),
-          row(t("Gain log, 24 hours"), t("One measurement every 15 minutes, as a table"), sw("gain-log", on(c.GAINLOG)))
+          row(t("Gain log, 24 hours"), t("One measurement every 15 minutes, as a table"), [sw("gain-log", on(c.GAINLOG)), on(c.GAINLOG) ? btn(t("Read it"), "gain-log-show") : null])
         ], "w6"),
         card(t("Look at it"), "terminal", null, h("div", { "class": "actions" },
           btn(t("Status"), "status"), btn(t("Statistics in the terminal"), "stats-show"), btn(t("Unknown callsigns and types"), "stats-gaps"), btn(t("One MLAT client only"), "mlat-guard")), "w12")
@@ -1170,8 +1170,8 @@ window.ZBI18N.start({ part: "console" }, function () {
     var c = S.cfg, f = S.facts, out = [];
     if (!(Number(c.LAT) || Number(c.LON))) out.push(t("The antenna's position is not set"));
     if (!f.decoder) out.push(t("No decoder yet: sudo zenithboard menu → 1 ADS-B → 1 Decoder and networks"));
-    if (!on(c.STATS)) out.push(t("Statistics are off"));
-    if (f.watchdog !== "on" || f.netwatch !== "on") out.push(t("The watchdogs are not both on"));
+    // 0.54.15: statistics and the watchdogs are choices, shown on the overview, not missing steps (a Pi without
+    // /dev/watchdog could never finish setting up)
     return out;
   }
   function wizard() {

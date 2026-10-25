@@ -11,6 +11,7 @@
  "30 days": "30 天",
  "Loading…": "載入中…",
  "Statistics are off. They cost about 30 KB a day on the card and are collected every 15 minutes once you turn them on:": "統計已關閉。開啟後每 15 分鐘收集一次，每天約佔用記憶卡 30 KB。開啟方式：",
+ "Or in the web console: Receiver → Statistics. Or in the menu: 7 Options → 1 Statistics.": "或在網頁主控台：接收器 → 統計。或在選單中：7 Options → 1 Statistics。",
  "Then come back here. <a>The wall</a>.": "然後再回到這裡。<a>看板</a>。",
  "Statistics are on, but there is no sample yet: the first one comes on the next quarter hour. <a>The wall</a>.": "統計已開啟，但尚無取樣資料：第一筆會在下一個 15 分鐘整點產生。<a>看板</a>。",
  "Aircraft": "飛機",

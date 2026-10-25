@@ -11,6 +11,7 @@
  "30 days": "30 jours",
  "Loading…": "Chargement…",
  "Statistics are off. They cost about 30 KB a day on the card and are collected every 15 minutes once you turn them on:": "Les statistiques sont désactivées. Elles occupent environ 30 Ko par jour sur la carte et sont relevées toutes les 15 minutes une fois activées :",
+ "Or in the web console: Receiver → Statistics. Or in the menu: 7 Options → 1 Statistics.": "Ou dans la console web : Récepteur → Statistiques. Ou dans le menu : 7 Options → 1 Statistics.",
  "Then come back here. <a>The wall</a>.": "Puis revenez ici. <a>Le mur</a>.",
  "Statistics are on, but there is no sample yet: the first one comes on the next quarter hour. <a>The wall</a>.": "Les statistiques sont activées, mais il n'y a pas encore de relevé : le premier arrive au prochain quart d'heure. <a>Le mur</a>.",
  "Aircraft": "Avions",

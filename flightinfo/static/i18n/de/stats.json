@@ -11,6 +11,7 @@
  "30 days": "30 Tage",
  "Loading…": "Wird geladen…",
  "Statistics are off. They cost about 30 KB a day on the card and are collected every 15 minutes once you turn them on:": "Die Statistik ist ausgeschaltet. Sie belegt etwa 30 KB pro Tag auf der SD-Karte und wird nach dem Einschalten alle 15 Minuten erfasst:",
+ "Or in the web console: Receiver → Statistics. Or in the menu: 7 Options → 1 Statistics.": "Oder in der Web-Konsole: Empfänger → Statistik. Oder im Menü: 7 Options → 1 Statistics.",
  "Then come back here. <a>The wall</a>.": "Kommen Sie dann hierher zurück. <a>Die Tafel</a>.",
  "Statistics are on, but there is no sample yet: the first one comes on the next quarter hour. <a>The wall</a>.": "Die Statistik ist eingeschaltet, aber es gibt noch keine Messung: Die erste folgt zur nächsten Viertelstunde. <a>Die Tafel</a>.",
  "Aircraft": "Flugzeuge",

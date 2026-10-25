@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **25 October 2026**, version **0.54.14**.
+Last updated: **25 October 2026**, version **0.54.15**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -66,8 +66,7 @@ The audit (build, tests, security, novice journeys, translations) ran on 0.53.3.
 
 **Before starting a batch:** read the CHANGELOG from 0.54.7 up, `git log`, and the open pull requests; then grep each item below in the code. Line numbers are those of 0.53.3 and have moved; an item already fixed is crossed out of this list in the same pull request that fixes the rest. The owner's standing instruction (23 October 2026): do the low-severity findings batch by batch, novice journeys first, merge each through the squash merge, report once per batch.
 
-**Batch 1: the console's words**: shipped in 0.54.8. Left, optional (a majority of the reviewers against):
-- the *Finish setting up* card counting stats off and no watchdog as gaps (`console.js` ~1135); the off `/stats` page offering only the SSH command (`stats.html` ~30); the gear panel pointing at `zenithboard config` (`index.html` ~38).
+**Batch 1: the console's words**: shipped in 0.54.8; its optional findings, and two more of the console's (a lost phone's sign-outs, the gain log read in the console), in 0.54.15 (lot A, the owner's choice of 25 October 2026).
 
 **Batch 2: the Bluesky menu and wizard**: shipped in 0.54.9. Left, optional:
 - changing only the app password replays the two wizards (`social.sh` ~123); `stats on` announces `/stats` with no wall installed (`stats.sh` ~48); the log selectors offer *978 MHz UAT* and *Bluesky posts* on a Pi without them: `logs uat` and `logs social` say *not installed* (`menus.sh` ~273).
