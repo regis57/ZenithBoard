@@ -57,12 +57,12 @@ keeplogs_off() {
 netwatch_state() { [ "$(cfg_get NETWATCH 0)" = 1 ] && echo on || echo off; }
 netwatch_install_units() {
   [ -f "$ZB_HOME/systemd/$NETWATCH_UNIT.service" ] || return 0
-  install -m 644 "$ZB_HOME/systemd/$NETWATCH_UNIT.service" "$ZB_HOME/systemd/$NETWATCH_UNIT.timer" /etc/systemd/system/
+  install -m 644 "$ZB_HOME/systemd/$NETWATCH_UNIT.service" "$ZB_HOME/systemd/$NETWATCH_UNIT.timer" "${ZB_UNIT_DIR}"/
   systemctl daemon-reload; systemctl enable --now "$NETWATCH_UNIT.timer" >/dev/null 2>&1 || true
 }
 netwatch_remove_units() {
   systemctl disable --now "$NETWATCH_UNIT.timer" >/dev/null 2>&1 || true
-  rm -f "/etc/systemd/system/$NETWATCH_UNIT.service" "/etc/systemd/system/$NETWATCH_UNIT.timer"; systemctl daemon-reload 2>/dev/null || true
+  rm -f "${ZB_UNIT_DIR}/$NETWATCH_UNIT.service" "${ZB_UNIT_DIR}/$NETWATCH_UNIT.timer"; systemctl daemon-reload 2>/dev/null || true
 }
 netwatch_on()  { cfg_set NETWATCH 1; netwatch_install_units; echo "Network watchdog is ON: every 2 minutes the Pi checks it can reach your router. After about 6 minutes of failure it restarts the network; after about 12 it restarts the Pi (never more than once every 3 hours)."; }
 netwatch_off() { cfg_set NETWATCH 0; netwatch_remove_units; rm -f "$NETWATCH_FAILS"; echo "Network watchdog is OFF."; }

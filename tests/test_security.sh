@@ -8,7 +8,7 @@ set -u
 cd "$(dirname "$0")/.." || exit 1
 t=$(mktemp -d); trap 'rm -rf "$t"' EXIT
 export ZENITHBOARD_ETC="$t/etc"; mkdir -p "$ZENITHBOARD_ETC" "$t/bin" "$t/apt" "$t/units"; touch "$ZENITHBOARD_ETC/config.env"
-export ZB_SKIP_SERVICES=1 ZB_APT_CONF_DIR="$t/apt" T="$t"
+export ZB_SKIP_SERVICES=1 ZB_APT_CONF_DIR="$t/apt" T="$t" ZB_SYSTEMD_DIR="$t/units"
 cat > "$t/bin/ss" <<'S'
 #!/bin/bash
 cat "$T/ss.out"
@@ -52,10 +52,11 @@ touch "$t/grafana-installed"; echo 200 > "$t/grafana-code"
 printf 'passwordauthentication yes\nport 22\n' > "$t/sshd.out"
 # as ss prints it on a Pi: every service twice (IPv4 and IPv6), the feeders' MLAT returns, FR24's page, one stranger
 printf 'LISTEN 0 128 0.0.0.0:8080 0.0.0.0:*\nLISTEN 0 128 [::]:8080 [::]:*\nLISTEN 0 128 0.0.0.0:22 0.0.0.0:*\nLISTEN 0 128 [::]:22 [::]:*\nLISTEN 0 128 0.0.0.0:3000 0.0.0.0:*\nLISTEN 0 128 0.0.0.0:30005 0.0.0.0:*\nLISTEN 0 128 0.0.0.0:30104 0.0.0.0:*\nLISTEN 0 128 0.0.0.0:30154 0.0.0.0:*\nLISTEN 0 128 0.0.0.0:31003 0.0.0.0:*\nLISTEN 0 128 0.0.0.0:8754 0.0.0.0:*\nLISTEN 0 128 0.0.0.0:8504 0.0.0.0:*\nLISTEN 0 128 127.0.0.1:5000 0.0.0.0:*\nLISTEN 0 128 [::1]:5001 [::]:*\nLISTEN 0 128 0.0.0.0:9000 0.0.0.0:*\n' > "$t/ss.out"
-echo "zenithboard-ddns.service 9.4" > "$t/scores"
+# 0.54.13: the real sec_units, on a folder of units (it used to be replaced by a copy, so the console's exclusion and
+# the "no service" branch never ran). The console runs as root by design (0.39.0): its score is not a warning.
+printf 'zenithboard-ddns.service 9.4\nzenithboard-console.service 9.6\n' > "$t/scores"
+touch "$t/units/zenithboard-flightinfo.service" "$t/units/zenithboard-ddns.service" "$t/units/zenithboard-console.service"
 mkdir -p "$t/etc"; echo tok > "$DDNS_CURL"; chmod 644 "$DDNS_CURL"
-# the units the Pi has installed: sec_units reads /etc/systemd/system, which a test cannot write, so it is wrapped
-sec_units() { local u s bad="" n=0; for u in zenithboard-flightinfo.service zenithboard-ddns.service; do n=$((n+1)); s=$(systemd-analyze security --no-pager "$u" | sed -n 's/.*Overall exposure level for .*: \([0-9.]*\).*/\1/p'); awk -v s="$s" 'BEGIN{exit !(s>6.5)}' && bad="$bad ${u%.service}($s)"; done; if [ -z "$bad" ]; then sec_line OK "All $n ZenithBoard services run inside a sandbox (systemd-analyze security)"; else sec_line WARN "Service(s) outside the sandbox:$bad (an old unit file?)" "sudo zenithboard update"; fi; }
 
 out=$(security_check); r=$?
 check "open Pi: exit status 1"                          '[ $r -eq 1 ]'
@@ -71,6 +72,7 @@ check "ports: each port once, not once per address family" '[ "$(printf "%s" "$o
 check "ports: SkyAware's second port is FlightAware's map"  'line OK "8504(skyaware)" && ! line INFO "8504"'
 check "ports: MLAT returns, feed ports and FR24 page are the feeders" 'line OK "30104(decoder/feeder)" && line OK "30154(decoder/feeder)" && line OK "31003(decoder/feeder)" && line OK "8754(decoder/feeder)" && ! line INFO "30104"'
 check "old unit outside the sandbox: WARN, fix is update" 'line WARN "zenithboard-ddns(9.4)" && printf "%s" "$out" | grep -q "zenithboard update"'
+check "the console's root helper is not counted as outside (0.54.13)" '! printf "%s" "$out" | grep -q "zenithboard-console("'
 check "ddns key readable by others: WARN with chmod"     'line WARN "ddns.curl is mode 644" && printf "%s" "$out" | grep -q "chmod 600"'
 check "count of things to look at"                       'printf "%s" "$out" | grep -q "^7 thing"'
 
@@ -100,4 +102,9 @@ out=$(PATH="$t/bin:/usr/bin:/bin" security_check)
 check "no grafana: OK, nothing left"                     'line OK "No ACARS or Grafana left"'
 check "no sshd: INFO"                                    'line INFO "No SSH server"'
 
+# 0.54.13: the branches the copy never ran
+rm -f "$t/units"/*.service
+check "no unit installed yet: said as INFO"              'sec_units | grep -q "No ZenithBoard service installed yet"'
+cfg_set CONSOLE 1; export CONSOLE_ENV="$t/console.env"; echo h > "$CONSOLE_ENV"; chmod 644 "$CONSOLE_ENV"
+check "a console.env readable by others: WARN, with the fix" 'sec_console | grep -q "WARN.*console.env is .* mode 644" && sec_console | grep -q "chmod 640"'
 [ "$fail" = 0 ] && echo "ALL OK" || { echo "SOME FAILED"; exit 1; }

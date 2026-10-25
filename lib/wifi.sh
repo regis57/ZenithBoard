@@ -115,12 +115,12 @@ wifi_apply() {
 
 wifi_install_unit() {
   [ -f "$ZB_HOME/systemd/$WIFI_UNIT.service" ] || return 0
-  install -m 644 "$ZB_HOME/systemd/$WIFI_UNIT.service" /etc/systemd/system/
+  install -m 644 "$ZB_HOME/systemd/$WIFI_UNIT.service" "${ZB_UNIT_DIR}"/
   systemctl daemon-reload; systemctl enable "$WIFI_UNIT" >/dev/null 2>&1 || true
 }
 wifi_remove_unit() {   # the saved networks and the radio state are left alone on purpose
   systemctl disable "$WIFI_UNIT" >/dev/null 2>&1 || true
-  rm -f "/etc/systemd/system/$WIFI_UNIT.service"; systemctl daemon-reload 2>/dev/null || true
+  rm -f "${ZB_UNIT_DIR}/$WIFI_UNIT.service"; systemctl daemon-reload 2>/dev/null || true
 }
 
 # ------------------------------------------------------------------ saved networks (NetworkManager profile files)

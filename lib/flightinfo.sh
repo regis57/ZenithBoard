@@ -5,7 +5,7 @@
 # Monthly aircraft-type data refresh (model names for the silhouettes). The timer follows AUTO_DATA_REFRESH.
 data_refresh_apply() {
   if [ "$(cfg_get AUTO_DATA_REFRESH 1)" = 1 ]; then
-    install -m 644 "$ZB_HOME/systemd/zenithboard-data-refresh.service" "$ZB_HOME/systemd/zenithboard-data-refresh.timer" /etc/systemd/system/
+    install -m 644 "$ZB_HOME/systemd/zenithboard-data-refresh.service" "$ZB_HOME/systemd/zenithboard-data-refresh.timer" "${ZB_UNIT_DIR}"/
     systemctl daemon-reload; systemctl enable --now zenithboard-data-refresh.timer >/dev/null 2>&1 || warn "could not enable the monthly refresh timer"
   else
     systemctl disable --now zenithboard-data-refresh.timer >/dev/null 2>&1 || true
@@ -26,7 +26,7 @@ deploy_files() {
     # ingester (acars/) and acarsdec's launcher (bin/run-acarsdec) its services start, until `acars remove`:
     # an update never stops a service its owner kept (0.30.1)
     local keep=""
-    if [ -f /etc/systemd/system/zenithboard-acars-ingest.service ] || [ -f /etc/systemd/system/zenithboard-acarsdec.service ]; then
+    if [ -f "${ZB_UNIT_DIR}"/zenithboard-acars-ingest.service ] || [ -f "${ZB_UNIT_DIR}"/zenithboard-acarsdec.service ]; then
       keep=$(mktemp -d)
       [ -d "$ZB_HOME/acars" ] && cp -a "$ZB_HOME/acars" "$keep/"
       [ -f "$ZB_HOME/bin/run-acarsdec" ] && cp -a "$ZB_HOME/bin/run-acarsdec" "$keep/"
@@ -53,7 +53,7 @@ install_flightinfo() {
   log "Installing FlightInfo"
   apt_install python3 || return 1
   ensure_zb_user; deploy_files
-  install -m 644 "$ZB_HOME/systemd/zenithboard-flightinfo.service" /etc/systemd/system/
+  install -m 644 "$ZB_HOME/systemd/zenithboard-flightinfo.service" "${ZB_UNIT_DIR}"/
   systemctl daemon-reload
   systemctl enable zenithboard-flightinfo; systemctl restart zenithboard-flightinfo
   data_refresh_apply
@@ -65,7 +65,7 @@ remove_flightinfo() {
   log "Removing FlightInfo"
   systemctl disable --now zenithboard-flightinfo 2>/dev/null || true
   systemctl disable --now zenithboard-data-refresh.timer 2>/dev/null || true
-  rm -f /etc/systemd/system/zenithboard-flightinfo.service /etc/systemd/system/zenithboard-data-refresh.service /etc/systemd/system/zenithboard-data-refresh.timer
+  rm -f "${ZB_UNIT_DIR}"/zenithboard-flightinfo.service "${ZB_UNIT_DIR}"/zenithboard-data-refresh.service "${ZB_UNIT_DIR}"/zenithboard-data-refresh.timer
   systemctl daemon-reload
 }
 

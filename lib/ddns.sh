@@ -96,12 +96,12 @@ ddns_update() {
 }
 ddns_install_units() {
   [ -f "$ZB_HOME/systemd/$DDNS_UNIT.service" ] || return 0
-  install -m 644 "$ZB_HOME/systemd/$DDNS_UNIT.service" "$ZB_HOME/systemd/$DDNS_UNIT.timer" /etc/systemd/system/
+  install -m 644 "$ZB_HOME/systemd/$DDNS_UNIT.service" "$ZB_HOME/systemd/$DDNS_UNIT.timer" "${ZB_UNIT_DIR}"/
   systemctl daemon-reload; systemctl enable --now "$DDNS_UNIT.timer" >/dev/null 2>&1 || true
 }
 ddns_remove_units() {
   systemctl disable --now "$DDNS_UNIT.timer" >/dev/null 2>&1 || true
-  rm -f "/etc/systemd/system/$DDNS_UNIT.service" "/etc/systemd/system/$DDNS_UNIT.timer"; systemctl daemon-reload 2>/dev/null || true
+  rm -f "${ZB_UNIT_DIR}/$DDNS_UNIT.service" "${ZB_UNIT_DIR}/$DDNS_UNIT.timer"; systemctl daemon-reload 2>/dev/null || true
 }
 # ddns_set PROVIDER HOST USER SECRET : validates, stores, starts the 5-minute timer, does a first update (prints the result line)
 ddns_set() {

@@ -55,7 +55,7 @@ gain_set 49.6 >/dev/null 2>&1 || true
 export ZB_X=1; cfg_set DECODER readsb
 gain_set 49.6 > "$t/out" 2>&1
 check "49.6 in RECEIVER_OPTIONS"  'grep -q "^RECEIVER_OPTIONS=\"--gain 49.6 --device serial00000978 --device-type rtlsdr\"" "$r"'
-check "old --gain=auto,... removed" '[ "$(grep -o -e "--gain" "$r" | wc -l)" = 1 ] || grep -c -e "--gain" "$r" | grep -q "^2$"'
+check "old --gain=auto,... removed: one --gain left, in RECEIVER_OPTIONS (0.54.13: the check took one or two)" '[ "$(grep "^RECEIVER_OPTIONS=" "$r" | grep -o -e "--gain" | wc -l)" = 1 ] && ! grep "^DECODER_OPTIONS=" "$r" | grep -q -e "--gain"'
 check "serial and other lines kept" 'grep -q "serial00000978" "$r" && grep -q "^JSON_DIR=/run/readsb" "$r" && grep -q "^ENABLED=yes" "$r"'
 check "no trailing space before the quote" '! grep -q " \"$" "$r"'
 gain_set 30 >/dev/null 2>&1

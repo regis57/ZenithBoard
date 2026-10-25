@@ -20,6 +20,29 @@ RUNNER = os.path.join(HERE, "..", "tools", "console_run.py")
 
 
 class ActionsTest(unittest.TestCase):
+    def test_every_action_names_a_command_the_command_line_knows(self):
+        # 0.54.13 (the audit of 22-23 October 2026): the dispatcher of bin/zenithboard is never run by a test, so a renamed
+        # case label would leave a console button answering "Usage:" with every suite green. Each action's first word must
+        # be a label of its top level, and a literal second word a label further down.
+        import re
+        with open(os.path.join(HERE, "..", "bin", "zenithboard"), encoding="utf-8") as fh:
+            src = fh.read()
+        top, anywhere = set(), set()
+        for m in re.finditer(r"^  ([a-z0-9|-]+)\)", src, re.M):
+            top |= set(m.group(1).split("|"))
+        for m in re.finditer(r'^\s+([a-z0-9|"*-]+)\)', src, re.M):
+            anywhere |= set(m.group(1).replace('"', "").split("|"))
+        n = 0
+        for name, spec in actions.ACTIONS.items():
+            argv = spec[2]
+            if argv is None:          # done by the page itself, no command
+                continue
+            n += 1
+            self.assertIn(argv[0], top, name)
+            if len(argv) > 1 and not argv[1].startswith("{"):
+                self.assertIn(argv[1], anywhere, name)
+        self.assertGreater(n, 50)
+
     def test_build_gives_the_argument_list(self):
         self.assertEqual(actions.build("units", {"value": "imperial"}), ["units", "imperial"])
         self.assertEqual(actions.build("localdb", {"value": "on"}), ["data", "localdb", "on"])
@@ -185,6 +208,54 @@ class TempDirs(unittest.TestCase):
         console.STATE_DIR, console.SPOOL_DIR, console.OUT_DIR = os.path.join(d, "state"), os.path.join(d, "state", "spool"), os.path.join(d, "out")
         console._env_cache.update(mtime=None, data={})
         self.dir = d
+
+
+class HttpMountTest(TempDirs):
+    """0.54.13 (the audit of 22-23 October 2026): every console test called Console.handle directly; this one goes through
+    the wall's real HTTP server, its body limit, its method check, the cookie it sets and the backup it streams."""
+
+    def test_through_the_wall_server(self):
+        import http.client, threading
+        import server
+        cfgpath = os.path.join(self.root, "config.env")
+        with open(cfgpath, "w") as fh:
+            fh.write("CONSOLE=1\nALLOW_FROM=private\n")
+        saved = {"CONFIG_FILE": server.CONFIG_FILE, "_CONSOLE": server._CONSOLE}
+        self.addCleanup(lambda: [setattr(server, k, v) for k, v in saved.items()])
+        self.addCleanup(setattr, console, "BACKUP", console.BACKUP)
+        server.CONFIG_FILE = cfgpath
+        server._cfg_cache.update(mtime=None)
+        server._CONSOLE = console.Console()
+        console.BACKUP = os.path.join(self.dir, "out", "backup.tar.gz")
+        with open(console.BACKUP, "wb") as fh:
+            fh.write(b"\x1f\x8b fake backup" * 100)
+        httpd = server.WallServer(("127.0.0.1", 0), server.Handler)
+        port = httpd.server_address[1]
+        threading.Thread(target=httpd.serve_forever, daemon=True).start()
+        self.addCleanup(httpd.server_close)
+        self.addCleanup(httpd.shutdown)
+
+        def call(method, path, body=None, headers=None, raw=None):
+            c = http.client.HTTPConnection("127.0.0.1", port, timeout=10)
+            hd = {"Content-Type": "application/json"}
+            hd.update(headers or {})
+            data = raw if raw is not None else (json.dumps(body).encode() if body is not None else None)
+            c.request(method, path, body=data, headers=hd)
+            r = c.getresponse(); out = r.read(); c.close()
+            return r.status, dict(r.getheaders()), out
+        st, hd, _ = call("POST", "/console/api/login", {"password": "a long password"})
+        self.assertEqual(st, 200)
+        self.assertIn("HttpOnly", hd["Set-Cookie"])
+        self.assertIn("SameSite=Strict", hd["Set-Cookie"])
+        tok = hd["Set-Cookie"].split(";")[0].split("=", 1)[1]
+        self.assertEqual(call("POST", "/console/api/login", raw=b"x" * (console.MAX_BODY + 1))[0], 413)
+        self.assertEqual(call("POST", "/api/planes", {})[0], 405)
+        st, hd, out = call("GET", "/console/api/backup", headers={"Cookie": "zbc=" + tok})
+        self.assertEqual(st, 200)
+        self.assertEqual(out, b"\x1f\x8b fake backup" * 100)
+        self.assertIn("attachment", hd["Content-Disposition"])
+        self.assertIn("-console.tar.gz", hd["Content-Disposition"])
+        self.assertEqual(call("GET", "/console/api/backup")[0], 401, "no backup without a sign-in")
 
 
 class SessionsTest(TempDirs):

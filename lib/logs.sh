@@ -46,13 +46,13 @@ logs_auto_run() { journalctl --vacuum-time=7d >/dev/null 2>&1; }
 logs_auto_on() {
   cfg_set LOG_AUTOCLEAN 1
   [ -f "$ZB_HOME/systemd/$LOGS_UNIT.service" ] || return 0
-  install -m 644 "$ZB_HOME/systemd/$LOGS_UNIT.service" "$ZB_HOME/systemd/$LOGS_UNIT.timer" /etc/systemd/system/
+  install -m 644 "$ZB_HOME/systemd/$LOGS_UNIT.service" "$ZB_HOME/systemd/$LOGS_UNIT.timer" "${ZB_UNIT_DIR}"/
   systemctl daemon-reload; systemctl enable --now "$LOGS_UNIT.timer" >/dev/null 2>&1 || true
 }
 logs_auto_off() {
   cfg_set LOG_AUTOCLEAN 0
   systemctl disable --now "$LOGS_UNIT.timer" >/dev/null 2>&1 || true
-  rm -f "/etc/systemd/system/$LOGS_UNIT.service" "/etc/systemd/system/$LOGS_UNIT.timer"; systemctl daemon-reload 2>/dev/null || true
+  rm -f "${ZB_UNIT_DIR}/$LOGS_UNIT.service" "${ZB_UNIT_DIR}/$LOGS_UNIT.timer"; systemctl daemon-reload 2>/dev/null || true
 }
 logs_auto_state() { [ "$(cfg_get LOG_AUTOCLEAN 0)" = 1 ] && echo "ON (every day, keeps the last 7 days)" || echo "OFF"; }
 

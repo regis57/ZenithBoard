@@ -79,7 +79,7 @@ class H(http.server.BaseHTTPRequestHandler):
     def log_message(self, *a): pass
 http.server.HTTPServer(("127.0.0.1", int(sys.argv[1])), H).serve_forever()
 PY
-srv=$!; sleep 1
+srv=$!; for _ in $(seq 50); do (exec 3<>"/dev/tcp/127.0.0.1/$port") 2>/dev/null && break; sleep 0.1; done   # 0.54.13: until it listens, 5 s at most, not a fixed sleep
 stats_gaps_sample 2026-10-18; stats_gaps_sample 2026-10-18
 kill $srv 2>/dev/null
 check "gaps: each aircraft once, by prefix and by type" '[ "$(sort "$STATS_DIR/gaps-2026-10-18" | tr "\t" " ")" = "$(printf "airline BGA aaa001\nairline BGA aaa003\nshape A21N aaa002\nshape A21N aaa003")" ]'

@@ -9,6 +9,9 @@ cd "$(dirname "$0")/.." || exit 1
 t=$(mktemp -d); trap 'rm -rf "$t"' EXIT
 export ZENITHBOARD_ETC="$t/etc"; mkdir -p "$ZENITHBOARD_ETC" "$t/bin" "$t/sysd" "$t/state"; touch "$ZENITHBOARD_ETC/config.env"
 export ZB_SKIP_SERVICES=1 ZB_SYSTEMD_DIR="$t/sysd" ZENITHBOARD_SOCIAL_DIR="$t/state/social"
+# 0.54.13: the Python side reads its own paths; without these, on the Pi, `social.py check` below would have used the
+# real account and signed in to Bluesky from a test
+export ZENITHBOARD_CONFIG="$ZENITHBOARD_ETC/config.env" ZENITHBOARD_SOCIAL_SECRETS="$ZENITHBOARD_ETC/social.env" ZENITHBOARD_SOCIAL_TEMPLATES="$ZENITHBOARD_ETC/social-templates.txt"
 printf '#!/bin/bash\necho "systemctl $*" >> "%s/systemctl.log"\n' "$t" > "$t/bin/systemctl"
 printf '#!/bin/bash\nexit 0\n' > "$t/bin/node"                      # "node is installed"
 printf '#!/bin/bash\necho "apt $*" >> "%s/apt.log"\n' "$t" > "$t/bin/apt-get"
@@ -196,9 +199,9 @@ echo remove | social_remove >/dev/null
 check "remove: secrets and state gone"             '[ ! -f "$SOCIAL_SECRETS" ] && [ -z "$(social_account)" ] && [ ! -d "$ZENITHBOARD_SOCIAL_DIR" ]'
 
 # ---- node is installed on demand
-rm -f "$t/bin/node"; hash -r
-PATH="$t/bin:/usr/bin:/bin" social_need_node >/dev/null 2>&1 || true   # no node anywhere on that PATH
-[ -f "$t/apt.log" ] || { printf '#!/bin/bash\nexit 0\n' > "$t/bin/node"; chmod +x "$t/bin/node"; }
+# 0.54.13: node is hidden from `command -v` itself; a PATH without /opt only worked where node was not in /usr/bin (the
+# Pi has it there, so the test failed on the very machine it is about)
+( command() { [ "$*" = "-v node" ] && return 1; builtin command "$@"; }; social_need_node >/dev/null 2>&1 ) || true
 check "node missing: apt is asked for nodejs"      'grep -q "install -y nodejs" "$t/apt.log"'
 printf '#!/bin/bash\nexit 0\n' > "$t/bin/node"; chmod +x "$t/bin/node"
 printf '#!/bin/bash\n[ "$1" = -c ] && exit 1\nexec /usr/bin/python3 "$@"\n' > "$t/bin/python3"; chmod +x "$t/bin/python3"; hash -r

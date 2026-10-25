@@ -53,6 +53,10 @@ check "and it signs everyone out (an epoch)"          'grep -q "^CONSOLE_EPOCH=\
 check "never in config.env"                           '! grep -q "CONSOLE_PASSWORD" "$ZENITHBOARD_ETC/config.env"'
 h=$(console_secret_get CONSOLE_PASSWORD_HASH)
 check "the wall's side accepts it"                    'python3 -c "import sys; sys.path.insert(0, \"flightinfo\"); import console; sys.exit(0 if console.check_password(\"a long password\", sys.argv[1]) else 1)" "$h"'
+# 0.54.13: signout was never run by a test: it keeps the password and moves the epoch forward
+sed -i 's/^CONSOLE_EPOCH=.*/CONSOLE_EPOCH="1000"/' "$CONSOLE_ENV"
+out=$(console_signout)
+check "signout: the password kept, the epoch moved forward" '[ "$(console_secret_get CONSOLE_PASSWORD_HASH)" = "$h" ] && [ "$(console_secret_get CONSOLE_EPOCH)" -gt 1000 ] && [ "$(stat -c %a "$CONSOLE_ENV")" = 640 ]'
 
 touch "$t/nowall"; out=$(console_on); rc=$?; rm -f "$t/nowall"
 check "on: refused before the wall, said why (0.43.0)" '[ "$rc" = 1 ] && echo "$out" | grep -q "install it first" && [ "$(cfg_get CONSOLE 0)" = 0 ]'
@@ -69,6 +73,10 @@ check "pair: a code's hash and its end for the wall"  'read -r hh until < "$t/co
 tok=$(printf "%s" "$out" | sed -n "s/.*#pair=\([A-Za-z0-9_-]*\).*/\1/p" | head -1)
 check "pair: the link carries the code, its hash is the one kept" '[ -n "$tok" ] && [ "$(printf "%s" "$tok" | sha256sum | cut -d" " -f1)" = "$(cut -d" " -f1 "$t/console/out/pair")" ]'
 check "pair: says how to see the QR code without qrencode" 'command -v qrencode >/dev/null || printf "%s" "$out" | grep -q "apt install qrencode"'
+# 0.54.13: the check above is empty where qrencode is installed; a stand-in that prints a marker covers that side
+printf '#!/bin/bash\necho QR-DRAWN "$@"\n' > "$t/bin/qrencode"; chmod +x "$t/bin/qrencode"; hash -r
+out=$(PATH="$t/bin:$PATH" console_pair)
+check "pair: with qrencode, the QR code is drawn from the link" 'printf "%s" "$out" | grep -q "QR-DRAWN.*#pair="'
 
 out=$(console_state_lines 2>/dev/null)
 check "state: KEY=value lines for the overview"       'printf "%s\n" "$out" | grep -q "^version=$ZB_VERSION$" && printf "%s\n" "$out" | grep -q "^watchdog=\(on\|off\)$" && ! printf "%s\n" "$out" | grep -qv "^[a-z0-9_]*="'

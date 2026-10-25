@@ -140,7 +140,8 @@ http.server.HTTPServer(("127.0.0.1", port), H).serve_forever()
 PY
 rec() { printf '{"day":"%s","time":"14:32","hex":"406a1b","flight":"EZY1234","km":%s,"near":{"name":"Charleroi","country":"BE","km":51},"route":%s,"pending":%s}' "$1" "$2" "$3" "$4"; }
 route='{"from":{"city":"Edinburgh","iata":"EDI"},"to":{"city":"Saint-Louis","iata":"BSL"}}'
-wall() { printf '[%s]' "$1" > "$t/answers.json"; rm -f "$t/answers.json.asked"; python3 "$t/wall.py" "$port" "$t/answers.json" & srv=$!; sleep 0.7; }
+wall() { printf '[%s]' "$1" > "$t/answers.json"; rm -f "$t/answers.json.asked"; python3 "$t/wall.py" "$port" "$t/answers.json" & srv=$!
+  for _ in $(seq 50); do (exec 3<>"/dev/tcp/127.0.0.1/$port") 2>/dev/null && break; sleep 0.1; done; }   # 0.54.13: until it listens, not a fixed sleep (a bare connection asks nothing of it)
 export ZB_FARTHEST_WAIT=0.2
 wall "{\"enabled\":true,\"days\":[$(rec "$today" 318.4 null '["route"]')]},{\"enabled\":true,\"days\":[$(rec "$today" 318.4 "$route" '[]')]}"
 stats_farthest_sample; kill $srv 2>/dev/null; wait $srv 2>/dev/null
