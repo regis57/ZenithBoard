@@ -277,7 +277,9 @@ class Sessions(object):
         signing that one out takes these too (0.54.15)."""
         token = secrets.token_urlsafe(32)
         t = now()
-        rec = {"id": secrets.token_hex(4), "kind": kind, "label": label, "created": t, "seen": t,
+        # 0.54.17 (the audit of 22-23 October 2026): with the Pi's clock behind the last "sign everyone out" (a boot
+        # before the network gave it the time), a new sign-in was older than it and died at the next request
+        rec = {"id": secrets.token_hex(4), "kind": kind, "label": label, "created": max(t, epoch()), "seen": t,
                "csrf": secrets.token_urlsafe(24)}
         if by:
             rec["by"] = by

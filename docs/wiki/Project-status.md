@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **25 October 2026**, version **0.54.16**.
+Last updated: **25 October 2026**, version **0.54.17**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -74,8 +74,7 @@ The audit (build, tests, security, novice journeys, translations) ran on 0.53.3.
 
 **Batch 4: the wall**: shipped in 0.54.11.
 
-**Batch 5: robustness and the tools**: shipped in 0.54.12. Left, optional:
-- `console pair` installing `qrencode` on demand (`console.sh` ~143); a clock behind `CONSOLE_EPOCH` killing a new session (`console.py` ~272).
+**Batch 5: robustness and the tools**: shipped in 0.54.12; its optional findings, with the Bluesky service waiting for the clock, in 0.54.17 (lot C).
 
 **Batch 6: the tests**: shipped in 0.54.13 and 0.54.14. Nothing left.
 

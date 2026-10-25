@@ -136,6 +136,12 @@ console_pair() {
   printf '%s %s\n' "$(printf '%s' "$tok" | sha256sum | cut -d' ' -f1)" "$(( $(date +%s) + CONSOLE_PAIR_S ))" > "$CONSOLE_DIR/out/pair"
   chown "root:$ZB_USER" "$CONSOLE_DIR/out/pair" 2>/dev/null || true; chmod 640 "$CONSOLE_DIR/out/pair"
   url="$(console_url)/#pair=$tok"
+  # 0.54.17 (the audit of 22-23 October 2026): a QR code was promised and, without qrencode, a long link was printed to
+  # type; the small package is fetched the first time (the link stays below it either way)
+  if ! command -v qrencode >/dev/null 2>&1 && [ "$(id -u)" -eq 0 ]; then
+    echo "Installing qrencode, once, to draw the QR code here..."
+    apt_install qrencode >/dev/null 2>&1 || true
+  fi
   echo "Scan this with the phone's camera within $((CONSOLE_PAIR_S / 60)) minutes; it works once:"
   if command -v qrencode >/dev/null 2>&1; then
     echo; qrencode -t ANSIUTF8 -m 2 "$url"; echo
