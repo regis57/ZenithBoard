@@ -459,7 +459,7 @@ In the United States many general-aviation aircraft transmit on **978 MHz (UAT)*
 * **What gets installed:** FlightAware's `dump978-fa` and `skyaware978` (from the FlightAware package repository). UAT aircraft are written to `/run/skyaware978/aircraft.json`; the **wall merges them with the 1090 MHz aircraft** (an aircraft heard on both appears once). If PiAware is installed it is pointed at the 978 MHz receiver as well (check your FlightAware stats page).
 * **Check it:** `sudo zenithboard status` shows the 978 MHz service and how many aircraft it hears; `sudo zenithboard logs uat` shows its log.
 * **Not shared with other feeders:** ADSB Exchange, Flightradar24 and Plane Finder keep receiving 1090 MHz only. The tar1090 map does not show UAT unless you add the `skyaware978` instance yourself ([tar1090 documentation](https://github.com/wiedehopf/tar1090#978-uat-support)).
-* **Honest status:** this part was written from the dump978-fa / tar1090 documentation **without a 978 MHz setup to test it on** (the author lives in Europe). The tests cover the dongle configuration, the region logic and the merge of the two aircraft lists, not the radio. If something does not work on your Pi, please open an issue with `zenithboard status` and `zenithboard logs uat`.
+* **Honest status: experimental, outside 1.0.** This part was written from the dump978-fa / tar1090 documentation **without a 978 MHz setup to test it on** (the author lives in Europe). The tests cover the dongle configuration, the region logic and the merge of the two aircraft lists, not the radio. If something does not work on your Pi, please open an issue with `zenithboard status` and `zenithboard logs uat`.
 
 ---
 

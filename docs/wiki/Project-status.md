@@ -43,11 +43,11 @@ Treat these as likely-working rather than known-working, and please report what 
 
 | Part | What is missing |
 |---|---|
-| 978 MHz UAT (United States) | No US hardware has run it |
+| 978 MHz UAT (United States) | No US hardware has run it. **Experimental, outside 1.0** (the owner, 25 October 2026) |
 | Fixed IP address | The `nmcli` calls are tested; a real address change was not run. Keep a keyboard and screen at hand |
-| The farthest aircraft named on `/stats` | Written in 0.22.0 and run against the real server with a made-up decoder; the real sky, the real route answers and the thread's cost on a Pi 3 are still to be seen |
+| The farthest aircraft named on `/stats` | Seen on the real page (*20/10 08:20 · easyJet EZY17QZ · Manchester → Verona · 335 km, near Cergy-Pontoise*, the owner's export of 24 October 2026); the thread's cost on a Pi 3 is not measured on its own |
 | A fresh install from the README | `install.sh` has been run end to end in a container against a scripted whiptail and stand-ins (0.21.1, `tests/test_install.sh`): flags, wizard, every menu it can reach. Not by that test: the deployed wall answering (`curl` is a stand-in there; the server has its own tests) and the uninstall (a source check only; corrected 0.54.1, it was credited with both). A blank card on a real Pi has not been done |
-| graphs1090 | collectd's memory over weeks is not measured |
+| graphs1090 | Running on the reference Pi (its graphs in the owner's exports, 24 October 2026); collectd's memory over weeks is not measured |
 | The summaries posted by the service (0.33.0–0.38.0) | `weekly test` ran on the Pi; the first scheduled one went out on 21 October 2026 (daily, 09:20), post 1 only, its lists left out by the rule fixed in 0.40.4. The daily and thirty-day summaries and the queue shared by all of them (0.38.0) are tested with a simulated clock only. The first weekly post is due on Sunday 25 October 19:00 if switched on; the airline lists cover a whole week from 1 November |
 | Posts 2 to 4 and the page's lists with real data over weeks | Cargo by callsign prefix (40 operators checked against published sources), military by database mark and address block, countries by ICAO address block: checked on made-up and tar1090-db data; a month of the real sky is still to come |
 | The web console | An update run from the page has not been seen on the Pi yet, nor signing a computer in with the phone (0.40.0) |
@@ -88,6 +88,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 25 October 2026, 13:31 | What 1.0 takes, reviewed with the owner: graphs1090, the farthest aircraft and the daily and weekly summaries seen on the Pi; UAT marked experimental, outside 1.0; a feature freeze (0.99.x) before the hands-off weeks; earliest late November. [Roadmap](Roadmap#what-10-takes) |
 | 25 October 2026, 13:10 | The owner's screenshot of *Sharing → Summaries*: links to posts 2 to 4, none to post 1 (*All summaries* runs the terminal's test). 0.55.2 links post 1, from a picture of its own |
 | 25 October 2026, 12:36 | The owner: the registration as a hashtag in every post, to count on Bluesky how often an aircraft crossed, inside the 300 characters, with the hashtags and the custom templates too. 0.55.1 |
 | 25 October 2026, 11:03 (same notes) | **Aviation units** (kt, ft, NM) asked for wherever units are: 0.55.0 adds them as a third choice, on the wall, the posts, the console, the menus and `/stats`, which follows the wall's units for its distances since. **Hindi** for the console: 0.55.0, the pages and the posts, without a native review (the owner's decision; Tamil and Urdu wait for one) |

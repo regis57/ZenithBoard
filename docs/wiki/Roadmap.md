@@ -39,20 +39,39 @@ Two *Later* items are to be built from what the reference Pi measures, not from 
 
 ## What 1.0 takes
 
-1.0 means *validated on real hardware, no caveats in [Project status](Project-status)* ([Release process](Release-process)). Each open caveat ends one way or the other:
+1.0 means *validated on real hardware, no caveats in [Project status](Project-status)* ([Release process](Release-process)). The state of it on **25 October 2026** (0.55.2), reviewed with the owner:
 
-| Caveat today | What lifts it |
+### Lifted
+
+| Caveat | How it was lifted |
 |---|---|
-| ~~Plane Finder never fed~~ | Lifted 20 October 2026: feeding from the reference Pi |
-| graphs1090 never run on a Pi (optional, 0.32.0) | Run on the reference Pi — or marked *optional, not verified*, so it stops being a caveat |
-| The summaries never posted by the service | The first scheduled weekly and monthly posts seen on Bluesky |
+| ~~Plane Finder never fed~~ | Feeding from the reference Pi since 20 October 2026 |
+| ~~graphs1090 never run on a Pi~~ | Running on the reference Pi: its 24-hour and 7-day graphs seen in the owner's exports, 24 October 2026. Only collectd's memory over weeks is still to be watched, which time does by itself |
+| ~~The farthest aircraft named on `/stats`, never seen on the real sky~~ | Seen on the real page: *20/10 08:20 · easyJet EZY17QZ · Manchester → Verona · 335 km, near Cergy-Pontoise* |
+| ~~978 MHz UAT (United States)~~ | **Marked experimental, outside 1.0** (the owner, 25 October 2026): no US receiver has run it. It stays in, documented as such; a US user's report can bring it in later |
+
+### Still open
+
+| Caveat | What lifts it |
+|---|---|
+| The summaries posted by the service | Daily (25 October, 08:45) and weekly (24 October, 08:00) **seen going out**. The **monthly** one is left: due 1 November, 09:00 |
+| Posts 2 to 4 and the page's lists over a real month | The lists began on 20 October: a whole month of them around **20 November** |
 | A fixed IP address never applied for real | `zenithboard net static …` on the reference Pi, then back to DHCP, with a keyboard and screen at hand |
-| 978 MHz UAT (United States) | Run by a US user — or marked *experimental, outside 1.0*, so it stops being a caveat |
+| The web console | An update run from the page, seen on the Pi; a computer signed in by the phone (QR, then yes) |
+| What 0.54.18 to 0.55.2 added | Seen once on the real Pi: the day's aircraft counted every 5 seconds (against FlightAware's count, a whole day after the update), aviation units, the registration's hashtag on a real post, Hindi, the summaries' post 1 link |
 
-And two proofs of stability that no caveat names yet:
+### The two proofs of stability
 
-* **Two to four weeks hands-off**, social sharing on: no crash in `zenithboard logs`, no reboot forced by a watchdog.
-* **A fresh install** on a blank card, following the wiki's [Fresh install](Fresh-install) alone, step by step, **and finished from the web console** (the owner's criterion, 21 October 2026: its checklist ticked line by line; a line that needed anything not written there is a fix to the page and a new try). Everything so far was proven on a Pi upgraded release after release; only a fresh install proves the README. Since 0.21.1 the installer is walked end to end against stand-ins at every change (`tests/test_install.sh`: flags, wizard, menus), which found a handful of small things, fixed in that release; the blank card itself is what remains.
+* **A fresh install** on a blank card, following the wiki's [Fresh install](Fresh-install) alone, step by step, **and finished from the web console** (the owner's criterion, 21 October 2026: its checklist ticked line by line; a line that needed anything not written there is a fix to the page and a new try). The owner's blank card of 25 October 2026 met three such lines (the signing-key question, Bluesky in the wizard, where to find the position), fixed in 0.54.18: **a new try on 0.55.x is what is left**. Since 0.21.1 the installer is also walked end to end against stand-ins at every change (`tests/test_install.sh`).
+* **Two to four weeks hands-off**, social sharing on: no crash in `zenithboard logs`, no reboot forced by a watchdog. This one cannot start while the Pi is updated several times a day: it starts with the freeze.
+
+### The freeze
+
+1.0 needs a **feature freeze** first: a release candidate (**0.99.x**) from which only fixes are made, no new feature, no new setting, no new screen. The hands-off weeks are counted from there; a fix that has to be shipped during them restarts nothing unless it touches what the weeks are proving (the services, the posts, the watchdogs). What is asked during the freeze waits for 1.1.
+
+Swahili and Hindi are published without a native review, said as such in [Translating](Translating): that is not a caveat for 1.0.
+
+**Earliest date:** the monthly summary on 1 November, a month of lists around 20 November, two weeks hands-off after the freeze: **late November or early December 2026**, with the fresh card, the fixed address and the console's update done meanwhile.
 
 ## Next — once the above is proven
 
