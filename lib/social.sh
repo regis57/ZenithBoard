@@ -728,7 +728,7 @@ social_menu() {
           back "Return to the previous menu") || continue
         case "$a" in
           setup) social_setup || true ;;
-          remove) clear; social_remove || true; read -rp "Press Enter to continue..." _ ;;
+          remove) clear; social_remove "" || true; read -rp "Press Enter to continue..." _ ;;
           status) clear; social_status; read -rp "Press Enter to continue..." _ ;;
         esac ;;
       words) social_setup_words && wt_msg "Saved." 7 || true ;;
