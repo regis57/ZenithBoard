@@ -2,7 +2,7 @@
 # shellcheck disable=SC2034
 # shellcheck shell=bash
 # Third-party pins. Bump here when an upstream moves; everything else reads these.
-ZB_VERSION="0.54.11"
+ZB_VERSION="0.54.12"
 
 # FlightAware APT repository package (provides piaware and dump1090-fa). FlightAware renamed it from
 # piaware-repository (9.0.1) to flightaware-apt-repository; see https://www.flightaware.com/adsb/piaware/install
@@ -31,8 +31,10 @@ ADSBX_UNINSTALL="/usr/local/share/adsbexchange/uninstall.sh"
 # 0.52.0: their stats package, optional (lib/adsbxstats.sh); it redirects to github.com/adsbexchange/adsbexchange-stats
 ADSBX_STATS_URL="https://adsbexchange.com/stats.sh"
 
-# Flightradar24
+# Tailscale
 TAILSCALE_PKGS="https://pkgs.tailscale.com/stable"   # 0.45.0: Tailscale's own repository (pkgs.tailscale.com/stable, read 21 October 2026)
+
+# Flightradar24
 FR24_INSTALL_URL="https://repo-feed.flightradar24.com/install_fr24_rpi.sh"
 # FR24 re-signed its apt repository with a new key because Debian 13 (trixie) rejects SHA1 signatures since
 # 2026-02-01. The key is only installed if it has exactly this fingerprint (the one apt reports as "missing").

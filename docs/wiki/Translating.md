@@ -56,12 +56,14 @@ English says is not taken, and the reviewer is told why.
 1. Open your language's sheet (the links above). On GitHub it shows as a table you can search; the **Download raw
    file** button gives the file.
 2. Open it in LibreOffice Calc, Google Sheets or Excel (Excel: *Data → From Text/CSV*, file origin *UTF-8*, so the
-   accents read right). The columns:
+   accents read right), and save it the same way: Excel's *CSV UTF-8*, LibreOffice's *Unicode (UTF-8)* character set.
+   A plain *CSV* from Excel loses every letter outside the computer's own alphabet; `apply` refuses it and says so
+   (0.54.12). The columns:
 
    | Column | What it is |
    |---|---|
    | `id` | The row's number, to talk about it |
-   | `page` | `console`, `stats` or `graphs`; `[plural: one]` / `[plural: other]` for the forms of a count |
+   | `page` | `console`, `stats`, `graphs` or `posts` (the Bluesky posts' words: a `[part]` is left out when a tag inside it is empty, `{tag\|cap}` takes a capital letter); `[plural: one]` / `[plural: other]` / `[plural: many]` for the forms of a count |
    | `where` | The file it comes from |
    | `english` | The reference |
    | `translation` | What the page shows today |

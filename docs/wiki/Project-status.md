@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **25 October 2026**, version **0.54.11**.
+Last updated: **25 October 2026**, version **0.54.12**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -74,16 +74,8 @@ The audit (build, tests, security, novice journeys, translations) ran on 0.53.3.
 
 **Batch 4: the wall**: shipped in 0.54.11.
 
-**Batch 5: robustness and the tools** (terminal, English)
-- `cfg_set` and `cfg_del` copy from `/tmp` with `install`, with no rename and no lock: `config.env` can be cut by a power loss, and two writers can lose a setting (`common.sh` ~43, 51): a temporary file in the same folder, `mv -f`, perhaps `flock`.
-- `flightinfo.sh` ~34 removes `flightinfo`, `lib` and `bin`, then copies without checking: an interrupted `cp` leaves `/opt/zenithboard` empty. At least `|| { err …; return 1; }` with the repair command.
-- `gpg` is not installed in the preamble (`install.sh` ~59): without it `zb_verify_source` says *the commit is not signed*, which is false. Install it, and give that case its own reason.
-- `tools/check-links.sh` ~18 does not watch `GRAPHS1090_INSTALL_URL`, `GITHUB_SIGNING_KEY_URL` and one concrete Tailscale file; `test_versions.sh` should check them for https.
-- `acars remove` returns *Nothing left* before cleaning the `ACARS_*` keys of `config.env` (`legacy.sh` ~29).
-- `health` says nothing of the clock (`lib/reliability.sh`, `timedatectl`); optional `After=time-sync.target` in the social unit.
-- `tools/i18n.py` ~365: a CSV saved by Excel in ANSI crashes `apply` with a `UnicodeDecodeError`: catch it, read as `cp1252` or say so; *CSV UTF-8* in `Translating.md`.
-- Comments that are wrong: *root script* in `zenithboard-stats.service` ~19 (it runs as `zenithboard`), the title *Flightradar24* on the Tailscale line of `versions.sh` ~34, the same in gain-log and wifi.
-- Optional: `console pair` installing `qrencode` on demand (`console.sh` ~143); a clock behind `CONSOLE_EPOCH` killing a new session (`console.py` ~272).
+**Batch 5: robustness and the tools**: shipped in 0.54.12. Left, optional:
+- `console pair` installing `qrencode` on demand (`console.sh` ~143); a clock behind `CONSOLE_EPOCH` killing a new session (`console.py` ~272).
 
 **Batch 6: the tests** (a green suite proves the logic, not the hardware; these make the logic proof wider)
 - *Medium*: `tests/test_security.sh` ~58 redefines `sec_units`, so the console's exclusion, the *no service* branch and the WARN on a readable `console.env` never run (use `ZB_SYSTEMD_DIR`, also in `logs.sh` ~49, `reliability.sh` ~60, `flightinfo.sh` ~8 so that `test_logs_uat.sh` stops writing the real `/etc/systemd/system` when run as root); `zb_apply_location` writes `/etc/default/…` and `/etc/pfclient-config.json` in hard-coded paths (`adsb.sh` ~333): `ZB_DEFAULT_DIR`, `ZB_PF_CONFIG`, then check the dump1090 `sed`, `ALTITUDE "…m"` and Plane Finder's JSON; no test goes through the wall's `_planes` handler (`server.py` ~2008: `SHOW_PHOTOS`, `SHOW_ROUTES`, demo, `hex` filter, `no_data`) nor through a real HTTP request to `/console` (login cookie, 413, 405, backup download); `bin/zenithboard` ~564's dispatcher is never run: a `tests/test_command.sh` replaying the argv of every `ACTIONS` entry as a plain user (the light version checks `argv[0]` against the `case` labels).

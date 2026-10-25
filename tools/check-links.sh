@@ -26,6 +26,9 @@ urls=(
   "$FR24_KEY_URL"
   "$PF_URL_ARMHF"
   "$PF_URL_ARM64"
+  "$GRAPHS1090_INSTALL_URL"
+  "$GITHUB_SIGNING_KEY_URL"
+  "$TAILSCALE_PKGS/debian/bookworm.noarmor.gpg"   # one real file: the folder itself answers nothing
 )
 
 fail=0

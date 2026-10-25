@@ -21,6 +21,11 @@ check() { if eval "$2"; then echo "ok   $1"; else echo "FAIL $1"; fail=1; fi; }
 
 check "a clean Pi: nothing left, no notice"          '[ -z "$(acars_leftovers)" ] && [ -z "$(acars_notice)" ]'
 check "a clean Pi: remove says so"                   'acars_remove | grep -q "Nothing of ACARS"'
+# 0.54.12: settings alone are a leftover too, and remove takes them (it returned "Nothing left" before cleaning them)
+cfg_set ACARS_FREQS "131.525 131.725"
+check "ACARS settings alone are listed"              'acars_leftovers | grep -q "settings ACARS_"'
+echo remove | acars_remove >/dev/null
+check "and removed with the word"                    '[ -z "$(cfg_get ACARS_FREQS "")" ] && [ -z "$(acars_leftovers)" ]'
 touch "$t/grafana" "$t/data/acars.db" "$GRAFANA_PASS_FILE"; cfg_set ACARS_SDR 00000131; cfg_set ACARS_FREQS "131.525"
 check "leftovers listed: package, messages, password" 'acars_leftovers | grep -q "package grafana" && acars_leftovers | grep -q "messages" && acars_leftovers | grep -q "password"'
 check "the notice gives the command"                 'acars_notice | grep -q "sudo zenithboard acars remove"'

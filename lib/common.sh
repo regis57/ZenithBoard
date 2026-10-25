@@ -33,22 +33,30 @@ cfg_get() {  # cfg_get KEY [default]
   printf '%s' "${v:-${2:-}}"
 }
 
-cfg_set() {  # cfg_set KEY VALUE
-  local key="$1" val="$2" tmp
+# The audit of 22-23 October 2026: config.env was rewritten in place from a copy in /tmp, so a power cut in the middle
+# could leave it cut short, and two writers at once could lose one's setting. Now the new file is written beside it,
+# put on the card, and renamed over it in one step, one writer at a time.
+cfg_write() {  # cfg_write KEY [VALUE]: the file without KEY, then KEY=VALUE when a value is given
+  local key="$1" tmp
   mkdir -p "$ZB_ETC"; touch "$ZB_CONFIG"
+  {
+    command -v flock >/dev/null && flock -w 10 9
+    tmp=$(mktemp "${ZB_CONFIG%/*}/.config.env.XXXXXX") || return 1
+    grep -v -E "^$key=" "$ZB_CONFIG" > "$tmp" || true
+    [ $# -lt 2 ] || printf '%s=%s\n' "$key" "$2" >> "$tmp"
+    chmod 644 "$tmp"; sync "$tmp" 2>/dev/null || true
+    mv -f "$tmp" "$ZB_CONFIG"
+  } 9>>"${ZB_CONFIG%/*}/.config.lock"
+}
+cfg_set() {  # cfg_set KEY VALUE
+  local val="$2"
   case "$val" in *[[:space:]]*) val="\"$val\"" ;; esac
-  tmp=$(mktemp)
-  grep -v -E "^$key=" "$ZB_CONFIG" > "$tmp" || true
-  printf '%s=%s\n' "$key" "$val" >> "$tmp"
-  install -m 644 "$tmp" "$ZB_CONFIG"; rm -f "$tmp"
+  cfg_write "$1" "$val"
 }
 
 cfg_del() {  # cfg_del KEY: the key gone from the file
-  local tmp
   [ -f "$ZB_CONFIG" ] || return 0
-  tmp=$(mktemp)
-  grep -v -E "^$1=" "$ZB_CONFIG" > "$tmp" || true
-  install -m 644 "$tmp" "$ZB_CONFIG"; rm -f "$tmp"
+  cfg_write "$1"
 }
 
 cfg_defaults() {  # write any missing keys with defaults (never overwrites)

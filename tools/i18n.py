@@ -361,9 +361,18 @@ def cmd_review(lang):
     return 0
 
 
+class NotUtf8(Exception):
+    pass
+
+
 def read_sheet(path):
-    with open(path, encoding="utf-8-sig", newline="") as fh:
-        text = fh.read()
+    try:
+        with open(path, encoding="utf-8-sig", newline="") as fh:
+            text = fh.read()
+    except UnicodeDecodeError:
+        # the audit of 22-23 October 2026: Excel's plain "CSV" saves in the computer's own encoding, which crashed this;
+        # it has already lost every letter outside that encoding, so it is refused rather than guessed
+        raise NotUtf8()
     # only the delimiter is guessed (a spreadsheet may save with ; or a tab). From the header line alone the sniffer
     # also guesses doublequote=False, and then a quoted "" stays doubled: on 23 October 2026 a reviewer's sheet with
     # plural rows ({"one": …} in the translation column) gave corrections that ended in ""} (0.53.4)
@@ -379,7 +388,14 @@ def cmd_apply(path, dry=False, skip=()):
     if lang not in LANGS:
         print("The file's name says its language (fr.csv, pt-BR.csv): %s is not one" % lang)
         return 1
-    rows, changed, refused = read_sheet(path), {}, []
+    try:
+        rows = read_sheet(path)
+    except NotUtf8:
+        print("%s is not UTF-8: a spreadsheet's plain CSV saves in the computer's own encoding, which loses the accents and "
+              "every letter outside it. Save it again as \"CSV UTF-8\" (Excel) or with the UTF-8 character set (LibreOffice), "
+              "then apply again. Nothing was changed." % path)
+        return 1
+    changed, refused = {}, []
     cats = {page: load(lang, page) for page in PAGES}
     for r in rows:
         fix = (r.get("correction") or "").strip()

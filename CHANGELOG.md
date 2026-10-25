@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.54.12
+Low-severity findings of the 22-23 October audit on **robustness and the tools** (batch 5 of the list in *Project status*). Nothing on the web pages changes, so no translation.
+- **`config.env` is written whole or not at all.** It was rewritten in place from a copy in `/tmp`, so a power cut at that moment could leave it cut short, and two writers at once (the console's helper and the menu) could lose one setting. The new file is now written beside it, put on the card, and renamed over it in one step, one writer at a time.
+- **A failed copy of ZenithBoard's files says so.** The deploy removed the old folders, then copied without checking: an interrupted copy (a full card) left `/opt/zenithboard` without its files and nothing said. It now stops with the cause to look for and the command to repair.
+- **`gpg` is installed with whiptail and curl** at the first run. Without it the update's signature check said *the commit is not signed*, which was not true; it now says gpg is missing and how to add it.
+- **The monthly link check watches three more addresses**: graphs1090's installer, GitHub's signing key, and one of Tailscale's real files (the folder answers nothing). Not reachable from where this was written: the next monthly run is what checks them.
+- **`acars remove` takes the old `ACARS_*` settings too.** On a Pi where only they were left it said *Nothing left* and kept them; they are now listed and removed.
+- **`zenithboard health` says whether the clock is set from the network**: the statistics and the summaries are dated by it, and a Pi has no battery clock.
+- **`i18n.py apply` refuses a sheet saved as plain CSV by Excel** (the computer's own encoding, which has already lost every letter outside it) with what to do, instead of a Python error. *Translating* says how to save it, and names the `posts` rows of the sheets.
+- Comments that said the wrong thing: the statistics' and gain log's services run as `zenithboard`, not root; the Wi-Fi service's sandbox note was the network watchdog's; the Tailscale address sat under *Flightradar24* in `versions.sh`. The wiki's home page said twelve languages: 21.
 ## 0.54.11
 Low-severity findings of the 22-23 October audit on **the wall** (batch 4 of the list in *Project status*).
 - **The gear panel shows the radius in use.** A radius that is not one of the presets (12 km, set with `config-set` or `?radius=`) showed as the first preset, 1 km; it is now listed where it falls, and selected.

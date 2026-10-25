@@ -188,10 +188,20 @@ health_card() {
   fi
 }
 
+# The clock dates the statistics and the summaries' days (the audit of 22-23 October 2026: health said nothing of it).
+# A Pi has no battery clock: until the network gives it the time, it starts from the last time it saved.
+health_clock() {
+  local s; s=$(timedatectl show -p NTPSynchronized --value 2>/dev/null) || return 0
+  case "$s" in
+    yes) echo "Clock:        $(date '+%Y-%m-%d %H:%M %Z'), set from the network: OK" ;;
+    no) echo "Clock:        $(date '+%Y-%m-%d %H:%M %Z'), NOT set from the network yet: the statistics and the summaries are dated by it. Check the internet; then: timedatectl" ;;
+  esac
+}
 health_check() {
   local t mem swap used boots prev lines
   echo "Model:        $(pi_model 2>/dev/null)"
   echo "Running since: $(uptime -s 2>/dev/null || echo unknown)"
+  health_clock
   health_power
   t=$(vcgencmd measure_temp 2>/dev/null | sed -n "s/^temp=\\([0-9]*\\).*/\\1/p")
   if [ -n "$t" ]; then
