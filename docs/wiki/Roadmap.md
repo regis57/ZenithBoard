@@ -48,6 +48,7 @@ Two *Later* items are to be built from what the reference Pi measures, not from 
 | ~~Plane Finder never fed~~ | Feeding from the reference Pi since 20 October 2026 |
 | ~~graphs1090 never run on a Pi~~ | Running on the reference Pi: its 24-hour and 7-day graphs seen in the owner's exports, 24 October 2026. Only collectd's memory over weeks is still to be watched, which time does by itself |
 | ~~The farthest aircraft named on `/stats`, never seen on the real sky~~ | Seen on the real page: *20/10 08:20 · easyJet EZY17QZ · Manchester → Verona · 335 km, near Cergy-Pontoise* |
+| ~~The web console: an update run from the page, a computer signed in by the phone~~ | Done several times on 25 October 2026, on two Pis (the owner) |
 | ~~978 MHz UAT (United States)~~ | **Marked experimental, outside 1.0** (the owner, 25 October 2026): no US receiver has run it. It stays in, documented as such; a US user's report can bring it in later |
 
 ### Still open
@@ -57,7 +58,6 @@ Two *Later* items are to be built from what the reference Pi measures, not from 
 | The summaries posted by the service | Daily (25 October, 08:45) and weekly (24 October, 08:00) **seen going out**. The **monthly** one is left: due 1 November, 09:00 |
 | Posts 2 to 4 and the page's lists over a real month | The lists began on 20 October: a whole month of them around **20 November** |
 | A fixed IP address never applied for real | `zenithboard net static …` on the reference Pi, then back to DHCP, with a keyboard and screen at hand |
-| The web console | An update run from the page, seen on the Pi; a computer signed in by the phone (QR, then yes) |
 | What 0.54.18 to 0.55.2 added | Seen once on the real Pi: the day's aircraft counted every 5 seconds (against FlightAware's count, a whole day after the update), aviation units, the registration's hashtag on a real post, Hindi, the summaries' post 1 link |
 
 ### The two proofs of stability

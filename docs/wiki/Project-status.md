@@ -35,6 +35,7 @@ One Raspberry Pi 3B, outdoors, on Wi-Fi, with an R820T dongle.
 | The statistics page | Running since 0.16.0; the lists of 0.31.0 and 0.37.0's look, toggle, cargo, business jets and flags seen on the real page (*45 cargo aircraft, DHL 11, ASL Airlines Belgium 10…*) |
 | `social weekly test` | Run on the reference Pi (0.33.0, 0.35.0): the right totals (*6 437 aircraft, 354.6 million messages, busiest Friday*), the lists left out until they cover the week (0.34.1) |
 | Social sharing on Bluesky | Posting on its own since 17 October 2026 under *ALL*, both looks, the four maps, the colours in turn; every crossing of a 10 km radius once since 0.20.0. Memory measured by the service itself |
+| The web console | An update run from the page, and a computer signed in by the phone (its QR code, then yes on the phone): done several times on 25 October 2026, on two Pis |
 | Room on a 1 GB board | With four feeders, the wall, statistics and social sharing: 575 to 654 MB of 1 GB still available, 34–35 °C, no throttling (20 October 2026; 656 MB with three feeders on 17 October). See [Hardware](Hardware) |
 
 ## Written and unit-tested, not yet run for real
@@ -50,7 +51,6 @@ Treat these as likely-working rather than known-working, and please report what 
 | graphs1090 | Running on the reference Pi (its graphs in the owner's exports, 24 October 2026); collectd's memory over weeks is not measured |
 | The summaries posted by the service (0.33.0–0.38.0) | `weekly test` ran on the Pi; the first scheduled one went out on 21 October 2026 (daily, 09:20), post 1 only, its lists left out by the rule fixed in 0.40.4. The daily and thirty-day summaries and the queue shared by all of them (0.38.0) are tested with a simulated clock only. The first weekly post is due on Sunday 25 October 19:00 if switched on; the airline lists cover a whole week from 1 November |
 | Posts 2 to 4 and the page's lists with real data over weeks | Cargo by callsign prefix (40 operators checked against published sources), military by database mark and address block, countries by ICAO address block: checked on made-up and tar1090-db data; a month of the real sky is still to come |
-| The web console | An update run from the page has not been seen on the Pi yet, nor signing a computer in with the phone (0.40.0) |
 | The page's last 24 hours (0.37.0) | Their lists need the last-seen column written since 0.37.0: complete from a day after the update |
 
 ## Known rough edges
@@ -88,6 +88,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 25 October 2026, 14:06 | The owner: an update run from the console and a computer signed in by the phone, done several times today on two Pis. The web console's caveat is lifted |
 | 25 October 2026, 13:51 CET | **The hands-off clock starts** (the owner): the reference Pi on 0.99.0, left alone from now. Two weeks on 8 November, four on 22 November. The same minute, CodeQL's two notes on the tests (a file read without `with`, in `tests/test_server.py`) fixed in the tests alone: nothing for the Pi, the clock goes on |
 | 25 October 2026, 13:42 | **Feature freeze** (the owner): 0.99.0, the release candidate for 1.0, the same code as 0.55.2; fixes only from now on, features wait for 1.1. The hands-off weeks start when the reference Pi runs 0.99.0 and is left alone: their start date goes here |
 | 25 October 2026, 13:31 | What 1.0 takes, reviewed with the owner: graphs1090, the farthest aircraft and the daily and weekly summaries seen on the Pi; UAT marked experimental, outside 1.0; a feature freeze (0.99.x) before the hands-off weeks; earliest late November. [Roadmap](Roadmap#what-10-takes) |
