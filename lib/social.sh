@@ -132,31 +132,30 @@ social_gap_words() {
 # The words of the posts: the area named in them (the owner's words, never derived from the antenna's position),
 # the radius, the gap, the rules.
 social_setup_words() {
-  local area radius gap rules said
+  # The audit of 22-23 October 2026: each answer used to be written as it came, so an Esc at the third question kept
+  # the first two. Now nothing is written before the last answer; Esc anywhere leaves the settings as they were.
+  local area radius gap tags rules said
   while true; do
     area=$(wt_input "Where is this, in two or three words, as the posts should say it? A town name (Trémery) reads \"above Trémery\"; your own words (near Metz) are kept.\nLeave empty for no place at all. The receiver's position is never used.\nThe posts are public: a town or a region says enough, not your village." "$(cfg_get SOCIAL_AREA "")") || return 1
-    if [ -z "${area//[[:space:]]/}" ] || [ "$(social_area_clean "$area")" = none ]; then cfg_set SOCIAL_AREA ""; break; fi
-    if area=$(social_area_clean "$area"); then cfg_set SOCIAL_AREA "$area"; break; fi
+    if [ -z "${area//[[:space:]]/}" ] || [ "$(social_area_clean "$area")" = none ]; then area=""; break; fi
+    if said=$(social_area_clean "$area"); then area=$said; break; fi
     wt_msg "Letters, digits, spaces and ' - . , only, 40 characters at most." 8
   done
-  # 0.53.7: the same rules as the commands (social radius, social gap); the wizard used to drop a bad value in silence,
-  # take 0, 500 or -5, and say "Saved." after it
+  # 0.53.7: the same rules as the commands (social radius, social gap), asked again with the reason
   while true; do
     radius=$(wt_input "Sharing radius in km: an aircraft is a candidate while it is inside it. This is separate from the wall's radius." "$(cfg_get SOCIAL_RADIUS_KM 15)") || return 1
-    if said=$(social_set_radius "$radius" 2>&1); then break; fi
+    if said=$(social_valid_radius "$radius" 2>&1); then break; fi
     wt_msg "$said" 8
   done
   while true; do
     gap=$(wt_input "Minimum minutes between two posts. 0 = none: every aircraft crossing the radius is posted once, as it happens.\nThe same crossing is never posted twice; the return flight or the next day is a new crossing." "$(cfg_get SOCIAL_GAP_MIN 0)") || return 1
-    if said=$(social_set_gap "$gap" 2>&1); then break; fi
+    if said=$(social_valid_gap "$gap" 2>&1); then break; fi
     wt_msg "$said" 8
   done
-  local tags
   while true; do
     tags=$(wt_input "Hashtags at the end of each post, separated by spaces (the # is optional). none for no hashtags.\n#avgeek becomes #helicopter or #military when one of those is posted." "$(cfg_get SOCIAL_HASHTAGS "$SOCIAL_TAGS_DEFAULT")") || return 1
-    if [ "$tags" = none ]; then cfg_set SOCIAL_HASHTAGS none; break; fi
-    local said
-    if said=$(social_hashtags_clean "$tags" 2>&1); then cfg_set SOCIAL_HASHTAGS "$said"; break; fi
+    [ "$tags" = none ] && break
+    if said=$(social_hashtags_clean "$tags" 2>&1); then tags=$said; break; fi
     wt_msg "$said" 8
   done
   rules=$(whiptail --title "$WT_TITLE" --checklist "What is worth a post? Tick the special aircraft you want, or ALL (Space = tick, Enter = go).\n\nALL posts everything that crosses the radius, once per crossing, the special aircraft first when there is one. Ticking ALL alone is the same as ticking every line." 20 76 6 \
@@ -168,6 +167,10 @@ social_setup_words() {
       all "ALL: everything that flies over, the special ones included" "$(social_rule_on all)" 3>&1 1>&2 2>&3) || return 1
   rules=${rules//\"/}
   case " $rules " in *" all "*) rules=all ;; esac       # ALL stands for every line: saved as the one word
+  cfg_set SOCIAL_AREA "$area"
+  social_set_radius "$radius" >/dev/null
+  social_set_gap "$gap" >/dev/null
+  cfg_set SOCIAL_HASHTAGS "$tags"
   cfg_set SOCIAL_RULES "${rules// /,}"
 }
 
@@ -231,12 +234,14 @@ social_set_area() {     # social_set_area [WORDS...|none]
   cfg_set SOCIAL_AREA "$v"
   echo "Place name: $v   (the posts say: $(social_area_reads "$v"))"
 }
+social_valid_radius() { [[ ${1:-} =~ ^[0-9]{1,3}$ ]] && [ "$((10#$1))" -ge 1 ] && [ "$((10#$1))" -le 200 ] || { echo "Sharing radius: whole kilometres, 1 to 200" >&2; return 1; }; }
+social_valid_gap() { [[ ${1:-} =~ ^[0-9]{1,4}$ ]] && [ "$((10#$1))" -le 1440 ] || { echo "Gap: whole minutes, 0 to 1440 (0 = none)" >&2; return 1; }; }
 social_set_radius() {   # social_set_radius [KM]: an aircraft inside it is a candidate; not the wall's radius
   if [ -z "${1:-}" ]; then
     echo "Sharing radius: $(cfg_get SOCIAL_RADIUS_KM 15) km"
     echo "Change:  sudo zenithboard social radius KM   (1 to 200 km; separate from the wall's radius)"; return 0
   fi
-  [[ $1 =~ ^[0-9]{1,3}$ ]] && [ "$((10#$1))" -ge 1 ] && [ "$((10#$1))" -le 200 ] || { echo "Sharing radius: whole kilometres, 1 to 200" >&2; return 1; }
+  social_valid_radius "$1" || return 1
   cfg_set SOCIAL_RADIUS_KM "$((10#$1))"
   echo "Sharing radius: $((10#$1)) km. The service takes it at its next look, no restart needed."
 }
@@ -327,7 +332,7 @@ social_set_gap() {
     echo "Gap between posts: $(social_gap_words)"
     echo "Change:  sudo zenithboard social gap MINUTES   (0 = none: every crossing of the radius is posted, once)"; return 0
   fi
-  [[ $1 =~ ^[0-9]{1,4}$ ]] && [ "$((10#$1))" -le 1440 ] || { echo "Gap: whole minutes, 0 to 1440 (0 = none)" >&2; return 1; }
+  social_valid_gap "$1" || return 1
   cfg_set SOCIAL_GAP_MIN "$((10#$1))"
   echo "Gap between posts: $(social_gap_words). The service takes it at its next look, no restart needed."
 }
@@ -608,7 +613,7 @@ social_setup_picture() {
   social_set_colour "$col" >/dev/null || return 1
   social_set_units "$units" >/dev/null || return 1
   social_set_look "$look" >/dev/null || { read -rp "Press Enter to continue..." _; return 1; }
-  wt_msg "Saved. Picture: $look, $(or_text "$(cfg_get SOCIAL_THEME "")" "the wall's colour ($(wall_theme))"), $(cfg_get SOCIAL_MAP normal) map.\n\nNext:  sudo zenithboard social test   draws the picture and shows the text, posts nothing.\nThen:  sudo zenithboard social on     starts posting." 12
+  wt_msg "Saved. Picture: $look, $(or_text "$(cfg_get SOCIAL_THEME "")" "the wall's colour ($(wall_theme))"), $(cfg_get SOCIAL_MAP normal) map.\n\nNext: 6 Try it, or post now -> 1 Try it (or  sudo zenithboard social test): draws the picture and shows the text, posts nothing.\nThen: 1 Switch sharing ON (or  sudo zenithboard social on): starts posting." 13
 }
 social_rule_on() { [ "$1" = all ] && case ",$(cfg_get SOCIAL_RULES "")," in *",all,"*|*",any,"*) echo ON; return ;; esac; case ",$(cfg_get SOCIAL_RULES "$(python3 -c 'import sys; sys.path.insert(0, sys.argv[1]); import social; print(social.DEFAULTS["SOCIAL_RULES"])' "$ZB_HOME/flightinfo")")," in *",$1,"*) echo ON ;; *) echo OFF ;; esac; }
 
@@ -634,7 +639,15 @@ social_on() {
   echo "Watch it:  zenithboard logs social      Stop it:  sudo zenithboard social off"
 }
 social_off() { cfg_set SOCIAL 0; social_remove_units; echo "Social sharing is OFF. The accounts are kept (remove them: sudo zenithboard social remove)."; }
-social_remove() {
+social_remove() {      # social_remove [--yes]: the account secret, the state and the service, after a typed word
+  local w
+  if [ "${1:-}" != --yes ]; then
+    # the audit of 22-23 October 2026: a plain yes/no, one line above Return, destroyed the history with the account
+    echo "This forgets the Bluesky account on this Pi (its app password), stops the service and deletes its state: the"
+    echo "history behind 'rare' and 'farthest' (30 days), the posts' memory and the map tiles. Your Bluesky account stays."
+    read -r -p "Type remove to go on: " w || w=""
+    [ "$w" = remove ] || { echo "Nothing was changed."; return 1; }
+  fi
   social_off >/dev/null
   rm -f "$SOCIAL_SECRETS"; rm -rf "$SOCIAL_DIR"
   echo "Social sharing removed: the account secret, the state, the map tiles and the service are gone. Node and Pillow stay (apt remove nodejs python3-pil to drop them)."
@@ -679,28 +692,75 @@ social_runs_old_code() {
 }
 
 # ---- the menu
+# The posts' language, by name (the audit of 22-23 October 2026: it was a code typed in a box)
+social_lang_menu() {
+  local c n w args=() cur; cur=$(cfg_get SOCIAL_LANG en)
+  for c in $(ZENITHBOARD_SOCIAL_TEMPLATES="$SOCIAL_TEMPLATES" python3 "$SOCIAL_PY" langs 2>/dev/null || echo en); do
+    n=$c; for w in $CONSOLE_LANG_NAMES; do [ "${w%%:*}" = "$c" ] && n=${w#*:}; done
+    args+=("$c" "${n//_/ }$( [ "$c" = "$cur" ] && echo "  (now)")")
+  done
+  c=$(wt_menu "The language of the posts: the aircraft posts and the summaries' words. The pictures keep English." "${args[@]}" back "Return to the previous menu") || return 0
+  [ "$c" = back ] && return 0
+  wt_msg "$(social_set_lang "$c" 2>&1 || echo "Nothing was changed.")" 10
+}
+# 0.54.8 (the audit of 22-23 October 2026): fourteen entries and Return under the fold became seven and Return, grouped
+# like the console's Sharing page; the destructive one is inside "The account", never just above Return.
 social_menu() {
   local c
   while true; do
     c=$(wt_menu "Social sharing: $(social_state)    Bluesky: $(or_text "$(social_account)" "no account")    Picture: $(social_look)\nRadius: $(cfg_get SOCIAL_RADIUS_KM 15) km    Gap: $(social_gap_words)    Area: $(or_text "$(cfg_get SOCIAL_AREA "")" "(none)")\nRules: $(cfg_get SOCIAL_RULES rare,military,helicopter,heavy,farthest)\n\nPosts a picture of the wall and a short text when something worth it flies over. Nothing leaves the Pi until you switch it on." \
-      setup "1  Set up or change the Bluesky account" \
-      words "2  Words and rules: place name, radius, gap, what is worth a post" \
-      picture "3  The picture: dot-matrix or split-flap, colour, map" \
-      photolink "4  Link to the Planespotters photo page: $( [ "$(cfg_get SOCIAL_PHOTOLINK 0)" = 1 ] && echo ON || echo OFF )" \
-      places "5  Town names from the region's own list (GeoNames, downloaded once): $( [ "$(cfg_get SOCIAL_PLACES 0)" = 1 ] && echo ON || echo OFF )" \
-      sentence "6  The words of a post: $(cfg_get SOCIAL_SENTENCE factual)" \
-      weekly "7  Summaries: the day, the week, the last 30 days ($(for p in $SUMMARY_PERIODS; do [ "$(cfg_get "$(summary_key "$p")" 0)" = 1 ] && printf '%s ' "$p"; done | sed 's/ $//; s/^$/all off/'))" \
-      test "8  Try it: draw the picture and show the text, post nothing" \
-      toggle "9  Switch sharing $( [ "$(social_state)" = on ] && echo OFF || echo ON )" \
-      post "10 Post now, once" \
-      lang "11 Language of the posts: $(cfg_get SOCIAL_LANG en)" \
-      template "12 Your own templates: $(grep -c . "$SOCIAL_TEMPLATES" 2>/dev/null || echo 0)" \
-      status "13 Status" \
-      remove "14 Remove: account, state and service" \
+      toggle "1  Switch sharing $( [ "$(social_state)" = on ] && echo OFF || echo ON )" \
+      account "2  The account: set up, change or remove" \
+      words "3  Words and rules: place name, radius, gap, what is worth a post" \
+      look "4  How a post looks: picture, words, language, templates, links" \
+      weekly "5  Summaries: the day, the week, the last 30 days ($(for p in $SUMMARY_PERIODS; do [ "$(cfg_get "$(summary_key "$p")" 0)" = 1 ] && printf '%s ' "$p"; done | sed 's/ $//; s/^$/all off/'))" \
+      try "6  Try it, or post now" \
+      status "7  Status" \
       back "Return to the previous menu") || return 0
     case "$c" in
-      setup) social_setup || true ;;
+      toggle) clear; if [ "$(social_state)" = on ]; then social_off; else social_on; fi; read -rp "Press Enter to continue..." _ ;;
+      account)
+        local a
+        a=$(wt_menu "The Bluesky account: $(or_text "$(social_account)" "none yet")" \
+          setup "1  Set up or change the account (handle and app password)" \
+          remove "2  Remove: account, history and service (asks you to type remove)" \
+          status "3  Status" \
+          back "Return to the previous menu") || continue
+        case "$a" in
+          setup) social_setup || true ;;
+          remove) clear; social_remove "" || true; read -rp "Press Enter to continue..." _ ;;
+          status) clear; social_status; read -rp "Press Enter to continue..." _ ;;
+        esac ;;
       words) social_setup_words && wt_msg "Saved." 7 || true ;;
+      look) social_look_menu ;;
+      weekly) summary_menu ;;
+      try)
+        local w
+        w=$(wt_menu "Try a post, or post one now." \
+          test "1  Try it: draw the picture and show the text, post nothing" \
+          post "2  Post now, once (on Bluesky, for real)" \
+          back "Return to the previous menu") || continue
+        case "$w" in
+          test) clear; social_need_tools && social_prepare_dir && sudo -u "$ZB_USER" python3 "$SOCIAL_PY" test; read -rp "Press Enter to continue..." _ ;;
+          post) clear; social_need_tools && social_prepare_dir && sudo -u "$ZB_USER" python3 "$SOCIAL_PY" post; read -rp "Press Enter to continue..." _ ;;
+        esac ;;
+      status) clear; social_status; read -rp "Press Enter to continue..." _ ;;
+      *) return 0 ;;
+    esac
+  done
+}
+social_look_menu() {
+  local c
+  while true; do
+    c=$(wt_menu "How a post looks." \
+      picture "1  The picture: dot-matrix or split-flap, colour, map" \
+      sentence "2  The words of a post: $(cfg_get SOCIAL_SENTENCE factual)" \
+      lang "3  Language of the posts: $(cfg_get SOCIAL_LANG en)" \
+      template "4  Your own templates: $(grep -c . "$SOCIAL_TEMPLATES" 2>/dev/null || echo 0)" \
+      photolink "5  Link to the Planespotters photo page: $( [ "$(cfg_get SOCIAL_PHOTOLINK 0)" = 1 ] && echo ON || echo OFF )" \
+      places "6  Town names from the region's own list (GeoNames, downloaded once): $( [ "$(cfg_get SOCIAL_PLACES 0)" = 1 ] && echo ON || echo OFF )" \
+      back "Return to the previous menu") || return 0
+    case "$c" in
       picture) social_setup_picture || true ;;
       photolink) social_set_photolink "$( [ "$(cfg_get SOCIAL_PHOTOLINK 0)" = 1 ] && echo off || echo on )" >/dev/null; wt_msg "$(social_set_photolink)" 10 ;;
       sentence)
@@ -711,20 +771,14 @@ social_menu() {
           board "✈ #RYR5ZK · EI-ENK / Brussels → Pisa / Boeing 737-800 · 10 570 m · 720 km/h" "$(social_ticked board)" \
           spotter "EI-ENK, a Ryanair Boeing 737-800, flying Brussels → Pisa as #RYR5ZK: ..." "$(social_ticked spotter)" \
           lookup "Look up, Trémery! Ryanair #RYR5ZK is passing 10.6 km overhead..." "$(social_ticked lookup)" \
-          custom "Your own templates (menu 12): $(grep -c . "$SOCIAL_TEMPLATES" 2>/dev/null || echo 0)" "$(social_ticked custom)") || continue
+          custom "Your own templates (entry 4): $(grep -c . "$SOCIAL_TEMPLATES" 2>/dev/null || echo 0)" "$(social_ticked custom)") || continue
         picks=$(printf '%s' "$picks" | tr -d '"' | tr ' ' ',')
         [ -n "$picks" ] || picks=factual
         wt_msg "$(social_set_sentence "$picks")" 8 ;;
-      weekly) summary_menu ;;
-      lang)
-        local code
-        code=$(wt_input "The language of the posts, as a code: $(python3 "$SOCIAL_PY" langs 2>/dev/null)
-
-The aircraft posts and the summaries' words; the pictures keep English." "$(cfg_get SOCIAL_LANG en)") || continue
-        wt_msg "$(social_set_lang "$code" 2>&1)" 10 ;;
+      lang) social_lang_menu ;;
       template)
         local tc tt
-        tc=$(wt_menu "Your own templates: posts in your words, with tags ZenithBoard fills in ({airline}, {from}, {to}, {altitude}...). A [part] is left out when a tag inside it is empty. Used when custom is ticked in 6." \
+        tc=$(wt_menu "Your own templates: posts in your words, with tags ZenithBoard fills in ({airline}, {from}, {to}, {altitude}...). A [part] is left out when a tag inside it is empty. Used when custom is ticked in 2 The words of a post." \
           list "1  See them" add "2  Add one" del "3  Delete one" clear "4  Delete them all" undo "5  Put back the ones before the last change" \
           test "6  Try them on an aircraft overhead (posts nothing)" tags "7  The tags" back "Return to the previous menu") || continue
         case "$tc" in
@@ -746,11 +800,6 @@ The aircraft posts and the summaries' words; the pictures keep English." "$(cfg_
         elif wt_yesno "Name the towns on the maps from the region's own list?\n\nThe Pi downloads GeoNames' files of the countries within 400 km (about 24 MB around Metz, once) and keeps every populated place, ranked by population or, where it is unknown, by rank (capital, province seat, village). Useful where the shipped lists know few towns. Nothing about this Pi is sent." 14; then
           clear; social_set_places on; read -rp "Press Enter to continue..." _
         fi ;;
-      test) clear; social_need_tools && social_prepare_dir && sudo -u "$ZB_USER" python3 "$SOCIAL_PY" test; read -rp "Press Enter to continue..." _ ;;
-      toggle) clear; if [ "$(social_state)" = on ]; then social_off; else social_on; fi; read -rp "Press Enter to continue..." _ ;;
-      post) clear; social_need_tools && social_prepare_dir && sudo -u "$ZB_USER" python3 "$SOCIAL_PY" post; read -rp "Press Enter to continue..." _ ;;
-      status) clear; social_status; read -rp "Press Enter to continue..." _ ;;
-      remove) if wt_yesno "Remove social sharing: the account secret, the state and the service?" 8; then clear; social_remove; read -rp "Press Enter to continue..." _; fi ;;
       *) return 0 ;;
     esac
   done

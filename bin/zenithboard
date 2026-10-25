@@ -129,7 +129,7 @@ ZenithBoard $ZB_VERSION - ADSB Flight Info
   zenithboard social radius [KM]        the sharing radius, 1 to 200 km (not the wall's)
   zenithboard social rules [all|LIST]   what is worth a post: all, or some of military,helicopter,heavy,rare,farthest
   zenithboard social check              try the account
-  zenithboard social remove             forget the account, stop the service
+  zenithboard social remove             forget the account, stop the service (asks you to type remove)
   zenithboard photos on|off             aircraft photos on the wall (needs internet on the Pi)
   zenithboard photos test [HEX]         check that this Pi can fetch photos from Planespotters
   zenithboard routes on|off             show where each flight comes from / goes to (looked up by callsign, needs internet)
@@ -385,7 +385,7 @@ case "${1:-}" in
         esac ;;
       check)  root_or_die; python3 "$SOCIAL_PY" check ;;
       status) social_status ;;
-      remove) root_or_die; social_remove ;;
+      remove) root_or_die; social_remove "${3:-}" ;;
       *) die "Usage: zenithboard social setup|words|hashtags [WORD...]|gap [MINUTES]|picture|look dotmap|flap|alternate|colour NAME|units metric|imperial|wall|photolink on|off|places on|off|sentence LIST|summary daily|weekly|monthly on|off|at TIME|parts LIST|test|post[2-4]|map NAME|area WORDS|radius KM|rules LIST|lang CODE|template ...|on|off|test [HEX]|post [HEX]|check|status|remove" ;;
     esac ;;
   patches)
