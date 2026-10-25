@@ -1096,7 +1096,8 @@ class StatsTest(unittest.TestCase):
         with open(os.path.join(d, "preview1.png"), "wb") as fh:
             fh.write(b"\x89PNG fake")
         self.assertEqual(get("/social/preview1")[0], 200)
-        js = open(os.path.join(os.path.dirname(server.__file__), "static", "console.js")).read()
+        with open(os.path.join(os.path.dirname(server.__file__), "static", "console.js")) as fh:
+            js = fh.read()
         self.assertIn('["1", "2", "3", "4"].map(', js, "the summaries' card links post 1 too")
         self.assertIn('"/social/preview1"', js)
         # 0.54.8: the first preview, never drawn (a try on an empty sky), says why instead of a bare "not found"
@@ -1325,7 +1326,8 @@ class SeenTrackerTest(unittest.TestCase):
         self.assertEqual(sorted(tr.snapshot()), ["2026-10-21", "2026-10-22"])
 
     def test_the_watch_needs_no_position_for_it(self):
-        src = open(os.path.join(os.path.dirname(server.__file__), "server.py")).read()
+        with open(os.path.join(os.path.dirname(server.__file__), "server.py")) as fh:
+            src = fh.read()
         i = src.index("def farthest_watch")
         self.assertLess(src.index("_seen.observe(data)", i), src.index("if lat or lon", i))
         self.assertIn('"/api/seen"', src)

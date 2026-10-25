@@ -71,7 +71,7 @@ Two *Later* items are to be built from what the reference Pi measures, not from 
 
 **What counts as a fix:** something that does not do what the docs say, a crash, a wrong figure, a security or privacy hole, a mistranslation, a doc that a novice cannot follow (the fresh-card try will find some), a provider that moved a file. **What does not:** a new option, a new tag, a new screen or card, a new language, a new look, an improvement to something that works as documented.
 
-**The hands-off clock** starts when the reference Pi runs 0.99.0 and is left alone; it is written in the field log of [Project status](Project-status) with its date. An update that only carries fixes for something else does not reset it; a reboot forced by a watchdog, a crash in the logs, or a fix to the services, the posts or the watchdogs does.
+**The hands-off clock started on 25 October 2026 at 13:51 CET** (the owner, the reference Pi on 0.99.0); written in the field log of [Project status](Project-status). Two weeks: 8 November; four weeks: 22 November. An update that only carries fixes for something else does not reset it; a reboot forced by a watchdog, a crash in the logs, or a fix to the services, the posts or the watchdogs does.
 
 Swahili and Hindi are published without a native review, said as such in [Translating](Translating): that is not a caveat for 1.0.
 

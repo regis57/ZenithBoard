@@ -86,7 +86,8 @@ class ListTests(unittest.TestCase):
         n = mlp.make(-9.65, 120.26, out, 200, opener, grid={"step": 0.1, "points": {"ID": [-97, 1203], "TL": [-94, 1215]}}, log=lambda *a: None)
         self.assertEqual(n, 3)
         self.assertEqual(asked, ["https://download.geonames.org/export/dump/ID.zip", "https://download.geonames.org/export/dump/TL.zip"])
-        text = gzip.open(out, "rt", encoding="utf-8").read()
+        with gzip.open(out, "rt", encoding="utf-8") as fh:
+            text = fh.read()
         self.assertIn("# centre -9.65 120.26 200", text)
         self.assertIn("Waingapu\t-9.6567\t120.2641\t50000", text)
         self.assertIn("Creative Commons Attribution 4.0", text)
@@ -96,7 +97,8 @@ class ListTests(unittest.TestCase):
             raise OSError("no internet")
         with self.assertRaises(OSError):
             mlp.make(-9.65, 120.26, out, 200, down, grid={"step": 0.1, "points": {"ID": [-97, 1203]}}, log=lambda *a: None)
-        self.assertEqual(gzip.open(out, "rt", encoding="utf-8").read(), text, "a failed run leaves the list as it was")
+        with gzip.open(out, "rt", encoding="utf-8") as fh:
+            self.assertEqual(fh.read(), text, "a failed run leaves the list as it was")
 
     def test_a_receiver_without_position_is_refused(self):
         self.assertEqual(mlp.main(["x", "0", "0", "/tmp/never.tsv.gz"]), 2)
