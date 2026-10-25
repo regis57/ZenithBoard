@@ -67,11 +67,21 @@ Two *Later* items are to be built from what the reference Pi measures, not from 
 
 ### The freeze
 
-1.0 needs a **feature freeze** first: a release candidate (**0.99.x**) from which only fixes are made, no new feature, no new setting, no new screen. The hands-off weeks are counted from there; a fix that has to be shipped during them restarts nothing unless it touches what the weeks are proving (the services, the posts, the watchdogs). What is asked during the freeze waits for 1.1.
+**Frozen since 25 October 2026, 13:42** (the owner: *on gèle à partir de maintenant, on ne passe qu'en correction*): **0.99.0** is the release candidate, the same code as 0.55.2. From it only fixes are made (0.99.1, 0.99.2…): no new feature, no new setting, no new screen, no new language. The hands-off weeks are counted from there; a fix that has to be shipped during them restarts nothing unless it touches what the weeks are proving (the services, the posts, the watchdogs). What is asked during the freeze waits for 1.1, written down below in *Waiting for 1.1*.
+
+**What counts as a fix:** something that does not do what the docs say, a crash, a wrong figure, a security or privacy hole, a mistranslation, a doc that a novice cannot follow (the fresh-card try will find some), a provider that moved a file. **What does not:** a new option, a new tag, a new screen or card, a new language, a new look, an improvement to something that works as documented.
+
+**The hands-off clock** starts when the reference Pi runs 0.99.0 and is left alone; it is written in the field log of [Project status](Project-status) with its date. An update that only carries fixes for something else does not reset it; a reboot forced by a watchdog, a crash in the logs, or a fix to the services, the posts or the watchdogs does.
 
 Swahili and Hindi are published without a native review, said as such in [Translating](Translating): that is not a caveat for 1.0.
 
 **Earliest date:** the monthly summary on 1 November, a month of lists around 20 November, two weeks hands-off after the freeze: **late November or early December 2026**, with the fresh card, the fixed address and the console's update done meanwhile.
+
+## Waiting for 1.1
+
+What is asked during the freeze, kept here so that nothing is lost, and done after 1.0:
+
+* *(nothing yet)*
 
 ## Next — once the above is proven
 

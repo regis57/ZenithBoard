@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **25 October 2026**, version **0.55.2**.
+Last updated: **25 October 2026**, version **0.99.0**, release candidate for 1.0.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -88,6 +88,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 25 October 2026, 13:42 | **Feature freeze** (the owner): 0.99.0, the release candidate for 1.0, the same code as 0.55.2; fixes only from now on, features wait for 1.1. The hands-off weeks start when the reference Pi runs 0.99.0 and is left alone: their start date goes here |
 | 25 October 2026, 13:31 | What 1.0 takes, reviewed with the owner: graphs1090, the farthest aircraft and the daily and weekly summaries seen on the Pi; UAT marked experimental, outside 1.0; a feature freeze (0.99.x) before the hands-off weeks; earliest late November. [Roadmap](Roadmap#what-10-takes) |
 | 25 October 2026, 13:10 | The owner's screenshot of *Sharing → Summaries*: links to posts 2 to 4, none to post 1 (*All summaries* runs the terminal's test). 0.55.2 links post 1, from a picture of its own |
 | 25 October 2026, 12:36 | The owner: the registration as a hashtag in every post, to count on Bluesky how often an aircraft crossed, inside the 300 characters, with the hashtags and the custom templates too. 0.55.1 |
