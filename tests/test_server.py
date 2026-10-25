@@ -995,6 +995,10 @@ class StatsTest(unittest.TestCase):
             fh.write(b"\x89PNG fake")
         self.assertEqual(get("/social/preview3")[0], 200)
         self.assertEqual(get("/social/preview5")[0], 404)
+        # 0.54.8: the first preview, never drawn (a try on an empty sky), says why instead of a bare "not found"
+        st, body = get("/social/preview")
+        self.assertEqual(st, 404)
+        self.assertIn(b"No picture yet", body)
 
     def test_a_cargo_airline_is_named_on_the_page(self):
         # 0.36.1: TAY (ASL Airlines Belgium) was listed bare among the airlines most seen

@@ -1694,7 +1694,8 @@ def _collect_once(hex_code=None, seconds=35):
 def cmd_test(hex_code=None):
     c, state, p, trace, why = _collect_once(hex_code)
     if not p:
-        print("Nothing to show: no aircraft with a track inside %s km right now (or the wall did not answer)." % c.get("SOCIAL_RADIUS_KM"))
+        print("Nothing to show: no aircraft with a track inside %s km right now (or the wall did not answer). "
+              "Try again when the wall shows one nearby; nothing is wrong with the settings." % c.get("SOCIAL_RADIUS_KM"))
         return 1
     pc = picture_for(c, int(state.get("pictures", 0)))     # this post's look and map, "alternate" and "rotate" resolved
     r = publish(p, trace, why, pc, {}, dry=True, keep=os.path.join(STATE_DIR, "preview"))

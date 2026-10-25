@@ -32,6 +32,14 @@ check "the sign-in page says what to do when the password is forgotten (0.54.7)"
 check "the pairing window says the phone must be on the home Wi-Fi (0.54.7)" 'grep -q "The phone must be on your home Wi-Fi" flightinfo/static/console.js'
 check "a page of the old version reloads itself after an update (0.54.7)" 'grep -q "r.data.version !== was) location.reload()" flightinfo/static/console.js'
 check "a failed command points at what it printed, not only at Activity (0.54.7)" 'grep -q "Read what it printed beside the button, or in Activity" flightinfo/static/console.js'
+check "summaries say when no account or posting off keeps them in (0.54.8)" 'grep -q "summariesBlocked(acct, c)" flightinfo/static/console.js && grep -q "summariesBlocked(acct, S.cfg)" flightinfo/static/console.js'
+check "the picture button only after a try that drew one (0.54.8)" '[ "$(grep -c "j.state === \"done\" && j.rc === 0 && (j.action" flightinfo/static/console.js)" = 2 ]'
+check "Enter in a field does what its button does (0.54.8)" '[ "$(grep -c "onEnter(" flightinfo/static/console.js)" -ge 5 ]'
+check "the first steps count themselves (0.54.8)" 'grep -q "{ n: STEPS.length - 2 }" flightinfo/static/console.js && ! grep -q "Seven short steps" flightinfo/static/console.js'
+check "a computer signed in by the phone is not listed as password (0.54.8)" 'grep -q "s.kind === \"approved\" ? t(\"by the phone\")" flightinfo/static/console.js'
+check "an out-of-date sign-in code has a button for a new one (0.54.8)" 'grep -q "PS.renewals = 0; phoneSignin()" flightinfo/static/console.js'
+check "an emptied templates field goes through the delete that asks (0.54.8)" '! grep -q "text: v || \"none\"" flightinfo/static/console.js'
+check "no menu path of before 0.44.0 in the console (0.54.8)" '! grep -q "menu → 1 ADSB" flightinfo/static/console.js'
 check "the default is written as off"                 'grep -qx "CONSOLE=0" lib/common.sh'
 
 out=$(printf 'short\nshort\n' | console_password 2>&1)

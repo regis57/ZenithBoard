@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.54.8
+Low-severity findings of the 22-23 October audit on **the web console's words** (batch 1 of the list in *Project status*), seven strings translated into the 20 languages and three moved; the review sheets are regenerated.
+- **The summaries say when they cannot go out.** They could be switched on with no Bluesky account, or with posting off, and nothing said so (the wizard applied them in silence too). The Summaries card and the wizard's step now say *no summary goes out until…*, and where to change it.
+- ***Try a post* on an empty sky no longer offers a picture that is not there.** The *The picture* button comes only after a try that drew one, in the card and in Activity; the page itself, opened before any picture was drawn, says why instead of a bare *not found*; the try says to come back when the wall shows an aircraft nearby, and that nothing is wrong with the settings.
+- **The line under *What is worth a post* follows the choice**: *Everything: every crossing* only when Everything is lit.
+- **The first steps count themselves** (*7 short steps* came from a fixed word).
+- **Phone sign-in**: an out-of-date code has a *New code* button (it waited for a reload the page did not mention); a computer signed in by the phone is listed *by the phone*, not *password*; a pairing code refused after the wall restarted names both ways to make a new one, the console's and the terminal's.
+- **Emptying the templates field and saving goes through *Delete them all*** and its question, instead of deleting them without a word.
+- **Enter in a field does what its button does** (the position, the radius, the place name, a summary's time…).
+- **The decoder's menu is named as it is** in the console and the README: *1 ADS-B → 1 Decoder and networks*, not *1 ADSB* (also in `zenithboard region us`).
+- **Switching sharing on, or the picture's look, may take minutes**: it may install Node or Pillow first, and the console now allows it the time (it stopped such a job after five minutes).
+- Already fixed before this batch, crossed out: the pairing window naming Safari for every phone (0.53.8).
 ## 0.54.7
 Low-severity findings of the 22-23 October audit on the web console's words, **translated once into the 20 languages** (five strings; the sheets are regenerated).
 - **A forgotten password has a line on the sign-in page**: over SSH, `sudo zenithboard console password` (a new one; every browser and phone is signed out). It said *Wrong password.* and its only help was about phones.

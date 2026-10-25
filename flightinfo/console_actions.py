@@ -80,10 +80,10 @@ ACTIONS = {
     "status":       ("receiver", "Status", ["status"], [], "read"),
     "mlat-guard":   ("receiver", "One MLAT client only", ["mlat-guard"], [], ""),
     # -- sharing (the Bluesky account itself is set up over SSH: it asks for an app password)
-    "social":       ("sharing", "Social sharing", ["social", "{value}"], [("value", "enum", ON_OFF)], "ask"),
+    "social":       ("sharing", "Social sharing", ["social", "{value}"], [("value", "enum", ON_OFF)], "ask long"),
     "social-status": ("sharing", "Sharing status", ["social", "status"], [], "read"),
     "social-test":  ("sharing", "Try a post", ["social", "test"], [], "read long"),
-    "social-look":  ("sharing", "Picture", ["social", "look", "{value}"], [("value", "enum", ("dotmap", "flap", "alternate"))], ""),
+    "social-look":  ("sharing", "Picture", ["social", "look", "{value}"], [("value", "enum", ("dotmap", "flap", "alternate"))], "long"),
     "social-colour": ("sharing", "Picture colour", ["social", "colour", "{value}"], [("value", "enum", THEMES + ("wall", "rotate"))], ""),
     "social-units": ("sharing", "Units of the posts", ["social", "units", "{value}"], [("value", "enum", ("metric", "imperial", "wall"))], ""),
     "social-map":   ("sharing", "Map", ["social", "map", "{value}"], [("value", "enum", ("normal", "night", "satellite", "terrain", "none", "rotate"))], ""),

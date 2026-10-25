@@ -27,7 +27,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.54.7"
+VERSION = "0.54.8"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -2004,6 +2004,11 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/stats":
             return self._file(STATIC_DIR, "stats.html")
         if path == "/social/preview":                 # the picture `zenithboard social test` drew, to look at before posting anything
+            if not os.path.isfile(os.path.join(SOCIAL_DIR, social_preview_name())):
+                # the audit of 22-23 October 2026: a bare "not found" after a try on an empty sky said nothing
+                msg = ("No picture yet: a try draws one only when an aircraft with a track is inside the sharing radius, "
+                       "and none has been. Try again when the wall shows one nearby (see what the try printed).\n")
+                return self._send(404, msg.encode("utf-8"), "text/plain; charset=utf-8")
             return self._file(SOCIAL_DIR, social_preview_name())
         if re.match(r"^/flags/[A-Z]{2}\.png$", path):   # 0.37.0: the statistics page's flags (country-flag-icons, MIT)
             return self._file(os.path.join(DATA_DIR, "flags"), path[len("/flags/"):])

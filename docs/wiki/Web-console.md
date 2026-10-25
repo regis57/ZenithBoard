@@ -63,7 +63,8 @@ for setting up, not for every visit: once a browser or a phone is signed in, it 
   signed in to the console: the phone shows *Sign in Windows at 192.168.1.237?* and the same four digits; check them
   and say yes, and the computer is signed in, for a week (a day unused), no password typed. The QR code carries only
   the request's name; the computer keeps a secret of its own to collect its sign-in, so a photo of its screen signs
-  nobody in. A request is answered once and lasts two minutes; the page renews it a few times, then waits for a click.
+  nobody in. A request is answered once and lasts two minutes; the page renews it a few times, then shows *New code*
+  (0.54.8). In *System → Signed in* such a computer is listed *by the phone*.
   Refused on the phone: nothing happens. Every one is in *Activity → Sign-ins*.
 * **Signing out**: *Sign out* on the page; *System → Signed in* lists every browser and phone and signs any of them
   out; `sudo zenithboard console signout` signs everyone out, and so does choosing a new password.
@@ -148,6 +149,10 @@ Click one of the last jobs to read what it printed: it opens at the top of the d
   showed it (that one is already signed in), nor another device later. Each browser has its own sign-in: the password,
   or its own QR code.
 * **A computer can be signed in by a phone** (0.40.0, off by default): see below.
+* **Enter applies, and the summaries say when they cannot go out (0.54.8).** Enter in a field does what the button beside
+  it does. The Summaries card, and the first steps, say when no summary goes out (no Bluesky account, or posting off).
+  *Try a post* offers *The picture* only when it drew one; on an empty sky it says to try again when the wall shows an
+  aircraft nearby. Emptying *Your own templates* and saving asks first, like *Delete them all*.
 * **Forgotten password, full card, failed command, update (0.54.7).** The sign-in page says how to get a new password
   (`sudo zenithboard console password`: every browser and phone is signed out). The pairing window says the phone must be
   on the home Wi-Fi. A change that cannot be written because the card is full says so, with `zenithboard health`,
