@@ -287,7 +287,14 @@ wifi_connect_menu() {   # scan, pick, password
   case "$sec" in *802.1X*) wt_msg "\"$ssid\" is a company (802.1X) network: not supported by this menu." 8; return 0 ;; esac
   p=""
   [ "$sec" = -- ] || p=$(wifi_ask_password "$ssid") || return 0
-  clear; wifi_connect "$ssid" "$p" 0 "$km"; echo; read -rp "Press Enter to continue..." _
+  clear; wifi_connect "$ssid" "$p" 0 "$km"
+  # 0.54.16 (the audit of 22-23 October 2026): a mistyped password was saved as typed, with no new try offered
+  while [ -n "$p" ] && [ "${ZB_SKIP_SERVICES:-}" != 1 ] && [ "$(wifi_active_ssid)" != "$ssid" ] \
+        && wt_yesno "\"$ssid\" is saved but not joined: a wrong password, or out of range.\n\nType its password again?" 10; do
+    p=$(wifi_ask_password "$ssid") || break
+    clear; wifi_connect "$ssid" "$p" 0 "$km"
+  done
+  echo; read -rp "Press Enter to continue..." _
 }
 
 wifi_hidden_menu() {

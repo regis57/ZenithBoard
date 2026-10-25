@@ -56,6 +56,12 @@ logs_auto_off() {
 }
 logs_auto_state() { [ "$(cfg_get LOG_AUTOCLEAN 0)" = 1 ] && echo "ON (every day, keeps the last 7 days)" || echo "OFF"; }
 
+# logs_unit UNIT NAME: true when the unit is installed; otherwise says so (0.54.6 for the feeders, 0.54.16 for 978 MHz
+# UAT and the Bluesky service: journalctl alone prints a bare "-- No entries --" that reads like success)
+logs_unit() {
+  systemctl list-unit-files "$1.service" 2>/dev/null | grep -q "^$1.service" && return 0
+  echo "$2 is not installed on this Pi: nothing to show."; return 1
+}
 logs_usage() {
   journalctl --disk-usage
   local mb; mb=$(logs_limit_mb)

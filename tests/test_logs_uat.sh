@@ -102,6 +102,11 @@ out=$(ZENITHBOARD_ETC="$t/letc" PATH="$t/lb:$PATH" bash bin/zenithboard logs fr2
 check "logs fr24: installed, its service's journal" 'grep -q "journalctl -u fr24feed" <<<"$out"'
 out=$(ZENITHBOARD_ETC="$t/letc" PATH="$t/lb:$PATH" bash bin/zenithboard logs adsbexchange 2>&1)
 check "logs adsbexchange: the unit the status screen names" 'grep -q "adsbexchange-feed is not installed" <<<"$out"'
+# 0.54.16: 978 MHz UAT and the Bluesky service too
+out=$(ZENITHBOARD_ETC="$t/letc" PATH="$t/lb:$PATH" bash bin/zenithboard logs uat 2>&1)
+check "logs uat: not installed, said so"   'grep -q "978 MHz UAT (dump978-fa) is not installed on this Pi" <<<"$out" && ! grep -q journalctl <<<"$out"'
+out=$(ZENITHBOARD_ETC="$t/letc" PATH="$t/lb:$PATH" bash bin/zenithboard logs social 2>&1)
+check "logs social: not installed, said so" 'grep -q "Bluesky posting (zenithboard-social) is not installed" <<<"$out"'
 
 # ---- the position, written into the decoder's and the feeders' own files (0.54.13: never run by a test before)
 mkdir -p "$t/etc" "$t/default"; ZB_ETC="$t/etc"; ZB_CONFIG="$t/etc/config.env"; touch "$ZB_CONFIG"

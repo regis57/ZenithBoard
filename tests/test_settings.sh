@@ -109,6 +109,8 @@ for i in 1 2 3 4 5 6 7 8; do cfg_del "PAR_$i"; done
 check "config: no copy left beside it, 644"         '! ls -A "$ZENITHBOARD_ETC" | grep -q "^\.config\.env\." && [ "$(stat -c %a "$ZENITHBOARD_ETC/config.env")" = 644 ] && [ -z "$(cfg_get PAR_1 "")" ]'
 check "deploy: a failed copy says so and how to repair" 'grep -q "install.sh --deploy" lib/flightinfo.sh && grep -q "is incomplete there" lib/flightinfo.sh'
 check "install: gpg comes with whiptail and curl"   'grep -q "apt_install whiptail curl ca-certificates gnupg" install.sh && grep -q "gpg is not installed on this Pi" lib/update.sh'
+check "stats on: the /stats page offered only with the wall" 'grep -q "the /stats page comes with the wall" lib/stats.sh'
+check "wifi: a join that failed offers to type the password again (0.54.16)" 'grep -q "Type its password again?" lib/wifi.sh'
 check "menu: update offers quick first"             'grep -q "quick \"1  ZenithBoard and the wall only" lib/update.sh'
 
 [ "$fail" = 0 ] && echo "ALL OK"; exit "$fail"
