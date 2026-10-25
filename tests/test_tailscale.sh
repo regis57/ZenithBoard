@@ -87,5 +87,25 @@ assert not any(\"remove\" in (s[2] or []) and \"tailscale\" in (s[2] or []) for 
 check "console: its overview reads Tailscale's state" 'grep -q "tailscale=%s" lib/console.sh && grep -q "Tailscale {state}" flightinfo/static/console.js && grep -q "Sign in to Tailscale" flightinfo/static/console.js'
 check "menu: 3 Connectivity, 4 Tailscale, with how and remove" 'grep -q "tailscale \"4  Tailscale" lib/menus.sh && grep -q "how \"1  How it works" lib/tailscale.sh && grep -q "remove \"5  Remove it completely" lib/tailscale.sh'
 
+# ---- 0.54.13 (the audit of 22-23 October 2026): the stand-in printed nothing, so what the Pi says of a running or a
+# waiting Tailscale was not tested. Now it answers `status --json` and `ip -4` as Tailscale does.
+cat > "$t/bin/tailscale" <<'S'
+#!/bin/bash
+case "$*" in
+  "status --json") printf '{"BackendState": "%s", "Self": {"DNSName": "zenithboard.tail1234.ts.net."}}\n' "$(cat "$T/backend")" ;;
+  "ip -4") echo 100.101.102.103 ;;
+esac
+S
+chmod +x "$t/bin/tailscale"; hash -r
+echo NeedsLogin > "$t/backend"
+check "state: not signed in"                    '[ "$(ts_state)" = "not signed in" ]'
+echo Running > "$t/backend"; cfg_set PORT 8080; cfg_set CONSOLE_TAILSCALE 0
+check "state: on"                               '[ "$(ts_state)" = on ]'
+out=$(tailscale_where)
+check "where: the wall by its 100.x address and by its name, the trailing dot gone" 'printf "%s" "$out" | grep -q "http://100.101.102.103:8080/" && printf "%s" "$out" | grep -q "http://zenithboard.tail1234.ts.net:8080/"'
+check "where: the console not offered while it is off for Tailscale" '! printf "%s" "$out" | grep -q "http://100.101.102.103:8080/console"'
+cfg_set CONSOLE_TAILSCALE 1
+check "where: the console offered once switched on" 'tailscale_where | grep -q "http://100.101.102.103:8080/console"'
+
 [ "$fail" = 0 ] && echo "ALL OK"
 exit "$fail"

@@ -13,6 +13,7 @@ import json
 import os
 import pwd
 import re
+import signal
 import stat
 import subprocess
 import sys
@@ -30,10 +31,12 @@ OUT = os.path.join(CONSOLE_DIR, "out")
 ZB_BIN = os.environ.get("ZENITHBOARD_BIN", os.path.join(ZB_HOME, "bin", "zenithboard"))
 WALL_USER = os.environ.get("ZB_USER", "zenithboard")
 MAX_JOB_BYTES = 4096
-MAX_LOG_BYTES = 256 * 1024          # a full update prints a lot; the end is what matters
-KEEP_JOBS = 60
-JOURNAL_LINES = 400
-TIMEOUT_S = {"long": 3600, "": 300}
+# 0.54.13 (the audit of 22-23 October 2026): the limits can be set from the environment, so a test can reach them in a
+# second; the helper's unit sets none of them, so the Pi keeps these values
+MAX_LOG_BYTES = int(os.environ.get("ZB_CONSOLE_MAX_LOG", 256 * 1024))   # a full update prints a lot; the end is what matters
+KEEP_JOBS = int(os.environ.get("ZB_CONSOLE_KEEP_JOBS", 60))
+JOURNAL_LINES = int(os.environ.get("ZB_CONSOLE_JOURNAL_LINES", 400))
+TIMEOUT_S = {"long": int(os.environ.get("ZB_CONSOLE_LONG_TIMEOUT", 3600)), "": int(os.environ.get("ZB_CONSOLE_TIMEOUT", 300))}
 
 
 def wall_uid():
@@ -147,9 +150,19 @@ def run_job(job_id, job):
         with os.fdopen(_create(log_path), "wb", buffering=0) as log:
             log.write(("$ zenithboard %s\n" % " ".join(" ".join(a.split()) for a in argv)).encode("utf-8", "replace"))
             try:
+                # its own process group, so a stop takes what it started too (a test saw a child keep the output open
+                # after its parent was killed, and the job run on past its time, 0.54.13)
                 p = subprocess.Popen([ZB_BIN] + argv, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
-                                     stderr=subprocess.STDOUT, env=_env(), cwd="/")
-                killer = threading.Timer(timeout, p.kill)      # a command that hangs without a word is stopped too
+                                     stderr=subprocess.STDOUT, env=_env(), cwd="/", start_new_session=True)
+                stopped = []
+
+                def stop():
+                    stopped.append(1)
+                    try:
+                        os.killpg(p.pid, signal.SIGKILL)
+                    except OSError:
+                        p.kill()
+                killer = threading.Timer(timeout, stop)        # a command that hangs without a word is stopped too
                 killer.start()
                 written = 0
                 for chunk in iter(lambda: p.stdout.readline(), b""):
@@ -158,8 +171,9 @@ def run_job(job_id, job):
                         written += len(chunk)
                 rc = p.wait()
                 killer.cancel()
-                if time.time() - started >= timeout:
-                    log.write(b"\n(stopped: it ran longer than %d minutes)\n" % (timeout // 60))
+                if stopped:                    # the timer's own word, not the clock (a slow end is not a stop)
+                    took = "%d minutes" % (timeout // 60) if timeout >= 120 else "%d seconds" % timeout
+                    log.write(("\n(stopped: it ran longer than %s)\n" % took).encode())
             except (OSError, ValueError) as e:     # 0.50.0: ValueError too (an argument that cannot be written)
                 log.write(("could not run it: %s\n" % e).encode("utf-8", "replace"))
                 rc = 127

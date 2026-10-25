@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **25 October 2026**, version **0.54.13**.
+Last updated: **25 October 2026**, version **0.54.14**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -79,8 +79,7 @@ The audit (build, tests, security, novice journeys, translations) ran on 0.53.3.
 **Batch 5: robustness and the tools**: shipped in 0.54.12. Left, optional:
 - `console pair` installing `qrencode` on demand (`console.sh` ~143); a clock behind `CONSOLE_EPOCH` killing a new session (`console.py` ~272).
 
-**Batch 6: the tests**: the medium ones and most of the low ones shipped in 0.54.13. Still to write, low:
-- `console_run.py` ~36's timeout, log cap, `KEEP_JOBS` and journal rotation are never exercised; `adsb_menu` (plan, REMOVE, the US UAT rule, `zb_mlat_guard`) has no test; the `nmcli` stub never fails (`wifi_apply`, `wifi_connect`, `wifi_forget`); the Tailscale stub prints nothing (`ts_state`, `tailscale_where`, `console_state_lines`); `summary-when --facts`, `template-tags` and `publish_week` (not dry) have no test; `translateDom` and `rebuild` in `i18n.js`; `zb_update_components` is never run end to end (a light test with every `is_*` false: *Update finished*, exit 0).
+**Batch 6: the tests**: shipped in 0.54.13 and 0.54.14. Still to write, low: `adsb_menu` (plan, REMOVE, the US UAT rule, `zb_mlat_guard`) with a scripted whiptail; `publish_week` not dry, with a stand-in for Bluesky; `zb_update_components` end to end (a light test with every `is_*` false: *Update finished*, exit 0).
 
 **Batch 7: the docs**: shipped with 0.54.13's documentation.
 

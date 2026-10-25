@@ -70,6 +70,44 @@ assert.strictEqual(I.tn(1, "{n} aircraft", "{n} aircraft"), "1 avion");
 assert.strictEqual(I.tn(7, "{n} distinct aircraft", "{n} distinct aircraft"), "7 avions distincts");
 
 // every key the console's script asks for is in the French catalogue (tools/i18n.py check says the same in detail)
+// 0.54.13 (the audit of 22-23 October 2026): the static pages' translation (translateDom, rebuild) had no test. A small
+// stand-in for the DOM: enough for an element marked data-t with a link inside, and the attributes translated.
+function text(v) { return { nodeType: 3, nodeValue: v }; }
+function el(tag, attrs, kids) {
+  const e = { nodeType: 1, tagName: tag.toUpperCase(), attrs: Object.assign({}, attrs || {}), childNodes: [] };
+  e.getAttribute = k => (k in e.attrs ? e.attrs[k] : null);
+  e.setAttribute = (k, v) => { e.attrs[k] = String(v); };
+  e.appendChild = n => { if (n.nodeType === 11) e.childNodes.push(...n.childNodes); else e.childNodes.push(n); return n; };
+  e.cloneNode = () => el(tag, e.attrs, []);
+  Object.defineProperty(e, "children", { get: () => e.childNodes.filter(n => n.nodeType === 1) });
+  Object.defineProperty(e, "textContent", {
+    get: () => e.childNodes.map(n => (n.nodeType === 3 ? n.nodeValue : n.textContent)).join(""),
+    set: v => { e.childNodes = v === "" ? [] : [text(v)]; } });
+  e.querySelectorAll = sel => {
+    const attr = sel.slice(1, -1), out = [];
+    (function walk(n) { n.children.forEach(c => { if (attr in c.attrs) out.push(c); walk(c); }); })(e);
+    return out;
+  };
+  (kids || []).forEach(k => e.childNodes.push(typeof k === "string" ? text(k) : k));
+  return e;
+}
+global.document = { createDocumentFragment: () => ({ nodeType: 11, childNodes: [], appendChild(n) { this.childNodes.push(n); return n; } }),
+  createTextNode: text, querySelector: () => null };
+const para = el("p", { "data-t": "" }, ["Read ", el("a", { href: "/x" }, ["the guide"]), "\n   first."]);
+const field = el("input", { placeholder: "Your name" });
+const root = el("div", {}, [para, field]);
+I._load("fr", { "Read <a>the guide</a> first.": "Lisez d'abord <a>le guide</a>.", "Your name": "Votre nom" }, ["fr"]);
+I.translateDom(root);
+assert.strictEqual(para.textContent, "Lisez d'abord le guide.", "the sentence in French, its spaces as the translation has them");
+assert.strictEqual(para.children.length, 1);
+assert.strictEqual(para.children[0].getAttribute("href"), "/x", "the link moved inside the sentence keeps its address");
+assert.strictEqual(para.children[0].textContent, "le guide");
+assert.strictEqual(field.getAttribute("placeholder"), "Votre nom");
+const untouched = el("p", { "data-t": "" }, ["Nobody translated this"]);
+I.translateDom(el("div", {}, [untouched]));
+assert.strictEqual(untouched.textContent, "Nobody translated this", "a key the catalogue lacks stays English");
+I._load("fr", fr, ["fr"]);
+
 const js = fs.readFileSync(path.join(__dirname, "..", "flightinfo", "static", "console.js"), "utf8");
 const asked = [...js.matchAll(/(?<![\w.$])t\("((?:[^"\\]|\\.)*)"/g)].map(m => JSON.parse('"' + m[1] + '"'));
 assert.ok(asked.length > 300, "console.js asks for its words through t()");

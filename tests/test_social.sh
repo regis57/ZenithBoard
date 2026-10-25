@@ -227,6 +227,9 @@ fi
 # ---- the Python command line answers without a Pi
 check "status runs without a service"              'python3 "$SOCIAL_PY" status | grep -q "Social sharing: off"'
 check "status says the summaries"                  'python3 "$SOCIAL_PY" status | grep -q "Summary, weekly: off" && python3 "$SOCIAL_PY" status | grep -q "Summary, monthly"'
+# 0.54.13: two of the command line's answers the console reads had no test
+check "summary-when --facts: the three summaries, last and next, as KEY=value" '[ "$(python3 "$SOCIAL_PY" summary-when --facts | grep -c "^sum_\(daily\|weekly\|monthly\)_\(last\|next\)=")" = 6 ]'
+check "template-tags: the tags, the [part] and |cap"   'python3 "$SOCIAL_PY" template-tags > "$t/tags" && grep -q "{airline}" "$t/tags" && grep -q "\[ ... \]" "$t/tags" && grep -q "{tag|cap}" "$t/tags"'
 check "week-test with no statistics says so"       'ZENITHBOARD_STATS_DIR="$t/nostats" python3 "$SOCIAL_PY" week-test | grep -q "Nothing to sum up"'
 check "check with no account says so"              'rm -f "$SOCIAL_SECRETS"; python3 "$SOCIAL_PY" check | grep -q "No account configured"'
 exit $fail

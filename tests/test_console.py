@@ -539,6 +539,33 @@ class RunnerTest(TempDirs):
     def job(self, name, params):
         return console.submit(name, params, "Mac 1")
 
+    def run_with(self, script, **env):
+        with open(self.stub, "w") as fh:
+            fh.write('#!/bin/sh\n[ "$1 $2" = "console state" ] && exit 0\n' + script)
+        full = dict(os.environ, ZB_CONSOLE_DIR=self.dir, ZENITHBOARD_BIN=self.stub,
+                    ZB_USER=__import__("pwd").getpwuid(os.getuid()).pw_name, **env)
+        subprocess.run([sys.executable, RUNNER], env=full, check=True, timeout=60)
+
+    def test_the_limits_are_kept(self):
+        # 0.54.13 (the audit of 22-23 October 2026): the timeout, the log's cap, the jobs kept and the journal's length were
+        # never reached by a test; they are set lower here, as the helper reads them
+        j = self.job("radius", {"value": "15"})
+        self.run_with('echo started; sleep 30; echo never\n', ZB_CONSOLE_TIMEOUT="1")
+        st = console.job_status(j)
+        self.assertIn("started", st["log"])
+        self.assertNotIn("never", st["log"])
+        self.assertIn("(stopped: it ran longer than 1 seconds)", st["log"])
+        j = self.job("cycle", {"value": "9"})
+        self.run_with('i=0; while [ $i -lt 200 ]; do echo "line $i of a long output"; i=$((i+1)); done\n', ZB_CONSOLE_MAX_LOG="500")
+        self.assertLess(len(console.job_status(j)["log"]), 700)
+        for v in range(10, 16):
+            self.job("cycle", {"value": str(v)})
+        self.run_with('echo ok\n', ZB_CONSOLE_KEEP_JOBS="3", ZB_CONSOLE_JOURNAL_LINES="4")
+        out = os.path.join(self.dir, "out")
+        self.assertEqual(len([n for n in os.listdir(out) if n.endswith(".json") and n != "state.json"]), 3)
+        with open(os.path.join(out, "journal.log")) as fh:
+            self.assertEqual(len(fh.read().splitlines()), 4)
+
     def test_a_job_runs_once_and_says_what_it_printed(self):
         j = self.job("radius", {"value": "15"})
         self.run_helper()
