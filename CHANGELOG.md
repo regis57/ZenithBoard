@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.54.15
+The 22-23 October audit's optional findings on **the web console** (lot A, chosen by the owner on 25 October 2026); three strings translated into the 20 languages.
+- **Finish setting up asks only for what is missing**: the antenna's position and a decoder. Statistics and the watchdogs are choices, shown on the overview; a Pi without a hardware watchdog could never finish setting up.
+- **Signing out a lost phone signs out what it signed in**: the computers it said yes to and the phones paired with a code it made (and so on). They stayed signed in.
+- **The gain log switched on in the console is read there too** (*Read it*, beside its switch); it could be read only over SSH.
+- **The statistics page, while they are off, names the console and the menu** beside the command.
+- **The wall's gear panel points at the web console and the menu** for the defaults of every screen, not at `zenithboard config`, which only reads them.
 ## 0.54.14
 The rest of the tests the 22-23 October audit found missing (batch 6), and one thing they found.
 - **A console job that runs past its time is stopped with everything it started.** The helper stopped the command it ran, not what that command had started: a child left running kept the output open, and the job went on past its limit with the page showing it running. Each job now runs in its own process group, stopped whole. The line saying so comes from the stop itself, not from the clock.

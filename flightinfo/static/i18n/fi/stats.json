@@ -11,6 +11,7 @@
  "30 days": "30 päivää",
  "Loading…": "Ladataan…",
  "Statistics are off. They cost about 30 KB a day on the card and are collected every 15 minutes once you turn them on:": "Tilastot ovat pois päältä. Ne vievät muistikortilta noin 30 kt päivässä, ja niitä kerätään 15 minuutin välein, kun otat ne käyttöön:",
+ "Or in the web console: Receiver → Statistics. Or in the menu: 7 Options → 1 Statistics.": "Tai verkkokonsolissa: Vastaanotin → Tilastot. Tai valikossa: 7 Options → 1 Statistics.",
  "Then come back here. <a>The wall</a>.": "Palaa sitten tänne. <a>Taulu</a>.",
  "Statistics are on, but there is no sample yet: the first one comes on the next quarter hour. <a>The wall</a>.": "Tilastot ovat päällä, mutta näytteitä ei vielä ole: ensimmäinen otetaan seuraavalla tasavartilla. <a>Taulu</a>.",
  "Aircraft": "Lentokoneet",

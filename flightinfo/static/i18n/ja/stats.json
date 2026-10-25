@@ -11,6 +11,7 @@
  "30 days": "30日間",
  "Loading…": "読み込み中…",
  "Statistics are off. They cost about 30 KB a day on the card and are collected every 15 minutes once you turn them on:": "統計はオフです。オンにすると15分ごとに記録され、SDカードを1日あたり約30 KB使用します：",
+ "Or in the web console: Receiver → Statistics. Or in the menu: 7 Options → 1 Statistics.": "またはウェブコンソールで：受信機 → 統計。またはメニューで：7 Options → 1 Statistics。",
  "Then come back here. <a>The wall</a>.": "その後、このページに戻ってください。<a>表示板</a>。",
  "Statistics are on, but there is no sample yet: the first one comes on the next quarter hour. <a>The wall</a>.": "統計はオンですが、まだ記録がありません。最初の記録は次の15分の区切りで行われます。<a>表示板</a>",
  "Aircraft": "航空機",

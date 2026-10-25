@@ -77,6 +77,7 @@ ACTIONS = {
     "gain-check":   ("receiver", "Gain check", ["gain", "check"], [], "read"),
     "gain-step":    ("receiver", "Gain one step", ["gain", "{value}"], [("value", "enum", ("up", "down"))], "ask"),
     "gain-log":     ("receiver", "Gain log, 24 h", ["gain", "log", "{value}"], [("value", "enum", ON_OFF)], ""),
+    "gain-log-show": ("receiver", "Read the gain log", ["gain", "log", "show"], [], "read"),   # 0.54.15: switched on here, read here too
     "status":       ("receiver", "Status", ["status"], [], "read"),
     "mlat-guard":   ("receiver", "One MLAT client only", ["mlat-guard"], [], ""),
     # -- sharing (the Bluesky account itself is set up over SSH: it asks for an app password)

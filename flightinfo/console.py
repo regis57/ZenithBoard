@@ -272,11 +272,15 @@ class Sessions(object):
         life, idle = (PAIRED_LIFE_S, PAIRED_IDLE_S) if rec.get("kind") == "paired" else (PASSWORD_LIFE_S, PASSWORD_IDLE_S)
         return t - rec.get("created", 0) < life and t - rec.get("seen", 0) < idle and rec.get("created", 0) >= epoch()
 
-    def create(self, kind, label):
+    def create(self, kind, label, by=None):
+        """by: the session that signed this one in (a pairing code it made, a computer it said yes to), so that
+        signing that one out takes these too (0.54.15)."""
         token = secrets.token_urlsafe(32)
         t = now()
         rec = {"id": secrets.token_hex(4), "kind": kind, "label": label, "created": t, "seen": t,
                "csrf": secrets.token_urlsafe(24)}
+        if by:
+            rec["by"] = by
         with self.lock:
             self._load()
             self.data = {k: v for k, v in self.data.items() if self._alive(v, t)}
@@ -315,12 +319,19 @@ class Sessions(object):
             return [dict((k, v) for k, v in r.items() if k != "csrf") for r in self.data.values() if self._alive(r, t)]
 
     def revoke(self, sid=None, keep=None):
-        """sid: that one; sid None: every one but keep."""
+        """sid: that one, and what it signed in (a lost phone takes the computers it said yes to); sid None: every
+        one but keep."""
         with self.lock:
             self._load()
             before = len(self.data)
+            gone = {sid}
+            while sid is not None:                 # what it signed in, and what those signed in
+                more = {v.get("id") for v in self.data.values() if v.get("by") in gone} - gone
+                if not more:
+                    break
+                gone |= more
             self.data = {k: v for k, v in self.data.items()
-                         if not ((sid is not None and v.get("id") == sid) or (sid is None and v.get("id") != keep))}
+                         if not ((sid is not None and v.get("id") in gone) or (sid is None and v.get("id") != keep))}
             if len(self.data) != before:
                 self._save()
             return before - len(self.data)
@@ -352,7 +363,8 @@ class Pairs(object):
         return None
 
     def redeem(self, token, label):
-        """-> True once for a live link, then never again."""
+        """-> truthy once for a live link (the session that made it, "label id", when the console made it), then never
+        again."""
         if not isinstance(token, str) or not (16 <= len(token) <= 64):
             return False
         h, t = _sha(token), now()
@@ -362,7 +374,7 @@ class Pairs(object):
                 if v["used_by"] or v["until"] < t:
                     return False
                 v["used_by"] = label
-                return True
+                return v.get("by") or True
             return self._redeem_from_terminal(h, t)
 
     def _redeem_from_terminal(self, h, t):
@@ -701,7 +713,7 @@ class Console(object):
                 state, v = self.approvals.poll(body.get("id"), body.get("secret"))
                 if state != "approved":
                     return Reply(200, {"state": state})
-                token, rec = self.sessions.create("approved", v["label"])
+                token, rec = self.sessions.create("approved", v["label"], by=(v.get("by") or "").rsplit(" ", 1)[-1] or None)
                 audit("signed in by a phone (%s): %s %s from %s" % (v["by"], v["label"], rec["id"], req.client))
                 return Reply(200, {"state": "approved"}, cookie=_cookie(token, PASSWORD_LIFE_S))
             if sess is None:
@@ -739,7 +751,8 @@ class Console(object):
         if wait:
             return Reply(429, {"error": "Too many tries. Wait %d seconds." % wait, "wait": wait})
         label = device_label(req.headers.get("user-agent"))
-        if not self.pairs.redeem(body.get("token"), label):
+        made_by = self.pairs.redeem(body.get("token"), label)
+        if not made_by:
             self.limiter.miss(ip)
             audit("pairing link refused from %s" % ip)
             # the audit of 22-23 October 2026: a code made in the browser dies when the wall restarts, and the
@@ -747,7 +760,8 @@ class Console(object):
             return Reply(401, {"error": "This pairing code is used or out of date (or the wall restarted since): make a new one, "
                                         "on a computer signed in (System → Signed in → Pair a phone) or over SSH "
                                         "(sudo zenithboard console pair). It is valid five minutes, once."})
-        token, rec = self.sessions.create("paired", label)
+        # the session that made the code ("label id"); a terminal's code has none
+        token, rec = self.sessions.create("paired", label, by=made_by.rsplit(" ", 1)[-1] if isinstance(made_by, str) else None)
         audit("paired: %s %s from %s" % (label, rec["id"], ip))
         return Reply(200, {"ok": True}, cookie=_cookie(token, PAIRED_LIFE_S))
 
