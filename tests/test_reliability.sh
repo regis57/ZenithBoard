@@ -128,6 +128,11 @@ check "temperature shown"              'grep -q "Temperature:  41 C: OK" <<<"$ou
 check "previous boot without shutdown messages = abrupt" 'grep -q "ended ABRUPTLY" <<<"$out" && grep -q "piaware" <<<"$out"'
 check "nothing alarming"               'grep -q "nothing alarming" <<<"$out"'
 check "saved logs off is explained"    'grep -q "logs are lost at every restart" <<<"$out"'
+# 0.54.12: the clock, which dates the statistics and the summaries
+mk timedatectl 'echo no'
+check "a clock not set from the network is said"  'health_check 2>&1 | grep -q "Clock: .*NOT set from the network yet"'
+mk timedatectl 'echo yes'
+check "a clock set from the network is OK"        'health_check 2>&1 | grep -q "Clock: .*set from the network: OK"'
 # 0.34.0: the card's size. The reference Pi's figures: a 32 GB card, 6% of its system partition used
 mk df 'printf "Filesystem 1-blocks Used Available Capacity Mounted on\n/dev/mmcblk0p2 31167209472 1736929280 28108087296 6%% /\n"'
 mk findmnt 'echo /dev/mmcblk0p2'

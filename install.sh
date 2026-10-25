@@ -55,8 +55,9 @@ preflight() {
   need_root "$@"
   command -v apt-get >/dev/null || die "This installer needs Raspberry Pi OS / Debian (apt)."
   case "$(arch)" in arm64|armhf) ;; *) warn "Architecture $(arch) is not a Raspberry Pi; continuing anyway." ;; esac
-  if ! command -v whiptail >/dev/null || ! command -v curl >/dev/null; then
-    log "Installing whiptail and curl"; apt-get update -qq && apt_install whiptail curl ca-certificates
+  # gpg too (the audit of 22-23 October 2026): without it the update's signature check said "the commit is not signed"
+  if ! command -v whiptail >/dev/null || ! command -v curl >/dev/null || ! command -v gpg >/dev/null; then
+    log "Installing whiptail, curl and gpg"; apt-get update -qq && apt_install whiptail curl ca-certificates gnupg
     # Without whiptail every screen fails and the menu quietly exits with nothing said (fresh-install check, 0.21.1)
     command -v whiptail >/dev/null && command -v curl >/dev/null \
       || die "whiptail and curl could not be installed (no internet, or apt failed above). Install them by hand:  sudo apt install whiptail curl   then run this again."

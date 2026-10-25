@@ -136,7 +136,8 @@ zb_verify_source() {
     *)
       warn "This update could not be shown to come from the usual signing key."
       case "${st:-N}" in
-        N) warn "Reason: the commit is not signed." ;;
+        N) if command -v gpg >/dev/null; then warn "Reason: the commit is not signed."
+           else warn "Reason: gpg is not installed on this Pi, so no signature can be checked:  sudo apt install gnupg  then update again."; fi ;;
         E) warn "Reason: the signature could not be checked (the key is missing here)." ;;
         *) warn "Reason: signed by $signer, which is not the key recorded on this Pi ($stored)." ;;
       esac

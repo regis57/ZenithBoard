@@ -19,6 +19,8 @@ acars_leftovers() {   # prints what is left, one item per line; nothing when the
   pkg_installed grafana && echo "package grafana"
   [ -f /etc/apt/sources.list.d/grafana.list ] && echo "apt source /etc/apt/sources.list.d/grafana.list"
   [ -f "$GRAFANA_PASS_FILE" ] && echo "password $GRAFANA_PASS_FILE"
+  # the audit of 22-23 October 2026: the settings alone were left behind by "Nothing left", which returned first
+  grep -qE '^(ACARS_[A-Z_]+|GRAFANA_PASSWORD)=' "$ZB_CONFIG" 2>/dev/null && echo "settings ACARS_* in $ZB_CONFIG"
   return 0
 }
 

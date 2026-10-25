@@ -55,6 +55,10 @@ cp -r "$t/cat" "$t/cat-skip"
 ZB_I18N_DIR="$t/cat-skip" ZB_I18N_REVIEW_DIR="$t/rev3" python3 tools/i18n.py apply "$t/fr.csv" --skip "$skip" > "$t/skip.out" 2>&1
 check "apply --skip: a proposal found inaccurate is not taken, and said" 'grep -q "\"Make a backup\": \"Faire une sauvegarde\"" "$t/cat-skip/fr/console.json" && grep -q "checked and not taken" "$t/skip.out"'
 ZB_I18N_DIR="$t/cat" ZB_I18N_REVIEW_DIR="$t/rev2" python3 tools/i18n.py apply "$t/fr.csv" > "$t/apply.out" 2>&1
+# 0.54.12: a sheet saved by Excel as plain CSV (the computer's own encoding) is refused with what to do, not a crash
+printf 'id,page,where,english,translation,correction,comment\n1,console,,Make a backup,x,Cr\xe9er,\n' > "$t/fr.csv.ansi"; cp "$t/fr.csv.ansi" "$t/ansi/fr.csv" 2>/dev/null || { mkdir -p "$t/ansi"; cp "$t/fr.csv.ansi" "$t/ansi/fr.csv"; }
+ZB_I18N_DIR="$t/cat" ZB_I18N_REVIEW_DIR="$t/rev4" python3 tools/i18n.py apply "$t/ansi/fr.csv" > "$t/ansi.out" 2>&1; rc=$?
+check "apply: a sheet that is not UTF-8 is refused, said, nothing changed" '[ '"$rc"' = 1 ] && grep -q "is not UTF-8" "$t/ansi.out" && grep -q "CSV UTF-8" "$t/ansi.out" && ! grep -q Traceback "$t/ansi.out"'
 # 0.53.4: a reviewer's sheet with a plural row: the translation column holds JSON, its quotes doubled in the CSV
 printf '%s\n' 'id,page,where,english,translation,correction,comment' \
   'fix-1,posts [plural: one],,{n} million messages,"{""one"": ""x"", ""other"": ""{n} millions de messages""}",{n} million de messages,"[plural] say ""1,2 million""."' > "$t/plural.csv"

@@ -16,8 +16,8 @@ ReadWritePaths=/var/lib/zenithboard
 RestrictAddressFamilies=AF_UNIX AF_INET
 IPAddressDeny=any
 IPAddressAllow=localhost
-# Sandbox: a root script that reads its settings and writes one file. Everything else is taken away from it, so
-# a flaw in it, or in a tool it runs, stays inside a box. Measure with: systemd-analyze security zenithboard-gain-log.service
+# Sandbox: a script, run as zenithboard, that reads its settings and writes one file. Everything else is taken away from it, so
+# a flaw in it, or in a tool it runs, stays inside a box. Measure with: systemd-analyze security zenithboard-stats.service
 NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=true

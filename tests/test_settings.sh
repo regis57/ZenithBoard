@@ -102,6 +102,13 @@ check "No on a yes/no switches it off"              '[ "$(cfg_get SHOW_PHOTOS)" 
 check "backup sub-menu: no Make or Restore twice, delete not last" '! sed -n "/^backup_menu() {/,/^}/p" lib/backup.sh | grep -q "make \"\|restore \"" && sed -n "/^backup_menu() {/,/^}/p" lib/backup.sh | grep -A1 "clean \"" | grep -q "show \""'
 check "uninstall: Yes goes on, the secrets and the data named" 'grep -q "Yes goes on to the typed word" install.sh && grep -q "Bluesky app password in social.env" install.sh && grep -q "sudo rm -rf \$ZB_DATA" install.sh'
 check "menu: the look is said even when the colour is left" 'grep -q "colour unchanged" lib/menus.sh'
+# 0.54.12 (the audit of 22-23 October 2026): config.env renamed over in one step, one writer at a time
+for i in 1 2 3 4 5 6 7 8; do cfg_set "PAR_$i" "v $i" & done; wait
+check "config: eight writers at once lose nothing"  'for i in 1 2 3 4 5 6 7 8; do [ "$(cfg_get "PAR_$i")" = "v $i" ] || exit 1; done'
+for i in 1 2 3 4 5 6 7 8; do cfg_del "PAR_$i"; done
+check "config: no copy left beside it, 644"         '! ls -A "$ZENITHBOARD_ETC" | grep -q "^\.config\.env\." && [ "$(stat -c %a "$ZENITHBOARD_ETC/config.env")" = 644 ] && [ -z "$(cfg_get PAR_1 "")" ]'
+check "deploy: a failed copy says so and how to repair" 'grep -q "install.sh --deploy" lib/flightinfo.sh && grep -q "is incomplete there" lib/flightinfo.sh'
+check "install: gpg comes with whiptail and curl"   'grep -q "apt_install whiptail curl ca-certificates gnupg" install.sh && grep -q "gpg is not installed on this Pi" lib/update.sh'
 check "menu: update offers quick first"             'grep -q "quick \"1  ZenithBoard and the wall only" lib/update.sh'
 
 [ "$fail" = 0 ] && echo "ALL OK"; exit "$fail"

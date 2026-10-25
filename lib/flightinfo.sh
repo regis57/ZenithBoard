@@ -32,7 +32,12 @@ deploy_files() {
       [ -f "$ZB_HOME/bin/run-acarsdec" ] && cp -a "$ZB_HOME/bin/run-acarsdec" "$keep/"
     fi
     rm -rf "${ZB_HOME:?}/flightinfo" "${ZB_HOME:?}/acars" "${ZB_HOME:?}/lib" "${ZB_HOME:?}/bin" "${ZB_HOME:?}/systemd" "${ZB_HOME:?}/tools"
-    cp -r "$src/flightinfo" "$src/lib" "$src/bin" "$src/systemd" "$src/tools" "$src/install.sh" "$src/LICENSE" "$ZB_HOME/"
+    # the audit of 22-23 October 2026: an interrupted copy (a full card) left /opt/zenithboard without its files and
+    # nothing said so
+    cp -r "$src/flightinfo" "$src/lib" "$src/bin" "$src/systemd" "$src/tools" "$src/install.sh" "$src/LICENSE" "$ZB_HOME/" || {
+      err "Copying ZenithBoard's files from $src to $ZB_HOME failed (a full card? zenithboard health says): ZenithBoard is incomplete there."
+      err "Once the cause is fixed:  sudo bash $src/install.sh --deploy"
+      return 1; }
     if [ -n "$keep" ]; then
       [ -d "$keep/acars" ] && cp -a "$keep/acars" "$ZB_HOME/"
       [ -f "$keep/run-acarsdec" ] && cp -a "$keep/run-acarsdec" "$ZB_HOME/bin/"
