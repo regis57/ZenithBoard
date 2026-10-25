@@ -1247,6 +1247,14 @@ class PhotoUrlTest(unittest.TestCase):
         self.assertEqual(meta["photographer"], "Mehrad Watson")
         self.assertTrue(ok)
 
+    def test_a_photo_page_link_elsewhere_is_dropped(self):
+        # 0.54.11: the link became the credit's href unchecked
+        for link in ("javascript:alert(1)", "https://evil.example/photo/1", "http://www.planespotters.net/photo/1", "y"):
+            meta, ok = server.parse_photo_answer({"photos": [{"thumbnail_large": {"src": "https://cdn.planespotters.net/x.jpg"},
+                                                              "photographer": "Jane Doe", "link": link}]})
+            self.assertEqual(meta["url"], "https://cdn.planespotters.net/x.jpg", link)
+            self.assertIsNone(meta["link"], link)
+
     def test_a_normal_answer_is_kept(self):
         meta, ok = server.parse_photo_answer({"photos": [{"thumbnail_large": {"src": "https://cdn.planespotters.net/x.jpg"},
                                                           "photographer": "Jane Doe", "link": "https://www.planespotters.net/photo/1"}]})

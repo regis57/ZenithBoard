@@ -73,6 +73,8 @@ check "profiles: colon in name"   'printf "%s\n" "$out" | grep -q "^u2	wifi	Home
 # ---- domain name: configs
 cfg_set DDNS_HOST myplanes.duckdns.org; local_ip() { echo 192.168.1.50; }
 check "the links never offer the receiver map from outside (0.54.3)" 'ddns_links | grep -q "Receiver map     : home network only" && ! ddns_links | grep -q "http://myplanes.duckdns.org/tar1090"'
+# 0.54.11: CGNAT is 100.64.0.0/10 exactly (the glob warned for 100.7.x and 100.10.x too)
+check "CGNAT: 100.64 to 100.127 only"  'ddns_is_cgnat 100.64.0.1 && ddns_is_cgnat 100.90.3.4 && ddns_is_cgnat 100.127.255.254 && ! ddns_is_cgnat 100.63.1.1 && ! ddns_is_cgnat 100.128.0.1 && ! ddns_is_cgnat 100.7.1.1 && ! ddns_is_cgnat 100.10.2.3 && ! ddns_is_cgnat 82.64.1.1 && ! ddns_is_cgnat ""'
 check "host ok"                  'ddns_valid_host myplanes.duckdns.org'
 check "host: space refused"      '! ddns_valid_host "my planes.org"'
 check "host: injection refused"  '! ddns_valid_host "a.org&token=x"'

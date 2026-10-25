@@ -149,8 +149,11 @@ ddns_status() {
   echo "The name points to:                            ${res:-does not resolve yet}"
   if [ -n "$pub" ] && [ -n "$res" ] && [ "$pub" = "$res" ]; then echo "RESULT: the name points to your address, so it works (an older FAILED line above is only the last answer the service gave; the next refresh replaces it)."
   elif [ -n "$pub" ] && [ -n "$res" ]; then echo "They differ: wait a few minutes, or run  sudo zenithboard ddns update"; fi
-  case "$pub" in 100.6[4-9].*|100.[7-9]*.*|100.1[01]*.*|100.12[0-7].*) echo "WARNING: $pub is a shared (CGNAT) address: your provider does not give you a public one, so a port cannot be opened to your Pi. Ask the provider for a public address, or use a VPN such as Tailscale." ;; esac
+  ! ddns_is_cgnat "$pub" || echo "WARNING: $pub is a shared (CGNAT) address: your provider does not give you a public one, so a port cannot be opened to your Pi. Ask the provider for a public address, or use a VPN such as Tailscale."
 }
+# 100.64.0.0/10, and nothing else: the glob it replaces (the audit of 22-23 October 2026) also warned for 100.7.x or
+# 100.10.x, which are ordinary public addresses
+ddns_is_cgnat() { net_valid_ip "${1:-}" && net_same_subnet "$1" 100.64.0.0 10; }
 # ddns_test: asks the service the same question in a few different ways and prints each short answer, so a refusal can be
 # explained (the token itself is never printed and never goes on a command line: each request is given to curl on stdin).
 ddns_test() {
