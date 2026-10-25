@@ -650,6 +650,39 @@ def clock_label(t=None):
     return time.strftime("%H:%M", lt) + " " + tz
 
 
+# 0.55.1, asked for by the owner (25 October 2026): the registration as a hashtag in every aircraft post, whatever its
+# words (the five shapes and the owner's templates), so that Bluesky's search for #EI-ENK counts how often that aircraft
+# crossed. Written as registered, with its hyphen: Bluesky's own hashtag rule keeps a hyphen inside a tag (checked in
+# atproto's TAG_REGEX, 25 October 2026). Where the words already show the registration after a space or at the start of
+# a line, that one becomes the hashtag; otherwise it goes first among the hashtags, which is never dropped to fit.
+REG_TAG_RE = re.compile(r"^[A-Z0-9](?:[A-Z0-9-]{0,8}[A-Z0-9])?$")
+
+
+def reg_hashtag(p):
+    """"#EI-ENK", or "" when the registration is unknown or could not be a hashtag (digits alone, odd characters)."""
+    reg = str(p.get("registration") or "").strip().upper()
+    if not REG_TAG_RE.match(reg) or reg.replace("-", "").isdigit():
+        return ""
+    return "#" + reg
+
+
+def tag_registration(text, tag):
+    """(text, True) with the registration written in the text made the hashtag (or already one); (text, False) when the
+    text does not show it where a hashtag can start (after a space or at a line's start)."""
+    reg = re.escape(tag[1:])
+    if re.search(r"(?:^|(?<=\s))#%s(?![A-Za-z0-9-])" % reg, text, re.I | re.M):
+        return text, True
+    m = re.search(r"(?:^|(?<=\s))%s(?![A-Za-z0-9-])" % reg, text, re.I | re.M)
+    if not m:
+        return text, False
+    return text[:m.start()] + tag + text[m.end():], True
+
+
+def has_tag(post, tag):
+    """The post carries that hashtag as Bluesky reads it (a facet), not merely its letters."""
+    return tag.lower() in (x.lower() for x in text_facets(post)[1])
+
+
 def hashtag_callsign(flight):
     """An airline callsign (ETD11K) becomes a hashtag, so a flight can be followed; a registration used as a
     callsign (DEABC) stays plain text."""
@@ -670,14 +703,15 @@ def range_words(km, lang=None, units="metric"):
 POST_MAX = 300                   # Bluesky's limit, in characters
 
 
-def fit_post(body, credit, tags):
+def fit_post(body, credit, tags, keep=0):
     """The post's lines inside Bluesky's 300 characters: the text, the hashtags, the map's credit last, as a
     footnote (0.19.6: it sat between the text and the hashtags). When it is too long: hashtags dropped from the end,
-    then the body cut at a separator. Never a hashtag cut in the middle (a wrong, clickable tag) and never the credit."""
+    then the body cut at a separator. Never a hashtag cut in the middle (a wrong, clickable tag) and never the credit.
+    keep: the first hashtags are never dropped (0.55.1: the registration's)."""
     def join(b, cr, t):
         return "\n".join(x for x in (b, t, cr or "") if x)
     words = tags.split()
-    while len(join(body, credit, " ".join(words))) > POST_MAX and words:
+    while len(join(body, credit, " ".join(words))) > POST_MAX and len(words) > keep:
         words.pop()
     tags = " ".join(words)
     while len(join(body, credit, tags)) > POST_MAX and " \u00b7 " in body:
@@ -879,11 +913,22 @@ def post_text(p, c, why=None, credit=None, photo=None, shape=None):
     elif shape != "factual":
         text = styled_text(shape, p, c, why) or text
     tags = "" if placed else post_hashtags(p, c)    # a template that placed them has them once
+    rtag, keep = reg_hashtag(p), 0
+    if rtag:
+        tagged, inline = tag_registration(text, rtag)
+        if inline:
+            text = tagged
+        else:
+            tags, keep = (rtag + " " + tags.replace(rtag, "")).strip(), 1
+    tags = " ".join(tags.split())
     if photo:                                    # the photo line only when the text fits whole beside it
-        with_photo = fit_post(text, "\n".join(x for x in (credit, photo) if x), tags.strip())
-        if with_photo.startswith(text + "\n") or with_photo == text:
+        with_photo = fit_post(text, "\n".join(x for x in (credit, photo) if x), tags, keep)
+        if (with_photo.startswith(text + "\n") or with_photo == text) and (not rtag or has_tag(with_photo, rtag)):
             return with_photo
-    return fit_post(text, credit, tags.strip())
+    post = fit_post(text, credit, tags, keep)
+    if rtag and not has_tag(post, rtag):         # cut away with the end of a long text: then first among the hashtags
+        post = fit_post(text, credit, (rtag + " " + tags.replace(rtag, "")).strip(), 1)
+    return post
 
 
 def post_hashtags(p, c):
@@ -989,7 +1034,8 @@ def template_values(p, c, why, L, now=None):
         "why": L.t(WHY_WORDS[why]) if why in WHY_WORDS else "", "area": area_words(c, L),
         "time": L.clock(time.localtime(now).tm_hour, time.localtime(now).tm_min), "date": L.day_month(datetime.date.fromtimestamp(now or time.time())),
         "photo": photo, "tracker": ("https://globe.adsbexchange.com/?icao=" + hexc) if re.match(r"^[0-9a-f]{6}$", hexc) else "",
-        "hashtags": post_hashtags(p, c),
+        # 0.55.1: the registration's hashtag first, so a template that places {hashtags} carries it there
+        "hashtags": " ".join(x for x in (reg_hashtag(p), post_hashtags(p, c)) if x),
     }
 
 
@@ -1802,7 +1848,7 @@ def cmd_week(post=False, second=False, part=None, period="weekly"):
 # 0.51.0: what the shell and the console ask of the owner's templates
 TAG_HELP = (("flight", "the flight number when known (FR4512), else the callsign"), ("callsign", "the callsign as sent (RYR4512)"),
             ("airline", "the airline"), ("airline_country", "the country the airline is based in"),
-            ("flag", "that country's flag, as an emoji (else the country of registration's)"), ("registration", "the registration"),
+            ("flag", "that country's flag, as an emoji (else the country of registration's)"), ("registration", "the registration, as a hashtag (#EI-ENK): every post carries it"),
             ("reg_country", "the country it is registered in"), ("type", "make and model"), ("type_code", "the ICAO type code (B738)"),
             ("category", "airliner, cargo aircraft, business jet, helicopter, military aircraft..."),
             ("from", "departure, city and code: Dublin (DUB)"), ("to", "arrival, city and code"), ("from_code", "the departure's code"),

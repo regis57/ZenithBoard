@@ -397,7 +397,7 @@ console-395,console,console.js,the callsign as sent (RYR4512),"izsaukuma signāl
 console-396,console,console.js,the airline,aviokompānija,,
 console-397,console,console.js,the country the airline is based in,aviokompānijas valsts,,
 console-398,console,console.js,"that country's flag, as an emoji",šīs valsts karogs kā emocijzīme,,
-console-399,console,console.js,the registration,reģistrācijas numurs,,
+console-399,console,console.js,"the registration, as a hashtag: #EI-ENK",reģistrācijas numurs kā tēmturis: #EI-ENK,,
 console-400,console,console.js,the country it is registered in,reģistrācijas valsts,,
 console-401,console,console.js,make and model,ražotājs un modelis,,
 console-402,console,console.js,the ICAO type code (B738),ICAO tipa kods (B738),,

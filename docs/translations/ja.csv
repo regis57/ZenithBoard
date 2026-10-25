@@ -397,7 +397,7 @@ console-395,console,console.js,the callsign as sent (RYR4512),送信されたま
 console-396,console,console.js,the airline,航空会社,,
 console-397,console,console.js,the country the airline is based in,航空会社の所在国,,
 console-398,console,console.js,"that country's flag, as an emoji",その国の国旗（絵文字）,,
-console-399,console,console.js,the registration,登録記号,,
+console-399,console,console.js,"the registration, as a hashtag: #EI-ENK",登録記号（ハッシュタグとして）：#EI-ENK,,
 console-400,console,console.js,the country it is registered in,機体の登録国,,
 console-401,console,console.js,make and model,メーカーと機種,,
 console-402,console,console.js,the ICAO type code (B738),ICAOの機種コード（B738）,,

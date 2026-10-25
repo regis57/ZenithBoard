@@ -397,7 +397,7 @@ console-395,console,console.js,the callsign as sent (RYR4512),"позывной 
 console-396,console,console.js,the airline,авиакомпания,,
 console-397,console,console.js,the country the airline is based in,страна авиакомпании,,
 console-398,console,console.js,"that country's flag, as an emoji",флаг этой страны в виде эмодзи,,
-console-399,console,console.js,the registration,бортовой номер,,
+console-399,console,console.js,"the registration, as a hashtag: #EI-ENK","бортовой номер, в виде хештега: #EI-ENK",,
 console-400,console,console.js,the country it is registered in,страна регистрации,,
 console-401,console,console.js,make and model,марка и модель,,
 console-402,console,console.js,the ICAO type code (B738),код типа ИКАО (B738),,
