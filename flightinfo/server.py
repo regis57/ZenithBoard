@@ -1748,16 +1748,71 @@ class FarthestTracker(object):
 _farthest = FarthestTracker()
 
 
+# --------------------------------------------------------------------------- every aircraft of the day (0.54.18)
+# The statistics timer used to count the day's aircraft from one look at aircraft.json every quarter hour. An aircraft
+# that crossed the range between two looks was never counted: the owner's FlightAware page gave 2 878 aircraft on
+# 23 October 2026 where /stats gave 2 554 (11% fewer), every day of the week alike. The same five-second look as the
+# farthest aircraft now notes every address of the day, in memory, with what the fleet file keeps (callsign, altitude,
+# type, category, military mark, time last seen); the timer asks for it on the loopback and adds it to its files.
+class SeenTracker(object):
+    """Every ICAO address seen, per day (local time), for the last two days: hex -> [callsign, altitude in ft, type,
+    emitter category, military mark, HHMM last seen], the columns of the fleet file (lib/stats.sh)."""
+
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.days = {}
+
+    def observe(self, data, now=None):
+        now = time.time() if now is None else now
+        rows = []
+        for ac in (data or {}).get("aircraft") or []:
+            if not isinstance(ac, dict):
+                continue
+            hx = str(ac.get("hex") or "").lower().strip()
+            if not re.match(r"^[0-9a-f]{6}$", hx):          # ~ marks a made-up address, as the timer always counted
+                continue
+            seen = ac.get("seen", 0)
+            when = datetime.datetime.fromtimestamp(now - (seen if isinstance(seen, (int, float)) and 0 <= seen < 300 else 0))
+            alt = ac.get("alt_baro")
+            try:
+                mil = "1" if int(ac.get("dbFlags") or 0) & 1 else ""
+            except (TypeError, ValueError):
+                mil = ""
+            rows.append((when.strftime("%Y-%m-%d"), hx, [
+                str(ac.get("flight") or "").strip().upper(), str(int(alt)) if isinstance(alt, (int, float)) else "",
+                str(ac.get("t") or "").strip().upper(), str(ac.get("category") or "").strip().upper()[:2], mil,
+                when.strftime("%H%M")]))
+        with self.lock:
+            for day, hx, v in rows:
+                d = self.days.setdefault(day, {})
+                old = d.get(hx)
+                # a blank never replaces what was known (the callsign often comes after the first position); the
+                # altitude and the time are the latest
+                d[hx] = v if old is None else [v[k] or old[k] for k in range(len(v))]
+            for day in sorted(self.days)[:-2]:
+                del self.days[day]
+
+    def snapshot(self):
+        with self.lock:
+            return {day: {hx: list(v) for hx, v in d.items()} for day, d in self.days.items()}
+
+
+_seen = SeenTracker()
+
+
 def farthest_watch():
-    """The tracker's loop, a thread of its own. Does nothing while statistics are off or the position is not set."""
+    """The trackers' loop, a thread of its own. Does nothing while statistics are off; the farthest aircraft also
+    needs the position."""
     while True:
         try:
             cfg = load_config()
             lat, lon = cfg_float(cfg, "LAT", 0), cfg_float(cfg, "LON", 0)
-            if cfg_bool(cfg, "STATS") and (lat or lon):
+            if cfg_bool(cfg, "STATS"):
                 data, _ = read_aircraft(cfg)
                 if data is not None:
-                    _farthest.observe(data, lat, lon)
+                    _seen.observe(data)
+                    if lat or lon:
+                        _farthest.observe(data, lat, lon)
         except Exception as exc:            # a bad file now and then must not end the watch for good
             print("farthest aircraft: %s" % exc, file=sys.stderr, flush=True)
         time.sleep(FARTHEST_EVERY_S)
@@ -2004,6 +2059,10 @@ class Handler(BaseHTTPRequestHandler):
                                         theme=public_config(cfg).get("theme"), fleet=read_fleet(cfg, rng=rng)))
         if path == "/api/farthest":                    # asked by the statistics timer every quarter hour (lib/stats.sh)
             return self._send(200, farthest_answer(cfg))
+        if path == "/api/seen":                        # the same timer, 0.54.18: every aircraft of today and yesterday
+            if self.client_address[0] not in ("127.0.0.1", "::1", "::ffff:127.0.0.1"):    # for the timer, not the network
+                return self._send(404, b"not found", "text/plain")
+            return self._send(200, {"enabled": cfg_bool(cfg, "STATS"), "days": _seen.snapshot()})
         if path == "/stats":
             return self._file(STATIC_DIR, "stats.html")
         if path == "/social/preview":                 # the picture `zenithboard social test` drew, to look at before posting anything

@@ -96,3 +96,17 @@ console.log("stats version line: ok");
 }
 console.log("stats farthest line: ok");
 
+
+// ---- 0.54.18: a week's messages did not fit its box ("386 530 3…" on the owner's page): from ten million on, short
+{
+  const pick = name => { const a = src.indexOf("function " + name + "("); let d = 0;
+    for (let j = src.indexOf("{", a); j < src.length; j++) { if (src[j] === "{") d++; else if (src[j] === "}" && --d === 0) return src.slice(a, j + 1); } };
+  for (const [loc, n, want] of [["fr", 386530314, "386,5 M"], ["en", 57200000, "57.2M"], ["fr", 9999999, null]]) {
+    const big = new Function("I", pick("fmt") + pick("big") + "return big;")({ locale: () => loc });
+    const got = big(n);
+    if (want) assert.strictEqual(got, want);
+    else assert.ok(/^9.999.999$/.test(got), "under ten million the whole number stays: " + got);
+  }
+  assert.ok(/t-messages"\)\.title = fmt\(/.test(src), "the whole number is in the tooltip");
+  console.log("stats messages box: ok");
+}

@@ -127,6 +127,7 @@ wait
 check "  and runs once it ends"                           '[ "$(zb_pkg_locked echo ran)" = ran ]'
 check "graphs1090 and the stats both take it"             'grep -q "zb_pkg_locked graphs_run_installer_unlocked" lib/graphs.sh && grep -q "zb_pkg_locked axs_run_installer_unlocked" lib/adsbxstats.sh'
 check "health hides a station's UUID"                     '[ "$(echo "Using UUID [0f1e2d3c-4b5a-6978-8796-a5b4c3d2e1f0] for stats" | zb_mask_ids)" = "Using UUID [(id hidden)] for stats" ] && grep -q "zb_mask_ids" lib/reliability.sh'
+check "the feed's update hides it too (0.54.18: the owner's paste showed it)" '[ "$(echo "Using existing valid UUID (0f1e2d3c-4b5a-6978-8796-a5b4c3d2e1f0) from x" | zb_mask_ids)" = "Using existing valid UUID ((id hidden)) from x" ] && grep -q "ADSBX_UPDATE_URL.*" lib/update.sh && grep -A1 "ADSBX_UPDATE_URL" lib/update.sh | grep -q zb_mask_ids'
 
 # installed by hand with their two lines, before ZenithBoard knew: off removes it and nothing else
 sed -i '/ jq$\| bind9-host$\| bash-builtins$/d' "$t/pkgs"

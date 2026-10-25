@@ -10,7 +10,7 @@
 # another (the airlines, types and altitudes of the page). Thirty days are kept, then pruned. About 30 KB a day on the card.
 #
 # A fifteen-minute sample misses an aircraft that crossed in less than that, so the daily count is a floor, and
-# both the page and the command say so. Off by default: `stats on` starts the timer, `stats off` stops it and
+# both the page and the command say so. Since 0.54.18 the wall's five-second look adds those (11% of the day's). Off by default: `stats on` starts the timer, `stats off` stops it and
 # keeps the files, `stats clear` empties them.
 STATS_DIR="${ZB_STATS_OUT_DIR:-/var/lib/zenithboard/stats}"
 STATS_FILE="$STATS_DIR/stats.csv"
@@ -64,9 +64,9 @@ stats_run() {
   now=$(date '+%Y-%m-%d %H:%M'); day=${now%% *}
   # tar1090's aircraft database, when `data localdb on`: the type of an aircraft the decoder did not give one
   ldb=""; [ "$(cfg_get LOCAL_DB 0)" = 1 ] && ldb=$(cfg_get LOCAL_DB_DIR /usr/local/share/tar1090/git-db/db)
-  n=$(python3 - "$sj" "$aj" "$(stats_day_file "$day")" "$(stats_fleet_file "$day")" "$ldb" "$ZB_HOME/flightinfo" <<'PY'
-import json, sys, os, time
-sj, aj, dayfile, fleetfile, localdb, flightinfo = sys.argv[1:7]
+  n=$(python3 - "$sj" "$aj" "$(stats_day_file "$day")" "$(stats_fleet_file "$day")" "$ldb" "$ZB_HOME/flightinfo" "$(cfg_get PORT 8080)" <<'PY'
+import json, sys, os, time, urllib.request
+sj, aj, dayfile, fleetfile, localdb, flightinfo, port = sys.argv[1:8]
 try:
     j = json.load(open(sj))
 except Exception:
@@ -95,6 +95,37 @@ try:
                         time.strftime("%H%M")]
 except Exception:
     pass
+# 0.54.18: every aircraft the wall saw since, in its five-second look (flightinfo/server.py, SeenTracker). The look
+# above, once a quarter hour, missed an aircraft that crossed between two: 11% fewer than FlightAware counted. Without
+# the wall (stats on without it, 0.54.16) or with an older one, the quarter-hour look alone, as before.
+today = os.path.basename(dayfile)[len("seen-"):]
+live = {}
+try:
+    with urllib.request.urlopen("http://127.0.0.1:%s/api/seen" % port, timeout=5) as r:
+        live = (json.load(r) or {}).get("days") or {}
+except Exception:
+    live = {}
+for h, v in (live.get(today) or {}).items():
+    if isinstance(v, list) and len(v) == 6 and len(h) == 6:
+        seen.add(h)
+        old_v = fleet.get(h)
+        fleet[h] = [str(x) for x in v] if old_v is None else [old_v[k] or str(v[k]) for k in range(6)]
+# the day before, for the aircraft of its last quarter hour (a sample at 00:05 reads them after midnight)
+for day, d in live.items():
+    if day == today or not isinstance(d, dict):
+        continue
+    pfile = dayfile[:-len(today)] + day
+    if not os.path.exists(pfile):
+        continue                                   # only a day the timer has already started
+    try:
+        prev = set(x.strip() for x in open(pfile) if x.strip())
+        add = set(h for h in d if len(h) == 6) - prev
+        if add:
+            with open(pfile + ".tmp", "w") as fh:
+                fh.write("\n".join(sorted(prev | add)) + "\n")
+            os.replace(pfile + ".tmp", pfile)
+    except OSError:
+        pass
 # the fleet file: what was known before is kept, a blank never replaces a value, the altitude is the latest.
 # 0.36.0: two more columns, the emitter category (A1 light ... B1 glider, B6 drone) and a military mark; 0.37.0 one
 # more, the time last seen (HHMM), for the statistics page's last 24 hours. Older lines are read as before
@@ -298,7 +329,9 @@ stats_show() {
   # shellcheck disable=SC2086
   printf ' %s\n' "$(stats_spark $hours)"
   echo
-  echo "Aircraft seen is a floor: a sample every 15 minutes misses an aircraft that crossed in less. CSV: zenithboard stats csv"
+  # 0.54.18: with the wall running, its five-second look adds the aircraft the quarter-hour sample missed
+  if is_flightinfo 2>/dev/null; then echo "Aircraft seen: every address the wall saw, looking every 5 seconds (a floor, but within a few percent). CSV: zenithboard stats csv"
+  else echo "Aircraft seen is a floor: a sample every 15 minutes misses an aircraft that crossed in less (the wall, when installed, looks every 5 seconds). CSV: zenithboard stats csv"; fi
 }
 stats_csv() { [ -f "$STATS_FILE" ] && cat "$STATS_FILE" || { echo "No statistics yet."; return 1; }; }
 

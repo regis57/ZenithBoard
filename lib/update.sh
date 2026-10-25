@@ -30,6 +30,16 @@ zb_refresh_units() {
 }
 
 zb_trust_stored() { cat "$ZB_TRUST_FPR" 2>/dev/null; }      # one fingerprint per line
+# zb_trust_shipped "FPR\nFPR\n": every usable key in GitHub's file is one shipped in lib/versions.sh
+zb_trust_shipped() {
+  local f n=0
+  while read -r f; do
+    [ -n "$f" ] || continue
+    grep -qixF -- "$f" <<<"$(tr ' ' '\n' <<<"${GITHUB_SIGNING_KEY_FPRS:-}")" || return 1
+    n=$((n + 1))
+  done <<<"$1"
+  [ "$n" -gt 0 ]
+}
 
 # zb_verify_decide STATUS SIGNER STORED -> ok | bad | unknown     (STATUS is git's %G?; STORED: one per line)
 # "ok" only for a good signature made by one of the keys we recorded. Separated out so it can be tested.
@@ -71,16 +81,26 @@ zb_trust_setup() {
   keys=$(zb_keys_in "$tmp")
   [ -n "$keys" ] || { warn "That key file could not be read."; return 1; }
   usable=""
+  while read -r fpr st _ uid; do
+    case "$st" in e|r) ;; *) usable="$usable$fpr"$'\n' ;; esac
+  done <<<"$keys"
+  [ -n "$usable" ] || { warn "None of those keys can be used."; return 1; }
+  # 0.54.18: the keys this release ships with (lib/versions.sh) need no question; any other one still does
+  if zb_trust_shipped "$usable"; then
+    GNUPGHOME="$ZB_TRUST_GPG" gpg --batch --quiet --import "$tmp" || return 1
+    printf '%s' "$usable" > "$ZB_TRUST_FPR"; chmod 600 "$ZB_TRUST_FPR"
+    log "GitHub's signing key is the one this ZenithBoard ships with (${usable%%$'\n'*}): trusted. Future updates are checked against it."
+    return 0
+  fi
   echo
   echo "ZenithBoard is about to trust the keys GitHub signs its releases with:"
   while read -r fpr st _ uid; do
     case "$st" in
-      e) echo "    $fpr   (expired, will NOT be trusted)   $uid" ;;
-      r) echo "    $fpr   (revoked, will NOT be trusted)   $uid" ;;
-      *) echo "    $fpr   $uid"; usable="$usable$fpr"$'\n' ;;
+      e|r) ;;                                                   # expired or revoked: never trusted, not shown
+      *) echo "    $fpr   $uid" ;;
     esac
   done <<<"$keys"
-  [ -n "$usable" ] || { warn "None of those keys can be used."; return 1; }
+  echo "GitHub now has a key this ZenithBoard does not know (a key change on GitHub's side)."
   echo "On GitHub, click the Verified badge beside a commit at"
   echo "    https://github.com/regis57/ZenithBoard/commits/main"
   echo "It shows a key ID: it must be the LAST 16 characters of one of the lines above."
@@ -271,7 +291,11 @@ zb_update_components() {
   fi
   want_c dump1090 && is_dump1090 && { log "dump1090-fa"; apt_install --only-upgrade dump1090-fa || warn "dump1090-fa update failed"; }
   if want_c adsbx && is_adsbx; then
-    log "ADSB Exchange"; ax=$(zb_tmp axupdate.sh) && fetch "$ADSBX_UPDATE_URL" "$ax" && bash "$ax" || warn "ADSB Exchange update failed"
+    # 0.54.18: their update prints the feed's UUID ("Using existing valid UUID (…)"), and an update's output is pasted:
+    # hidden as the stats installer's is. Their script draws nothing (its whiptail lines are commented out, read on
+    # 25 October 2026), so its output can go through a filter.
+    log "ADSB Exchange"; ax=$(zb_tmp axupdate.sh) && fetch "$ADSBX_UPDATE_URL" "$ax" \
+      && ( set -o pipefail; bash "$ax" 2>&1 | zb_mask_ids ) || warn "ADSB Exchange update failed"
     if is_adsbx_stats; then log "ADSB Exchange stats"; adsbx_stats_update; fi
   fi
   want_c piaware && is_piaware && { log "piaware"; apt_install --only-upgrade piaware || warn "piaware update failed"; }

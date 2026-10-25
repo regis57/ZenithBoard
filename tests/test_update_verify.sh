@@ -55,11 +55,27 @@ check "the current one is not"               '! grep -q "^$NEWK e " <<<"$keys"'
 fetch() { cp "$1" "$2"; }
 GITHUB_SIGNING_KEY_URL="$t/github.gpg"
 mv "$t/var/trust/signer.fpr" "$t/var/trust/signer.fpr.keep" 2>/dev/null || true
+# a key this ZenithBoard does not ship (GitHub changed its key): asked, as before
+GITHUB_SIGNING_KEY_FPRS="0000000000000000000000000000000000000000"
 shown=$(zb_trust_setup </dev/null 2>&1)
-check "every key in the file is shown"       'grep -q "$OLDK" <<<"$shown" && grep -q "$NEWK" <<<"$shown"'
-check "the expired one is marked as not trusted" 'grep "$OLDK" <<<"$shown" | grep -q "expired, will NOT be trusted"'
+check "a key not shipped is shown"           'grep -q "$NEWK" <<<"$shown"'
+check "the expired one is not even listed (0.54.18: it read as an error)" '! grep -q "$OLDK" <<<"$shown"'
 check "it explains how to compare with GitHub"   'grep -q "LAST 16 characters" <<<"$shown"'
 check "with nobody to answer, nothing is recorded" '[ ! -f "$t/var/trust/signer.fpr" ]'
+# the key shipped in lib/versions.sh (0.54.18): trusted with no question, even with nobody to answer (the console)
+GITHUB_SIGNING_KEY_FPRS="$NEWK"
+shown=$(zb_trust_setup </dev/null 2>&1)
+check "the shipped key is trusted without a question" '! grep -q "Trust these keys" <<<"$shown" && grep -qx "$NEWK" "$t/var/trust/signer.fpr"'
+check "the expired key is not recorded"      '! grep -q "$OLDK" "$t/var/trust/signer.fpr"'
+check "it says which key and why"            'grep -q "ships with ($NEWK)" <<<"$shown"'
+rm -f "$t/var/trust/signer.fpr"
+# GitHub's file with the shipped key and another valid one: the other one is asked about
+GITHUB_SIGNING_KEY_FPRS="$OLDK"; zb_trust_shipped "$NEWK"$'\n' && r=yes || r=no
+check "an unknown key among them still asks" '[ "$r" = no ]'
+zb_trust_shipped "" && r=yes || r=no
+check "an empty list is never 'shipped'"     '[ "$r" = no ]'
+. lib/versions.sh
+check "the real shipped key is GitHub's current one (key ID B5690EEEBB952194)" '[ "${GITHUB_SIGNING_KEY_FPRS: -16}" = B5690EEEBB952194 ]'
 mv "$t/var/trust/signer.fpr.keep" "$t/var/trust/signer.fpr" 2>/dev/null || true
 
 # ---- what the update does with that, with a stand-in git

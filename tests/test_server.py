@@ -1293,6 +1293,37 @@ class FarthestTest(unittest.TestCase):
             server._farthest = old
 
 
+class SeenTrackerTest(unittest.TestCase):
+    """0.54.18: every aircraft of the day, noted every five seconds, so that the statistics count those that crossed
+    between two quarter-hour samples (the owner's /stats was 11% under FlightAware's count)."""
+
+    def test_it_keeps_every_real_address_with_the_fleet_columns(self):
+        import datetime
+        tr = server.SeenTracker()
+        t0 = time.mktime(datetime.datetime(2026, 10, 23, 9, 15, 0).timetuple())
+        tr.observe({"aircraft": [{"hex": "4CA123", "flight": "RYR5ZK  ", "alt_baro": 37000.0, "t": "B738", "category": "a3"},
+                                 {"hex": "~2a0001"}, {"hex": "3c6444", "dbFlags": 1}, "junk"]}, now=t0)
+        tr.observe({"aircraft": [{"hex": "4ca123", "alt_baro": 12000}]}, now=t0 + 600)       # no callsign this time
+        day = tr.snapshot()["2026-10-23"]
+        self.assertEqual(sorted(day), ["3c6444", "4ca123"], "the ~ address is made up, as the timer always counted")
+        self.assertEqual(day["4ca123"], ["RYR5ZK", "12000", "B738", "A3", "", "0925"], "a blank keeps what was known")
+        self.assertEqual(day["3c6444"][4], "1")
+
+    def test_two_days_only(self):
+        import datetime
+        tr = server.SeenTracker()
+        for d in (20, 21, 22):
+            tr.observe({"aircraft": [{"hex": "abcdef"}]}, now=time.mktime(datetime.datetime(2026, 10, d, 12).timetuple()))
+        self.assertEqual(sorted(tr.snapshot()), ["2026-10-21", "2026-10-22"])
+
+    def test_the_watch_needs_no_position_for_it(self):
+        src = open(os.path.join(os.path.dirname(server.__file__), "server.py")).read()
+        i = src.index("def farthest_watch")
+        self.assertLess(src.index("_seen.observe(data)", i), src.index("if lat or lon", i))
+        self.assertIn('"/api/seen"', src)
+        self.assertIn('not in ("127.0.0.1", "::1"', src[src.index('"/api/seen"'):])
+
+
 class PhotoUrlTest(unittest.TestCase):
     """The photo address is somebody else's answer, and the Pi fetches it itself: it has to be checked first."""
 
