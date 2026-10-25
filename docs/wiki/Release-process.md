@@ -12,6 +12,8 @@
 
 Most releases are patches. When in doubt it is a patch.
 
+**During the freeze (from 0.99.0, 25 October 2026, until 1.0)** every release is a patch of 0.99 and a fix only; what counts as one is in [Roadmap → The freeze](Roadmap#the-freeze). A feature asked meanwhile goes to *Waiting for 1.1* in the Roadmap, not into the code.
+
 ## The version lives in two files
 
 ```

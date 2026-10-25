@@ -32,6 +32,14 @@ on Wi-Fi, near Trémery (Moselle). The owner tests on it; a session never reache
   (`zenithboard stats gaps`, the field log) rather than an assumption.
 - Mastodon is gone (0.19.0) and stays gone. No paid tier, no telemetry, no cloud account.
 
+## Feature freeze (since 25 October 2026)
+
+The owner froze the features for 1.0: **0.99.x is the release candidate, fixes only** (a crash, a wrong figure, something
+not doing what the docs say, a security or privacy hole, a mistranslation, a doc a novice cannot follow, a provider that
+moved a file). A request for anything new during the freeze is **not built**: say so to the owner, in French, and write
+it under *Waiting for 1.1* in `docs/wiki/Roadmap.md`. Every release is a patch of 0.99 until the owner says 1.0. What
+1.0 still needs, and the hands-off clock, are in Roadmap → What 1.0 takes.
+
 ## Workflow for a change
 
 1. `git checkout main && git pull`, then a branch named for the change.
