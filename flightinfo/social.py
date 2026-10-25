@@ -1812,7 +1812,14 @@ def cmd_week(post=False, second=False, part=None, period="weekly"):
     port = int(server.cfg_float(c, "PORT", 8080))
     for n in (1, 2, 3, 4):
         r = publish_week(c, sec, time.time(), state, dry=True, part=n, period=period,
-                         keep=os.path.join(STATE_DIR, "preview" if n == 1 else "preview%d" % n))
+                         keep=os.path.join(STATE_DIR, "preview%d" % n))
+        if n == 1 and r.get("preview"):
+            # 0.55.2: post 1 has its own copy (/social/preview1), which a later 'social test' of a crossing does not
+            # replace; /social/preview still shows the last picture drawn, this one included
+            try:
+                keep_copy(r["preview"], os.path.join(STATE_DIR, "preview"))
+            except OSError:
+                pass                             # the page's own copy is there; the shared one is a convenience
         if n == 1 and "skipped" in r:
             print("Nothing to sum up: %s." % r["skipped"])
             return 1
@@ -1828,7 +1835,7 @@ def cmd_week(post=False, second=False, part=None, period="weekly"):
                 pass                             # there was none to remove
         else:
             print("  Picture: %s (%s bytes)   See it:  http://%s:%d/social/preview%s" % (
-                r.get("preview") or r.get("preview_error"), r.get("bytes"), local_ip(), port, "" if n == 1 else n))
+                r.get("preview") or r.get("preview_error"), r.get("bytes"), local_ip(), port, n))
             print("  " + r["text"].replace("\n", "\n  "))
             print("  Alt text: " + r["alt"])
         if n == 1 and r.get("fleet_since"):

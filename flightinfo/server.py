@@ -27,7 +27,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.55.1"
+VERSION = "0.55.2"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -2078,7 +2078,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._file(SOCIAL_DIR, social_preview_name())
         if re.match(r"^/flags/[A-Z]{2}\.png$", path):   # 0.37.0: the statistics page's flags (country-flag-icons, MIT)
             return self._file(os.path.join(DATA_DIR, "flags"), path[len("/flags/"):])
-        if path in ("/social/preview2", "/social/preview3", "/social/preview4"):   # the weekly posts' pictures (0.35.0, 0.36.0)
+        # the summaries' pictures (0.35.0, 0.36.0); 0.55.2: post 1, the period, has its own too
+        if path in ("/social/preview1", "/social/preview2", "/social/preview3", "/social/preview4"):
             name = "preview%s.png" % path[-1]
             if not os.path.isfile(os.path.join(SOCIAL_DIR, name)):
                 # 0.36.1: "not found" alone, seen on the reference Pi, did not say why: that post had nothing to say

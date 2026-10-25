@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.55.2
+- **The summaries' post 1 has its link** (the owner's screenshot, 25 October 2026): *Sharing → Summaries* now shows *Post 1 · The period ↗* beside posts 2 to 4. *All summaries* draws the four in the terminal's way; the link opens the first one's picture. It has a copy of its own, `/social/preview1`, which a later *Try a post* of a crossing does not replace (before, post 1 shared `/social/preview` with it). `/social/preview` still shows the last picture drawn.
+
 ## 0.55.1
 - **The registration is a hashtag in every aircraft post** (the owner, 25 October 2026), so Bluesky's search for *#EI-ENK* lists every time that aircraft crossed. Every shape and the owner's own templates:
   - where the words already show the registration after a space or at a line's start, that one becomes the hashtag (*Aircraft #D-EABC*, *✈ #RYR5ZK · #EI-ENK*, *#EI-ENK, a Ryanair…*);
