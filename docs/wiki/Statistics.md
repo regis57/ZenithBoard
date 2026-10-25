@@ -35,7 +35,11 @@ The figure in the box and the one in the line can differ by a few kilometres: th
 
 At the edge of range the decoder often has an aircraft's positions before its callsign. Since 0.24.0 the wall remembers the callsigns heard in the last hour and names the farthest aircraft with the one heard before or after its farthest position; until then the line had the registration and the model alone, with no flight and no route (seen on the real page: *TF-ICE · BOEING 737 MAX 8 · 322 km*).
 
-**The daily aircraft count is a floor.** A sample every fifteen minutes misses an aircraft that crossed in less than that. Both the page and the command say so. Sampling more often would catch more of them and write to the SD card more often; fifteen minutes is the same trade the gain log makes.
+**The daily aircraft count is a floor, now close to the real one (0.54.18).** Until 0.54.17 a sample every fifteen minutes missed every aircraft that crossed in less than that: the owner's FlightAware page gave 2 878 aircraft on 23 October 2026 where `/stats` gave 2 554, 11% fewer, every day of the week alike. Since 0.54.18 the wall, which already reads `aircraft.json` every five seconds for the farthest aircraft, notes every address of the day in memory (with its callsign, altitude, type, category, military mark and time last seen), and the quarter-hour sample adds them to the day's files: nothing more is written to the card, and nothing more often. The wall answers that list on the loopback only (`/api/seen`). Without the wall (statistics on without it), the quarter-hour look alone counts, as before.
+
+FlightAware's *Aircraft reported* also counts what it calls *Other*: about 40 to 110 a day here, part of them non-ICAO addresses (TIS-B, marked `~` by the decoder) that ZenithBoard never counts, since they are made up. A few percent below FlightAware is therefore expected.
+
+**The 7 and 30 days count distinct aircraft over the whole period**: an aircraft seen on four days counts once. The owner's 18–24 October week: 6 673 distinct aircraft on `/stats` (6 613 on the weekly post, made two hours earlier), against about 2 600 a day. FlightAware's table gives one figure per day; adding its seven days counts the same Ryanair 737 seven times.
 
 ## graphs1090: years of the decoder's graphs (optional)
 
@@ -59,7 +63,7 @@ sudo zenithboard graphs off
 
 In ZenithBoard's own look since 0.37.0: the name in the wall's dots, numbers and bars in the wall's colour (amber, or the colour the wall is set to) on black, grey for what explains them. Top right, **the period: 24 h, 7 days or 30 days**. **Everything on the page follows it** (0.43.0: the sky by hour, the fourth box and the farthest aircraft did not); the choice stays in the address (`/stats#7d`) and, when the browser allows it, for the next visit. From the top, in the order of the [summary's posts](Social-sharing#the-weeks-summary-0330-optional) (the owner, 21 October 2026):
 
-* **Four boxes**: distinct aircraft (a floor), messages with the busiest hour, the farthest distance and when, and the **busiest day** (7 and 30 days: the most distinct aircraft) or **busiest hour** (24 hours: the most aircraft with a position, on average).
+* **Four boxes**: distinct aircraft (a floor), messages with the busiest hour (from ten million on, shortened to *386.5 M* the language's way, the whole number in its tooltip, 0.54.18), the farthest distance and when, and the **busiest day** (7 and 30 days: the most distinct aircraft) or **busiest hour** (24 hours: the most aircraft with a position, on average).
 * **The farthest aircraft of the period**, in words, its airline's flag first. One aircraft is written down a day, the day's farthest (since 0.22.0): for 24 hours, yesterday's counts when it was seen inside them. When the box above says more, the line says why.
 * **Aircraft** (the first post): the sky by hour for the period — one row of the 24 hours, or a row a day for 7 or 30 — then the **airlines** and the **models** most seen side by side.
 * **Cargo and business jets** (the second post): each cargo airline with the model it flew most, the business jets by make and model, the countries they are most registered in.

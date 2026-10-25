@@ -436,6 +436,7 @@
  "last: {when}": "terakhir: {when}",
  "next: now": "berikutnya: sekarang",
  "next: {when}": "berikutnya: {when}",
+ "On this Pi": "Di Pi ini",
  "24 h, 7 days, 30 days": "24 jam, 7 hari, 30 hari",
  "Off · switch on in Receiver": "Nonaktif · aktifkan di Penerima",
  "Receiver map": "Peta penerima",
@@ -443,6 +444,7 @@
  "SkyAware": "SkyAware",
  "FlightAware's map": "Peta FlightAware",
  "The decoder's graphs, port 8542": "Grafik dekoder, port 8542",
+ "The networks you feed": "Jaringan yang Anda kirimi data",
  "Its own page, port 30053": "Halamannya sendiri, port 30053",
  "Its feeder's page, port 8754": "Halaman feeder-nya, port 8754",
  "Your feed, on their site": "Feed Anda, di situs mereka",
@@ -455,6 +457,9 @@
  "General aviation": "Penerbangan umum",
  "No account yet · see Sharing": "Belum ada akun · lihat Berbagi",
  "Reading…": "Membaca…",
+ "{n} other browsers and phones": {
+  "other": "{n} browser dan ponsel lain"
+ },
  "this one": "yang ini",
  "{how} · since {since} · seen {seen}": "{how} · masuk {since} · terakhir aktif {seen}",
  "paired": "ditautkan",
@@ -515,6 +520,7 @@
  "Sharing on Bluesky": "Berbagi di Bluesky",
  "Account @{account}. Posting each crossing is switched in Sharing; the summaries here.": "Akun @{account}. Posting pesawat yang melintas diaktifkan di Berbagi; rekap diatur di sini.",
  "No Bluesky account on this Pi: it is set up in the terminal (it asks for an app password): sudo zenithboard social setup. Skip this step until then.": "Belum ada akun Bluesky di Pi ini: akun disiapkan di terminal (meminta kata sandi aplikasi): sudo zenithboard social setup. Lewati langkah ini sampai saat itu.",
+ "The summaries come with the account: they are shown here once it is set up.": "Ringkasan hadir bersama akun: ditampilkan di sini setelah akun disiapkan.",
  "Summary of the last 24 hours": "Rekap 24 jam terakhir",
  "Every day at its time (21:00 unless changed in Sharing), from the statistics.": "Setiap hari pada waktunya (21:00 kecuali diubah di Berbagi), dari statistik.",
  "Summary of the week": "Rekap mingguan",

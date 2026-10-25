@@ -40,9 +40,13 @@ In its order, each step skipped when it is done already:
    | Daily log clean-up | The last 7 days kept |
    | Wi-Fi hardening | Reconnects without end, no power saving (only when on Wi-Fi) |
 
-5. **The web console**: its password (10 characters at least, asked twice), then its address. You finish in your
-   browser: its first steps check what is left, *System → Signed in → Pair a phone*. Bluesky, if you post, is set up here in
-   *7 Options* (it asks for an app password, which never goes through a web page).
+5. **Bluesky, optional** (0.54.18): asked only while no account is set up. *Yes*: its handle, then an app password
+   (made at bsky.app → *Settings* → *Privacy and Security* → *App Passwords*), checked with Bluesky, then the words
+   and the picture. *No*: the screen says where it is later (*7 Options → 3 Bluesky → 2 The account*, or
+   `sudo zenithboard social setup`). The account is set up in the terminal because the app password never goes
+   through a web page; the console's first steps show the summaries once it exists.
+6. **The web console**: its password (10 characters at least, asked twice), then its address. You finish in your
+   browser: its first steps check what is left, *System → Signed in → Pair a phone*.
 
 Once everything is done, the entry says *all done: check it again*.
 

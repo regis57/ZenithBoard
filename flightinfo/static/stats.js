@@ -20,6 +20,14 @@ window.ZBI18N.start({ part: "stats" }, function () {
   function showTip(e, text) { tip.textContent = text; tip.hidden = false; tip.style.left = e.clientX + "px"; tip.style.top = e.clientY + "px"; }
   function hideTip() { tip.hidden = true; }
   function fmt(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " "); }
+  // 0.54.18: a week's messages (386 530 314) did not fit its box and was cut ("386 530 3…", the owner's page): from ten
+  // million on, the box says "386.5 M" the language's way, as the summary cards do; the whole number is in its tooltip
+  function big(n) {
+    n = Math.round(n || 0);
+    if (n < 1e7) return fmt(n);
+    try { return new Intl.NumberFormat(I.locale(), { notation: "compact", maximumFractionDigits: 1 }).format(n); }
+    catch (e) { return (Math.round(n / 1e5) / 10) + " M"; }
+  }
   // the axis needs short labels: "2 M" fits the margin where "2 000 000" is cut off (the numbers above the bars stay whole)
   function axisFmt(n) {
     if (n >= 1e6) return String(Math.round(n / 1e5) / 10).replace(".0", "") + " M";
@@ -261,7 +269,8 @@ window.ZBI18N.start({ part: "stats" }, function () {
     // the four boxes: all of them the period's (0.43.0: the fourth was the thirty days' best, whatever the toggle)
     $("t-aircraft").textContent = fmt(tot.aircraft || 0);
     $("t-aircraft-d").textContent = t("distinct aircraft, {period}, a floor", { period: per });
-    $("t-messages").textContent = fmt(tot.messages || 0);
+    $("t-messages").textContent = big(tot.messages || 0);
+    $("t-messages").title = fmt(tot.messages || 0);
     $("t-busiest").textContent = tot.busiest_hour === null || tot.busiest_hour === undefined ? t("nothing yet") :
       t("busiest hour {hour}:00, {n}", { hour: (tot.busiest_hour < 10 ? "0" : "") + tot.busiest_hour, n: fmt(tot.busiest_messages) });
     $("t-far").textContent = (tot.farthest_km || 0) + " km";

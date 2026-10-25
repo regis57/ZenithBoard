@@ -87,6 +87,19 @@ label { font: 600 11px var(--mono); letter-spacing: .12em; text-transform: upper
 .busy::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--on); margin-right: 10px;
   animation: pulse .6s infinite alternate; }
 details summary { cursor: pointer; font: 600 12px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+/* 0.54.18: the browser's own triangle sat against the first letter (the owner's screenshot): one of ours, with room */
+details > summary { list-style: none; display: flex; align-items: center; gap: 10px; }
+details > summary::-webkit-details-marker { display: none; }
+details > summary::before { content: ""; flex: none; width: 0; height: 0; border-style: solid; border-width: 5px 0 5px 7px;
+  border-color: transparent transparent transparent currentColor; transition: transform .15s; }
+details[open] > summary::before { transform: rotate(90deg); }
+[dir="rtl"] details > summary::before { border-width: 5px 7px 5px 0; border-color: transparent currentColor transparent transparent; }
+[dir="rtl"] details[open] > summary::before { transform: rotate(-90deg); }
+.page-groups { display: grid; gap: 14px; }
+.page-groups summary .n-items { color: var(--faint); }
+details.fold > summary { padding: 4px 0; }
+details.fold[open] > summary { margin-bottom: 10px; }
+details.fold .list { margin-top: 4px; }
 .gate-help p { font-size: 14px; color: var(--muted); }
 
 /* ---- signed in: a side bar on a computer, tabs at the bottom on a phone */

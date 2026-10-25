@@ -168,6 +168,27 @@ touch "$STATS_DIR/farthest-$old"; stats_prune
 check "farthest: pruned after thirty days like the rest" '[ ! -e "$STATS_DIR/farthest-$old" ] && [ -f "$ff" ]'
 check "farthest: the unit gives the sample time to wait" 'grep -q "^TimeoutStartSec=120$" systemd/zenithboard-stats.service'
 
+# ---- 0.54.18: the wall's five-second list of the day's aircraft is added (a quarter-hour look missed 11%)
+port=$((20000 + RANDOM % 20000)); cfg_set PORT "$port"
+mkdir -p "$t/www/api"
+yday=$(date -d yesterday '+%Y-%m-%d'); today=$(date '+%Y-%m-%d')
+printf '{"enabled":true,"days":{"%s":{"aaa001":["BAW12","34000","A35K","A5","","0915"],"3c6444":["","","","","1","0920"]},"%s":{"bbb002":["","","","","","2358"]}}}' "$today" "$yday" > "$t/www/api/seen"
+python3 -m http.server "$port" --bind 127.0.0.1 --directory "$t/www" >/dev/null 2>&1 & srv=$!
+for _ in $(seq 1 50); do curl -s -o /dev/null "http://127.0.0.1:$port/api/seen" && break; sleep 0.1; done
+echo '{"last15min":{"messages":10,"max_distance":1000}}' > "$t/run/readsb/stats.json"
+printf '3c6444\n' > "$(stats_day_file "$yday")"                    # yesterday already started
+stats_run
+kill "$srv" 2>/dev/null; wait "$srv" 2>/dev/null
+check "the wall's list: an aircraft the quarter-hour look missed is counted" 'grep -qx aaa001 "$(stats_day_file "$today")"'
+check "  with its callsign, altitude, type and category in the fleet file" 'grep -q "^aaa001	BAW12	34000	A35K	A5		0915$" "$(stats_fleet_file "$today")"'
+check "  a blank from the wall keeps what was known, and adds the military mark" 'grep -q "^3c6444	DLH4YK	[0-9]*	A320		1	" "$(stats_fleet_file "$today")"'
+check "  yesterday's last aircraft go to yesterday's file"  'grep -qx bbb002 "$(stats_day_file "$yday")"'
+check "  and to yesterday's fleet file, for the 24 hours' airlines and models (the review)" 'grep -qP "^bbb002(\t){6}2358$" "$(stats_fleet_file "$yday")"'
+check "  the count in the CSV includes them" '[ "$(tail -1 "$STATS_FILE" | cut -d, -f5)" = "$(grep -c . "$(stats_day_file "$today")")" ]'
+rm -f "$(stats_day_file "$yday")" "$(stats_fleet_file "$yday")"; cfg_set PORT 1
+stats_run
+check "wall down: the quarter-hour look alone, as before" '[ "$(tail -1 "$STATS_FILE" | cut -d, -f5)" -ge 1 ]'
+
 # ---- off keeps the files, clear empties them
 out=$(stats_off)
 check "off: setting, timer disabled, files kept"  '[ "$(cfg_get STATS)" = 0 ] && grep -q "disable --now zenithboard-stats.timer" "$t/systemctl.log" && [ -f "$STATS_FILE" ] && [ ! -e "$t/sysd/zenithboard-stats.timer" ]'

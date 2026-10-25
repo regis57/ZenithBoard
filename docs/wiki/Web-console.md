@@ -67,7 +67,8 @@ for setting up, not for every visit: once a browser or a phone is signed in, it 
   (0.54.8). In *System → Signed in* such a computer is listed *by the phone*.
   Refused on the phone: nothing happens. Every one is in *Activity → Sign-ins*.
 * **Signing out**: *Sign out* on the page; *System → Signed in* lists every browser and phone and signs any of them
-  out; `sudo zenithboard console signout` signs everyone out, and so does choosing a new password.
+  out (this browser first; since 0.54.18, more than two others fold under one line, *N other browsers and phones*,
+  that unfolds); `sudo zenithboard console signout` signs everyone out, and so does choosing a new password.
 
 **Face ID and passkeys are not offered, on purpose.** A passkey (WebAuthn) is tied to a domain name and browsers allow
 it only in a *secure context*: HTTPS, or `localhost` on the machine itself. A plain-HTTP page at an address like
@@ -120,7 +121,7 @@ One section on screen at a time: a side bar on a computer, tabs at the bottom of
 
 | Section | What is in it |
 |---|---|
-| Overview | Up time, temperature and power warnings, memory, card; each service running or not; links to every page this Pi serves (the wall, `/stats`, the receiver map, graphs1090, Plane Finder, Flightradar24, the post pictures, your map on ADSB Exchange once its stats are on) and to the ones it can serve once switched on |
+| Overview | Up time, temperature and power warnings, memory, card; each service running or not; links to every page this Pi serves and to the ones it can serve once switched on, in three groups since 0.54.18 (the owner's request): *On this Pi* (the wall, `/stats`, the receiver map, graphs1090), *The networks you feed* (Plane Finder, Flightradar24, ADSB Exchange, your map there once its stats are on) and *Bluesky* (the post pictures). Each group folds to its title alone; the browser remembers which ones you left folded |
 | Wall | Look, colour, units, radius, seconds per aircraft; photos, routes, the receiver map's database, the monthly data refresh |
 | Receiver | Region, antenna position, statistics, graphs1090, ADSB Exchange's stats (0.52.0, with the link to their map of your aircraft), the gain (check, one step down or up), the gain log, status |
 | Sharing | Bluesky on or off; the place name, the sharing radius, what is worth a post, the gap, the town names on the maps (0.50.0); the picture (look, colour, map, units, photo link, the words, the hashtags, the posts' language, 0.51.0); *Your own templates*, with the tags a click away and a try (0.51.0); the three summaries (on or off, day and time, which posts, a try); *Try a post* and the pictures |

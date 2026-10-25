@@ -207,7 +207,11 @@ ini_set() {  # ini_set FILE KEY VALUE  -> KEY="VALUE" (replace or append)
 WT_TITLE="ZenithBoard - ADSB Flight Info"
 wt_msg()   { whiptail --title "$WT_TITLE" --msgbox "$1" "${2:-16}" 76; }
 wt_yesno() { whiptail --title "$WT_TITLE" --yesno "$1" "${2:-12}" 76; }
-wt_input() { whiptail --title "$WT_TITLE" --inputbox "$1" 10 76 "${2:-}" 3>&1 1>&2 2>&3; }
+# 0.54.18: tall enough for a question of several lines (the position's, with where to find it)
+wt_input() {
+  local nl h; nl=$(grep -o '\\n' <<<"$1" | wc -l); h=$(( ${#1} / 68 + nl + 8 )); [ "$h" -ge 10 ] || h=10; [ "$h" -le 22 ] || h=22
+  whiptail --title "$WT_TITLE" --inputbox "$1" "$h" 76 "${2:-}" 3>&1 1>&2 2>&3
+}
 # wt_menu "text" tag item tag item ...
 # ONE way out in every menu: a list entry tagged "back" (or "0" for the main menu) is selectable with the arrow keys, and then
 # there is no Cancel button next to it (that made two). A menu without such an entry (a plain picker) keeps its button, named

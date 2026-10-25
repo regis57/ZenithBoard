@@ -54,10 +54,11 @@ main_menu() {
 
 # ---------------------------------------------------------------- Start here: the first installation, in its order
 # 1 a backup from another card, if any; 2 the antenna (asked by first_run_wizard); 3 ADS-B: the decoder and ADSB
-# Exchange, other networks if wanted; 4 the wall; 5 what is worth switching on, ticked, the list shown; 6 the web
-# console, with its password, and its address to finish in a browser. Each step is skipped when it is done already.
+# Exchange, other networks if wanted; 4 the wall; 5 what is worth switching on, ticked, the list shown; 6 Bluesky, if
+# wanted (0.54.18); 7 the web console, with its password, and its address to finish in a browser. Each step is skipped
+# when it is done already.
 start_here() {
-  wt_msg "The first installation, step by step:\n\n  1. A backup from another card, if you have one\n  2. ADS-B: the decoder, ADSB Exchange, and the other networks you want\n  3. The wall, for the tablet\n  4. What is worth switching on: a list, all ticked, untick at will\n  5. The web console: you finish in your browser\n\nA step already done is skipped. Each one can be done again later from its own menu." 18 || return 0
+  wt_msg "The first installation, step by step:\n\n  1. A backup from another card, if you have one\n  2. ADS-B: the decoder, ADSB Exchange, and the other networks you want\n  3. The wall, for the tablet\n  4. What is worth switching on: a list, all ticked, untick at will\n  5. Bluesky, if you want the posts (optional)\n  6. The web console: you finish in your browser\n\nA step already done is skipped. Each one can be done again later from its own menu." 19 || return 0
   # 1 · a backup
   if [ -z "$(installed_decoder)" ] && wt_yesno "Are you moving from another card, with a ZenithBoard backup file?\n\n(Made on the old card with: menu 6 Backup, or  sudo zenithboard backup make. The console's copy leaves the networks' identities out: it is not the one to move with.)" 12; then
     # 0.54.5: a backup step left (Esc, a wrong path) used to end Start here, four screens back; the rest goes on without it
@@ -80,8 +81,23 @@ start_here() {
   fi
   # 4 · what is worth switching on
   start_recommended
-  # 5 · the web console
+  # 5 · Bluesky, optional (0.54.18)
+  start_bluesky
+  # 6 · the web console
   start_console
+}
+
+# 0.54.18 (the owner's fresh card, 25 October 2026): the account is set up only here, in the terminal, since it asks
+# for an app password the console never handles; the console's first steps then showed the summaries' switches for an
+# account that did not exist. Start here now offers it, before the console, and says where it is when declined.
+start_bluesky() {
+  [ -z "$(social_account)" ] || return 0
+  if wt_yesno "Bluesky (optional): ZenithBoard can post the aircraft worth it, and the summaries of the day and the week, to a Bluesky account of yours. Nothing is posted until you switch it on.\n\nIt needs the account and an APP password for it, made at bsky.app: Settings -> Privacy and Security -> App Passwords.\n\nSet it up now?\n\n(Later: menu 7 Options -> 3 Bluesky -> 2 The account, or  sudo zenithboard social setup)" 18; then
+    # the handle and password are kept even when Bluesky refused them, so Start here would not ask again: the way back
+    # is the account's own entry (the review, 0.54.18)
+    social_setup || wt_msg "The Bluesky account is not finished. When you have the right app password: menu 7 Options -> 3 Bluesky -> 2 The account, or  sudo zenithboard social setup" 10
+  fi
+  return 0
 }
 
 start_restore() {

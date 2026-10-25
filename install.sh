@@ -110,10 +110,14 @@ settings_units() {
   cfg_set UNITS "$u"
 }
 
+# 0.54.18: where to find the three numbers (the owner, 25 October 2026). The site was checked that day: a map, a search
+# box, and for the spot clicked the latitude, longitude and elevation in metres, no account.
+POSITION_HELP_URL="https://www.mapcoordinates.net/en"
+
 settings_location() {
   local lat lon alt
   while true; do
-    lat=$(wt_input "Antenna LATITUDE in decimal degrees (e.g. 49.1193, south is negative)." "$(cfg_get LAT)") || return 1
+    lat=$(wt_input "Antenna LATITUDE in decimal degrees (e.g. 49.1193, south is negative).\n\nNot sure? On a phone or a computer open  $POSITION_HELP_URL  and click the antenna's spot on the map: it shows the latitude, the longitude and the elevation (m) to type here." "$(cfg_get LAT)") || return 1
     valid_lat "$lat" && break; wt_msg "Not a valid latitude (-90..90)." 8
   done
   while true; do
@@ -122,7 +126,7 @@ settings_location() {
   done
   # a typo used to become 0 without a word (fresh-install check, 0.21.1): ask again instead, like the latitude
   while true; do
-    alt=$(wt_input "Antenna altitude above sea level in METRES (approximate is fine)." "$(cfg_get ALT_M 0)") || return 1
+    alt=$(wt_input "Antenna altitude above sea level in METRES (approximate is fine).\n\n$POSITION_HELP_URL gives the ground's elevation; add the antenna's height above the ground (a roof: about 6 to 10 m)." "$(cfg_get ALT_M 0)") || return 1
     is_number "$alt" && break; wt_msg "Not a number: the altitude in metres, e.g. 180 (0 if you do not know it)." 8
   done
   cfg_set LAT "$lat"; cfg_set LON "$lon"; cfg_set ALT_M "$alt"

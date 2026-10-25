@@ -30,6 +30,16 @@ zb_refresh_units() {
 }
 
 zb_trust_stored() { cat "$ZB_TRUST_FPR" 2>/dev/null; }      # one fingerprint per line
+# zb_trust_shipped "FPR\nFPR\n": every usable key in GitHub's file is one shipped in lib/versions.sh
+zb_trust_shipped() {
+  local f n=0
+  while read -r f; do
+    [ -n "$f" ] || continue
+    grep -qixF -- "$f" <<<"$(tr ' ' '\n' <<<"${GITHUB_SIGNING_KEY_FPRS:-}")" || return 1
+    n=$((n + 1))
+  done <<<"$1"
+  [ "$n" -gt 0 ]
+}
 
 # zb_verify_decide STATUS SIGNER STORED -> ok | bad | unknown     (STATUS is git's %G?; STORED: one per line)
 # "ok" only for a good signature made by one of the keys we recorded. Separated out so it can be tested.
@@ -71,16 +81,26 @@ zb_trust_setup() {
   keys=$(zb_keys_in "$tmp")
   [ -n "$keys" ] || { warn "That key file could not be read."; return 1; }
   usable=""
+  while read -r fpr st _ uid; do
+    case "$st" in e|r) ;; *) usable="$usable$fpr"$'\n' ;; esac
+  done <<<"$keys"
+  [ -n "$usable" ] || { warn "None of those keys can be used."; return 1; }
+  # 0.54.18: the keys this release ships with (lib/versions.sh) need no question; any other one still does
+  if zb_trust_shipped "$usable"; then
+    GNUPGHOME="$ZB_TRUST_GPG" gpg --batch --quiet --import "$tmp" || return 1
+    printf '%s' "$usable" > "$ZB_TRUST_FPR"; chmod 600 "$ZB_TRUST_FPR"
+    log "GitHub's signing key is the one this ZenithBoard ships with (${usable%%$'\n'*}): trusted. Future updates are checked against it."
+    return 0
+  fi
   echo
   echo "ZenithBoard is about to trust the keys GitHub signs its releases with:"
   while read -r fpr st _ uid; do
     case "$st" in
-      e) echo "    $fpr   (expired, will NOT be trusted)   $uid" ;;
-      r) echo "    $fpr   (revoked, will NOT be trusted)   $uid" ;;
-      *) echo "    $fpr   $uid"; usable="$usable$fpr"$'\n' ;;
+      e|r) ;;                                                   # expired or revoked: never trusted, not shown
+      *) echo "    $fpr   $uid" ;;
     esac
   done <<<"$keys"
-  [ -n "$usable" ] || { warn "None of those keys can be used."; return 1; }
+  echo "GitHub now has a key this ZenithBoard does not know (a key change on GitHub's side)."
   echo "On GitHub, click the Verified badge beside a commit at"
   echo "    https://github.com/regis57/ZenithBoard/commits/main"
   echo "It shows a key ID: it must be the LAST 16 characters of one of the lines above."
@@ -271,7 +291,13 @@ zb_update_components() {
   fi
   want_c dump1090 && is_dump1090 && { log "dump1090-fa"; apt_install --only-upgrade dump1090-fa || warn "dump1090-fa update failed"; }
   if want_c adsbx && is_adsbx; then
-    log "ADSB Exchange"; ax=$(zb_tmp axupdate.sh) && fetch "$ADSBX_UPDATE_URL" "$ax" && bash "$ax" || warn "ADSB Exchange update failed"
+    # 0.54.18: their update prints the feed's UUID ("Using existing valid UUID (…)"), and an update's output is pasted:
+    # hidden as the stats installer's is. Their update draws nothing on its normal path (read on 25 October 2026), so
+    # its output can go through a filter; but when their settings file lacks one of the values it needs, it runs their
+    # setup, whose whiptail screens cannot draw through a filter: that case runs as before, unfiltered.
+    log "ADSB Exchange"; ax=$(zb_tmp axupdate.sh) && fetch "$ADSBX_UPDATE_URL" "$ax" \
+      && if adsbx_settings_complete; then ( set -o pipefail; bash "$ax" 2>&1 | zb_mask_ids ); else bash "$ax"; fi \
+      || warn "ADSB Exchange update failed"
     if is_adsbx_stats; then log "ADSB Exchange stats"; adsbx_stats_update; fi
   fi
   want_c piaware && is_piaware && { log "piaware"; apt_install --only-upgrade piaware || warn "piaware update failed"; }
@@ -302,7 +328,33 @@ zb_update_components() {
   if [ "$(cfg_get SOCIAL 0)" = 1 ]; then social_install_units; fi
   zb_mlat_guard
   zb_wall_check
+  zb_system_updates_note
   zb_update_verdict
+}
+
+# 0.54.18 (the owner, 25 October 2026: "16 not upgraded: why? will it break something?"). apt's "N not upgraded" counts
+# the system's own packages that have a newer version waiting. Installing one package never upgrades the others, and
+# ZenithBoard never does the system's upgrade for you (it can restart services, and a new kernel wants a reboot), so
+# the count stays until you run it. Nothing is broken meanwhile. Said once, at the end, with the command.
+# 0.54.18 (the review): the values ADSB Exchange's update needs in its settings file; one missing and it runs its setup
+adsbx_settings_complete() {
+  local f=${ZB_ADSBX_DEFAULT:-/etc/default/adsbexchange} k
+  [ -r "$f" ] || return 1
+  for k in INPUT INPUT_TYPE USER LATITUDE LONGITUDE ALTITUDE MLATSERVER TARGET NET_OPTIONS; do
+    grep -Eq "^$k=\"?[^\" ]" "$f" || return 1
+  done
+}
+
+zb_system_updates_note() {
+  local n
+  # the same count as apt's "N not upgraded": what `upgrade` would take, plus what it keeps back
+  n=$(apt-get -s -o Debug::NoLocking=1 upgrade 2>/dev/null | sed -n -E 's/^([0-9]+) upgraded, .* and ([0-9]+) not upgraded\.$/\1 \2/p' | awk '{print $1 + $2}')
+  [ "${n:-0}" -gt 0 ] 2>/dev/null || return 0
+  echo "  Debian has newer versions of $n of this Pi's own packages (what apt calls \"$n not upgraded\"). ZenithBoard installs"
+  echo "  only what it needs and never upgrades the rest: nothing is broken meanwhile. When you choose:"
+  echo "      sudo apt full-upgrade     then   sudo reboot   if it says a new kernel came"
+  [ "$(patches_state 2>/dev/null)" = on ] && echo "  The daily security fixes (on) already apply the security ones by themselves."
+  return 0
 }
 
 # 0.53.7: an update whose code pull failed used to end "Update finished", exit 0, and the console toasted "done": the

@@ -78,7 +78,9 @@ Every ZenithBoard service is sandboxed since 0.15.0, each keeping only what its 
 
 `zenithboard update` pulls from GitHub and then runs `install.sh` as root. So before anything is merged or run, the new commit's signature is checked against keys you approved.
 
-**The first time**, ZenithBoard fetches GitHub's signing-key file and lists every key in it. GitHub rotated its key in 2024 and still publishes the expired one, so there are two: expired or revoked keys are marked and never trusted, the rest are recorded in `/var/lib/zenithboard/trust/signer.fpr`. To check before you say yes: click the **Verified** badge beside a commit on GitHub — the *key ID* it shows must be the last 16 characters of one of the listed fingerprints.
+**The first time**, ZenithBoard fetches GitHub's signing-key file. GitHub rotated its key in 2024 and still publishes the expired one; expired or revoked keys are never trusted and, since 0.54.18, not even listed. The valid key is recorded in `/var/lib/zenithboard/trust/signer.fpr`.
+
+**Since 0.54.18 the current key is shipped with ZenithBoard** (`GITHUB_SIGNING_KEY_FPRS` in `lib/versions.sh`: `968479A1AFF927E37D1A566BB5690EEEBB952194`, key ID `B5690EEEBB952194`, checked on 25 October 2026: the key ID of the signature on `main`'s latest commit, and GitHub's key file as the owner's fresh card read it). When GitHub's file holds exactly that key, it is trusted without a question. Until then every new card asked you to compare it with the **Verified** badge on GitHub, with the expired key listed first, and it read as an error (the owner's fresh card, 25 October 2026). That question came right after `install.sh` had run as root from the same clone, so the clone was already trusted; the question added a ceremony, not a check. **A key GitHub adds later** (a new rotation) is not in the shipped list: it is shown and asked about as before: click the **Verified** badge beside a commit on GitHub, and the *key ID* it shows must be the last 16 characters of the listed fingerprint.
 
 **After that** the check is silent, and speaks only when something changes:
 
@@ -89,7 +91,7 @@ Every ZenithBoard service is sandboxed since 0.15.0, each keeping only what its 
 | A signature by an expired key | Treated as unknown, not as good |
 | Not signed, or signed by another key | Explains the possible honest reasons and asks. With nobody there to answer, nothing is installed |
 
-**Why no fingerprint is written into the project's files:** a fingerprint recorded in the very files you are deciding whether to trust proves nothing. Trust starts with you looking once.
+**What the shipped fingerprint proves, and what it does not:** it is in the files you cloned, so it proves no more than the clone itself. It changes nothing for an attacker who could already change those files before your first run; it stops one who changes the code GitHub sends later, exactly as the recorded fingerprint did.
 
 **While an update waits for your answer**, you can see exactly which commit it is about to install, from a second terminal, and compare it with the top commit on GitHub:
 
