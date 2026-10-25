@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.54.9
+Low-severity findings of the 22-23 October audit on **the Bluesky menu and its wizard, in the terminal** (batch 2 of the list in *Project status*). Nothing on the web pages changes, so no translation.
+- **The Bluesky menu has seven entries and Return**, grouped like the console's Sharing page: switch sharing on or off, the account, words and rules, how a post looks, summaries, try it or post now, status. It had fourteen, and *Return* fell under the fold of a 24-line screen. A test holds it, and the new sub-menu, to seven.
+- **Removing the account asks you to type `remove`**, and says what goes: the app password on the Pi, the service, and the history behind *rare* and *farthest*. It was a plain yes/no, one line above *Return*. The command asks too; `social remove --yes` does not.
+- **The words wizard writes nothing until its last answer.** Each answer was saved as it came, so an Esc at the third question kept the first two.
+- **The posts' language is chosen by name** in a list, not typed as a code; a refusal says *Nothing was changed.*
+- **The picture wizard's last screen names the menu entries** (*6 Try it, or post now*, *1 Switch sharing ON*) beside the commands.
 ## 0.54.8
 Low-severity findings of the 22-23 October audit on **the web console's words** (batch 1 of the list in *Project status*), seven strings translated into the 20 languages and three moved; the review sheets are regenerated.
 - **The summaries say when they cannot go out.** They could be switched on with no Bluesky account, or with posting off, and nothing said so (the wizard applied them in silence too). The Summaries card and the wizard's step now say *no summary goes out until…*, and where to change it.

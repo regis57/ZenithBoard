@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **25 October 2026**, version **0.54.8**.
+Last updated: **25 October 2026**, version **0.54.9**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -67,13 +67,8 @@ The audit (build, tests, security, novice journeys, translations) ran on 0.53.3.
 **Batch 1: the console's words**: shipped in 0.54.8. Left, optional (a majority of the reviewers against):
 - the *Finish setting up* card counting stats off and no watchdog as gaps (`console.js` ~1135); the off `/stats` page offering only the SSH command (`stats.html` ~30); the gear panel pointing at `zenithboard config` (`index.html` ~38).
 
-**Batch 2: the Bluesky menu and wizard, in the terminal** (English only)
-- The Bluesky menu has 14 entries plus *Return*, which falls under the fold (`social.sh` ~664, 678): at least *Return* first or a shorter header, ideally grouped like the console; a test counting the entries of every `wt_menu`.
-- *Remove* is a plain yes/no that destroys the secret, the state and the places, one line above *Return* (`social.sh` ~732): a typed word, and the entry moved.
-- The *Words and rules* wizard saves each answer as it goes (`social.sh` ~139): keep them in locals and write at the end.
-- The posts' language is typed as a code (`social.sh` ~700): a named menu shared with the language menu; a refusal says *Nothing was changed.*
-- The last page of the wizard names commands and not the entries 8 and 9 (`social.sh` ~603).
-- Optional: changing only the app password replays the two wizards (`social.sh` ~123); `stats on` announces `/stats` with no wall installed (`stats.sh` ~48); the log selectors offer *978 MHz UAT* and *Bluesky posts* on a Pi without them: `logs uat` and `logs social` say *not installed* (`menus.sh` ~273).
+**Batch 2: the Bluesky menu and wizard**: shipped in 0.54.9. Left, optional:
+- changing only the app password replays the two wizards (`social.sh` ~123); `stats on` announces `/stats` with no wall installed (`stats.sh` ~48); the log selectors offer *978 MHz UAT* and *Bluesky posts* on a Pi without them: `logs uat` and `logs social` say *not installed* (`menus.sh` ~273).
 
 **Batch 3: Esc, numbers and the last menu details, in the terminal**
 - Esc on *Photos*, *Routes*, *Refresh* and *Offline database* cuts the function with no word (`menus.sh` ~208-216; the same shape in `wifi.sh` ~321 and `social.sh` ~725): `0` yes, `1` no, anything else goes on, and a line saying what is now set.

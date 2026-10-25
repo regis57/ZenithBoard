@@ -67,7 +67,7 @@ Every `zenithboard` command, grouped by what you are trying to do. `zenithboard`
 | `zenithboard social on` · `off` · `status` | yes | Post the aircraft overhead as a picture of the wall (off by default). `on` tries the account first (0.53.7): a refused app password stops it, with what to do; Bluesky not reachable just now is said and sharing goes on, the posts waiting for the network. `off` keeps the account |
 | `zenithboard social post [HEX]` | | Post now, once, whatever the gap. That aircraft then counts as posted for its crossing |
 | `zenithboard social check` | yes | Try the account: open a session on Bluesky |
-| `zenithboard social remove` | yes | Forget the account, stop the service, delete its state and its map tiles |
+| `zenithboard social remove` | yes | Forget the account, stop the service, delete its state (the 30 days of history behind `rare` and `farthest`) and its map tiles. Asks you to type `remove` (0.54.9); `remove --yes` does not ask |
 | `zenithboard photos on` · `off` | yes | Aircraft photos from Planespotters. Off: the animated sky scene instead |
 | `zenithboard photos test [HEX]` | | Can this Pi reach Planespotters? One real request, and the answer |
 | `zenithboard routes on` · `off` | yes | Origin and destination, looked up by callsign. Off: no callsign leaves the Pi |

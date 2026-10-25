@@ -121,9 +121,9 @@ check "template undo again: nothing to put back is said"  '! social_template und
 check "menu: delete them all (asked first) and put back"  'grep -q "clear \"4  Delete them all\"" lib/social.sh && grep -q "undo \"5  Put back" lib/social.sh && grep -q "Delete all your templates?" lib/social.sh'
 check "template test: on a sample when nothing flies over, posts nothing" 'social_template test > "$t/tt" 2>&1; grep -q "on a sample" "$t/tt" && grep -q "Nothing posted" "$t/tt"'
 check "words of a post: custom accepted"            'social_set_sentence factual,custom | grep -q "factual,custom" && social_set_sentence factual >/dev/null'
-check "lang and template: commands and menu"        'grep -q "lang)   \[" bin/zenithboard && grep -q "template|templates)" bin/zenithboard && grep -q "lang \"11 Language of the posts" lib/social.sh && grep -q "template \"12 Your own templates" lib/social.sh'
+check "lang and template: commands and menu"        'grep -q "lang)   \[" bin/zenithboard && grep -q "template|templates)" bin/zenithboard && grep -q "lang \"3  Language of the posts" lib/social.sh && grep -q "template \"4  Your own templates" lib/social.sh'
 check "summaries: the overview and a wrong period"     'social_summary | grep -q "daily" && social_summary | grep -q "monthly" && ! social_summary yearly on >/dev/null'
-check "summaries: command and menu"                 'grep -q "summary-test" bin/zenithboard && grep -q "set -- social summary weekly" bin/zenithboard && grep -q "weekly \"7  Summaries" lib/social.sh && grep -q "^summary_menu()" lib/social.sh && grep -q "remove \"14 Remove" lib/social.sh'
+check "summaries: command and menu"                 'grep -q "summary-test" bin/zenithboard && grep -q "set -- social summary weekly" bin/zenithboard && grep -q "weekly \"5  Summaries" lib/social.sh && grep -q "^summary_menu()" lib/social.sh && grep -q "remove \"2  Remove" lib/social.sh'
 check "units: metric, imperial or the wall's, nothing else (0.24.3)" 'social_set_units imperial >/dev/null && [ "$(cfg_get SOCIAL_UNITS)" = imperial ] && ! social_set_units feet >/dev/null && [ "$(cfg_get SOCIAL_UNITS)" = imperial ] && social_set_units wall >/dev/null && [ -z "$(cfg_get SOCIAL_UNITS "")" ]'
 check "map: the five, nothing else"                'social_set_map satellite >/dev/null && [ "$(cfg_get SOCIAL_MAP)" = satellite ] && ! social_set_map google >/dev/null && [ "$(cfg_get SOCIAL_MAP)" = satellite ]'
 check "the shell knows the Python lists"           'py=$(python3 -c "import sys; sys.path.insert(0, \"flightinfo\"); import social, server; print(\" \".join(social.MAP_CHOICES)); print(\" \".join(server.THEMES))"); [ "$(echo "$py" | head -1)" = "$SOCIAL_MAPS" ] && [ "$(echo "$py" | tail -1)" = "$SOCIAL_THEMES" ]'
@@ -155,6 +155,21 @@ printf '%s\n' "" abc 0 500 -5 20 x -5 1500 10 none > "$t/answers"; : > "$t/msgs.
 )
 check "wizard: a bad radius is asked again, then kept"   '[ "$(cfg_get SOCIAL_RADIUS_KM)" = 20 ] && [ "$(grep -c "whole kilometres" "$t/msgs.log")" = 4 ]'
 check "wizard: a bad gap is asked again, then kept"      '[ "$(cfg_get SOCIAL_GAP_MIN)" = 10 ] && [ "$(grep -c "whole minutes" "$t/msgs.log")" = 3 ]'
+# 0.54.9 (the audit of 22-23 October 2026): an Esc in the middle keeps nothing of the answers before it
+printf '%s\n' "Somewhere Else" 42 > "$t/answers"
+(
+  wt_input() { local a; a=$(head -1 "$t/answers") || return 1; [ -n "$a" ] || return 1; sed -i 1d "$t/answers"; printf '%s' "$a"; }
+  wt_msg() { :; }
+  social_setup_words
+)
+check "wizard: Esc at the gap keeps the place and radius as they were" '[ "$(cfg_get SOCIAL_RADIUS_KM)" = 20 ] && [ "$(cfg_get SOCIAL_AREA "")" != "Somewhere Else" ]'
+# 0.54.9: seven entries and Return at most, in the Bluesky menu and its sub-menus (it had fourteen, Return under the fold)
+for f in social_menu social_look_menu; do
+  n=$(sed -n "/^$f() {/,/^}/p" lib/social.sh | grep -cE '^      [a-z]+ "[0-9]+  ')
+  check "$f: seven entries at most ($n), and Return" '[ "$n" -ge 3 ] && [ "$n" -le 7 ] && sed -n "/^$f() {/,/^}/p" lib/social.sh | grep -q "back \"Return to the previous menu\""'
+done
+check "menu: Remove is not the entry just above Return" '! sed -n "/^social_menu() {/,/^}/p" lib/social.sh | grep -A1 "remove \"" | grep -q "back \""'
+check "menu: the posts' language is chosen by name"     'grep -q "^social_lang_menu()" lib/social.sh && grep -q "lang) social_lang_menu" lib/social.sh'
 
 # ---- on / off / remove
 social_try_account() { echo "bluesky: ok, signed in as zb.bsky.social"; }      # Bluesky itself is not reached from a test
@@ -175,7 +190,9 @@ check "on: an unreachable Bluesky is said, and sharing goes on" '[ "$rc" = 0 ] &
 social_off >/dev/null
 social_try_account() { echo "bluesky: ok, signed in as zb.bsky.social"; }
 check "off: setting, unit gone, secrets kept"      '[ "$(cfg_get SOCIAL)" = 0 ] && [ ! -f "$t/sysd/zenithboard-social.service" ] && [ -f "$SOCIAL_SECRETS" ]'
-social_remove >/dev/null
+out=$(echo no | social_remove 2>&1); rc=$?
+check "remove: anything but the typed word changes nothing" '[ "$rc" = 1 ] && [ -f "$SOCIAL_SECRETS" ] && printf "%s" "$out" | grep -q "Nothing was changed"'
+echo remove | social_remove >/dev/null
 check "remove: secrets and state gone"             '[ ! -f "$SOCIAL_SECRETS" ] && [ -z "$(social_account)" ] && [ ! -d "$ZENITHBOARD_SOCIAL_DIR" ]'
 
 # ---- node is installed on demand

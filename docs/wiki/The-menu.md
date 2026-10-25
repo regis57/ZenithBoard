@@ -161,6 +161,11 @@ Statistics ([Statistics](Statistics)), graphs1090 and its look, Bluesky ([Social
 console ([Web console](Web-console), its entry *7* the language of the web pages). Each is off until switched on, graphs1090's look excepted: ZenithBoard's by
 default, graphs1090's own with `sudo zenithboard graphs look original`.
 
+*3 Bluesky* (0.54.9, seven entries and Return, like the console's Sharing page): *1* switch sharing on or off, *2* the
+account (set up, change, or remove after typing `remove`, and its status), *3* words and rules, *4* how a post looks
+(picture, words, language by name, your own templates, photo link, town names), *5* summaries, *6* try it or post now,
+*7* status.
+
 ## Where did an entry go? (before 0.44.0)
 
 | Before | Now |
