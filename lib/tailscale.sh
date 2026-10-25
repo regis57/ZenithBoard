@@ -84,7 +84,8 @@ tailscale_on() {
     echo "Tailscale asks you to sign in, once. Open the link it prints below (or scan its QR code with your phone),"
     echo "sign in to YOUR Tailscale account (made on tailscale.com: free for personal use; ZenithBoard never makes"
     echo "one and never sees its password), then approve this Pi. Install Tailscale on your phone or computer too,"
-    echo "signed in to the same account. This waits until the sign-in is done (Ctrl+C stops it, nothing is lost)."
+    echo "signed in to the same account. This waits until the sign-in is done. Ctrl+C stops it and nothing is lost, but from"
+    echo "the menu it closes the menu too: start it again with  sudo ./install.sh  or  sudo zenithboard tailscale on."
     echo
     [ "${ZB_SKIP_SERVICES:-}" = 1 ] || tailscale up --qr || { err "Tailscale did not connect (above). Try again: sudo zenithboard tailscale on"; return 1; }
   fi

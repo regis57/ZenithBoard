@@ -328,7 +328,8 @@ case "${1:-}" in
       *) die "Usage: zenithboard mode dots|flap" ;;
     esac ;;
   cycle)
-    root_or_die; is_number "${2:-x}" || die "Usage: zenithboard cycle SECONDS"; cfg_set CYCLE_SECONDS "$2"; restart_flightinfo ;;
+    root_or_die; valid_cycle "${2:-x}" || die "Usage: zenithboard cycle SECONDS   (whole seconds, 2 to 60)"
+    cfg_set CYCLE_SECONDS "$((10#$2))"; restart_flightinfo; echo "Seconds per aircraft: $((10#$2))." ;;
   security) security_check ;;
   stats)
     case "${2:-show}" in

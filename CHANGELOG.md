@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.54.10
+Low-severity findings of the 22-23 October audit: **Esc, numbers and the last menu details, in the terminal** (batch 3 of the list in *Project status*). Nothing on the web pages changes, so no translation.
+- **Esc on a yes/no question no longer switches a feature off.** *Photos*, *Routes*, *Monthly refresh* and *Offline registrations* (and a Wi-Fi network's *Auto-connect*) took Esc for No; now only Yes and No change anything.
+- **Seconds per aircraft are whole seconds, 2 to 60**, in the menu and `zenithboard cycle`, as the presets and the console already had it. 0, -3 and 600 were taken, and `10s` was dropped without a word; the menu now asks again with the reason.
+- **The gain steps say only what happened.** *so 48.0 became 48.0* is gone when nothing was rounded, and a step past the maximum or the minimum says *Already at the maximum* instead of restarting the decoder for nothing.
+- **Tailscale's sign-in says that Ctrl+C from the menu closes the menu too**, and how to start again.
+- **A new look of the wall followed by Esc on the colour** keeps the look, restarts the wall and says *colour unchanged*; the look was written with no restart and no word.
+- **Uninstall everything**: its first question no longer reads as two (*Yes* goes on to the typed word; *No* to make a backup first), and its last one names the Bluesky app password and the console's password among the settings, and says that the statistics and the posts' history in `/var/lib/zenithboard` stay, with the command to delete them.
+- **The backup sub-menu *Show, list, delete older backups*** holds just that: *Make* and *Restore* were there twice; the entry that deletes is not the last one.
+- **The web pages' language says *not chosen yet*** in the menu as in the command (it said *en*), and setting it says when a browser takes it.
 ## 0.54.9
 Low-severity findings of the 22-23 October audit on **the Bluesky menu and its wizard, in the terminal** (batch 2 of the list in *Project status*). Nothing on the web pages changes, so no translation.
 - **The Bluesky menu has seven entries and Return**, grouped like the console's Sharing page: switch sharing on or off, the account, words and rules, how a post looks, summaries, try it or post now, status. It had fourteen, and *Return* fell under the fold of a 24-line screen. A test holds it, and the new sub-menu, to seven.

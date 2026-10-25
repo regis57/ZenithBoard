@@ -61,6 +61,8 @@ check "no trailing space before the quote" '! grep -q " \"$" "$r"'
 gain_set 30 >/dev/null 2>&1
 check "30 became 29.7 and replaced the old one" 'grep -q -e "--gain 29.7 --device" "$r" && ! grep -q -e "--gain 49.6" "$r"'
 check "explains the rounding"     'gain_set 30 2>&1 | grep -q "became 29.7"'
+check "no rounding said when there was none (0.54.10)" 'gain_set 29.7 2>&1 | grep -q "Gain set to 29.7 dB" && ! gain_set 29.7 2>&1 | grep -q became'
+check "menu: a step past the end changes nothing (0.54.10)" 'grep -q "Already at the" lib/gain.sh && [ "$(gain_step_move 49.6 up)" = 49.6 ]'
 gain_set default >/dev/null 2>&1
 check "default removes the gain from RECEIVER_OPTIONS" '! grep -q "^RECEIVER_OPTIONS=.*--gain" "$r" && grep -q "serial00000978" "$r"'
 check "bad value refused, file unchanged" 'cp "$r" "$t/x"; ! gain_set loud >/dev/null 2>&1; cmp -s "$r" "$t/x"'

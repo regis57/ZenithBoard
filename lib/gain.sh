@@ -75,6 +75,7 @@ gain_set() {
   gain_write "$d" "$g" || return 1
   gain_restart "$d"
   if [ "$g" = default ]; then echo "Gain: the setting was removed; $d uses its default again."
+  elif awk -v a="$v" -v b="$g" 'BEGIN { exit !(a + 0 == b + 0) }' 2>/dev/null; then echo "Gain set to $g dB on $d. The decoder was restarted."
   else echo "Gain set to $g dB on $d (the dongle only has fixed steps, so $v became $g). The decoder was restarted."; fi
   if [ "$(gain_current "$d")" = default ] && [ "$g" != default ]; then warn "The gain line could not be found in $(gain_file "$d"): check the file."; fi
   if [ -f /boot/piaware-config.txt ] && [ "$d" = dump1090-fa ]; then
@@ -238,8 +239,10 @@ gain_menu() {
     case "$c" in
       check) clear; gain_check; echo; read -rp "Press Enter to continue..." _ ;;
       max) clear; gain_set max; echo; read -rp "Press Enter to continue..." _ ;;
-      down) clear; gain_set "$(gain_step_move "$cur" down)"; echo; read -rp "Press Enter to continue..." _ ;;
-      up) clear; gain_set "$(gain_step_move "$cur" up)"; echo; read -rp "Press Enter to continue..." _ ;;
+      # the audit of 22-23 October 2026: a step past the end restarted the decoder for nothing
+      down|up) v=$(gain_step_move "$cur" "$c")
+        if [ "$v" = "$cur" ]; then wt_msg "Already at the $( [ "$c" = up ] && echo maximum || echo minimum ) ($cur dB): nothing was changed." 8; continue; fi
+        clear; gain_set "$v"; echo; read -rp "Press Enter to continue..." _ ;;
       value)
         v=$(wt_input "Gain in dB. The dongle has fixed steps, so the nearest one is used:\n$GAIN_STEPS" "$GAIN_MAX") || continue
         clear; gain_set "$v" || true; echo; read -rp "Press Enter to continue..." _ ;;

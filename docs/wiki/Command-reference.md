@@ -27,7 +27,7 @@ Every `zenithboard` command, grouped by what you are trying to do. `zenithboard`
 | `zenithboard location LAT LON [ALT_M]` | yes | Move the antenna. Writes the position **everywhere** it is stored (ZenithBoard, the decoder, the feeders) and tells you which websites to update by hand |
 | `zenithboard color amber` · `green` · `red` · `white` · `turquoise` | yes | Dot colour of every wall (the dark blue was taken out in 0.23.0) |
 | `zenithboard mode dots` · `flap` | yes | Dot matrix, or the airport split-flap board. Without an argument: shows the current one |
-| `zenithboard cycle SECONDS` | yes | How long each aircraft stays on screen (14 by default) |
+| `zenithboard cycle SECONDS` | yes | How long each aircraft stays on screen: whole seconds, 2 to 60 (14 by default; 0.54.10: anything else is refused, as in the menu, the presets and the console) |
 | `zenithboard stats` | | Today, yesterday, the 30-day average and best, and messages per hour as a sparkline. See [Statistics](Statistics) |
 | `zenithboard stats on` · `off` · `status` | yes | Collect a sample every 15 minutes (off by default). `off` keeps the files |
 | `zenithboard stats csv` · `clear` | yes for clear | The raw samples as CSV; empty them |

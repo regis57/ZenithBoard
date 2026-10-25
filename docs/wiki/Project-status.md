@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **25 October 2026**, version **0.54.9**.
+Last updated: **25 October 2026**, version **0.54.10**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -70,15 +70,7 @@ The audit (build, tests, security, novice journeys, translations) ran on 0.53.3.
 **Batch 2: the Bluesky menu and wizard**: shipped in 0.54.9. Left, optional:
 - changing only the app password replays the two wizards (`social.sh` ~123); `stats on` announces `/stats` with no wall installed (`stats.sh` ~48); the log selectors offer *978 MHz UAT* and *Bluesky posts* on a Pi without them: `logs uat` and `logs social` say *not installed* (`menus.sh` ~273).
 
-**Batch 3: Esc, numbers and the last menu details, in the terminal**
-- Esc on *Photos*, *Routes*, *Refresh* and *Offline database* cuts the function with no word (`menus.sh` ~208-216; the same shape in `wifi.sh` ~321 and `social.sh` ~725): `0` yes, `1` no, anything else goes on, and a line saying what is now set.
-- *Seconds per aircraft* only checks `is_number` (`menus.sh` ~192, `bin/zenithboard` ~329): 0, -3 and 600 pass, `10s` is dropped in silence; one `valid_cycle` (2 to 60) in `common.sh`.
-- Every gain step prints *so 48.0 became 48.0*, and an Up at the maximum restarts the decoder for nothing (`gain.sh` ~78): say *Already at the maximum*, no restart.
-- *Ctrl+C stops it* is false from the menu: with no trap the installer closes (`tailscale.sh` ~87).
-- *Split-flap* then Esc on the colour writes the mode and shows it on the wall with no restart and no *Saved* (`menus.sh` ~169, `install.sh` ~131).
-- *Uninstall everything*: two questions under one yes/no and a comment promising a file that is never offered (`install.sh` ~168); the last yes/no does not name `social.env` and the console's hash, nor say that `/var/lib/zenithboard` stays (~190).
-- *Make* and *Restore* appear twice in the *Show, list, delete* sub-menu (`backup.sh` ~452): five entries under a title promising three; adjust `test_menus.sh` and `test_install.sh`.
-- *Reload the page* said by the language menu while the browser keeps its own choice (`console.sh` ~233); *en* shown where the command says *not chosen yet* (~246).
+**Batch 3: Esc, numbers and the last menu details**: shipped in 0.54.10. Left, optional: a wrong Wi-Fi password is saved as typed with no new try offered (`wifi.sh` ~367; the message already names both causes).
 
 **Batch 4: the wall** (preview the screens in headless Chromium first)
 - The *Radius* list shows 1 km when the radius (12, say) is not a preset (`app.js` ~426): add the current value.
@@ -105,7 +97,7 @@ The audit (build, tests, security, novice journeys, translations) ran on 0.53.3.
 - `Testing.md` ~12 and `README.md` ~691: the shellcheck line leaves out `tools/*.sh`; `python3-pil fonts-dejavu-core` are needed or the split-flap tests are skipped; *well under a minute* is about a minute and a half.
 - `Project-status.md` (lines 48, 51) and `Web-console.md` ~240-242 still say that graphs1090, the console's `.path` unit, the root helper and the iPhone pairing never ran on the Pi; the field log of 21 October says they did. Keep *update from the page* and *restore* as not seen.
 - *Checked as you type* (`Fresh-install.md` ~117, `Web-console.md` ~31): the position is checked when Next is pressed.
-- `Backup-and-restore.md` ~63: *6 Backup → 3 Show, list, delete older backups → 4 Delete the older ones*; `Moving-to-a-new-card.md` ~100 (*step 4* of *Start here*) and ~102 and `The-menu.md` ~44 (*System → Signed in → Pair a phone*), `menus.sh` ~125 the same.
+- `Moving-to-a-new-card.md` ~100 (*step 4* of *Start here*) and ~102 and `The-menu.md` ~44 (*System → Signed in → Pair a phone*), `menus.sh` ~125 the same.
 - `console.py` ~19's docstring says 12 h and 30 days, the constants (~50-53) say a week and a year; `Command-reference.md` ~189 says *30 days* for a paired phone.
 - `Security.md` ~48 and `Configuration-reference.md` ~24: `BIND_ADDRESS=127.0.0.1` for a reverse proxy makes every visitor look like 127.0.0.1, which gets round `ALLOW_FROM`, the console's network check and the per-address limiter: say the proxy must filter. `Web-console.md` ~202: the lost phone's first step is revoking that one device in the console, then *Sign out the others*.
 

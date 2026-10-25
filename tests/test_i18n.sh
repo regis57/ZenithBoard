@@ -74,6 +74,7 @@ check "languages offered: English and those with a catalogue, as the wall's serv
 check "Swahili offered (0.53.1, the owner): complete, chosen like the others" '[ ! -e flightinfo/static/i18n/sw/draft.txt ] && zb_langs | grep -qw sw && python3 tools/i18n.py check sw | grep -q "0 problem" && console_lang sw >/dev/null && [ "$(cfg_get CONSOLE_LANG)" = sw ] && cfg_set CONSOLE_LANG ""'
 check "a language marked draft is still held back (the mechanism stays for the next one)" 'grep -q "draft.txt" lib/common.sh && grep -q "draft.txt" flightinfo/server.py && grep -q "draft.txt" flightinfo/post_lang.py'
 check "not chosen by default: the console asks at its first visit" '[ -z "$(cfg_get CONSOLE_LANG)" ] && console_lang | grep -q "not chosen yet"'
+check "the menu says not chosen yet too, not en (0.54.10)" '[ "$(console_lang_now)" = "not chosen yet" ] && grep -q "Language of the web pages: \$(console_lang_now)" lib/console.sh'
 check "console lang: a language with no catalogue is refused" '! console_lang xx >/dev/null 2>&1 && [ -z "$(cfg_get CONSOLE_LANG)" ]'
 check "console lang fr: written, said"                    'console_lang fr | grep -q "Language of the web pages: fr" && [ "$(cfg_get CONSOLE_LANG)" = fr ]'
 cp tests/fixtures/graphs1090-index.html "$t/g/usr/share/graphs1090/html/index.html" 2>/dev/null || printf '<html><head>\n\t\t<link rel="stylesheet" href="portal.css">\n</head><body><h1>Performance Graphs</h1>\n\t\t<script src="graphs.js"></script>\n</body></html>\n' > "$t/g/usr/share/graphs1090/html/index.html"

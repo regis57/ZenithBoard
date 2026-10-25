@@ -91,6 +91,17 @@ check "gaps: the stats unit may reach the loopback only" 'grep -q "^RestrictAddr
 check "menu: uninstall asks for the word"           'grep -q "\[ \"\$word\" = uninstall \]" install.sh'
 check "menu: removing the wall and all logs too"    'grep -q "= remove \]" lib/menus.sh && grep -q "= delete \]" lib/logs.sh'
 check "menu: Backup holds the backup, the settings file, uninstall (not last)" 'grep -q "6 \"6  Backup" lib/menus.sh && grep -q "uninstall \"4  Uninstall everything" lib/menus.sh && grep -q "import \"6  Settings only" lib/menus.sh'
+# 0.54.10 (the audit of 22-23 October 2026): the menu and the command took 0, -3 and 600 seconds per aircraft
+check "cycle: whole seconds, 2 to 60"               'valid_cycle 2 && valid_cycle 14 && valid_cycle 60 && ! valid_cycle 0 && ! valid_cycle -3 && ! valid_cycle 600 && ! valid_cycle 10s && ! valid_cycle 1.5 && ! valid_cycle ""'
+check "cycle: the command and the menu use it"      'grep -q "valid_cycle \"\${2:-x}\"" bin/zenithboard && grep -q "if valid_cycle \"\$s\"" lib/menus.sh'
+cfg_set SHOW_PHOTOS 1
+( wt_yesno() { return 255; }; . lib/menus.sh; menu_yesno_set SHOW_PHOTOS "q" 8 ); rc=$?
+check "Esc on a yes/no leaves the setting as it was" '[ '"$rc"' = 2 ] && [ "$(cfg_get SHOW_PHOTOS)" = 1 ]'
+( wt_yesno() { return 1; }; . lib/menus.sh; menu_yesno_set SHOW_PHOTOS "q" 8 )
+check "No on a yes/no switches it off"              '[ "$(cfg_get SHOW_PHOTOS)" = 0 ]'
+check "backup sub-menu: no Make or Restore twice, delete not last" '! sed -n "/^backup_menu() {/,/^}/p" lib/backup.sh | grep -q "make \"\|restore \"" && sed -n "/^backup_menu() {/,/^}/p" lib/backup.sh | grep -A1 "clean \"" | grep -q "show \""'
+check "uninstall: Yes goes on, the secrets and the data named" 'grep -q "Yes goes on to the typed word" install.sh && grep -q "Bluesky app password in social.env" install.sh && grep -q "sudo rm -rf \$ZB_DATA" install.sh'
+check "menu: the look is said even when the colour is left" 'grep -q "colour unchanged" lib/menus.sh'
 check "menu: update offers quick first"             'grep -q "quick \"1  ZenithBoard and the wall only" lib/update.sh'
 
 [ "$fail" = 0 ] && echo "ALL OK"; exit "$fail"

@@ -14,7 +14,7 @@ Read the whole file with `zenithboard config`.
 | `THEME` | `amber` | `zenithboard color amber\|green\|red\|white\|turquoise` | Dot colour of every wall. A tablet can override it with a link. `blue` (taken out in 0.23.0) shows amber |
 | `DISPLAY_MODE` | `dots` | `zenithboard mode dots\|flap` | Dot matrix, or the airport split-flap board |
 | `RADIUS` | `10` | `zenithboard radius N` | Detection radius in your unit. Allowed: 1, 2, 5, 10, 15, 30, 50 |
-| `CYCLE_SECONDS` | `14` | `zenithboard cycle N` | How long each aircraft stays on screen. A row too long for its width scrolls once in that time |
+| `CYCLE_SECONDS` | `14` | `zenithboard cycle N` | How long each aircraft stays on screen, 2 to 60 seconds. A row too long for its width scrolls once in that time |
 | `SHOW_PHOTOS` | `1` | `zenithboard photos on\|off` | Aircraft photos from Planespotters. Needs internet on the Pi |
 | `FLAGS` | `1` | the gear on the tablet, or this line | The two flags on the dot-matrix wall: where the aircraft is registered, and where it was built. With them on, the airline and model rows hold twelve characters instead of fourteen |
 | `SHOW_ROUTES` | `1` | `zenithboard routes on\|off` | Where the flight comes from and goes to. Needs internet |
