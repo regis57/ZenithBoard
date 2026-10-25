@@ -49,7 +49,7 @@
     savePrefs();
   }
   function savePrefs() { try { localStorage.setItem("zenithboard", JSON.stringify(prefs)); } catch (e) {} }
-  function units() { return prefs.units === "imperial" || prefs.units === "metric" ? prefs.units : server.units; }
+  function units() { return ["metric", "imperial", "aviation"].indexOf(prefs.units) >= 0 ? prefs.units : server.units; }
   function radius() { var r = parseFloat(prefs.radius); return r > 0 ? r : server.radius; }
   function cycleMs() { var c = parseFloat(prefs.cycle); return Math.max(2, c > 0 ? c : server.cycle_seconds) * 1000; }
   // A colour the wall no longer has (the dark blue, gone in 0.23.0), still in a tablet's memory or in its address,
@@ -174,10 +174,10 @@
     var p = planes.filter(function (x) { return x.hex === curHex; })[0];
     if (!p) {
       textCenter(g, "NO FLIGHTS", 6, 2);
-      textCenter(g, "WITHIN " + radius() + (u === "imperial" ? " MI" : " KM"), 28, 1);
+      textCenter(g, "WITHIN " + radius() + " " + Fmt.distUnit(u), 28, 1);
       textCenter(g, "SEEN " + total + " AIRCRAFT", 40, 1);
       textCenter(g, clock(), 54, 2);
-      var within = "WITHIN " + radius() + (u === "imperial" ? " MI" : " KM");
+      var within = "WITHIN " + radius() + " " + Fmt.distUnit(u);
       return { g: g, sig: "empty" + total + clock() + radius() + u, plane: null,
                lines: ["", centered("NO FLIGHTS"), "", centered(within), centered("SEEN " + total + " AIRCRAFT"), "", centered(clock()), ""] };
     }
@@ -436,7 +436,7 @@
     var list = server.radius_presets.slice(), cur = radius();
     if (list.indexOf(cur) < 0 && cur > 0) { list.push(cur); list.sort(function (a, b) { return a - b; }); }
     list.forEach(function (v) {
-      var o = document.createElement("option"); o.value = v; o.textContent = v + (u === "imperial" ? " mi" : " km");
+      var o = document.createElement("option"); o.value = v; o.textContent = v + " " + (u === "aviation" ? "NM" : Fmt.distUnit(u).toLowerCase());
       if (v === cur) o.selected = true; rs.appendChild(o);
     });
     document.getElementById("s-units").value = u;

@@ -103,9 +103,9 @@ comes from the Pi, as before, so nothing stale is ever shown. The console's CSP 
 
 ## Languages
 
-**21 languages** (French 0.47.0, Swahili 0.53.1, the others 0.48.0): English, French, German, Dutch, Italian, Spanish,
-Portuguese (Brazil), Polish, Finnish, Estonian, Latvian, Lithuanian, Indonesian, Swahili, Russian, Ukrainian, Arabic
-(right to left), Japanese, Korean, Chinese (Simplified and Traditional); Swahili without a native speaker's review yet —
+**22 languages** (French 0.47.0, Swahili 0.53.1, Hindi 0.55.0, the others 0.48.0): English, French, German, Dutch, Italian, Spanish,
+Portuguese (Brazil), Polish, Finnish, Estonian, Latvian, Lithuanian, Indonesian, Swahili, Hindi, Russian, Ukrainian, Arabic
+(right to left), Japanese, Korean, Chinese (Simplified and Traditional); Swahili and Hindi without a native speaker's review yet —
 [Translating](Translating). The first visit asks before
 the password: the browser's own language and English as two buttons, the others in one list; once signed in, that choice becomes the Pi's default
 (`CONSOLE_LANG`) for every browser that did not choose. **The flag at the top** (here, on `/stats` and on graphs1090's

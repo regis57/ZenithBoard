@@ -2,7 +2,7 @@
 
 A Raspberry Pi that listens to the aircraft overhead and shows them on a tablet or a TV as a dot-matrix wall or an airport split-flap board. It can also feed what it hears to ADSB Exchange, FlightAware, Flightradar24 and Plane Finder, and post the aircraft crossing a radius to Bluesky.
 
-Current version: **0.54.18** · Licence: **GPL-3.0-or-later** · [Repository](https://github.com/regis57/ZenithBoard)
+Current version: **0.55.0** · Licence: **GPL-3.0-or-later** · [Repository](https://github.com/regis57/ZenithBoard)
 
 ## Installing it
 
@@ -34,7 +34,7 @@ Installation, the menus and every setting are in the [README](https://github.com
 * **[Testing](Testing)** — the test suite and the two patterns it is built on.
 * **[Social sharing](Social-sharing)** — the aircraft worth a post, on Bluesky, as a picture of the wall: dot-matrix with a map, split-flap with a map, or dot-matrix with the track in dots; off by default.
 * **[Statistics](Statistics)** — messages per hour, the farthest aircraft, aircraft per day; off by default.
-* **[Translation plan](Translation-plan)** — the console, the pages and the posts in 21 languages, and your own post templates with tags. French is out (0.47.0).
+* **[Translation plan](Translation-plan)** — the console, the pages and the posts in 22 languages, and your own post templates with tags. French is out (0.47.0).
 * **[Translating](Translating)** — the review sheets: correct your language beside the English, no account needed.
 * **[The menu](The-menu)** — every screen of `sudo zenithboard menu`, by what you want to do, starting with *Start here*.
 * **[Moving to a new card](Moving-to-a-new-card)** — your ZenithBoard on another card, step by step, with WinSCP from Windows.

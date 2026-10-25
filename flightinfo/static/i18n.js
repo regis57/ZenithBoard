@@ -28,6 +28,7 @@
     ["lt", "Lietuvių", ["LT"]],
     ["id", "Bahasa Indonesia", ["ID"]],
     ["sw", "Kiswahili", ["@africa"]],
+    ["hi", "हिन्दी", ["IN"]],
     ["ru", "Русский", ["RU"]],
     ["uk", "Українська", ["UA"]],
     ["ar", "العربية", ["@arabic"]],

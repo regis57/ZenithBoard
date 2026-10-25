@@ -109,7 +109,9 @@ valid_theme() { case "$1" in amber|green|red|white|turquoise) return 0 ;; *) ret
 # The wall's colour as it shows: one taken out (the dark blue, 0.23.0) shows as amber until another is chosen, and the
 # menus and messages say amber, not the word left in config.env
 wall_theme() { local t; t=$(cfg_get THEME amber); if valid_theme "$t"; then printf '%s' "$t"; else printf amber; fi; }
-valid_units() { [ "$1" = metric ] || [ "$1" = imperial ]; }
+# 0.55.0: aviation, the way pilots and controllers count: distances in nautical miles, speeds in knots, heights in feet
+valid_units() { [ "$1" = metric ] || [ "$1" = imperial ] || [ "$1" = aviation ]; }
+units_distance() { case "$1" in imperial) echo mi ;; aviation) echo NM ;; *) echo km ;; esac; }   # the radius's unit
 
 # ------------------------------------------------------------------ system state
 unit_exists()  { systemctl list-unit-files "$1.service" 2>/dev/null | grep -q "^$1.service"; }
@@ -143,7 +145,7 @@ ensure_zb_user() {
 # 0.47.0: the web pages' languages. English always; the others when this copy of ZenithBoard carries their catalogue
 # (flightinfo/static/i18n/<code>/console.json), so a language is offered only once it is translated. The same codes
 # as flightinfo/static/i18n.js and flightinfo/console_actions.py (tests/test_i18n.sh holds the three together).
-ZB_LANG_CODES="en fr de nl it es pt-BR pl fi et lv lt id sw ru uk ar ja ko zh-Hans zh-Hant"
+ZB_LANG_CODES="en fr de nl it es pt-BR pl fi et lv lt id sw hi ru uk ar ja ko zh-Hans zh-Hant"
 zb_langs() {
   local c out=en
   for c in $ZB_LANG_CODES; do
@@ -237,7 +239,7 @@ wt_radio() { local t="$1"; shift; whiptail --title "$WT_TITLE" --radiolist "$t" 
 wt_check() { local t="$1"; shift; whiptail --title "$WT_TITLE" --checklist "$t" 22 76 10 "$@" 3>&1 1>&2 2>&3; }
 
 radius_radio_items() {  # radius_radio_items CURRENT UNITS -> args for wt_radio
-  local r unit="km"; [ "$2" = imperial ] && unit="mi"
+  local r unit; unit=$(units_distance "$2")
   for r in $RADIUS_PRESETS; do
     if [ "$r" = "$1" ]; then printf '%s\n%s\n%s\n' "$r" "$r $unit" ON; else printf '%s\n%s\n%s\n' "$r" "$r $unit" OFF; fi
   done
@@ -246,7 +248,7 @@ radius_radio_items() {  # radius_radio_items CURRENT UNITS -> args for wt_radio
 pick_radius() {  # prints the chosen preset on stdout
   local units items; units=$(cfg_get UNITS metric)
   mapfile -t items < <(radius_radio_items "$(cfg_get RADIUS 10)" "$units")
-  wt_radio "Detection radius in $( [ "$units" = imperial ] && echo miles || echo kilometres ).\nAircraft inside it are cycled on the wall." "${items[@]}"
+  wt_radio "Detection radius in $(case "$units" in imperial) echo miles ;; aviation) echo nautical miles ;; *) echo kilometres ;; esac).\nAircraft inside it are cycled on the wall." "${items[@]}"
 }
 
 restart_flightinfo() { unit_exists zenithboard-flightinfo && systemctl restart zenithboard-flightinfo || true; }

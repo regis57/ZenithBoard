@@ -38,7 +38,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STATIC = os.path.join(ROOT, "flightinfo", "static")
 CATALOGUES = os.environ.get("ZB_I18N_DIR") or os.path.join(STATIC, "i18n")             # the tests use copies
 REVIEW = os.environ.get("ZB_I18N_REVIEW_DIR") or os.path.join(ROOT, "docs", "translations")
-LANGS = ("fr", "de", "nl", "it", "es", "pt-BR", "pl", "fi", "et", "lv", "lt", "id", "sw", "ru", "uk", "ar", "ja", "ko",
+LANGS = ("fr", "de", "nl", "it", "es", "pt-BR", "pl", "fi", "et", "lv", "lt", "id", "sw", "hi", "ru", "uk", "ar", "ja", "ko",
          "zh-Hans", "zh-Hant")
 PAGES = {
     "console": ["flightinfo/static/i18n.js", "flightinfo/static/console.html", "flightinfo/static/console.js",

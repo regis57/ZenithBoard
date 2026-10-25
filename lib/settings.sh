@@ -62,7 +62,7 @@ preset_key_of() { printf 'PRESET_%s' "$(printf '%s' "$1" | tr '[:lower:]' '[:upp
 preset_valid_pair() {   # preset_valid_pair key=value -> 0 when it is one of the tablet's settings with a sane value
   local k=${1%%=*} v=${1#*=}
   case "$k" in
-    units) [ "$v" = metric ] || [ "$v" = imperial ] ;;
+    units) valid_units "$v" ;;
     radius) is_number "$v" && awk -v r="$v" 'BEGIN { exit !(r > 0 && r <= 500) }' ;;
     cycle) is_number "$v" && awk -v c="$v" 'BEGIN { exit !(c >= 2 && c <= 60) }' ;;
     theme) valid_theme "$v" ;;
@@ -77,7 +77,7 @@ preset_add() {   # preset_add NAME key=value...
   preset_valid_name "$name" || { echo "A preset name is 1 to 16 lower-case letters or digits, starting with a letter (kitchen, tv2)." >&2; return 1; }
   [ $# -gt 0 ] || { echo "Give what the preset sets: one or more of  $PRESET_KEYS  as key=value." >&2; return 1; }
   for p in "$@"; do
-    preset_valid_pair "$p" || { echo "Not a tablet setting, or a bad value: $p   (keys: $PRESET_KEYS; mode dots|flap; units metric|imperial; flags 0|1)" >&2; return 1; }
+    preset_valid_pair "$p" || { echo "Not a tablet setting, or a bad value: $p   (keys: $PRESET_KEYS; mode dots|flap; units metric|imperial|aviation; flags 0|1)" >&2; return 1; }
     pairs+=("$p")
   done
   cfg_set "$(preset_key_of "$name")" "${pairs[*]}"

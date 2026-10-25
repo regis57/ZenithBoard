@@ -180,7 +180,7 @@ wall_menu() {
   local c inst
   while true; do
     if is_flightinfo; then inst="Reinstall its files (the same version)"; else inst="Install the wall"; fi
-    c=$(wt_menu "The wall: the page an old tablet shows ($(is_flightinfo && echo "http://$(local_ip):$(cfg_get PORT 8080)/" || echo "not installed"))\n\nRadius $(cfg_get RADIUS) $( [ "$(cfg_get UNITS)" = imperial ] && echo mi || echo km)    Look: $(cfg_get DISPLAY_MODE dots), $(wall_theme)    $(cfg_get CYCLE_SECONDS 14) s per aircraft\nPhotos $(menu_onoff "$( [ "$(cfg_get SHOW_PHOTOS 1)" = 1 ] && echo on)")    Routes $(menu_onoff "$( [ "$(cfg_get SHOW_ROUTES 1)" = 1 ] && echo on)")" \
+    c=$(wt_menu "The wall: the page an old tablet shows ($(is_flightinfo && echo "http://$(local_ip):$(cfg_get PORT 8080)/" || echo "not installed"))\n\nRadius $(cfg_get RADIUS) $(units_distance "$(cfg_get UNITS)")    Look: $(cfg_get DISPLAY_MODE dots), $(wall_theme)    $(cfg_get CYCLE_SECONDS 14) s per aircraft\nPhotos $(menu_onoff "$( [ "$(cfg_get SHOW_PHOTOS 1)" = 1 ] && echo on)")    Routes $(menu_onoff "$( [ "$(cfg_get SHOW_ROUTES 1)" = 1 ] && echo on)")" \
       install "1  $inst" \
       show "2  What it shows: radius, units, seconds" \
       look "3  Its look: dots or split-flap, and colour" \
@@ -214,7 +214,7 @@ wall_show_menu() {
   while true; do
     c=$(wt_menu "What the wall shows\n\nRadius: $(cfg_get RADIUS)    Units: $(cfg_get UNITS)    Seconds per aircraft: $(cfg_get CYCLE_SECONDS 14)" \
       radius "1  Detection radius" \
-      units "2  Units: metric or imperial (everywhere)" \
+      units "2  Units: metric, imperial or aviation (everywhere)" \
       cycle "3  Seconds each aircraft stays" \
       back "Return to the previous menu") || return 0
     case "$c" in

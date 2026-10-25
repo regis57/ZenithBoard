@@ -64,7 +64,8 @@ console.log("stats version line: ok");
   };
   // 0.47.0: its words go through t(); English here (the key itself), French below
   const T = "var t = function (s, v) { var c = (CAT && CAT[s]) || s; return v ? c.replace(/\\{(\\w+)\\}/g, function (m, k) { return v[k]; }) : c; };\n";
-  const line = new Function("CAT", T + ["fmt", "shortDay", "altText", "place", "farthestLine"].map(grab).join("\n") + "return farthestLine;")(null);
+  const H = ["fmt", "shortDay", "altText", "unitName", "dist", "place", "farthestLine"];
+  const line = new Function("CAT", T + "var UNITS = 'metric';\n" + H.map(grab).join("\n") + "return farthestLine;")(null);
   const full = {day: "2026-10-18", time: "14:32", hex: "406a1b", flight: "EZY1234", flight_iata: "U21234", airline: "easyJet",
     registration: "G-EZAB", type: "A319", type_name: "Airbus A319", alt_ft: 37000, km: 318.4,
     route: {from: {city: "Edinburgh", iata: "EDI", name: "Edinburgh Airport"}, to: {city: "Saint-Louis", iata: "BSL"}},
@@ -72,6 +73,9 @@ console.log("stats version line: ok");
   assert.strictEqual(line(full, "metric"),
     "18/10 14:32 \u00b7 easyJet U21234 (EZY1234) \u00b7 Edinburgh (EDI) \u2192 Saint-Louis (BSL) \u00b7 Airbus A319 G-EZAB \u00b7 11\u202f280 m \u00b7 318 km, near Charleroi, BE (35 km)");
   assert.ok(/ 37\u202f000 ft /.test(line(full, "imperial")), "imperial: the altitude in feet");
+  // 0.55.0: aviation, as pilots count: feet, and the distances in nautical miles (318.4 km = 172 NM; 35 km = 19 NM)
+  assert.ok(/ 37\u202f000 ft \u00b7 172 NM, near Charleroi, BE \(19 NM\)$/.test(line(full, "aviation")), line(full, "aviation"));
+  assert.ok(/ 198 mi, near Charleroi, BE \(22 mi\)$/.test(line(full, "imperial")), line(full, "imperial"));
   // a light aircraft: no callsign, no airline, no route, no city found
   assert.strictEqual(line({day: "2026-10-18", time: "09:05", hex: "3c0001", registration: "D-EABC", type: "C172", alt_ft: 4500, km: 205.2}, "metric"),
     "18/10 09:05 \u00b7 D-EABC \u00b7 C172 \u00b7 1\u202f370 m \u00b7 205 km");
@@ -89,7 +93,7 @@ console.log("stats version line: ok");
   assert.strictEqual(line(null, "metric"), null);
   // the same line in French, from the shipped catalogue: the words translated, the names and numbers as they were
   const fr = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "flightinfo", "static", "i18n", "fr", "stats.json"), "utf8"));
-  const lineFr = new Function("CAT", T + ["fmt", "shortDay", "altText", "place", "farthestLine"].map(grab).join("\n") + "return farthestLine;")(fr);
+  const lineFr = new Function("CAT", T + "var UNITS = 'metric';\n" + H.map(grab).join("\n") + "return farthestLine;")(fr);
   assert.ok(/318 km, près de Charleroi, BE \(35 km\)$/.test(lineFr(full, "metric")), lineFr(full, "metric"));
   assert.ok(/RCH123 \(militaire\)/.test(lineFr({day: "2026-10-18", flight: "RCH123", airline: "MILITARY", hex: "ae0001", km: 250}, "metric")));
   assert.ok(/318 km, à 85 km de Brugge, BE$/.test(lineFr(Object.assign({}, full, {near: {name: "Brugge", country: "BE", km: 85}}), "metric")));

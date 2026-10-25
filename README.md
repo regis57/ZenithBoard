@@ -118,12 +118,12 @@ sudo ./install.sh
 The first run asks, once:
 
 * **Region** — *everywhere else* (1090 MHz only) or *United States and territories*. In the US many small aircraft use **978 MHz (UAT)**, so the installer offers an optional extra step for it (see [978 MHz UAT](#978-mhz-uat-united-states)) and starts with *imperial* units pre-selected. Elsewhere nothing about 978 MHz is shown.
-* **Units** — *metric* (km, km/h, metres, m/s) or *imperial* (miles, knots, feet, ft/min).
+* **Units** — *metric* (km, km/h, metres), *imperial* (miles, knots, feet) or, since 0.55.0, *aviation* (nautical miles, knots, feet: the way pilots and air traffic control count).
 * **Antenna position** — latitude, longitude, altitude (needed by the decoder, MLAT and the wall's distance calculation). Tip: right-click your house in Google Maps to copy the coordinates.
 * **Default radius** — how close a plane must be to appear on the wall.
 
 <p align="center"><img src="docs/images/install-1-welcome.png" alt="The welcome screen lists the four first questions, then points at Start here" width="400"></p>
-<p align="center"><img src="docs/images/install-2-units.png" alt="Choosing metric or imperial units" width="400"></p>
+<p align="center"><img src="docs/images/install-2-units.png" alt="Choosing metric, imperial or aviation units" width="400"></p>
 
 ### 5. Start here
 After the questions comes the main menu, **by what you want to do** (0.44.0). New here: choose **Start here**. It goes through the first installation in its order, skipping what is already done:
@@ -317,11 +317,11 @@ Three ways, pick the one that suits you.
 
 | Where | How |
 |---|---|
-| **Command line** (affects every screen) | `sudo zenithboard units imperial` · `sudo zenithboard units metric` · `sudo zenithboard radius 5` · `sudo zenithboard cycle 8` |
+| **Command line** (affects every screen) | `sudo zenithboard units imperial` · `sudo zenithboard units metric` · `sudo zenithboard units aviation` · `sudo zenithboard radius 5` · `sudo zenithboard cycle 8` |
 | **Menu** | `sudo zenithboard menu` (by subject: ADS-B, the wall, connectivity…) |
 | **On the tablet** (that tablet only) | Tap the faint gear in the bottom-right corner: units, radius, seconds per plane, colour (amber / green / red / white / turquoise). Or use a link, see [Tablet links](#tablet-links-one-address-per-look) below. |
 
-Radius presets are **1, 2, 5, 10, 15, 30, 50** — read as kilometres in metric mode and miles in imperial mode. Changes apply immediately, no restart or reinstall.
+Radius presets are **1, 2, 5, 10, 15, 30, 50** — read as kilometres in metric mode, miles in imperial mode and nautical miles in aviation mode. Changes apply immediately, no restart or reinstall.
 
 ### Tablet links: one address per look
 
@@ -336,8 +336,8 @@ Each tablet can have its own look through the link you open. The settings are re
 | `http://<pi>:8080/?units=imperial&radius=30&theme=white` | imperial | **30 miles** | white |
 | `http://<pi>:8080/?units=metric&radius=50&theme=green&cycle=10` | metric | **50 km** | green, **10 s** per aircraft |
 
-* `units` = `metric` or `imperial` · `radius` = `1`, `2`, `5`, `10`, `15`, `30` or `50` (**kilometres with `metric`, miles with `imperial`**) · `theme` = `amber`, `green`, `red` or `white` · `cycle` = seconds per aircraft (2 or more). Any of them can be left out.
-* The distance on the wall's last line follows the same units: `6.7KM NW` in metric, `4.2MI NW` in imperial. Altitude is in metres or feet, speed in km/h or knots.
+* `units` = `metric`, `imperial` or `aviation` · `radius` = `1`, `2`, `5`, `10`, `15`, `30` or `50` (**kilometres with `metric`, miles with `imperial`, nautical miles with `aviation`**) · `theme` = `amber`, `green`, `red` or `white` · `cycle` = seconds per aircraft (2 or more). Any of them can be left out.
+* The distance on the wall's last line follows the same units: `6.7KM NW` in metric, `4.2MI NW` in imperial, `3.6NM NW` in aviation. Altitude is in metres or feet, speed in km/h or knots (feet and knots in both imperial and aviation).
 * To go back to the Pi's settings, tap the gear → *Reset*.
 
 ### Moving the antenna (position)
@@ -610,7 +610,7 @@ sudo zenithboard console on           # prints the address; off again: sudo zeni
 sudo zenithboard console pair         # a QR code that signs a phone in, once, within 5 minutes
 ```
 
-* **In 21 languages** (0.48.0: English, French, German, Dutch, Italian, Spanish, Portuguese (Brazil), Polish, Finnish, Estonian, Latvian, Lithuanian, Indonesian, Russian, Ukrainian, Arabic, Japanese, Korean, Chinese simplified and traditional; Swahili since 0.53.1): asked at the first visit, a flag at the top to change it; the statistics and graphs1090's pages follow. Each language has a review sheet to correct it: [Translating](https://github.com/regis57/ZenithBoard/wiki/Translating).
+* **In 22 languages** (0.48.0: English, French, German, Dutch, Italian, Spanish, Portuguese (Brazil), Polish, Finnish, Estonian, Latvian, Lithuanian, Indonesian, Russian, Ukrainian, Arabic, Japanese, Korean, Chinese simplified and traditional; Swahili since 0.53.1; Hindi since 0.55.0): asked at the first visit, a flag at the top to change it; the statistics and graphs1090's pages follow. Each language has a review sheet to correct it: [Translating](https://github.com/regis57/ZenithBoard/wiki/Translating).
 * **Off by default**, and it answers home networks only. Nine first steps (the antenna, the wall, the networks, statistics, the watchdogs, the summaries, your phone) open the first time, and again from *System*.
 * **A new card, step by step, finished in the console**: [Fresh install](https://github.com/regis57/ZenithBoard/wiki/Fresh-install).
 * **A phone signs in by QR code** (dark on its own white square, so it scans on a black screen) and stays signed in as long as it opens the console once a month; no password is needed for it. The terminal is for setting up, once, not for every visit. Face ID and passkeys need HTTPS under a domain name, which a Pi at a home address does not have.

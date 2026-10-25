@@ -22,7 +22,7 @@ Every `zenithboard` command, grouped by what you are trying to do. `zenithboard`
 
 | Command | sudo | What it is for |
 |---|---|---|
-| `zenithboard units metric` · `imperial` | yes | km, km/h, m — or miles, knots, feet |
+| `zenithboard units metric` · `imperial` · `aviation` | yes | km, km/h, m — or miles, knots, feet — or nautical miles, knots, feet (0.55.0) |
 | `zenithboard radius N` | yes | How far around the antenna aircraft are shown: 1, 2, 5, 10, 15, 30 or 50, in your unit |
 | `zenithboard location LAT LON [ALT_M]` | yes | Move the antenna. Writes the position **everywhere** it is stored (ZenithBoard, the decoder, the feeders) and tells you which websites to update by hand |
 | `zenithboard color amber` · `green` · `red` · `white` · `turquoise` | yes | Dot colour of every wall (the dark blue was taken out in 0.23.0) |
@@ -61,7 +61,7 @@ Every `zenithboard` command, grouped by what you are trying to do. `zenithboard`
 | `zenithboard social weekly on` · `off` · `test` · `post` · `post2` · `post3` · `post4` | yes (on, off) | The same as `social summary weekly …` since 0.38.0. | Four posts on Sundays from 19:00, two minutes apart: the week (aircraft, messages, the busiest day and hour, the airlines and models most seen, the crossings posted, a picture of the week by hour); the cargo airlines and business jets (0.35.0); the military aircraft by country; general aviation (0.36.0). Needs statistics on; never a distance, a direction or a registration. `test` draws all four and prints the texts, posting nothing; `post` … `post4` posts that one now. Off by default. 0.33.0 |
 | `zenithboard social sentence LIST` | yes (to change) | The words of a post: `factual` (as before), `story`, `board`, `spotter`, `lookup`, `custom` (your own templates, 0.51.0); several, comma-separated, or `random`, one drawn at each post. Without a value: the current choice. 0.29.0 |
 | `zenithboard social photolink on` · `off` | yes (to change) | End each post with *Photo: NAME / Planespotters*, a link to the aircraft's photo page, when the wall has one. The link only, never the picture. Off by default. 0.25.0 |
-| `zenithboard social units metric` · `imperial` · `wall` | yes | The posts' units, picture and text (m, km/h, km or ft, knots, mi), or the wall's own `UNITS` (the default). 0.24.3 |
+| `zenithboard social units metric` · `imperial` · `aviation` · `wall` | yes | The posts' units, picture and text (m, km/h, km or ft, knots, mi or ft, kt, NM), or the wall's own `UNITS` (the default). 0.24.3 |
 | `zenithboard social map NAME` · `rotate` | yes | The map of the dotmap and flap looks: normal, night, satellite, terrain, none, or the four maps in turn |
 | `zenithboard social test [HEX]` | | Draw the picture and print the text for the best candidate (or that aircraft); post nothing. The picture is at `/social/preview` |
 | `zenithboard social on` · `off` · `status` | yes | Post the aircraft overhead as a picture of the wall (off by default). `on` tries the account first (0.53.7): a refused app password stops it, with what to do; Bluesky not reachable just now is said and sharing goes on, the posts waiting for the network. `off` keeps the account |

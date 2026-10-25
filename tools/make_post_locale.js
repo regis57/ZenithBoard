@@ -9,7 +9,7 @@
 "use strict";
 const fs = require("fs"), path = require("path");
 const ROOT = path.join(__dirname, "..");
-const LANGS = ["fr", "de", "nl", "it", "es", "pt-BR", "pl", "fi", "et", "lv", "lt", "id", "sw", "ru", "uk", "ar", "ja", "ko", "zh-Hans", "zh-Hant"];
+const LANGS = ["fr", "de", "nl", "it", "es", "pt-BR", "pl", "fi", "et", "lv", "lt", "id", "sw", "hi", "ru", "uk", "ar", "ja", "ko", "zh-Hans", "zh-Hant"];
 const tag = (l) => l === "ar" ? "ar-u-nu-latn" : l;              // Arabic in Western digits, as the pages write it
 
 const blocks = JSON.parse(fs.readFileSync(path.join(ROOT, "flightinfo/data/icao_countries.json"), "utf8")).blocks;

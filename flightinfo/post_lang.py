@@ -23,7 +23,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 I18N_DIR = os.environ.get("ZB_I18N_DIR") or os.path.join(HERE, "static", "i18n")
 LOCALE_FILE = os.path.join(HERE, "data", "post-locale.json")
 # the same codes as the web pages (lib/common.sh ZB_LANG_CODES, console_actions.LANGS, i18n.js)
-LANGS = ("en", "fr", "de", "nl", "it", "es", "pt-BR", "pl", "fi", "et", "lv", "lt", "id", "sw", "ru", "uk", "ar", "ja", "ko",
+LANGS = ("en", "fr", "de", "nl", "it", "es", "pt-BR", "pl", "fi", "et", "lv", "lt", "id", "sw", "hi", "ru", "uk", "ar", "ja", "ko",
          "zh-Hans", "zh-Hant")
 NBSP = " "
 EN_UNITS = {"meter": "m", "kilometer": "km", "kilometer-per-hour": "km/h"}
@@ -54,7 +54,9 @@ def plural(code, n):
     n = abs(int(n))
     if code in ("ja", "ko", "zh-Hans", "zh-Hant", "id"):
         return "other"
-    if code in ("fr", "pt-BR"):
+    if code in ("fr", "pt-BR", "hi"):            # hi (0.55.0): CLDR's "i = 0 or n = 1", 0 and 1 for whole numbers
+        if code == "hi":
+            return "one" if n in (0, 1) else "other"
         if n in (0, 1):
             return "one"
         return "many" if n % 1000000 == 0 else "other"
