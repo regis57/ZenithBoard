@@ -80,7 +80,7 @@ The audit (build, tests, security, novice journeys, translations) ran on 0.53.3.
 - `console pair` installing `qrencode` on demand (`console.sh` ~143); a clock behind `CONSOLE_EPOCH` killing a new session (`console.py` ~272).
 
 **Batch 6: the tests**: the medium ones and most of the low ones shipped in 0.54.13. Still to write, low:
-- `console_run.py` ~36's timeout, log cap, `KEEP_JOBS` and journal rotation are never exercised; `adsb_menu` (plan, REMOVE, the US UAT rule, `zb_mlat_guard`) has no test; the `nmcli` stub never fails (`wifi_apply`, `wifi_connect`, `wifi_forget`); the Tailscale stub prints nothing (`ts_state`, `tailscale_where`, `console_state_lines`); `summary-when --facts`, `template-tags` and `publish_week` (not dry) have no test; the *draft* languages held back by `web_langs()` are checked by a grep only; `translateDom` and `rebuild` in `i18n.js`; `zb_update_components` is never run end to end (a light test with every `is_*` false: *Update finished*, exit 0).
+- `console_run.py` ~36's timeout, log cap, `KEEP_JOBS` and journal rotation are never exercised; `adsb_menu` (plan, REMOVE, the US UAT rule, `zb_mlat_guard`) has no test; the `nmcli` stub never fails (`wifi_apply`, `wifi_connect`, `wifi_forget`); the Tailscale stub prints nothing (`ts_state`, `tailscale_where`, `console_state_lines`); `summary-when --facts`, `template-tags` and `publish_week` (not dry) have no test; `translateDom` and `rebuild` in `i18n.js`; `zb_update_components` is never run end to end (a light test with every `is_*` false: *Update finished*, exit 0).
 
 **Batch 7: the docs**: shipped with 0.54.13's documentation.
 

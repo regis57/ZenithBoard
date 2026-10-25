@@ -138,6 +138,20 @@ class DataFilesTest(unittest.TestCase):
         self.assertEqual(server.social_preview_name(), "preview.png")
 
 
+class DraftLanguageTest(unittest.TestCase):
+    def test_a_language_marked_draft_is_not_offered(self):
+        # 0.54.13 (the audit of 22-23 October 2026): the hold-back was checked by a grep only
+        d = tempfile.mkdtemp(); self.addCleanup(shutil.rmtree, d)
+        self.addCleanup(setattr, server, "I18N_DIR", server.I18N_DIR); server.I18N_DIR = d
+        for code in ("fr", "de"):
+            os.makedirs(os.path.join(d, code))
+            with open(os.path.join(d, code, "console.json"), "w") as fh:
+                fh.write("{}")
+        self.assertEqual(server.web_langs(), ["en", "fr", "de"])
+        open(os.path.join(d, "de", "draft.txt"), "w").close()
+        self.assertEqual(server.web_langs(), ["en", "fr"])
+
+
 class ThrottledLookupTests(unittest.TestCase):
     """Planespotters refuses bursts with 403, so slow lookups are spaced out and failures are retried."""
 

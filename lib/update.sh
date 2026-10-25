@@ -281,7 +281,7 @@ zb_update_components() {
   fi
   if want_c flightinfo && is_flightinfo; then
     log "FlightInfo"; ensure_zb_user          # also repairs the folder modes of older installs
-    systemctl daemon-reload; install -m 644 "$ZB_HOME/systemd/zenithboard-flightinfo.service" /etc/systemd/system/; systemctl daemon-reload; restart_flightinfo
+    systemctl daemon-reload; install -m 644 "$ZB_HOME/systemd/zenithboard-flightinfo.service" "${ZB_UNIT_DIR}"/; systemctl daemon-reload; restart_flightinfo
     graphs_look_keep      # 0.53.8: graphs1090's page keeps its own copy of the catalogues and the language list; `update quick` left it on the old ones
     data_refresh_apply
     [ "$(cfg_get AUTO_DATA_REFRESH 1)" != 1 ] || data_refresh_now || warn "aircraft data refresh failed (kept the previous data)"
@@ -290,7 +290,7 @@ zb_update_components() {
   acars_notice      # 0.30.0: ACARS and Grafana left by an older version are said, never removed by an update
 
   zb_refresh_units
-  if [ -f /etc/systemd/system/zenithboard-wifi.service ]; then wifi_install_unit; fi
+  if [ -f "${ZB_UNIT_DIR}"/zenithboard-wifi.service ]; then wifi_install_unit; fi
   if [ "$(cfg_get DDNS_PROVIDER none)" != none ]; then ddns_install_units; fi
   if [ "$(cfg_get LOG_AUTOCLEAN 0)" = 1 ]; then logs_auto_on; fi
   if [ "$(cfg_get NETWATCH 0)" = 1 ]; then netwatch_install_units; fi
