@@ -118,4 +118,31 @@ check "position: ADSB Exchange's file, altitude with its unit glued" 'grep -qx "
 check "position: Plane Finder's JSON, its other keys kept" 'python3 -c "import json,sys; d=json.load(open(sys.argv[1])); assert d[\"latitude\"]==49.25 and d[\"longitude\"]==6.2 and d[\"sharecode\"]==\"abc\"" "$t/pf.json"'
 check "position: kept in config.env too" '[ "$(cfg_get LAT)" = 49.25 ] && [ "$(cfg_get ALT_M)" = 180 ]'
 
+# ---- the ADS-B step itself (0.54.14, the audit of 22-23 October 2026: its plan, REMOVE, the US-only UAT line and the
+# MLAT guard had no test). The screens answer from a script; installing and removing only say what they would do.
+adsb_run() {   # adsb_run REGION FEEDERS-TICKED YES|NO -> what was shown and done, in $t/adsb.log
+  : > "$t/adsb.log"
+  (
+    cfg_set REGION "$1"
+    installed_decoder() { echo readsb; }; is_readsb() { return 0; }; is_dump1090() { return 1; }; is_adsbx() { return 0; }
+    is_piaware() { return 0; }; is_fr24() { return 1; }; is_planefinder() { return 1; }; is_adsbx_stats() { return 1; }
+    is_uat978() { return 1; }; is_low_mem() { return 1; }; AXS_STATE="$t/none"
+    wt_radio() { echo readsb; }; wt_input() { echo ""; }
+    answer=$3; wt_yesno() { printf 'PLAN %s\n' "$1" >> "$t/adsb.log"; [ "$answer" = YES ]; }
+    for f in install_piaware remove_piaware install_fr24 remove_fr24 install_planefinder remove_planefinder install_adsbx \
+             install_decoder remove_decoder install_uat978 remove_uat978 zb_mlat_guard; do eval "$f() { echo \"DID $f\" >> \"$t/adsb.log\"; }"; done
+    wt_check() { printf 'CHECKLIST %s\n' "$*" >> "$t/adsb.log"; echo "$ADSB_TICK"; }
+    ADSB_TICK="$2" adsb_menu < /dev/null > /dev/null 2>&1
+    echo "CANCELLED=${ADSB_CANCELLED:-}" >> "$t/adsb.log"
+  )
+}
+adsb_run world '"ADSBX" "FR24"' YES
+check "adsb: the plan says what goes and what comes"  'grep -q "PLAN.*REMOVE FLIGHTAWARE" "$t/adsb.log" && grep -q "PLAN.*Install FR24" "$t/adsb.log"'
+check "adsb: and does it, then guards MLAT"           'grep -q "DID remove_piaware" "$t/adsb.log" && grep -q "DID install_fr24" "$t/adsb.log" && grep -q "DID zb_mlat_guard" "$t/adsb.log" && ! grep -q "DID install_planefinder" "$t/adsb.log"'
+check "adsb: no 978 MHz line outside the United States" '! grep -q "CHECKLIST.*UAT978" "$t/adsb.log"'
+adsb_run us '"ADSBX" "FLIGHTAWARE"' YES
+check "adsb: the United States are offered 978 MHz UAT" 'grep -q "CHECKLIST.*UAT978" "$t/adsb.log"'
+adsb_run world '"ADSBX"' NO
+check "adsb: No at the plan does nothing, and says it was left" '! grep -q "^DID" "$t/adsb.log" && grep -q "CANCELLED=1" "$t/adsb.log"'
+
 exit "$fail"
