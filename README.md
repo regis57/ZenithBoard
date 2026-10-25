@@ -4,6 +4,8 @@
 [![CI](https://github.com/regis57/ZenithBoard/actions/workflows/ci.yml/badge.svg)](https://github.com/regis57/ZenithBoard/actions/workflows/ci.yml)
 <a href="https://buymeacoffee.com/regis57"><img src="https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20beer&emoji=%F0%9F%8D%BA&slug=regis57&button_colour=FFDD00&font_colour=000000&font_family=Cookie&outline_colour=000000&coffee_colour=ffffff" alt="Buy me a beer" height="20"></a>
 
+> **Release candidate for 1.0 (0.99.x), until 25 November 2026.** Features are frozen: only fixes ship for a month while the reference Pi runs hands-off; 1.0 follows if nothing is left open ([what 1.0 takes](https://github.com/regis57/ZenithBoard/wiki/Roadmap#what-10-takes)). Trying it now is welcome: a report in the [issues](https://github.com/regis57/ZenithBoard/issues) helps most.
+
 **See the planes flying right above your house, on an old tablet, in glowing dot-matrix lights — and share the same antenna with the big flight-tracking networks.**
 
 ZenithBoard turns a Raspberry Pi (4 or newer recommended) and a cheap USB radio dongle into:
