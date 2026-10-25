@@ -303,6 +303,17 @@ class SessionsTest(TempDirs):
         self.assertEqual(c.pairs.redeem(tok, "iPad"), "iPhone ab12cd34")
         self.assertFalse(c.pairs.redeem(tok, "iPad"), "once")
 
+    def test_a_clock_behind_the_last_sign_out_does_not_kill_a_new_sign_in(self):
+        # 0.54.17 (the audit of 22-23 October 2026): a boot before the network set the clock made new sessions older
+        # than CONSOLE_EPOCH, dead at once
+        with open(self.env, "a") as fh:
+            fh.write('CONSOLE_EPOCH="%d"\n' % (time.time() + 3600))
+        os.utime(self.env, (time.time() + 10, time.time() + 10))
+        console._env_cache.update(mtime=None, data={})
+        s = console.Sessions()
+        tok, rec = s.create("password", "Mac")
+        self.assertIsNotNone(s.get(tok))
+
     def test_revoke_the_others(self):
         s = console.Sessions()
         a, ra = s.create("password", "Mac")

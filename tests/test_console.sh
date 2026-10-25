@@ -12,6 +12,7 @@ export ZENITHBOARD_ETC="$t/etc"; mkdir -p "$ZENITHBOARD_ETC" "$t/bin" "$t/sysd";
 export ZB_SYSTEMD_DIR="$t/sysd" ZB_CONSOLE_DIR="$t/console"
 printf '#!/bin/bash\necho "systemctl $*" >> "%s/systemctl.log"\n[ "$1" = is-active ] && echo active\n[ "$1" = list-unit-files ] && [ ! -e "%s/nowall" ] && echo "$2 enabled"\nexit 0\n' "$t" "$t" > "$t/bin/systemctl"
 printf '#!/bin/bash\necho 192.168.1.50\n' > "$t/bin/hostname"
+printf '#!/bin/bash\necho "apt-get $*" >> "%s/apt.log"\n' "$t" > "$t/bin/apt-get"   # 0.54.17: never the real apt from a test
 chmod +x "$t"/bin/*; export PATH="$t/bin:$PATH"
 # shellcheck source=lib/common.sh
 . lib/common.sh
@@ -73,6 +74,7 @@ check "pair: a code's hash and its end for the wall"  'read -r hh until < "$t/co
 tok=$(printf "%s" "$out" | sed -n "s/.*#pair=\([A-Za-z0-9_-]*\).*/\1/p" | head -1)
 check "pair: the link carries the code, its hash is the one kept" '[ -n "$tok" ] && [ "$(printf "%s" "$tok" | sha256sum | cut -d" " -f1)" = "$(cut -d" " -f1 "$t/console/out/pair")" ]'
 check "pair: says how to see the QR code without qrencode" 'command -v qrencode >/dev/null || printf "%s" "$out" | grep -q "apt install qrencode"'
+check "pair: as root without qrencode, it is fetched once (0.54.17)" 'command -v qrencode >/dev/null || [ "$(id -u)" -ne 0 ] || grep -q "apt-get install -y qrencode" "$t/apt.log"'
 # 0.54.13: the check above is empty where qrencode is installed; a stand-in that prints a marker covers that side
 printf '#!/bin/bash\necho QR-DRAWN "$@"\n' > "$t/bin/qrencode"; chmod +x "$t/bin/qrencode"; hash -r
 out=$(PATH="$t/bin:$PATH" console_pair)

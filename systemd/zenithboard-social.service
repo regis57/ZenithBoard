@@ -1,6 +1,7 @@
 [Unit]
 Description=ZenithBoard social sharing (posts the aircraft overhead to Bluesky as a picture of the wall)
-After=network-online.target zenithboard-flightinfo.service
+# time-sync.target too (0.54.17): the summaries are dated by the clock, and a Pi has no battery clock
+After=network-online.target time-sync.target zenithboard-flightinfo.service
 Wants=network-online.target
 
 [Service]

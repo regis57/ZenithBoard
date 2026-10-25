@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.54.17
+The 22-23 October audit's optional findings on **robustness** (lot C, chosen by the owner on 25 October 2026). Nothing on the web pages changes, so no translation.
+- **`console pair` draws its QR code the first time too**: without `qrencode` it printed a long link to type; it now fetches the small package once (the link stays below the code either way, and an offline Pi still gets the link).
+- **A sign-in on a Pi whose clock is behind** (a boot before the network gave it the time) no longer dies at once: it was older than the last *sign everyone out* and refused at the next request.
+- **The Bluesky service starts once the clock is set** (`time-sync.target`): the summaries are dated by it, and a Pi has no battery clock.
 ## 0.54.16
 The 22-23 October audit's optional findings **in the terminal** (lot B, chosen by the owner on 25 October 2026). Nothing on the web pages changes, so no translation.
 - **A new Bluesky app password does not replay the two wizards.** Changing only the password asked again every word and every picture setting; for an account already there it now says *saved and checked* and keeps them.
