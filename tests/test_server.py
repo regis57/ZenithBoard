@@ -1091,6 +1091,14 @@ class StatsTest(unittest.TestCase):
             fh.write(b"\x89PNG fake")
         self.assertEqual(get("/social/preview3")[0], 200)
         self.assertEqual(get("/social/preview5")[0], 404)
+        # 0.55.2: the summary's post 1 has its own picture too, linked beside 2 to 4 in the console
+        self.assertEqual(get("/social/preview1")[0], 404)
+        with open(os.path.join(d, "preview1.png"), "wb") as fh:
+            fh.write(b"\x89PNG fake")
+        self.assertEqual(get("/social/preview1")[0], 200)
+        js = open(os.path.join(os.path.dirname(server.__file__), "static", "console.js")).read()
+        self.assertIn('["1", "2", "3", "4"].map(', js, "the summaries' card links post 1 too")
+        self.assertIn('"/social/preview1"', js)
         # 0.54.8: the first preview, never drawn (a try on an empty sky), says why instead of a bare "not found"
         st, body = get("/social/preview")
         self.assertEqual(st, 404)

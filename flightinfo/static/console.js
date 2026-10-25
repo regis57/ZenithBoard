@@ -523,7 +523,7 @@ window.ZBI18N.start({ part: "console" }, function () {
   function inlineTerm(j) {
     var pre = h("pre", { text: termText(j) }), st = pillOf(j);
     var links = j.state === "done" && j.rc === 0 && (j.action === "social-test" || j.action === "summary-test") ? h("div", { "class": "actions" },
-      h("a", { "class": "btn", href: "/social/preview", target: "_blank", rel: "noopener", text: j.action === "summary-test" ? postName(1) : t("The picture ↗") }),
+      h("a", { "class": "btn", href: j.action === "summary-test" ? "/social/preview1" : "/social/preview", target: "_blank", rel: "noopener", text: j.action === "summary-test" ? postName(1) : t("The picture ↗") }),
       j.action === "summary-test" ? ["2", "3", "4"].map(function (n) { return h("a", { "class": "btn", href: "/social/preview" + n, target: "_blank", rel: "noopener", text: postName(n) }); }) : null) : null;
     // 0.45.1: Tailscale's sign-in link, as a button, while it waits for it (only its own address is taken)
     var tsl = j.action === "tailscale" && j.state !== "done" && /https:\/\/login\.tailscale\.com\/a\/[A-Za-z0-9]+/.exec(j.log || "");
@@ -709,8 +709,9 @@ window.ZBI18N.start({ part: "console" }, function () {
             on(c.STATS) ? null : h("p", { "class": "note", text: t("Statistics are off: no summary can be made until they are on (Receiver).") }),
             // the audit of 22-23 October 2026: they could be switched on with no account, or sharing off, and nothing said they would not go out
             summariesBlocked(acct, c),
+            // 0.55.2 (the owner's screenshot): post 1, the period, was not among the links; "All summaries" is the terminal's
             h("div", { "class": "actions" }, btn(t("All summaries"), "summaries"),
-              ["2", "3", "4"].map(function (n) { return h("a", { "class": "btn", href: "/social/preview" + n, target: "_blank", rel: "noopener", text: postName(n) }); })),
+              ["1", "2", "3", "4"].map(function (n) { return h("a", { "class": "btn", href: "/social/preview" + n, target: "_blank", rel: "noopener", text: postName(n) }); })),
             h("p", { "class": "note", text: t("Each summary goes once at its time: moved to later today, it goes today; set to a time already past, from the next one. Why one did not go out: sudo zenithboard social summary why") }),
             h("p", { "class": "note", text: t("Posting one now stays in the terminal, where you see it first: sudo zenithboard social summary weekly post") })], "w12")
       ];
@@ -1156,7 +1157,7 @@ window.ZBI18N.start({ part: "console" }, function () {
       body.appendChild(h("div", { "class": "term" }, h("div", { "class": "th" }, ico("terminal"), h("b", { text: j.label }), termPill), termPre));
       drawTerm();
       if (j.state === "done" && j.rc === 0 && (j.action === "social-test" || j.action === "summary-test")) {
-        body.appendChild(h("div", { "class": "actions" }, h("a", { "class": "btn", href: "/social/preview", target: "_blank", rel: "noopener", text: j.action === "summary-test" ? postName(1) : t("The picture ↗") }),
+        body.appendChild(h("div", { "class": "actions" }, h("a", { "class": "btn", href: j.action === "summary-test" ? "/social/preview1" : "/social/preview", target: "_blank", rel: "noopener", text: j.action === "summary-test" ? postName(1) : t("The picture ↗") }),
           j.action === "summary-test" ? ["2", "3", "4"].map(function (n) { return h("a", { "class": "btn", href: "/social/preview" + n, target: "_blank", rel: "noopener", text: postName(n) }); }) : null));
       }
     }
