@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.55.1
+- **The registration is a hashtag in every aircraft post** (the owner, 25 October 2026), so Bluesky's search for *#EI-ENK* lists every time that aircraft crossed. Every shape and the owner's own templates:
+  - where the words already show the registration after a space or at a line's start, that one becomes the hashtag (*Aircraft #D-EABC*, *✈ #RYR5ZK · #EI-ENK*, *#EI-ENK, a Ryanair…*);
+  - otherwise it goes first among the hashtags (*#EI-ENK #ADSB #avgeek*), or first in a template's `{hashtags}`;
+  - written as registered, hyphen included, which Bluesky keeps inside a hashtag (its own rule, checked in atproto's `TAG_REGEX`);
+  - within the 300 characters: never dropped to fit (the other hashtags go first, then the text gives way); a long text cut where the registration stood gets it back among the hashtags; never twice; kept with `social hashtags none`.
+  - The summaries carry none: they are about many aircraft.
+- The console's tag list says so: *{registration}: the registration, as a hashtag: #EI-ENK*, in every language.
+
 ## 0.55.0
 Two of the owner's requests of 25 October 2026.
 - **Aviation units: nautical miles, knots and feet**, as pilots and air traffic control count, a third choice beside metric and imperial: `sudo zenithboard units aviation`, the installer's units screen, the wall menu, the console (*Wall → Units*, the first steps), a tablet's own (`?units=aviation`, its gear, a preset).

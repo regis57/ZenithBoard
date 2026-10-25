@@ -397,7 +397,7 @@ console-395,console,console.js,the callsign as sent (RYR4512),das Rufzeichen wie
 console-396,console,console.js,the airline,die Fluggesellschaft,,
 console-397,console,console.js,the country the airline is based in,das Heimatland der Fluggesellschaft,,
 console-398,console,console.js,"that country's flag, as an emoji",die Flagge dieses Landes als Emoji,,
-console-399,console,console.js,the registration,das Kennzeichen,,
+console-399,console,console.js,"the registration, as a hashtag: #EI-ENK","das Kennzeichen, als Hashtag: #EI-ENK",,
 console-400,console,console.js,the country it is registered in,"das Land, in dem das Flugzeug registriert ist",,
 console-401,console,console.js,make and model,Hersteller und Typ,,
 console-402,console,console.js,the ICAO type code (B738),der ICAO-Typcode (B738),,

@@ -896,7 +896,7 @@ window.ZBI18N.start({ part: "console" }, function () {
   // are saved. The draft outlives the page's redraws.
   var TAGS = [["flight", t("the flight number when known (FR4512), else the callsign")], ["callsign", t("the callsign as sent (RYR4512)")],
     ["airline", t("the airline")], ["airline_country", t("the country the airline is based in")], ["flag", t("that country's flag, as an emoji")],
-    ["registration", t("the registration")], ["reg_country", t("the country it is registered in")], ["type", t("make and model")],
+    ["registration", t("the registration, as a hashtag: #EI-ENK")], ["reg_country", t("the country it is registered in")], ["type", t("make and model")],
     ["type_code", t("the ICAO type code (B738)")], ["category", t("airliner, cargo aircraft, business jet, helicopter…")],
     ["from", t("departure, city and code: Dublin (DUB)")], ["to", t("arrival, city and code")], ["from_code", t("the departure's code")],
     ["to_code", t("the arrival's code")], ["altitude", t("the altitude")], ["speed", t("the ground speed")], ["climb", t("climbing, descending or level")],

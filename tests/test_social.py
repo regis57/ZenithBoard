@@ -55,9 +55,9 @@ class SentenceTest(unittest.TestCase):
         self.assertTrue(self.text("factual").startswith("Flight Ryanair #RYR5ZK · Boeing 737-800 · Brussels → Pisa"))
         self.assertTrue(self.text("story").startswith("A Ryanair Boeing 737-800 bound for Pisa from Brussels has just crossed the sky above Trémery, 10" + nb + "570" + nb + "m up. #RYR5ZK"), self.text("story"))
         board = self.text("board").split("\n")
-        self.assertEqual(board[:3], ["\u2708 #RYR5ZK · EI-ENK", "Brussels \u2192 Pisa", "Boeing 737-800 · 10" + nb + "570" + nb + "m · 720" + nb + "km/h"])
+        self.assertEqual(board[:3], ["\u2708 #RYR5ZK · #EI-ENK", "Brussels \u2192 Pisa", "Boeing 737-800 · 10" + nb + "570" + nb + "m · 720" + nb + "km/h"])
         self.assertTrue(board[3].startswith("Above Trémery at "))
-        self.assertTrue(self.text("spotter").startswith("EI-ENK, a Ryanair Boeing 737-800, flying Brussels \u2192 Pisa as #RYR5ZK: 10" + nb + "570" + nb + "m above Trémery at 720" + nb + "km/h."), self.text("spotter"))
+        self.assertTrue(self.text("spotter").startswith("#EI-ENK, a Ryanair Boeing 737-800, flying Brussels \u2192 Pisa as #RYR5ZK: 10" + nb + "570" + nb + "m above Trémery at 720" + nb + "km/h."), self.text("spotter"))
         self.assertTrue(self.text("lookup").startswith("Look up, Trémery! Ryanair #RYR5ZK is passing 10.6" + nb + "km overhead on its way from Brussels to Pisa."), self.text("lookup"))
 
     def test_never_the_distance_nor_the_direction(self):
@@ -79,7 +79,7 @@ class SentenceTest(unittest.TestCase):
 
     def test_what_a_shape_cannot_say_falls_back(self):
         bare = {"hex": "abc123", "flight": "", "registration": "D-EABC", "alt_ft": 3000}
-        self.assertTrue(self.text("story", p=bare).startswith("Aircraft D-EABC"), "no airline, no type: factual")
+        self.assertTrue(self.text("story", p=bare).startswith("Aircraft #D-EABC"), "no airline, no type: factual")
         self.assertTrue(self.text("lookup", **{"SOCIAL_AREA": "near Metz"}).startswith("Look up! Ryanair #RYR5ZK"))
 
     def test_a_or_an(self):
@@ -111,11 +111,11 @@ class WordsTest(unittest.TestCase):
         self.assertTrue(t.endswith(" · altitude 11\u00a0280\u00a0m · above Trémery"), t)
 
     def test_unknown_airline_shows_callsign_and_model(self):
-        self.assertEqual(social.post_text(BELUGA, CFG).split("\n")[0], "Flight #BGA113J · Airbus A330-743 Beluga XL · F-GXLH · altitude 9\u00a0750\u00a0m · over Luxembourg")
+        self.assertEqual(social.post_text(BELUGA, CFG).split("\n")[0], "Flight #BGA113J · Airbus A330-743 Beluga XL · #F-GXLH · altitude 9\u00a0750\u00a0m · over Luxembourg")
 
     def test_a_registration_used_as_callsign_is_an_aircraft_not_a_flight(self):
         p = dict(BELUGA, flight="FGXLH", type_name="CESSNA 172", type="C172")
-        self.assertEqual(social.post_text(p, dict(CFG, SOCIAL_AREA="Trémery")).split("\n")[0], "Aircraft F-GXLH · Cessna 172 · altitude 9\u00a0750\u00a0m · above Trémery")
+        self.assertEqual(social.post_text(p, dict(CFG, SOCIAL_AREA="Trémery")).split("\n")[0], "Aircraft #F-GXLH · Cessna 172 · altitude 9\u00a0750\u00a0m · above Trémery")
 
     def test_only_airline_callsigns_become_hashtags(self):
         self.assertEqual(social.hashtag_callsign("ETD11K"), "#ETD11K")
@@ -125,7 +125,7 @@ class WordsTest(unittest.TestCase):
 
     def test_helicopter(self):
         t = social.post_text(HELI, CFG)
-        self.assertTrue(t.startswith("Helicopter D-HABC · Airbus Helicopters H145 · altitude 460\u00a0m · over Luxembourg"), t)
+        self.assertTrue(t.startswith("Helicopter #D-HABC · Airbus Helicopters H145 · altitude 460\u00a0m · over Luxembourg"), t)
         self.assertIn("#helicopter", t)
 
     def test_military_without_callsign(self):
@@ -195,10 +195,12 @@ class WordsTest(unittest.TestCase):
         self.assertEqual(social.fit_post("short", None, "#ADSB"), "short\n#ADSB")
 
     def test_hashtags_none_means_none_at_all(self):
-        # 0.19.7: `social hashtags none` — not even #helicopter or #military added back
+        # 0.19.7: `social hashtags none` — not even #helicopter or #military added back; 0.55.1: the registration's
+        # hashtag stays (the owner's rule: in every aircraft post)
         for p in (EZY, HELI, KC135):
             t = social.post_text(p, dict(CFG, SOCIAL_HASHTAGS="none"))
-            self.assertNotIn("#", t.replace("#EZY1234", ""), t)
+            rt = social.reg_hashtag(p)
+            self.assertNotIn("#", t.replace("#EZY1234", "").replace(rt or "#", "", 1) if rt else t.replace("#EZY1234", ""), t)
         t = social.post_text(HELI, dict(CFG, SOCIAL_HASHTAGS="#ADSB #Moselle"))
         self.assertTrue(t.endswith("#ADSB #Moselle #helicopter"), t)
 
@@ -221,7 +223,7 @@ class WordsTest(unittest.TestCase):
                     self.assertIn("GeoNames (CC BY 4.0)", st["credit_full"], mode)
         self.assertIn("Copernicus Sentinel data", social_card.MAP_STYLES["satellite"]["credit_full"])
         t = social.post_text(EZY, CFG, credit="Map \u00a9 OpenStreetMap, EOX").split("\n")
-        self.assertTrue(t[1].startswith("#ADSB"))
+        self.assertTrue(t[1].startswith("#G-UZHA #ADSB"), t)
         self.assertEqual(t[2], "Map \u00a9 OpenStreetMap, EOX")
 
 
@@ -1132,6 +1134,59 @@ class FacetTest(unittest.TestCase):
         self.assertEqual(kinds, ["tag", "tag", "link"])
 
 
+class RegistrationTagTest(unittest.TestCase):
+    """0.55.1, the owner's rule: the registration as a hashtag in every aircraft post, whatever its words, within
+    Bluesky's 300 characters, never dropped to fit and never twice."""
+    RYR = SentenceTest.RYR
+    C = dict(CFG, SOCIAL_AREA="Trémery", SOCIAL_HASHTAGS="#ADSB #avgeek")
+
+    def test_every_shape_carries_it_once_as_bluesky_reads_it(self):
+        for shape in social.SENTENCES:
+            t = social.post_text(self.RYR, self.C, None, shape=shape)
+            self.assertTrue(social.has_tag(t, "#EI-ENK"), (shape, t))
+            self.assertEqual(t.count("#EI-ENK"), 1, (shape, t))
+            self.assertLessEqual(len(t), social.POST_MAX)
+
+    def test_the_tag_bluesky_finds_keeps_the_hyphen(self):
+        self.assertEqual(social.text_facets("#EI-ENK, a Ryanair")[1], ["#EI-ENK"])
+        self.assertEqual(social.reg_hashtag({"registration": "n123ab"}), "#N123AB")
+        self.assertEqual(social.reg_hashtag({"registration": "12345"}), "", "digits alone are no hashtag")
+        self.assertEqual(social.reg_hashtag({"registration": "D-E ABC"}), "")
+        self.assertEqual(social.reg_hashtag({}), "")
+
+    def test_never_dropped_to_fit_even_with_long_hashtags(self):
+        many = " ".join("#tag%d" % i for i in range(60))
+        for shape in social.SENTENCES:
+            t = social.post_text(self.RYR, dict(self.C, SOCIAL_HASHTAGS=many), None, shape=shape, credit="Map \u00a9 OpenStreetMap, EOX")
+            self.assertLessEqual(len(t), social.POST_MAX, shape)
+            self.assertTrue(social.has_tag(t, "#EI-ENK"), (shape, t))
+
+    def test_a_long_template_cut_keeps_it(self):
+        d = tempfile.mkdtemp(); self.addCleanup(shutil.rmtree, d, True)
+        path = os.path.join(d, "t.txt")
+        self.addCleanup(setattr, social, "TEMPLATES_FILE", social.TEMPLATES_FILE)
+        social.TEMPLATES_FILE = path
+        with open(path, "w") as fh:            # the registration at the very end of a text too long to fit whole
+            fh.write("{airline} " + "and on and on " * 15 + "{registration}\n")
+        t = social.post_text(self.RYR, dict(self.C, SOCIAL_SENTENCE="custom", SOCIAL_HASHTAGS=" ".join("#x%d" % i for i in range(30))), None)
+        self.assertLessEqual(len(t), social.POST_MAX)
+        self.assertTrue(social.has_tag(t, "#EI-ENK"), t)
+
+    def test_a_registration_not_after_a_space_goes_with_the_hashtags(self):
+        self.assertEqual(social.tag_registration("reg:EI-ENK", "#EI-ENK"), ("reg:EI-ENK", False))
+        self.assertEqual(social.tag_registration("EI-ENKX here", "#EI-ENK"), ("EI-ENKX here", False))
+        self.assertEqual(social.tag_registration("seen EI-ENK.", "#EI-ENK"), ("seen #EI-ENK.", True))
+        self.assertEqual(social.tag_registration("seen #ei-enk", "#EI-ENK"), ("seen #ei-enk", True))
+
+    def test_with_the_photo_line_too(self):
+        p = dict(self.RYR, photo_link="https://www.planespotters.net/photo/1234567/ei-enk", photo_credit="A. Spotter")
+        c = dict(self.C, SOCIAL_PHOTOLINK="1")
+        line, _ = social.photo_line(p, c)
+        t = social.post_text(p, c, None, credit="Map \u00a9 OpenStreetMap, EOX", photo=line)
+        self.assertTrue(social.has_tag(t, "#EI-ENK"), t)
+        self.assertLessEqual(len(t), social.POST_MAX)
+
+
 class CustomTemplateTest(unittest.TestCase):
     """0.51.0, the owner's word: posts in his own words, with tags, as one more style ("custom")."""
     RYR = SentenceTest.RYR
@@ -1150,11 +1205,11 @@ class CustomTemplateTest(unittest.TestCase):
     def test_the_template_is_the_post_its_hashtags_after(self):
         self.write("{airline} {flight}[, {from} → {to}] at {altitude}. {why}")
         t = social.post_text(self.RYR, self.C, "rare")
-        self.assertEqual(t.split("\n"), ["Ryanair RYR5ZK, Brussels → Pisa at 10\u00a0570\u00a0m. A rare visitor.", "#ADSB #avgeek"])
+        self.assertEqual(t.split("\n"), ["Ryanair RYR5ZK, Brussels → Pisa at 10\u00a0570\u00a0m. A rare visitor.", "#EI-ENK #ADSB #avgeek"])
 
     def test_a_template_that_places_the_hashtags_gets_them_once(self):
         self.write("{airline} {flight} {hashtags}")
-        self.assertEqual(social.post_text(self.RYR, self.C, None), "Ryanair RYR5ZK #ADSB #avgeek")
+        self.assertEqual(social.post_text(self.RYR, self.C, None), "Ryanair RYR5ZK #EI-ENK #ADSB #avgeek")   # 0.55.1: with the registration's
 
     def test_an_empty_tag_takes_its_part_away(self):
         self.write("{airline}[, {from} → {to}][, squawk {squawk}].")
@@ -1166,15 +1221,15 @@ class CustomTemplateTest(unittest.TestCase):
         import random as r
         self.addCleanup(setattr, social.random, "choice", r.choice)
         social.random.choice = lambda seq: seq[min(1, len(seq) - 1)]      # the style (one), then the second template
-        self.assertEqual(social.post_text(self.RYR, self.C, None).split("\n"), ["Ryanair RYR5ZK, no tags", "#ADSB #avgeek"])
+        self.assertEqual(social.post_text(self.RYR, self.C, None).split("\n"), ["Ryanair RYR5ZK, no tags", "#EI-ENK #ADSB #avgeek"])
         social.random.choice = lambda seq: seq[0]
         heli = dict(self.RYR, shape="heli")
-        self.assertEqual(social.post_text(heli, self.C, None), "Ryanair RYR5ZK #ADSB #helicopter", "the template's hashtags as the line's")
+        self.assertEqual(social.post_text(heli, self.C, None), "Ryanair RYR5ZK #EI-ENK #ADSB #helicopter", "the template's hashtags as the line's")
 
     def test_any_aircraft_takes_the_template(self):
         self.write("[{registration} ]{category}[ at {altitude}]")
         bare = {"hex": "abc123", "flight": "", "registration": "D-EABC", "alt_ft": 3000}
-        self.assertEqual(social.post_text(bare, self.C, None).split("\n")[0], "D-EABC aircraft at 910\u00a0m")
+        self.assertEqual(social.post_text(bare, self.C, None).split("\n")[0], "#D-EABC aircraft at 910\u00a0m")
 
     def test_the_maps_credit_is_never_cut(self):
         # found in review: a long template and the terrain map's credit (46 characters) went past 300, and the cut

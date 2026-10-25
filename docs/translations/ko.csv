@@ -397,7 +397,7 @@ console-395,console,console.js,the callsign as sent (RYR4512),송신된 그대�
 console-396,console,console.js,the airline,항공사,,
 console-397,console,console.js,the country the airline is based in,항공사 소속 국가,,
 console-398,console,console.js,"that country's flag, as an emoji",그 국가의 국기(이모지),,
-console-399,console,console.js,the registration,등록번호,,
+console-399,console,console.js,"the registration, as a hashtag: #EI-ENK","등록번호, 해시태그로: #EI-ENK",,
 console-400,console,console.js,the country it is registered in,항공기 등록 국가,,
 console-401,console,console.js,make and model,제조사와 기종,,
 console-402,console,console.js,the ICAO type code (B738),ICAO 기종 코드(B738),,
