@@ -11,7 +11,7 @@ ZenithBoard runs as root on a machine in your home, listens on your network, and
 | Your network | The wall has no login **by design**. It answers home networks only (`ALLOW_FROM=private`): a forwarded port meets a 403 from the internet until you open it on purpose | 0.15.0 |
 | The wall server | Runs as a `nologin` system user inside a full systemd sandbox; can write nowhere | 0.12.0 |
 | Its HTTP answers | Every header value comes from a fixed table inside the program | 0.12.2 |
-| Photos | The address must be `https` inside `planespotters.net` or `plnspttrs.net` before it is handed to the tablet | 0.11.1, 0.12.4, 0.24.5 |
+| Photos | The address must be `https` inside `planespotters.net` or `plnspttrs.net` before it is handed to the tablet; the credit's link too (0.54.11), and neither sends a referrer | 0.11.1, 0.12.4, 0.24.5, 0.54.11 |
 | Files it serves | Real-path check: nothing outside its own folders, symlinks included | always |
 | Updates of ZenithBoard | The commit is signature-checked before `install.sh` runs as root. One GitHub release per version, pointing at that signed commit | 0.12.0, fixed in 0.12.3; releases 0.15.0 |
 | Downloads run as root | Private `mktemp` folder (mode 700), https only, no downgrade on redirect | 0.12.0, fixed in 0.12.1 |

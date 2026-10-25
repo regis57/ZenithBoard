@@ -27,7 +27,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.54.10"
+VERSION = "0.54.11"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -1238,7 +1238,10 @@ def parse_photo_answer(data):
     url = (p.get("thumbnail_large") or {}).get("src")
     if not url or not photo_url_allowed(url):
         return None, True
-    return {"url": url, "photographer": p.get("photographer"), "link": p.get("link")}, True
+    # the audit of 22-23 October 2026: the link became the credit's href unchecked (a javascript: or another site would
+    # have been followed from the wall); it is kept only on Planespotters itself, over https
+    link = p.get("link")
+    return {"url": url, "photographer": p.get("photographer"), "link": link if photo_url_allowed(link) else None}, True
 
 
 def _photo_api(hex_code):

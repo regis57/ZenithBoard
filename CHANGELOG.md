@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.54.11
+Low-severity findings of the 22-23 October audit on **the wall** (batch 4 of the list in *Project status*).
+- **The gear panel shows the radius in use.** A radius that is not one of the presets (12 km, set with `config-set` or `?radius=`) showed as the first preset, 1 km; it is now listed where it falls, and selected.
+- **Seconds per aircraft in the gear panel are 2 to 60**, whole seconds, like the Pi's own setting: 0, -5 or 600 typed there stayed displayed while another value applied; the field now puts back what applies.
+- **The photo's credit link goes to Planespotters and nowhere else.** The link in Planespotters' answer became the credit's address unchecked (a `javascript:` or another site would have been followed from the wall); it is kept only on planespotters.net over https. The photo and its link no longer send the wall's address as the referrer.
+- **The CGNAT warning of `zenithboard ddns status`** is for 100.64.0.0/10 exactly: it also warned for ordinary public addresses such as 100.7.x or 100.10.x.
 ## 0.54.10
 Low-severity findings of the 22-23 October audit: **Esc, numbers and the last menu details, in the terminal** (batch 3 of the list in *Project status*). Nothing on the web pages changes, so no translation.
 - **Esc on a yes/no question no longer switches a feature off.** *Photos*, *Routes*, *Monthly refresh* and *Offline registrations* (and a Wi-Fi network's *Auto-connect*) took Esc for No; now only Yes and No change anything.

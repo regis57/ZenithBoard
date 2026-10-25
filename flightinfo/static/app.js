@@ -431,9 +431,13 @@
   function fillPanel() {
     var rs = document.getElementById("s-radius"), u = units();
     rs.innerHTML = "";
-    server.radius_presets.forEach(function (v) {
+    // the audit of 22-23 October 2026: a radius that is not a preset (set with config-set or ?radius=) showed the
+    // first preset instead; it is listed too, where it falls, and selected
+    var list = server.radius_presets.slice(), cur = radius();
+    if (list.indexOf(cur) < 0 && cur > 0) { list.push(cur); list.sort(function (a, b) { return a - b; }); }
+    list.forEach(function (v) {
       var o = document.createElement("option"); o.value = v; o.textContent = v + (u === "imperial" ? " mi" : " km");
-      if (v === radius()) o.selected = true; rs.appendChild(o);
+      if (v === cur) o.selected = true; rs.appendChild(o);
     });
     document.getElementById("s-units").value = u;
     document.getElementById("s-cycle").value = cycleMs() / 1000;
@@ -458,7 +462,12 @@
     document.getElementById("gear").onclick = function () { fillPanel(); panel.hidden = !panel.hidden; };
     document.getElementById("s-units").onchange = function () { prefs.units = this.value; savePrefs(); fillPanel(); lastSig = ""; poll(); };
     document.getElementById("s-radius").onchange = function () { prefs.radius = this.value; savePrefs(); lastSig = ""; poll(); };
-    document.getElementById("s-cycle").onchange = function () { prefs.cycle = this.value; savePrefs(); startCycle(); };
+    // whole seconds, 2 to 60, like the Pi's own setting; anything else puts back what applies (it kept 0 or 600 shown)
+    document.getElementById("s-cycle").onchange = function () {
+      var v = Math.round(Number(this.value));
+      if (v >= 2 && v <= 60) { prefs.cycle = String(v); savePrefs(); startCycle(); }
+      fillPanel();
+    };
     document.getElementById("s-theme").onchange = function () { prefs.theme = this.value; savePrefs(); applyTheme(); resize(); };
     document.getElementById("s-mode").onchange = function () { prefs.mode = this.value; savePrefs(); applyMode(); };
     document.getElementById("s-flags").onchange = function () { prefs.flags = this.value; savePrefs(); scroll.stop(); lastSig = ""; poll(); };

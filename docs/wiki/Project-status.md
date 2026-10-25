@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **25 October 2026**, version **0.54.10**.
+Last updated: **25 October 2026**, version **0.54.11**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -72,11 +72,7 @@ The audit (build, tests, security, novice journeys, translations) ran on 0.53.3.
 
 **Batch 3: Esc, numbers and the last menu details**: shipped in 0.54.10. Left, optional: a wrong Wi-Fi password is saved as typed with no new try offered (`wifi.sh` ~367; the message already names both causes).
 
-**Batch 4: the wall** (preview the screens in headless Chromium first)
-- The *Radius* list shows 1 km when the radius (12, say) is not a preset (`app.js` ~426): add the current value.
-- *Seconds per aircraft* keeps 0 or -5 displayed while the Pi's value applies, and 600 is accepted (`app.js` ~453): bound to 2..60 and call `fillPanel()` again.
-- The Planespotters `link` is not validated: a `javascript:` or foreign site becomes the credit's href (`server.py` ~1229, `app.js` ~132). Keep it only if `photo_url_allowed(link)`; `rel="noopener noreferrer"` on `#photolink` and `referrerpolicy="no-referrer"` on `#photo` (`index.html`). Fix the test that sends `"link": "y"`.
-- The CGNAT glob of `ddns.sh` (~152) warns for `100.7.x` and `100.10.x`: `net_valid_ip` then `net_same_subnet "$pub" 100.64.0.0 10`, and a test for `ddns_status`.
+**Batch 4: the wall**: shipped in 0.54.11.
 
 **Batch 5: robustness and the tools** (terminal, English)
 - `cfg_set` and `cfg_del` copy from `/tmp` with `install`, with no rename and no lock: `config.env` can be cut by a power loss, and two writers can lose a setting (`common.sh` ~43, 51): a temporary file in the same folder, `mv -f`, perhaps `flock`.
