@@ -63,7 +63,7 @@ Two *Later* items are to be built from what the reference Pi measures, not from 
 ### The two proofs of stability
 
 * **A fresh install** on a blank card, following the wiki's [Fresh install](Fresh-install) alone, step by step, **and finished from the web console** (the owner's criterion, 21 October 2026: its checklist ticked line by line; a line that needed anything not written there is a fix to the page and a new try). The owner's blank card of 25 October 2026 met three such lines (the signing-key question, Bluesky in the wizard, where to find the position), fixed in 0.54.18: **a new try on 0.55.x is what is left**. Since 0.21.1 the installer is also walked end to end against stand-ins at every change (`tests/test_install.sh`).
-* **Two to four weeks hands-off**, social sharing on: no crash in `zenithboard logs`, no reboot forced by a watchdog. This one cannot start while the Pi is updated several times a day: it starts with the freeze.
+* **One month hands-off**, the release candidate's month (the owner, 25 October 2026: *l'application passe en RC pour un mois afin de valider un passage en v1.0*), social sharing on: no crash in `zenithboard logs`, no reboot forced by a watchdog. This one cannot start while the Pi is updated several times a day: it starts with the freeze.
 
 ### The freeze
 
@@ -71,11 +71,11 @@ Two *Later* items are to be built from what the reference Pi measures, not from 
 
 **What counts as a fix:** something that does not do what the docs say, a crash, a wrong figure, a security or privacy hole, a mistranslation, a doc that a novice cannot follow (the fresh-card try will find some), a provider that moved a file. **What does not:** a new option, a new tag, a new screen or card, a new language, a new look, an improvement to something that works as documented.
 
-**The hands-off clock started on 25 October 2026 at 13:51 CET** (the owner, the reference Pi on 0.99.0); written in the field log of [Project status](Project-status). Two weeks: 8 November; four weeks: 22 November. An update that only carries fixes for something else does not reset it; a reboot forced by a watchdog, a crash in the logs, or a fix to the services, the posts or the watchdogs does.
+**The hands-off clock started on 25 October 2026 at 13:51 CET** (the owner, the reference Pi on 0.99.0); written in the field log of [Project status](Project-status). The month ends on **25 November 2026**. An update that only carries fixes for something else does not reset it; a reboot forced by a watchdog, a crash in the logs, or a fix to the services, the posts or the watchdogs does.
 
 Swahili and Hindi are published without a native review, said as such in [Translating](Translating): that is not a caveat for 1.0.
 
-**Earliest date:** the monthly summary on 1 November, a month of lists around 20 November, two weeks hands-off after the freeze: **late November or early December 2026**, with the fresh card, the fixed address and the console's update done meanwhile.
+**Earliest date:** the monthly summary on 1 November, a month of lists around 20 November, the release candidate's month hands-off: **25 November 2026 at the earliest**, with the fresh card and the fixed address done meanwhile. A caveat still open then moves the date, not the bar.
 
 ## Waiting for 1.1
 

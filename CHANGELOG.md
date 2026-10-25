@@ -1,7 +1,7 @@
 # Changelog
 
 ## 0.99.0 — release candidate for 1.0
-- **Feature freeze** (the owner, 25 October 2026, 13:42). The code is 0.55.2's; from here, fixes only (0.99.x), and what is asked meanwhile waits for 1.1 ([Roadmap → The freeze](https://github.com/regis57/ZenithBoard/wiki/Roadmap#the-freeze), *Waiting for 1.1*). 1.0 comes once the open caveats are lifted, a fresh card has been done from the wiki alone, and the reference Pi has run two to four weeks hands-off on this candidate.
+- **Feature freeze** (the owner, 25 October 2026, 13:42). The code is 0.55.2's; from here, fixes only (0.99.x), and what is asked meanwhile waits for 1.1 ([Roadmap → The freeze](https://github.com/regis57/ZenithBoard/wiki/Roadmap#the-freeze), *Waiting for 1.1*). 1.0 comes once the open caveats are lifted, a fresh card has been done from the wiki alone, and the reference Pi has run a month hands-off on this candidate: **until 25 November 2026** (the owner, the same day: the release candidate runs one month).
 
 ## 0.55.2
 - **The summaries' post 1 has its link** (the owner's screenshot, 25 October 2026): *Sharing → Summaries* now shows *Post 1 · The period ↗* beside posts 2 to 4. *All summaries* draws the four in the terminal's way; the link opens the first one's picture. It has a copy of its own, `/social/preview1`, which a later *Try a post* of a crossing does not replace (before, post 1 shared `/social/preview` with it). `/social/preview` still shows the last picture drawn.
