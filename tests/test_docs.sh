@@ -13,7 +13,7 @@ bad() { echo "FAIL $1"; fail=1; }
 check() { if eval "$2"; then ok "$1"; else bad "$1"; fi; }
 
 # 1. every top-level command in the case statement (aliases such as color|colour: the first name is enough)
-cmds=$(awk '/^case "\$\{1:-\}" in/,/^esac/' bin/zenithboard | grep -oE '^  [a-z][a-z|-]*\)' | tr -d ' )' | cut -d'|' -f1 | sort -u)
+cmds=$(awk '/^case "\$\{1:-\}" in/,/^esac/' bin/zenithboard | grep -oE '^  [a-z][a-z0-9|-]*\)' | tr -d ' )' | cut -d'|' -f1 | sort -u)
 [ -n "$cmds" ] || { echo "FAIL could not read the commands from bin/zenithboard"; exit 1; }
 for c in $cmds; do
   if grep -q "zenithboard $c\b" "$page"; then ok "documented: zenithboard $c"; else bad "NOT documented: zenithboard $c"; fi

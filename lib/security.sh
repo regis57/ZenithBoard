@@ -80,7 +80,7 @@ sec_ports() {
 sec_units() {
   local u s bad="" n=0
   command -v systemd-analyze >/dev/null 2>&1 || { sec_line INFO "systemd-analyze is not available: sandboxes not measured"; return 0; }
-  for u in /etc/systemd/system/zenithboard-*.service; do
+  for u in "${ZB_UNIT_DIR}"/zenithboard-*.service; do
     [ -f "$u" ] || continue
     u=$(basename "$u")
     [ "$u" != zenithboard-console.service ] || continue      # 0.39.0: root by design, said by sec_console

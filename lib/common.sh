@@ -7,6 +7,9 @@ ZB_CONFIG="$ZB_ETC/config.env"
 ZB_HOME="${ZENITHBOARD_HOME:-/opt/zenithboard}"; export ZB_HOME     # override only for testing (tests/test_install.sh)
 ZB_BIN_DIR="${ZENITHBOARD_BIN_DIR:-/usr/local/bin}"; export ZB_BIN_DIR   # where the zenithboard command is linked
 ZB_DATA="/var/lib/zenithboard"; export ZB_DATA
+# where the units are installed; a test points it at a folder of its own (the audit of 22-23 October 2026: run as root,
+# the tests wrote the real /etc/systemd/system)
+ZB_UNIT_DIR="${ZB_SYSTEMD_DIR:-/etc/systemd/system}"; export ZB_UNIT_DIR
 ZB_USER="zenithboard"; export ZB_USER
 RADIUS_PRESETS="1 2 5 10 15 30 50"
 

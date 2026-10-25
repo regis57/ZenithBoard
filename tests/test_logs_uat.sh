@@ -17,7 +17,8 @@ ok()  { echo "ok   $1"; }
 bad() { echo "FAIL $1"; fail=1; }
 check() { if eval "$2"; then ok "$1"; else bad "$1"; fi; }
 t=$(mktemp -d); trap 'rm -rf "$t"' EXIT
-export ZB_SKIP_SERVICES=1
+export ZB_SKIP_SERVICES=1 ZB_SYSTEMD_DIR="$t/units"     # 0.54.13: never the real units, even run as root
+mkdir -p "$t/units"
 
 # ---- logs: limit file
 JOURNALD_DIR="$t/journald.conf.d"; JOURNALD_CONF="$JOURNALD_DIR/zenithboard.conf"
@@ -101,5 +102,20 @@ out=$(ZENITHBOARD_ETC="$t/letc" PATH="$t/lb:$PATH" bash bin/zenithboard logs fr2
 check "logs fr24: installed, its service's journal" 'grep -q "journalctl -u fr24feed" <<<"$out"'
 out=$(ZENITHBOARD_ETC="$t/letc" PATH="$t/lb:$PATH" bash bin/zenithboard logs adsbexchange 2>&1)
 check "logs adsbexchange: the unit the status screen names" 'grep -q "adsbexchange-feed is not installed" <<<"$out"'
+
+# ---- the position, written into the decoder's and the feeders' own files (0.54.13: never run by a test before)
+mkdir -p "$t/etc" "$t/default"; ZB_ETC="$t/etc"; ZB_CONFIG="$t/etc/config.env"; touch "$ZB_CONFIG"
+printf 'ENABLED=yes\nDECODER_OPTIONS="--lat 1.0 --lon 2.0 --max-range 360"\n' > "$t/default/dump1090-fa"
+printf 'LATITUDE=1\nLONGITUDE=2\nALTITUDE=10m\nUSER=x\n' > "$t/default/adsbexchange"
+printf '{"latitude": 1.0, "longitude": 2.0, "sharecode": "abc"}\n' > "$t/pf.json"
+(
+  is_readsb() { return 1; }; is_dump1090() { return 0; }; is_adsbx() { return 0; }; is_piaware() { return 1; }
+  is_fr24() { return 1; }; is_planefinder() { return 0; }; systemctl() { :; }; restart_flightinfo() { :; }
+  ZB_DEFAULT_DIR="$t/default" ZB_PF_CONFIG="$t/pf.json" zb_apply_location 49.25 6.2 180 > "$t/loc.out" 2>&1
+)
+check "position: dump1090-fa's options get the new one, once, the rest kept" 'grep -qx "DECODER_OPTIONS=\"--lat 49.25 --lon 6.2 --max-range 360\"" "$t/default/dump1090-fa"'
+check "position: ADSB Exchange's file, altitude with its unit glued" 'grep -qx "LATITUDE=\"49.25\"" "$t/default/adsbexchange" && grep -qx "LONGITUDE=\"6.2\"" "$t/default/adsbexchange" && grep -qx "ALTITUDE=\"180m\"" "$t/default/adsbexchange" && grep -qx "USER=x" "$t/default/adsbexchange"'
+check "position: Plane Finder's JSON, its other keys kept" 'python3 -c "import json,sys; d=json.load(open(sys.argv[1])); assert d[\"latitude\"]==49.25 and d[\"longitude\"]==6.2 and d[\"sharecode\"]==\"abc\"" "$t/pf.json"'
+check "position: kept in config.env too" '[ "$(cfg_get LAT)" = 49.25 ] && [ "$(cfg_get ALT_M)" = 180 ]'
 
 exit "$fail"

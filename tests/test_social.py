@@ -1573,6 +1573,9 @@ class PublishTest(unittest.TestCase):
         if shutil.which(social.NODE) is None:
             self.skipTest("node not installed here")
         old = social.RUN_DIR; social.RUN_DIR = "/proc/no-such-place/social"; self.addCleanup(setattr, social, "RUN_DIR", old)
+        # 0.54.13: a temporary folder of its own, so a leftover of another run elsewhere on the machine cannot fail this
+        mine = tempfile.mkdtemp(); self.addCleanup(shutil.rmtree, mine, True)
+        self.addCleanup(setattr, tempfile, "tempdir", tempfile.tempdir); tempfile.tempdir = mine
         r = social.publish(EZY, trace(30), "all", dict(CFG, SOCIAL_MAP="none"), {}, dry=True)
         self.assertIn("text", r)
         self.assertFalse([d for d in os.listdir(tempfile.gettempdir()) if d.startswith("zenithboard-social-")], "the stand-in folder must be removed")
@@ -2175,3 +2178,41 @@ class WeeklyTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PostNowTest(unittest.TestCase):
+    """0.54.13 (the audit of 22-23 October 2026): `social post` ("Post now") had no test; it caused a double post in 0.19.2.
+    A success is remembered (so the service does not post the same crossing again); a failure is not."""
+
+    def setUp(self):
+        names = ("_collect_once", "account", "bluesky_ready", "publish", "picture_for", "merge_disk", "remember_post")
+        saved = {n: getattr(social, n) for n in names}
+        self.addCleanup(lambda: [setattr(social, n, v) for n, v in saved.items()])
+        self.remembered = []
+        plane = {"hex": "3c6444", "flight": "DLH4YK"}
+        social._collect_once = lambda hex_code=None: ({"SOCIAL_RADIUS_KM": "15"}, {}, plane, [], "military")
+        social.account = lambda: {"BLUESKY_HANDLE": "zb.bsky.social", "BLUESKY_APP_PASSWORD": "x"}
+        social.bluesky_ready = lambda sec: True
+        social.picture_for = lambda c, n: {}
+        social.merge_disk = lambda st: st
+        social.remember_post = lambda p, when: self.remembered.append(p["hex"])
+
+    def run_post(self):
+        import contextlib, io
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            rc = social.cmd_post()
+        return rc, out.getvalue()
+
+    def test_a_post_that_went_out_is_remembered(self):
+        social.publish = lambda *a, **k: {"bluesky": "ok at://did:plc:x/app.bsky.feed.post/1"}
+        rc, out = self.run_post()
+        self.assertEqual(rc, 0)
+        self.assertEqual(self.remembered, ["3c6444"])
+
+    def test_a_refused_post_is_not_remembered(self):
+        social.publish = lambda *a, **k: {"bluesky": "FAILED: 500"}
+        rc, out = self.run_post()
+        self.assertEqual(rc, 1)
+        self.assertEqual(self.remembered, [])
+        self.assertIn("FAILED", out)

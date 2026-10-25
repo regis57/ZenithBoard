@@ -16,7 +16,7 @@ never on a plain-HTTP address like http://192.168.1.196:8080 (web.dev/articles/w
 What protects it: home networks only (whatever ALLOW_FROM says); a Host header that is an address or a local name
 (against DNS rebinding); a session cookie that is HttpOnly, SameSite=Strict and limited to /console; a second token
 in a header on every change (against cross-site requests); failed sign-ins slowed down per address and overall;
-sessions that end (12 h for a password, 30 days for a paired phone, sooner when unused) and that `console password`
+sessions that end (a week for a password, a day unused; a year for a paired phone, a month unused) and that `console password`
 or `console signout` end at once; strict security headers on every page.
 """
 import base64

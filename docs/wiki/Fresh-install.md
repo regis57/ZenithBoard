@@ -114,7 +114,7 @@ graphs lived on the card only):
     in with the console password. Its version is written at the bottom of the page, linked to its release notes.
 18. **The first steps** open by themselves the first time, nine short screens; nothing changes before the last one:
     1. *Welcome*: what this Pi is, its decoder, which networks it feeds. On a card where the console was just switched on, the page first waits (a few seconds) for the Pi's first reading, so these lines are true when they appear (0.54.2; before, they could say *no decoder* and *nobody yet* right after Start here).
-    2. *Where the antenna is*: region, units, and the position, checked as you type (latitude −90 to 90, longitude
+    2. *Where the antenna is*: region, units, and the position, checked when you press Next (latitude −90 to 90, longitude
        −180 to 180, altitude in metres).
     3. *The wall*: its look, its colour, its radius.
     4. *Feeding the networks*: each one, running or not installed, with a link to its own page. Read only.

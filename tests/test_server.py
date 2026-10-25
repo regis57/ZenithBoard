@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Run: python3 -m unittest discover -s tests -v"""
 import json
+import shutil
+import tempfile
 import os
 import sys
 import time
@@ -110,6 +112,44 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(server.public_config(cfg)["units"], "metric")
         self.assertEqual(server.public_config(dict(cfg, THEME="purple"))["theme"], "amber")   # amber is the default
         self.assertEqual(server.public_config(cfg)["radius_presets"], [1, 2, 5, 10, 15, 30, 50])
+
+
+class DataFilesTest(unittest.TestCase):
+    def test_every_country_of_the_address_blocks_has_its_flag(self):
+        # 0.54.13 (the audit of 22-23 October 2026): nothing checked that a country the decoder can name has a flag to show
+        here = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "flightinfo", "data")
+        with open(os.path.join(here, "icao_countries.json"), encoding="utf-8") as fh:
+            codes = {b[2] for b in json.load(fh)["blocks"] if b[2]}
+        self.assertGreater(len(codes), 150)
+        missing = sorted(c for c in codes if not os.path.isfile(os.path.join(here, "flags", c + ".png")))
+        self.assertEqual(missing, [])
+
+    def test_the_newer_preview_is_the_one_shown(self):
+        # 0.54.13: preview.png (the dots) or preview.jpg (split-flap with a map), the newer when both are there
+        d = tempfile.mkdtemp(); self.addCleanup(shutil.rmtree, d)
+        self.addCleanup(setattr, server, "SOCIAL_DIR", server.SOCIAL_DIR); server.SOCIAL_DIR = d
+        self.assertEqual(server.social_preview_name(), "preview.png", "neither yet: the dots' name")
+        for name, age in (("preview.png", 100), ("preview.jpg", 50)):
+            with open(os.path.join(d, name), "wb") as fh:
+                fh.write(b"x")
+            os.utime(os.path.join(d, name), (time.time() - age, time.time() - age))
+        self.assertEqual(server.social_preview_name(), "preview.jpg")
+        os.utime(os.path.join(d, "preview.png"), None)
+        self.assertEqual(server.social_preview_name(), "preview.png")
+
+
+class DraftLanguageTest(unittest.TestCase):
+    def test_a_language_marked_draft_is_not_offered(self):
+        # 0.54.13 (the audit of 22-23 October 2026): the hold-back was checked by a grep only
+        d = tempfile.mkdtemp(); self.addCleanup(shutil.rmtree, d)
+        self.addCleanup(setattr, server, "I18N_DIR", server.I18N_DIR); server.I18N_DIR = d
+        for code in ("fr", "de"):
+            os.makedirs(os.path.join(d, code))
+            with open(os.path.join(d, code, "console.json"), "w") as fh:
+                fh.write("{}")
+        self.assertEqual(server.web_langs(), ["en", "fr", "de"])
+        open(os.path.join(d, "de", "draft.txt"), "w").close()
+        self.assertEqual(server.web_langs(), ["en", "fr"])
 
 
 class ThrottledLookupTests(unittest.TestCase):
@@ -695,6 +735,62 @@ class WhoMayReadTest(unittest.TestCase):
     def test_the_default_setting_is_private(self):
         self.assertEqual(server.DEFAULTS["ALLOW_FROM"], "private")
         self.assertEqual(server.DEFAULTS["BIND_ADDRESS"], "0.0.0.0")
+
+    def test_the_planes_handler_asks_the_internet_only_when_the_settings_say_so(self):
+        # 0.54.13 (the audit of 22-23 October 2026): no test went through /api/planes itself, so the wiring of SHOW_PHOTOS,
+        # SHOW_ROUTES and DEMO ("off by default" decides the outgoing calls), the hex filter and no_data were not checked
+        import http.client, tempfile, threading
+        calls = []
+        rec = lambda name: (lambda *a, **k: calls.append(name) or None)
+        data = {"now": 1, "aircraft": [
+            {"hex": "3c6444", "flight": "DLH4YK  ", "lat": 49.26, "lon": 6.21, "alt_baro": 30000, "track": 90, "gs": 400, "seen_pos": 1},
+            {"hex": "4ca7b5", "flight": "RYR5ZK  ", "lat": 49.27, "lon": 6.19, "alt_baro": 32000, "track": 80, "gs": 420, "seen_pos": 1}]}
+        answer = {"data": data}
+        saved = {n: getattr(server, n) for n in ("read_aircraft", "lookup_photo", "lookup_route", "lookup_aircraft",
+                                                  "lookup_route_fallback", "CONFIG_FILE")}
+        self.addCleanup(lambda: [setattr(server, n, v) for n, v in saved.items()])
+        server.read_aircraft = lambda cfg: (answer["data"], "/run/readsb/aircraft.json")
+        for n in ("lookup_photo", "lookup_route", "lookup_aircraft", "lookup_route_fallback"):
+            setattr(server, n, rec(n))
+        with tempfile.NamedTemporaryFile("w", suffix=".env", delete=False) as fh:
+            cfgpath = fh.name
+        self.addCleanup(os.unlink, cfgpath)
+        server.CONFIG_FILE = cfgpath
+
+        def config(text):
+            with open(cfgpath, "w") as fh:
+                fh.write("LAT=49.25\nLON=6.2\nRADIUS=20\n" + text)
+            server._cfg_cache.update(mtime=None)
+        httpd = server.WallServer(("127.0.0.1", 0), server.Handler)
+        port = httpd.server_address[1]
+        threading.Thread(target=httpd.serve_forever, daemon=True).start()
+        self.addCleanup(httpd.server_close)
+        self.addCleanup(httpd.shutdown)
+
+        def planes(q=""):
+            c = http.client.HTTPConnection("127.0.0.1", port, timeout=5); c.request("GET", "/api/planes" + q)
+            r = c.getresponse(); body = json.loads(r.read()); c.close(); return body
+        config("SHOW_PHOTOS=0\nSHOW_ROUTES=0\n")
+        got = planes()
+        self.assertEqual(sorted(p["hex"] for p in got["planes"]), ["3c6444", "4ca7b5"])
+        self.assertEqual(calls, [], "photos and routes off: nothing asked of the internet")
+        config("SHOW_PHOTOS=1\nSHOW_ROUTES=1\n")
+        planes()
+        self.assertIn("lookup_photo", calls)
+        self.assertIn("lookup_route", calls)
+        del calls[:]
+        config("SHOW_PHOTOS=1\nSHOW_ROUTES=1\nDEMO=1\n")
+        planes()
+        self.assertEqual(calls, [], "the demo asks nothing of the internet unless DEMO_REAL_PHOTOS says so")
+        config("SHOW_PHOTOS=0\nSHOW_ROUTES=0\n")
+        self.assertEqual([p["hex"] for p in planes("?hex=4CA7B5")["planes"]], ["4ca7b5"], "one aircraft asked by its address")
+        self.assertEqual(len(planes("?hex=../../x")["planes"]), 2, "anything but an address is ignored")
+        answer["data"] = None
+        got = planes()
+        self.assertEqual((got["error"], got["planes"], got["total"]), ("no_data", [], 0))
+        c = http.client.HTTPConnection("127.0.0.1", port, timeout=5); c.request("GET", "/demo/aircraft.json")
+        r = c.getresponse(); r.read(); c.close()
+        self.assertEqual(r.status, 404, "the demo's files only when DEMO is on")
 
     def test_a_name_that_is_not_the_pis_gets_nothing_of_the_wall_data(self):
         # 0.54.0: DNS rebinding. The request comes from a home browser (a private address) with the attacker's own name

@@ -9,13 +9,15 @@ No test framework is installed. Python uses `unittest` from the standard library
 Exactly what CI runs:
 
 ```bash
-shellcheck -x -S warning install.sh bin/zenithboard bin/zenithboard-demo lib/*.sh tests/*.sh
+shellcheck -x -S warning install.sh bin/zenithboard bin/zenithboard-demo lib/*.sh tests/*.sh tools/*.sh
 python3 -m unittest discover -s tests -v
 for t in tests/test_*.sh; do bash "$t" || echo "FAIL $t"; done
 for t in tests/test_*.js; do node "$t" || echo "FAIL $t"; done
 ```
 
-Run the whole set before pushing. It takes well under a minute, and the shell tests are the ones that catch the expensive mistakes.
+Run the whole set before pushing. It takes about a minute and a half on a laptop, and the shell tests are the ones that catch the
+expensive mistakes. The split-flap pictures' tests need Pillow and its font, or they are skipped: `sudo apt install python3-pil
+fonts-dejavu-core` (CI installs them).
 
 ## What covers what
 

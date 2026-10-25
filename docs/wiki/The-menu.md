@@ -41,7 +41,7 @@ In its order, each step skipped when it is done already:
    | Wi-Fi hardening | Reconnects without end, no power saving (only when on Wi-Fi) |
 
 5. **The web console**: its password (10 characters at least, asked twice), then its address. You finish in your
-   browser: its first steps check what is left, *System → Pair a phone*. Bluesky, if you post, is set up here in
+   browser: its first steps check what is left, *System → Signed in → Pair a phone*. Bluesky, if you post, is set up here in
    *7 Options* (it asks for an app password, which never goes through a web page).
 
 Once everything is done, the entry says *all done: check it again*.

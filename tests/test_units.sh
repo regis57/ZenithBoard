@@ -25,8 +25,11 @@ else
   echo "skip systemd-analyze security not available here: the exposure ceilings are not measured"
 fi
 
-# ---- every unit has the basics, whatever its score
-for u in flightinfo data-refresh ddns logs-clean gain-log stats netwatch wifi social; do
+# ---- every unit has the basics, whatever its score; every unit shipped, so a new one cannot slip past (0.54.13). The
+# console's helper runs as root by design (0.39.0, Security), with its own fixed list of commands: it is the exception.
+units=$(cd systemd && ls zenithboard-*.service | sed 's/^zenithboard-//; s/\.service$//' | grep -vx console)
+check "the list is read from systemd/ (and still holds the wall)" 'grep -qx flightinfo <<<"$units"'
+for u in $units; do
   check "$u: ProtectSystem=strict"   'has $u "ProtectSystem=strict"'
   check "$u: ProtectHome"            'has $u "ProtectHome=true"'
   check "$u: PrivateTmp"             'has $u "PrivateTmp=true"'

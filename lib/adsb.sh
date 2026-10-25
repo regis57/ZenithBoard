@@ -66,7 +66,7 @@ install_decoder() {  # install_decoder readsb|dump1090-fa
       ensure_fa_repo || return 1
       apt_install dump1090-fa || return 1
       local f=/etc/default/dump1090-fa
-      sed -i -E 's/ ?--lat [^" ]+//; s/ ?--lon [^" ]+//' "$f"
+      sed -i -E 's/--lat [^" ]+ ?//; s/--lon [^" ]+ ?//' "$f"
       sed -i -E "s|^(DECODER_OPTIONS=\")|\1--lat $lat --lon $lon |" "$f"
       [ -n "$dev" ] && sed -i -E "s/--device-index [^\" ]+/--device-index $dev/" "$f"
       systemctl enable dump1090-fa; systemctl restart dump1090-fa
@@ -348,8 +348,10 @@ adsb_menu() {
 # Prints one line per place. "manual" lines are things only the provider's website can change.
 _loc_line() { printf '  %-26s %s\n' "$1" "$2"; }
 
+# The decoders' and feeders' own files; a test points them at a folder of its own (the audit of 22-23 October 2026:
+# the sed of dump1090, ADSB Exchange's ALTITUDE and Plane Finder's JSON were never run by a test)
 zb_apply_location() {  # zb_apply_location LAT LON [ALT_M]
-  local lat="$1" lon="$2" alt="${3:-$(cfg_get ALT_M 0)}"
+  local lat="$1" lon="$2" alt="${3:-$(cfg_get ALT_M 0)}" dd="${ZB_DEFAULT_DIR:-/etc/default}"
   log "Applying position $lat, $lon, ${alt} m everywhere"
   cfg_set LAT "$lat"; cfg_set LON "$lon"; cfg_set ALT_M "$alt"
   _loc_line "ZenithBoard wall" "updated"; restart_flightinfo
@@ -358,13 +360,13 @@ zb_apply_location() {  # zb_apply_location LAT LON [ALT_M]
     readsb-set-location "$lat" "$lon" >/dev/null 2>&1 && systemctl restart readsb && _loc_line "readsb" "updated"
   fi
   if is_dump1090; then
-    local f=/etc/default/dump1090-fa
-    sed -i -E 's/ ?--lat [^" ]+//; s/ ?--lon [^" ]+//' "$f"
+    local f="$dd/dump1090-fa"
+    sed -i -E 's/--lat [^" ]+ ?//; s/--lon [^" ]+ ?//' "$f"
     sed -i -E "s|^(DECODER_OPTIONS=\")|\1--lat $lat --lon $lon |" "$f"
     systemctl restart dump1090-fa && _loc_line "dump1090-fa" "updated"
   fi
   if is_adsbx; then
-    local f=/etc/default/adsbexchange
+    local f="$dd/adsbexchange"
     if [ -f "$f" ] && grep -q '^LATITUDE=' "$f"; then
       ini_set "$f" LATITUDE "$lat"; ini_set "$f" LONGITUDE "$lon"; ini_set "$f" ALTITUDE "${alt}m"
       systemctl restart adsbexchange-feed adsbexchange-mlat 2>/dev/null
@@ -380,7 +382,7 @@ zb_apply_location() {  # zb_apply_location LAT LON [ALT_M]
     _loc_line "Flightradar24" "MANUAL: edit your receiver on https://www.flightradar24.com (My data sharing)"
   fi
   if is_planefinder; then
-    local f=/etc/pfclient-config.json
+    local f="${ZB_PF_CONFIG:-/etc/pfclient-config.json}"
     if [ -f "$f" ] && command -v python3 >/dev/null && python3 - "$f" "$lat" "$lon" <<'PY'
 import json, sys
 f, lat, lon = sys.argv[1], float(sys.argv[2]), float(sys.argv[3])

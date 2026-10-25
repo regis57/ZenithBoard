@@ -28,7 +28,7 @@ user not existing yet); `console password` works already.
 Or the menu: *7 Options → 4 Web console*, or the end of *Start here*. On a new card, the whole way from the SD card to here: [Fresh install](Fresh-install).
 
 **The first steps** open the first time you sign in, nine short screens (0.41.0): what this Pi is and feeds, where
-the antenna is (checked as you type), the wall, the networks (read only, each with its page), what to collect, what
+the antenna is (checked when you press Next), the wall, the networks (read only, each with its page), what to collect, what
 keeps it running, the Bluesky summaries, your phone, then a review that applies only what you changed, one command
 after the other. *Skip* leaves everything as it is. **They open again** from *System → First steps again*, from the
 *Finish setting up* card the overview shows while something is missing (no position, no decoder, statistics off, a
@@ -210,7 +210,7 @@ when you do not need it. `zenithboard security` says it is on and checks the pas
 | **Password forgotten** | 1. `sudo zenithboard console password` (choose a new one; everyone is signed out). 2. Sign in again |
 | **"This pairing code is used or out of date"**, with a fresh code | The wall could not write its console folder: it was started before `console on` made it, and its sandbox opens only folders present at its start (0.39.0, fixed in 0.39.2: `console on` restarts it, the code no longer depends on that write). 1. `sudo systemctl restart zenithboard-flightinfo`. 2. `sudo zenithboard console pair` again (a code works once, five minutes). The page also says it when the folder cannot be written |
 | **"Too many tries. Wait N seconds."** (failed QR codes count too) | 1. Wait, or 2. `sudo systemctl restart zenithboard-flightinfo` (the count lives in the wall's memory; signed-in sessions survive the restart) |
-| **Phone lost, or a browser you do not know in *Signed in*** | 1. `sudo zenithboard console signout` (every browser and phone out at once). 2. `sudo zenithboard console password` if the password may be known. 3. Pair your phone again: `sudo zenithboard console pair` |
+| **Phone lost, or a browser you do not know in *Signed in*** | From a browser still signed in: *System → Signed in*, *Sign out* beside that one, then *Sign out the others* (what it signed in, by a pairing or the phone's yes, goes too). Or over SSH: 1. `sudo zenithboard console signout` (every browser and phone out at once). 2. `sudo zenithboard console password` if the password may be known. 3. Pair your phone again: `sudo zenithboard console pair` |
 | **The page says the console is off** | `sudo zenithboard console on` |
 | **403 "home network only" or "open it by the Pi's address"** | 1. Open it as `http://192.168.x.x:8080/console` (the Pi's address: `hostname -I`), from a device on the home network. 2. By a name of your own (not `*.local`): `sudo zenithboard config-set CONSOLE_HOSTS your.name`. 3. A VPN whose addresses are not private (Tailscale's 100.64/10) is refused until you say so: `sudo zenithboard tailscale console on` (0.46.0; off by default), or SSH through it. A narrower `ALLOW_FROM` applies too (`zenithboard config`) |
 | **A change stays *queued*** behind another (*Queued: … runs first*) | Normal: one change at a time. Wait for the one running (its output: *Activity*). To give up on it: see *A change stays running* |
@@ -249,5 +249,6 @@ sudo zenithboard console pair        # the phone again (QR code)
 
 Built and previewed on 21 October 2026 against a stand-in for the `zenithboard` command (desktop and phone width,
 headless Chromium): the wizard, every section, Activity, the QR code. The request checks, the sessions, the pairing
-and the helper are covered by `tests/test_console.py` and `tests/test_console.sh`. **Not yet run on the reference Pi**:
-the systemd path unit, the helper as root, a real update from the page. See [Project status](Project-status).
+and the helper are covered by `tests/test_console.py` and `tests/test_console.sh`. In use on the reference Pi since
+21 October 2026: the systemd path unit and the helper as root (graphs1090 installed from the page), an iPhone paired by
+QR code, a backup downloaded. **Not yet seen there**: a real update from the page. See [Project status](Project-status).

@@ -97,9 +97,9 @@ Pi, connect with PuTTY, bring the system up to date. Two tips:
 * **Your statistics** at `http://zenithboard.local:8080/stats`: the previous days are there.
 * **Bluesky**, if you post: the backup never holds its password. Make a new *app password* on bsky.app
   (*Settings → Privacy and security → App passwords*), then in PuTTY: `sudo zenithboard social setup`.
-* **graphs1090**, if you had it: it comes back with step 6 of *Start here* (or `sudo zenithboard graphs on`), with its
+* **graphs1090**, if you had it: it comes back ticked in the list of step 4 of *Start here* (or `sudo zenithboard graphs on`), with its
   history.
-* **Your phone**: in the console, *System → Pair a phone*.
+* **Your phone**: in the console, *System → Signed in → Pair a phone*.
 
 Once all is well for a few days, the old card can be reused.
 
