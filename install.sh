@@ -165,10 +165,11 @@ presets_menu() {
 }
 
 # The one step that cannot be undone asks for the word, not a key: a Yes one Enter too many (seen as a risk in
-# the menu review of 0.21.0) must not take a working receiver down. Your settings are offered as a file first.
+# the menu review of 0.21.0) must not take a working receiver down. A backup is pointed to first.
 uninstall_all() {
   local word
-  wt_yesno "UNINSTALL EVERYTHING?\n\nThis removes FlightInfo, all feeders, graphs1090 and the decoder installed through this menu (and ACARS / Grafana if an older ZenithBoard installed them).\n\nFirst, keep a backup? (menu 6 Backup, or: sudo zenithboard backup make)" 14 || return 0
+  # the audit of 22-23 October 2026: "First, keep a backup?" under a Yes/No read as two questions; Yes is now "go on"
+  wt_yesno "UNINSTALL EVERYTHING?\n\nThis removes FlightInfo, all feeders, graphs1090 and the decoder installed through this menu (and ACARS / Grafana if an older ZenithBoard installed them).\n\nNo backup yet? Choose No, then 6 Backup -> 1 Make a backup now (or: sudo zenithboard backup make).\n\nYes goes on to the typed word." 16 || return 0
   word=$(wt_input "To go on, type the word  uninstall  (anything else cancels)." "") || return 0
   [ "$word" = uninstall ] || { wt_msg "Not uninstalled: nothing was changed." 7; return 0; }
   clear
@@ -192,7 +193,7 @@ uninstall_all() {
   if is_adsbx_stats || [ -f "$AXS_STATE" ]; then adsbx_stats_off; fi
   is_adsbx && remove_adsbx
   [ -n "$(installed_decoder)" ] && remove_decoder
-  if wt_yesno "Also delete your ZenithBoard settings ($ZB_ETC) and program files ($ZB_HOME)?" 8; then
+  if wt_yesno "Also delete your ZenithBoard settings ($ZB_ETC, with the Bluesky app password in social.env and the console's password) and program files ($ZB_HOME)?\n\nThe statistics and the posts' history in $ZB_DATA stay either way (to delete them too: sudo rm -rf $ZB_DATA)." 12; then
     rm -rf "$ZB_ETC" "$ZB_HOME" "$ZB_BIN_DIR/zenithboard"
     id "$ZB_USER" >/dev/null 2>&1 && userdel "$ZB_USER" 2>/dev/null
   fi

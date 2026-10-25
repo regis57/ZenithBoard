@@ -470,21 +470,18 @@ backup_delete_console() {
 backup_menu() {
   local c f out
   while true; do
-    c=$(wt_menu "Backup and restore\n\nOne file with the settings, the features that are on, the statistics, graphs1090's history, the kept logs and the networks' identities: to keep, or to move to a new card." \
-      make "1  Make a backup now (in your home folder)" \
-      show "2  Show what a backup holds, and check it reads back" \
-      list "3  List the backups, newest first" \
-      clean "4  Delete the older ones, keep the 3 newest (asks you to type delete)" \
-      restore "5  Restore a backup (asks you to type RESTORE)" \
+    # the audit of 22-23 October 2026: Make and Restore were here too, twice in the Backup menu and under a title
+    # promising three things; the one that deletes is not the last before Return
+    c=$(wt_menu "Show, list, delete older backups\n\nOne file with the settings, the features that are on, the statistics, graphs1090's history, the kept logs and the networks' identities: to keep, or to move to a new card." \
+      list "1  List the backups, newest first" \
+      clean "2  Delete the older ones, keep the 3 newest (asks you to type delete)" \
+      show "3  Show what a backup holds, and check it reads back" \
       back "Return to the previous menu") || return 0
     case "$c" in
-      make) out=$(backup_make "$(getent passwd "${SUDO_USER:-root}" | cut -d: -f6)/zenithboard-backup-$(hostname)-$(date +%Y%m%d-%H%M).tar.gz" 2>&1); wt_msg "$out" 20 ;;
       show) f=$(wt_input "The backup file (its full path):" "$(ls -t "$(getent passwd "${SUDO_USER:-root}" | cut -d: -f6)"/zenithboard-backup-*.tar.gz 2>/dev/null | head -1)") || continue
             wt_msg "$(backup_show "$f" 2>&1)" 20 ;;
       list) wt_msg "Backups, newest first (their names carry the date, so they sort the same way):\n\n$(backup_list "" 2>&1)" 20 ;;
       clean) clear; backup_clean "$(bk_home)"; read -r -p "Press Enter to go back to the menu. " _ ;;
-      restore) f=$(wt_input "The backup file to restore (its full path; copy it here first with scp):" "$(ls -t "$(getent passwd "${SUDO_USER:-root}" | cut -d: -f6)"/zenithboard-backup-*.tar.gz 2>/dev/null | head -1)") || continue
-            clear; backup_restore "$f"; read -r -p "Press Enter to go back to the menu. " _ ;;
       *) return 0 ;;
     esac
   done

@@ -318,7 +318,9 @@ wifi_saved_menu() {
       local km hid; km=$(wifi_profile_keymgmt "$uuid"); hid=$(wifi_profile_hidden "$uuid"); [ -n "$km" ] || km=wpa-psk
       wifi_forget "$uuid"; clear; wifi_connect "$ssid" "$p" "$hid" "$km"; read -rp "Press Enter to continue..." _ ;;
     auto)
-      if wt_yesno "Join \"$name\" automatically whenever it is in range (and at every boot)?" 8; then nmcli connection modify uuid "$uuid" connection.autoconnect yes; else nmcli connection modify uuid "$uuid" connection.autoconnect no; fi ;;
+      # Esc changes nothing (the audit of 22-23 October 2026: it was taken for No)
+      wt_yesno "Join \"$name\" automatically whenever it is in range (and at every boot)?" 8
+      case $? in 0) nmcli connection modify uuid "$uuid" connection.autoconnect yes ;; 1) nmcli connection modify uuid "$uuid" connection.autoconnect no ;; esac ;;
     forget)
       wt_yesno "Forget \"$name\"? Its password is deleted from this Pi." 8 || return 0
       wifi_confirm_session_risk "Forgetting this network" || return 0

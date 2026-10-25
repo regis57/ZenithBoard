@@ -176,8 +176,13 @@ wall_menu() {
       install) clear; install_flightinfo; menu_pause ;;
       show) wall_show_menu ;;
       look)
-        settings_style && settings_color && { restart_flightinfo; graphs_look_keep
-          wt_msg "Saved: $(cfg_get DISPLAY_MODE dots), $(wall_theme).\n\nThe default for every screen. A tablet that chose its own (its gear icon, or ?mode=) keeps it until Reset in its gear panel." 11; } ;;
+        # the audit of 22-23 October 2026: Esc on the colour after a new look left the look written, on the wall at
+        # its next reload, with no restart and no word; the look is kept and said, the colour as it was
+        if settings_style; then
+          settings_color; c=$?
+          restart_flightinfo; graphs_look_keep
+          wt_msg "Saved: $(cfg_get DISPLAY_MODE dots), $(wall_theme)$( [ "$c" = 0 ] || echo " (colour unchanged)").\n\nThe default for every screen. A tablet that chose its own (its gear icon, or ?mode=) keeps it until Reset in its gear panel." 11
+        fi ;;
       data) wall_data_menu ;;
       presets) presets_menu ;;
       remove)
@@ -199,12 +204,21 @@ wall_show_menu() {
     case "$c" in
       radius) change_radius ;;
       units) settings_units && restart_flightinfo ;;
-      cycle) s=$(wt_input "Seconds each aircraft stays on the wall (2-60)." "$(cfg_get CYCLE_SECONDS 14)") && is_number "$s" && cfg_set CYCLE_SECONDS "$s" && restart_flightinfo ;;
+      cycle)
+        while s=$(wt_input "Seconds each aircraft stays on the wall: whole seconds, 2 to 60." "$(cfg_get CYCLE_SECONDS 14)"); do
+          if valid_cycle "$s"; then cfg_set CYCLE_SECONDS "$((10#$s))"; restart_flightinfo; break; fi
+          wt_msg "Seconds per aircraft: whole seconds, 2 to 60. Nothing was changed." 8
+        done ;;
       *) return 0 ;;
     esac
   done
 }
 
+# menu_yesno_set KEY QUESTION HEIGHT: Yes sets KEY to 1, No to 0, Esc leaves it as it was (and returns 2)
+menu_yesno_set() {
+  wt_yesno "$2" "$3"
+  case $? in 0) cfg_set "$1" 1 ;; 1) cfg_set "$1" 0 ;; *) return 2 ;; esac
+}
 wall_data_menu() {
   local c
   while true; do
@@ -215,15 +229,19 @@ wall_data_menu() {
       localdb "4  Offline registrations (the map's database)" \
       back "Return to the previous menu") || return 0
     case "$c" in
-      photos) if wt_yesno "Show aircraft photos (Planespotters) on the wall? Needs internet on the Pi." 8; then cfg_set SHOW_PHOTOS 1; else cfg_set SHOW_PHOTOS 0; fi ;;
-      routes) if wt_yesno "Show where each flight comes from and goes to?\n\nThe callsign (for example DLH4YK) is looked up on the free adsbdb.com database. When your decoder does not know an aircraft, its address is also used to find the model name. Needs internet on the Pi." 13; then cfg_set SHOW_ROUTES 1; else cfg_set SHOW_ROUTES 0; fi ;;
+      # the audit of 22-23 October 2026: Esc (whiptail's 255) was taken for No and switched the feature off; now
+      # only Yes and No change anything (menu_yesno_set)
+      photos) menu_yesno_set SHOW_PHOTOS "Show aircraft photos (Planespotters) on the wall? Needs internet on the Pi." 8 ;;
+      routes) menu_yesno_set SHOW_ROUTES "Show where each flight comes from and goes to?\n\nThe callsign (for example DLH4YK) is looked up on the free adsbdb.com database. When your decoder does not know an aircraft, its address is also used to find the model name. Needs internet on the Pi." 13 ;;
       data)
-        if wt_yesno "Refresh the aircraft model list automatically once a month?\n\n(Downloads a free list of aircraft names from GitHub. Needs internet on the Pi; the wall works without it.)" 12; then cfg_set AUTO_DATA_REFRESH 1; else cfg_set AUTO_DATA_REFRESH 0; fi
-        data_refresh_apply ;;
+        menu_yesno_set AUTO_DATA_REFRESH "Refresh the aircraft model list automatically once a month?\n\n(Downloads a free list of aircraft names from GitHub. Needs internet on the Pi; the wall works without it.)" 12 && data_refresh_apply ;;
       localdb)
-        if wt_yesno "Read registrations and models from tar1090's aircraft database on this Pi?\n\nThe receiver map (tar1090) keeps it on the card and updates it itself. Nothing is downloaded and nothing is sent to the internet." 12; then
-          [ -d "$(cfg_get LOCAL_DB_DIR /usr/local/share/tar1090/git-db/db)" ] && cfg_set LOCAL_DB 1 || wt_msg "No tar1090 database at $(cfg_get LOCAL_DB_DIR /usr/local/share/tar1090/git-db/db).\n\nIt comes with the receiver map (tar1090)." 10
-        else cfg_set LOCAL_DB 0; fi
+        wt_yesno "Read registrations and models from tar1090's aircraft database on this Pi?\n\nThe receiver map (tar1090) keeps it on the card and updates it itself. Nothing is downloaded and nothing is sent to the internet." 12
+        case $? in
+          0) [ -d "$(cfg_get LOCAL_DB_DIR /usr/local/share/tar1090/git-db/db)" ] && cfg_set LOCAL_DB 1 || wt_msg "No tar1090 database at $(cfg_get LOCAL_DB_DIR /usr/local/share/tar1090/git-db/db).\n\nIt comes with the receiver map (tar1090)." 10 ;;
+          1) cfg_set LOCAL_DB 0 ;;
+          *) continue ;;
+        esac
         restart_flightinfo ;;
       *) return 0 ;;
     esac

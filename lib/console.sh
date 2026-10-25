@@ -211,20 +211,22 @@ console_state_lines() {
 # 0.53.8: the menu named 14 of the 21 languages (the seven added since 0.48.0 were missing, though `console lang pl` took
 # them). Arabic is written in Latin letters here: whiptail does not shape or reverse Arabic, which would come out broken.
 CONSOLE_LANG_NAMES="en:English fr:Français de:Deutsch nl:Nederlands it:Italiano es:Español pt-BR:Português_(Brasil) pl:Polski fi:Suomi et:Eesti lv:Latviešu lt:Lietuvių id:Bahasa_Indonesia sw:Kiswahili ru:Русский uk:Українська ar:Arabic ja:日本語 ko:한국어 zh-Hans:简体中文 zh-Hant:繁體中文"
+# the audit of 22-23 October 2026: the menu said "en" where the command said "not chosen yet"; one word for both
+console_lang_now() { local l; l=$(cfg_get CONSOLE_LANG ""); echo "${l:-not chosen yet}"; }
 console_lang_menu() {
   local c args=() n
   for c in $(zb_langs); do
     for n in $CONSOLE_LANG_NAMES; do [ "${n%%:*}" = "$c" ] && args+=("$c" "${n#*:}"); done
   done
   args=("${args[@]//_/ }")
-  c=$(wt_menu "Language of the web pages (the console, the statistics, graphs1090's page) for every browser that has not chosen its own with the flag at the top. This menu and what the Pi prints stay in English.\n\nNow: $(cfg_get CONSOLE_LANG en)" "${args[@]}" back "Return to the previous menu") || return 0
+  c=$(wt_menu "Language of the web pages (the console, the statistics, graphs1090's page) for every browser that has not chosen its own with the flag at the top. This menu and what the Pi prints stay in English.\n\nNow: $(console_lang_now)" "${args[@]}" back "Return to the previous menu") || return 0
   [ "$c" = back ] && return 0
   wt_msg "$(console_lang "$c" 2>&1)" 10
 }
 console_lang() {   # console_lang [CODE]
   local want=${1:-} c ok=""
   if [ -z "$want" ]; then
-    echo "Language of the web pages: $(cfg_get CONSOLE_LANG en)$( [ -z "$(cfg_get CONSOLE_LANG)" ] && echo ' (not chosen yet: the console asks at its first visit)')"
+    echo "Language of the web pages: $(console_lang_now)$( [ -z "$(cfg_get CONSOLE_LANG)" ] && echo ': the console asks at its first visit')"
     echo "Available on this Pi: $(zb_langs)"
     echo "Each browser can still choose its own with the flag at the top of the page. What the Pi prints stays in English."
     return 0
@@ -233,7 +235,7 @@ console_lang() {   # console_lang [CODE]
   [ -n "$ok" ] || { err "Not a language this Pi has: $want   (available: $(zb_langs))"; return 1; }
   cfg_set CONSOLE_LANG "$want"
   graphs_look_keep 2>/dev/null || true            # graphs1090's page reads it from its own copy
-  echo "Language of the web pages: $want. A browser that chose its own with the flag keeps it; reload the page."
+  echo "Language of the web pages: $want. A browser that has not chosen its own takes it at its next page load; one that chose with the flag keeps its choice."
 }
 
 console_menu() {
@@ -246,7 +248,7 @@ console_menu() {
       signout "4  Sign every browser and phone out" \
       status "5  Status" \
       phone "6  Sign computers in with a phone (a QR code on the computer): $( [ "$(cfg_get CONSOLE_PHONE_SIGNIN 0)" = 1 ] && echo ON || echo OFF )" \
-      lang "7  Language of the web pages: $(cfg_get CONSOLE_LANG en)" \
+      lang "7  Language of the web pages: $(console_lang_now)" \
       back "Return to the previous menu") || return 0
     case "$c" in
       toggle) clear; if [ "$(console_state)" = on ]; then console_off; else console_on; fi; read -rp "Press Enter to continue..." _ ;;

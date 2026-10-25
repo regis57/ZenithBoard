@@ -88,6 +88,9 @@ DEF
 
 # ------------------------------------------------------------------ validation
 is_number() { [[ "$1" =~ ^-?[0-9]+([.][0-9]+)?$ ]]; }
+# seconds each aircraft stays on the wall: whole seconds, 2 to 60, as the presets and the console have it (the audit of
+# 22-23 October 2026: the menu and the command took 0, -3 and 600)
+valid_cycle() { [[ ${1:-} =~ ^[0-9]{1,2}$ ]] && [ "$((10#$1))" -ge 2 ] && [ "$((10#$1))" -le 60 ]; }
 valid_lat() { is_number "$1" && awk -v v="$1" 'BEGIN{exit !(v>=-90 && v<=90)}'; }
 valid_lon() { is_number "$1" && awk -v v="$1" 'BEGIN{exit !(v>=-180 && v<=180)}'; }
 valid_radius() { local r; for r in $RADIUS_PRESETS; do [ "$r" = "$1" ] && return 0; done; return 1; }
