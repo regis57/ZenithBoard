@@ -120,6 +120,12 @@ social_setup() {
     echo "Bluesky refused. The handle and app password are saved; fix them with  sudo zenithboard social setup  and try again."
     read -rp "Press Enter to continue..." _; return 1
   fi
+  # 0.54.16 (the audit of 22-23 October 2026): a new app password for the same Pi replayed both wizards, every answer
+  # already given; they run only for a first account
+  if [ -n "$have" ]; then
+    wt_msg "Account @$handle saved and checked.\n\nThe words and the picture are as they were: 3 Words and rules and 4 How a post looks change them." 10
+    return 0
+  fi
   social_setup_words && social_setup_picture
 }
 

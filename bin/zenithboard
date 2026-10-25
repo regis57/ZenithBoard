@@ -540,15 +540,14 @@ case "${1:-}" in
       clean) root_or_die; logs_clean "${3:-all}" ;;
       auto) root_or_die; case "${3:-status}" in on) logs_auto_on; echo "Automatic cleaning is ON: every day, logs older than 7 days are removed." ;; off) logs_auto_off; echo "Automatic cleaning is OFF." ;; status) echo "Automatic cleaning: $(logs_auto_state)" ;; *) die "Usage: zenithboard logs auto on|off|status" ;; esac ;;
       auto-run) root_or_die; logs_auto_run ;;
-      uat) journalctl -u dump978-fa -u skyaware978 -n 100 --no-pager ;;
+      uat) logs_unit dump978-fa "978 MHz UAT (dump978-fa)" && journalctl -u dump978-fa -u skyaware978 -n 100 --no-pager ;;
       flightinfo) journalctl -u zenithboard-flightinfo -n 100 --no-pager ;;
-      social) journalctl -u zenithboard-social -n 100 --no-pager ;;
+      social) logs_unit zenithboard-social "Bluesky posting (zenithboard-social)" && journalctl -u zenithboard-social -n 100 --no-pager ;;
       decoder) journalctl -u "$(cfg_get DECODER readsb)" -n 100 --no-pager ;;
       # 0.54.6: a feeder that fails had no log to read: the names are the ones `status` uses
       adsbexchange|piaware|fr24|planefinder)
         u=$(case "${2:-}" in adsbexchange) echo adsbexchange-feed ;; piaware) echo piaware ;; fr24) echo fr24feed ;; planefinder) echo pfclient ;; esac)
-        if systemctl list-unit-files "$u.service" 2>/dev/null | grep -q "^$u.service"; then journalctl -u "$u" -n 100 --no-pager
-        else echo "$u is not installed on this Pi: nothing to show."; fi ;;
+        logs_unit "$u" "$u" && journalctl -u "$u" -n 100 --no-pager ;;
       *) die "Usage: zenithboard logs [flightinfo|decoder|uat|social|adsbexchange|piaware|fr24|planefinder]" ;;
     esac ;;
   console)

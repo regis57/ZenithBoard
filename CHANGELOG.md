@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.54.16
+The 22-23 October audit's optional findings **in the terminal** (lot B, chosen by the owner on 25 October 2026). Nothing on the web pages changes, so no translation.
+- **A new Bluesky app password does not replay the two wizards.** Changing only the password asked again every word and every picture setting; for an account already there it now says *saved and checked* and keeps them.
+- **`stats on` offers the `/stats` page only when the wall that serves it is installed**; otherwise it says the page comes with the wall.
+- **`zenithboard logs uat` and `logs social` say *not installed*** on a Pi without 978 MHz UAT or the Bluesky service, like the feeders' logs since 0.54.6, instead of journalctl's bare *-- No entries --*.
+- **A Wi-Fi network joined from the menu with a wrong password offers to type it again**: it was saved as typed, and the menu went back with only a warning.
 ## 0.54.15
 The 22-23 October audit's optional findings on **the web console** (lot A, chosen by the owner on 25 October 2026); three strings translated into the 20 languages.
 - **Finish setting up asks only for what is missing**: the antenna's position and a decoder. Statistics and the watchdogs are choices, shown on the overview; a Pi without a hardware watchdog could never finish setting up.

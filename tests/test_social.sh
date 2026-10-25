@@ -174,6 +174,15 @@ done
 check "menu: Remove is not the entry just above Return" '! sed -n "/^social_menu() {/,/^}/p" lib/social.sh | grep -A1 "remove \"" | grep -q "back \""'
 check "menu: the posts' language is chosen by name"     'grep -q "^social_lang_menu()" lib/social.sh && grep -q "lang) social_lang_menu" lib/social.sh'
 
+# 0.54.16: a new app password for an account already there does not replay the two wizards
+printf 'BLUESKY_HANDLE=zb.bsky.social\nBLUESKY_APP_PASSWORD=old\n' > "$SOCIAL_SECRETS"
+out=$(
+  wt_input() { echo zb.bsky.social; }; whiptail() { echo "new-pass-word" >&2; }; wt_msg() { echo "MSG $1"; }
+  social_setup_words() { echo WORDS-WIZARD; }; social_setup_picture() { echo PICTURE-WIZARD; }
+  python3() { echo "bluesky: ok, signed in as zb.bsky.social"; }
+  social_setup 2>&1 < /dev/null
+)
+check "setup: a new app password, the wizards not replayed" 'printf "%s" "$out" | grep -q "saved and checked" && ! printf "%s" "$out" | grep -q "WORDS-WIZARD"'
 # ---- on / off / remove
 social_try_account() { echo "bluesky: ok, signed in as zb.bsky.social"; }      # Bluesky itself is not reached from a test
 out=$(social_on)

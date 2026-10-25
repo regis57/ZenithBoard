@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **25 October 2026**, version **0.54.15**.
+Last updated: **25 October 2026**, version **0.54.16**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -68,10 +68,9 @@ The audit (build, tests, security, novice journeys, translations) ran on 0.53.3.
 
 **Batch 1: the console's words**: shipped in 0.54.8; its optional findings, and two more of the console's (a lost phone's sign-outs, the gain log read in the console), in 0.54.15 (lot A, the owner's choice of 25 October 2026).
 
-**Batch 2: the Bluesky menu and wizard**: shipped in 0.54.9. Left, optional:
-- changing only the app password replays the two wizards (`social.sh` ~123); `stats on` announces `/stats` with no wall installed (`stats.sh` ~48); the log selectors offer *978 MHz UAT* and *Bluesky posts* on a Pi without them: `logs uat` and `logs social` say *not installed* (`menus.sh` ~273).
+**Batch 2: the Bluesky menu and wizard**: shipped in 0.54.9; its optional findings in 0.54.16 (lot B).
 
-**Batch 3: Esc, numbers and the last menu details**: shipped in 0.54.10. Left, optional: a wrong Wi-Fi password is saved as typed with no new try offered (`wifi.sh` ~367; the message already names both causes).
+**Batch 3: Esc, numbers and the last menu details**: shipped in 0.54.10; its optional finding (a Wi-Fi password typed again) in 0.54.16 (lot B).
 
 **Batch 4: the wall**: shipped in 0.54.11.
 

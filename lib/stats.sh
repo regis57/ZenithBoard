@@ -47,7 +47,9 @@ stats_prepare_dir() {
 
 stats_on()  { stats_prepare_dir || { echo "Could not make $STATS_DIR"; return 1; }; cfg_set STATS 1; stats_install_units
               echo "Statistics are ON: one line every 15 minutes in $STATS_FILE, $STATS_DAYS days kept."
-              echo "Read them with 'zenithboard stats' or at http://$(local_ip):$(cfg_get PORT 8080)/stats"; }
+              # 0.54.16: the page only once the wall that serves it is installed
+              if is_flightinfo 2>/dev/null; then echo "Read them with 'zenithboard stats' or at http://$(local_ip):$(cfg_get PORT 8080)/stats"
+              else echo "Read them with 'zenithboard stats'; the /stats page comes with the wall (menu 2 The wall)."; fi; }
 stats_off() { cfg_set STATS 0; stats_remove_units; echo "Statistics are OFF. The files are kept in $STATS_DIR (empty them: zenithboard stats clear)."; }
 stats_clear() { rm -f "$STATS_DIR"/seen-* "$STATS_DIR"/gaps-* "$STATS_DIR"/farthest-* "$STATS_DIR"/fleet-* 2>/dev/null; [ -d "$STATS_DIR" ] && echo "$STATS_HEADER" > "$STATS_FILE"; echo "Statistics emptied ($STATS_DIR)."; }
 
