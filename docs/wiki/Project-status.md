@@ -79,7 +79,7 @@ The audit (build, tests, security, novice journeys, translations) ran on 0.53.3.
 **Batch 5: robustness and the tools**: shipped in 0.54.12. Left, optional:
 - `console pair` installing `qrencode` on demand (`console.sh` ~143); a clock behind `CONSOLE_EPOCH` killing a new session (`console.py` ~272).
 
-**Batch 6: the tests**: shipped in 0.54.13 and 0.54.14. Still to write, low: `adsb_menu` (plan, REMOVE, the US UAT rule, `zb_mlat_guard`) with a scripted whiptail; `publish_week` not dry, with a stand-in for Bluesky; `zb_update_components` end to end (a light test with every `is_*` false: *Update finished*, exit 0).
+**Batch 6: the tests**: shipped in 0.54.13 and 0.54.14. Still to write, low: `adsb_menu` (plan, REMOVE, the US UAT rule, `zb_mlat_guard`) with a scripted whiptail.
 
 **Batch 7: the docs**: shipped with 0.54.13's documentation.
 

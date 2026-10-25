@@ -1980,6 +1980,33 @@ class WeeklyTest(unittest.TestCase):
         social.server.STATS_DIR = self.d + "/none"
         self.assertIn("skipped", social.publish_week(self.c, {}, now, {}, dry=True))
 
+    def test_publish_for_real_posts_once_and_deletes_the_picture(self):
+        # 0.54.14 (the audit of 22-23 October 2026): publish_week was only ever run dry
+        self.addCleanup(setattr, social.server, "STATS_DIR", social.server.STATS_DIR)
+        self.addCleanup(setattr, social, "post_bluesky", social.post_bluesky)
+        social.server.STATS_DIR = self.d
+        now = time.mktime(self.now.timetuple())
+        sent = []
+
+        def ok(sec, text, path, alt, w, h, mime, lang=None):
+            sent.append((text, os.path.exists(path), path, lang))
+            return "at://did:plc:xyz/app.bsky.feed.post/3k"
+        social.post_bluesky = ok
+        r = social.publish_week(self.c, {"BLUESKY_HANDLE": "zb"}, now, {"post_days": {}})
+        self.assertEqual(r["bluesky"], "at://did:plc:xyz/app.bsky.feed.post/3k")
+        self.assertEqual(len(sent), 1)
+        self.assertTrue(sent[0][0].startswith("The week above Trémery"))
+        self.assertTrue(sent[0][1], "the picture was there when it was sent")
+        self.assertFalse(os.path.exists(sent[0][2]), "and deleted after")
+
+        def refused(*a, **k):
+            sent.append(a[2])
+            raise RuntimeError("Bluesky said no")
+        social.post_bluesky = refused
+        r = social.publish_week(self.c, {"BLUESKY_HANDLE": "zb"}, now, {"post_days": {}})
+        self.assertEqual(r["bluesky"], "FAILED: Bluesky said no")
+        self.assertFalse(os.path.exists(sent[-1]), "deleted after a failure too")
+
     def test_posts_counted_by_day_for_thirty_one_days(self):
         # 0.38.0: thirty-one days for the monthly summary (eight before)
         s = warm()
