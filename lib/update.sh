@@ -292,10 +292,12 @@ zb_update_components() {
   want_c dump1090 && is_dump1090 && { log "dump1090-fa"; apt_install --only-upgrade dump1090-fa || warn "dump1090-fa update failed"; }
   if want_c adsbx && is_adsbx; then
     # 0.54.18: their update prints the feed's UUID ("Using existing valid UUID (…)"), and an update's output is pasted:
-    # hidden as the stats installer's is. Their script draws nothing (its whiptail lines are commented out, read on
-    # 25 October 2026), so its output can go through a filter.
+    # hidden as the stats installer's is. Their update draws nothing on its normal path (read on 25 October 2026), so
+    # its output can go through a filter; but when their settings file lacks one of the values it needs, it runs their
+    # setup, whose whiptail screens cannot draw through a filter: that case runs as before, unfiltered.
     log "ADSB Exchange"; ax=$(zb_tmp axupdate.sh) && fetch "$ADSBX_UPDATE_URL" "$ax" \
-      && ( set -o pipefail; bash "$ax" 2>&1 | zb_mask_ids ) || warn "ADSB Exchange update failed"
+      && if adsbx_settings_complete; then ( set -o pipefail; bash "$ax" 2>&1 | zb_mask_ids ); else bash "$ax"; fi \
+      || warn "ADSB Exchange update failed"
     if is_adsbx_stats; then log "ADSB Exchange stats"; adsbx_stats_update; fi
   fi
   want_c piaware && is_piaware && { log "piaware"; apt_install --only-upgrade piaware || warn "piaware update failed"; }
@@ -334,11 +336,21 @@ zb_update_components() {
 # the system's own packages that have a newer version waiting. Installing one package never upgrades the others, and
 # ZenithBoard never does the system's upgrade for you (it can restart services, and a new kernel wants a reboot), so
 # the count stays until you run it. Nothing is broken meanwhile. Said once, at the end, with the command.
+# 0.54.18 (the review): the values ADSB Exchange's update needs in its settings file; one missing and it runs its setup
+adsbx_settings_complete() {
+  local f=${ZB_ADSBX_DEFAULT:-/etc/default/adsbexchange} k
+  [ -r "$f" ] || return 1
+  for k in INPUT INPUT_TYPE USER LATITUDE LONGITUDE ALTITUDE MLATSERVER TARGET NET_OPTIONS; do
+    grep -Eq "^$k=\"?[^\" ]" "$f" || return 1
+  done
+}
+
 zb_system_updates_note() {
   local n
-  n=$(apt-get -s -o Debug::NoLocking=1 dist-upgrade 2>/dev/null | grep -c '^Inst ') || n=0
-  [ "${n:-0}" -gt 0 ] || return 0
-  echo "  Debian has newer versions of $n of this Pi's own packages (apt's \"$n not upgraded\" above). ZenithBoard installs"
+  # the same count as apt's "N not upgraded": what `upgrade` would take, plus what it keeps back
+  n=$(apt-get -s -o Debug::NoLocking=1 upgrade 2>/dev/null | sed -n -E 's/^([0-9]+) upgraded, .* and ([0-9]+) not upgraded\.$/\1 \2/p' | awk '{print $1 + $2}')
+  [ "${n:-0}" -gt 0 ] 2>/dev/null || return 0
+  echo "  Debian has newer versions of $n of this Pi's own packages (what apt calls \"$n not upgraded\"). ZenithBoard installs"
   echo "  only what it needs and never upgrades the rest: nothing is broken meanwhile. When you choose:"
   echo "      sudo apt full-upgrade     then   sudo reboot   if it says a new kernel came"
   [ "$(patches_state 2>/dev/null)" = on ] && echo "  The daily security fixes (on) already apply the security ones by themselves."

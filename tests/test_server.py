@@ -1322,6 +1322,7 @@ class SeenTrackerTest(unittest.TestCase):
         self.assertLess(src.index("_seen.observe(data)", i), src.index("if lat or lon", i))
         self.assertIn('"/api/seen"', src)
         self.assertIn('not in ("127.0.0.1", "::1"', src[src.index('"/api/seen"'):])
+        self.assertIn('X-Forwarded-For', src[src.index('"/api/seen"'):src.index('"/api/seen"') + 800], "not through a proxy")
 
 
 class PhotoUrlTest(unittest.TestCase):

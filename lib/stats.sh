@@ -124,6 +124,27 @@ for day, d in live.items():
             with open(pfile + ".tmp", "w") as fh:
                 fh.write("\n".join(sorted(prev | add)) + "\n")
             os.replace(pfile + ".tmp", pfile)
+        # and its fleet file, which the 24 hours' airlines and models read (the review, 0.54.18)
+        pfleet = fleetfile[:-len(today)] + day
+        rows = {}
+        try:
+            for line in open(pfleet):
+                f = line.rstrip("\n").split("\t")
+                if f and f[0]:
+                    rows[f[0]] = f[1:]
+        except FileNotFoundError:
+            pass
+        changed = False
+        for h, v in d.items():
+            if len(h) == 6 and isinstance(v, list) and len(v) == 6:
+                old_v = (rows.get(h, []) + [""] * 6)[:6]
+                new_v = [old_v[k] or str(v[k]) for k in range(6)]
+                if h not in rows or new_v != rows[h][:6]:
+                    rows[h] = new_v; changed = True
+        if changed:
+            with open(pfleet + ".tmp", "w") as fh:
+                fh.write("".join("%s\t%s\n" % (h, "\t".join(v)) for h, v in sorted(rows.items())))
+            os.replace(pfleet + ".tmp", pfleet)
     except OSError:
         pass
 # the fleet file: what was known before is kept, a blank never replaces a value, the altitude is the latest.
@@ -330,7 +351,7 @@ stats_show() {
   printf ' %s\n' "$(stats_spark $hours)"
   echo
   # 0.54.18: with the wall running, its five-second look adds the aircraft the quarter-hour sample missed
-  if is_flightinfo 2>/dev/null; then echo "Aircraft seen: every address the wall saw, looking every 5 seconds (a floor, but within a few percent). CSV: zenithboard stats csv"
+  if is_flightinfo 2>/dev/null; then echo "Aircraft seen: with the wall answering on this Pi, every address it saw, looking every 5 seconds (a floor, but within a few percent). CSV: zenithboard stats csv"
   else echo "Aircraft seen is a floor: a sample every 15 minutes misses an aircraft that crossed in less (the wall, when installed, looks every 5 seconds). CSV: zenithboard stats csv"; fi
 }
 stats_csv() { [ -f "$STATS_FILE" ] && cat "$STATS_FILE" || { echo "No statistics yet."; return 1; }; }

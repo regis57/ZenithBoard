@@ -129,10 +129,16 @@ check "verdict: code not updated says so and exits 1" "$rc:$(printf '%s' "$res" 
 res=$(unset ZB_CODE_NOT_UPDATED; zb_update_verdict 2>&1); rc=$?
 check "verdict: code updated says finished and exits 0" "$rc:$(printf '%s' "$res" | grep -c 'Update finished')" "0:1"
 # ---- 0.54.18: apt's "16 not upgraded" explained once, with the command; nothing said when there is nothing waiting
-res=$(apt-get() { printf 'Inst libc6 [2.41-1] (2.41-2 Debian:13)\nInst openssl [3.5.1] (3.5.4 Debian-Security:13)\nConf x\n'; }; patches_state() { echo on; }; zb_system_updates_note 2>&1)
+res=$(apt-get() { printf 'Inst libc6 [2.41-1] (2.41-2 Debian:13)\n1 upgraded, 0 newly installed, 0 to remove and 1 not upgraded.\n'; }; patches_state() { echo on; }; zb_system_updates_note 2>&1)
 check "pending system updates: counted, why, and the command" "$(printf '%s' "$res" | grep -c '2 of this Pi.s own packages'):$(printf '%s' "$res" | grep -c 'nothing is broken'):$(printf '%s' "$res" | grep -c 'sudo apt full-upgrade'):$(printf '%s' "$res" | grep -c 'security fixes (on)')" "1:1:1:1"
-res=$(apt-get() { :; }; zb_system_updates_note 2>&1)
+res=$(apt-get() { echo "0 upgraded, 0 newly installed, 0 to remove and 0 not upgraded."; }; zb_system_updates_note 2>&1)
 check "nothing waiting: nothing said" "$res" ""
+d=$(mktemp -d); f="$d/adsbexchange"
+printf 'INPUT="127.0.0.1:30005"\nINPUT_TYPE="dump1090"\nUSER="x"\nLATITUDE="49.2"\nLONGITUDE="6.2"\nALTITUDE="180m"\nMLATSERVER="feed.adsbexchange.com:31090"\nTARGET="--net-connector feed1.adsbexchange.com,30004,beast_reduce_out"\nNET_OPTIONS="--net-heartbeat 60"\n' > "$f"
+ZB_ADSBX_DEFAULT="$f" adsbx_settings_complete && r=yes || r=no
+sed -i '/^TARGET=/d' "$f"; ZB_ADSBX_DEFAULT="$f" adsbx_settings_complete && r2=yes || r2=no
+check "ADSB Exchange's settings complete: filtered; one missing: their setup runs unfiltered (the review, 0.54.18)" "$r:$r2" "yes:no"
+rm -rf "$d"
 
 # ---- 0.54.6: `update quick` is documented as "no apt": apt-get update only for a component that apt itself upgrades
 check "apt-get update only when dump1090, piaware or fr24 is concerned" "$(sed -n '/^zb_update_components()/,/^}/p' "$HERE/lib/update.sh" | grep -c 'if { want_c dump1090 && is_dump1090; } || { want_c piaware && is_piaware; } || { want_c fr24 && is_fr24; }; then apt-get update -qq; fi')" "1"

@@ -93,7 +93,9 @@ start_here() {
 start_bluesky() {
   [ -z "$(social_account)" ] || return 0
   if wt_yesno "Bluesky (optional): ZenithBoard can post the aircraft worth it, and the summaries of the day and the week, to a Bluesky account of yours. Nothing is posted until you switch it on.\n\nIt needs the account and an APP password for it, made at bsky.app: Settings -> Privacy and Security -> App Passwords.\n\nSet it up now?\n\n(Later: menu 7 Options -> 3 Bluesky -> 2 The account, or  sudo zenithboard social setup)" 18; then
-    social_setup || wt_msg "The account is not set up. Start here again, or menu 7 Options -> 3 Bluesky -> 2 The account, when you have the app password." 9
+    # the handle and password are kept even when Bluesky refused them, so Start here would not ask again: the way back
+    # is the account's own entry (the review, 0.54.18)
+    social_setup || wt_msg "The Bluesky account is not finished. When you have the right app password: menu 7 Options -> 3 Bluesky -> 2 The account, or  sudo zenithboard social setup" 10
   fi
   return 0
 }

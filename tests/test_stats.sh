@@ -183,8 +183,9 @@ check "the wall's list: an aircraft the quarter-hour look missed is counted" 'gr
 check "  with its callsign, altitude, type and category in the fleet file" 'grep -q "^aaa001	BAW12	34000	A35K	A5		0915$" "$(stats_fleet_file "$today")"'
 check "  a blank from the wall keeps what was known, and adds the military mark" 'grep -q "^3c6444	DLH4YK	[0-9]*	A320		1	" "$(stats_fleet_file "$today")"'
 check "  yesterday's last aircraft go to yesterday's file"  'grep -qx bbb002 "$(stats_day_file "$yday")"'
+check "  and to yesterday's fleet file, for the 24 hours' airlines and models (the review)" 'grep -qP "^bbb002(\t){6}2358$" "$(stats_fleet_file "$yday")"'
 check "  the count in the CSV includes them" '[ "$(tail -1 "$STATS_FILE" | cut -d, -f5)" = "$(grep -c . "$(stats_day_file "$today")")" ]'
-rm -f "$(stats_day_file "$yday")"; cfg_set PORT 1
+rm -f "$(stats_day_file "$yday")" "$(stats_fleet_file "$yday")"; cfg_set PORT 1
 stats_run
 check "wall down: the quarter-hour look alone, as before" '[ "$(tail -1 "$STATS_FILE" | cut -d, -f5)" -ge 1 ]'
 

@@ -2060,7 +2060,9 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/farthest":                    # asked by the statistics timer every quarter hour (lib/stats.sh)
             return self._send(200, farthest_answer(cfg))
         if path == "/api/seen":                        # the same timer, 0.54.18: every aircraft of today and yesterday
-            if self.client_address[0] not in ("127.0.0.1", "::1", "::ffff:127.0.0.1"):    # for the timer, not the network
+            # for the timer, not the network; behind a reverse proxy everyone comes from 127.0.0.1, with its header
+            if self.client_address[0] not in ("127.0.0.1", "::1", "::ffff:127.0.0.1") or self.headers.get("X-Forwarded-For") \
+                    or self.headers.get("Forwarded"):
                 return self._send(404, b"not found", "text/plain")
             return self._send(200, {"enabled": cfg_bool(cfg, "STATS"), "days": _seen.snapshot()})
         if path == "/stats":

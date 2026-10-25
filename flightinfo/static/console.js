@@ -1036,6 +1036,7 @@ window.ZBI18N.start({ part: "console" }, function () {
     return groups.filter(function (g) { return g.items.length; });
   }
   function folded(key) { try { return window.localStorage.getItem("zb.fold." + key) === "1"; } catch (e) { return false; } }
+  function shown(key) { try { return window.localStorage.getItem("zb.fold." + key) === "0"; } catch (e) { return false; } }   // left open
   function remember(key, isFolded) { try { window.localStorage.setItem("zb.fold." + key, isFolded ? "1" : "0"); } catch (e) { /* private window */ } }
   function pages() {
     return pagesGroups().map(function (g) {
@@ -1057,7 +1058,7 @@ window.ZBI18N.start({ part: "console" }, function () {
     var all = S.sessions.sessions, mine = all.filter(function (s) { return s.id === S.sessions.you; }),
       others = all.filter(function (s) { return s.id !== S.sessions.you; });
     if (others.length <= 2) return h("div", { "class": "list" }, mine.concat(others).map(sessionRow));
-    var d = h("details", { "class": "fold", open: folded("sessions.others") ? null : (S.othersOpen ? true : null) },
+    var d = h("details", { "class": "fold", open: S.othersOpen || shown("sessions.others") ? true : null },
       h("summary", { text: tn(others.length, "{n} other browser or phone", "{n} other browsers and phones", { n: num(others.length) }) }),
       h("div", { "class": "list" }, others.map(sessionRow)));
     d.addEventListener("toggle", function () { S.othersOpen = d.open; remember("sessions.others", !d.open); });
