@@ -2,7 +2,7 @@
 # shellcheck disable=SC2034
 # shellcheck shell=bash
 # Third-party pins. Bump here when an upstream moves; everything else reads these.
-ZB_VERSION="0.54.17"
+ZB_VERSION="0.54.18"
 
 # FlightAware APT repository package (provides piaware and dump1090-fa). FlightAware renamed it from
 # piaware-repository (9.0.1) to flightaware-apt-repository; see https://www.flightaware.com/adsb/piaware/install
@@ -21,8 +21,8 @@ READSB_INSTALL_URL="https://github.com/wiedehopf/adsb-scripts/raw/master/readsb-
 # 2026). The current key is now shipped: a key file from GitHub holding exactly it is trusted without a question. A
 # key GitHub adds later (a rotation) is not in this list, and is asked about as before.
 # Checked on 25 October 2026: main's latest commit (GitHub's squash merge) is signed by key ID B5690EEEBB952194, and
-# web-flow.gpg lists 968479A1AFF927E37D1A566BB5690EEEBB952194 (valid) and 5DE3E0509C47EA3CF04A42D34AEE18F83AFDEB23
-# (expired 2024, never trusted).
+# web-flow.gpg, as the owner's fresh card read it that day, lists 968479A1AFF927E37D1A566BB5690EEEBB952194 (valid)
+# and 5DE3E0509C47EA3CF04A42D34AEE18F83AFDEB23 (expired 2024, never trusted).
 GITHUB_SIGNING_KEY_URL="https://github.com/web-flow.gpg"
 GITHUB_SIGNING_KEY_FPRS="968479A1AFF927E37D1A566BB5690EEEBB952194"
 

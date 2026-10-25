@@ -12,8 +12,9 @@ About 45 minutes, most of it waiting. Commands are typed on your computer's term
 
 * A Raspberry Pi 3B or newer, its official power supply, a micro-SD card of 16 GB or more (it will be erased).
 * An RTL-SDR dongle and its 1090 MHz antenna; an Ethernet cable if you can (Wi-Fi works).
-* Your antenna's position: latitude, longitude, altitude in metres (a right-click on your roof in a map gives the
-  first two).
+* Your antenna's position: latitude, longitude, altitude in metres. [mapcoordinates.net](https://www.mapcoordinates.net/en)
+  gives all three for the spot you click (the ground's elevation: add the antenna's height above it); the installer
+  points there too (0.54.18).
 * A free [ADSB Exchange](https://www.adsbexchange.com/) feed is set up on the way; FlightAware, Flightradar24 and Plane
   Finder accounts only if you want those too.
 
@@ -77,8 +78,9 @@ graphs lived on the card only):
     ```
     It installs `whiptail` and `curl` if they are missing; on a 1 GB board it says once what the board is good for.
 12. **The first questions** (once): the region (*everywhere else*, or the United States for 978 MHz), the units, the
-    antenna's position (latitude, longitude, altitude in metres; a typo is asked again), the wall's radius. Esc on any of them stops the installer with a line saying so: what you answered is kept and the questions come again at the next `sudo ./install.sh` (0.54.5; it used to stop without a word). Then the
-    main menu: choose **Start here** ([every screen](The-menu)). It does steps 13 to 16 in this order, and skips what
+    antenna's position (latitude, longitude, altitude in metres; a typo is asked again; the screen says where to find
+    them: [mapcoordinates.net](https://www.mapcoordinates.net/en)), the wall's radius. Esc on any of them stops the installer with a line saying so: what you answered is kept and the questions come again at the next `sudo ./install.sh` (0.54.5; it used to stop without a word). Then the
+    main menu: choose **Start here** ([every screen](The-menu)). It does steps 13 to 16 in this order (with Bluesky, optional, between 15 and 16), and skips what
     is done already. **Do them in this order**: the web console is a page of the wall, and the wall needs the decoder.
 
     ![The main menu](https://raw.githubusercontent.com/regis57/ZenithBoard/main/docs/images/menu-main.png)
@@ -100,6 +102,12 @@ graphs lived on the card only):
 15. **What is worth switching on** — one list, everything ticked: statistics, graphs1090 (in ZenithBoard's look), logs
     kept after a restart, the hardware and network watchdogs, Debian's daily security fixes, the daily log clean-up,
     Wi-Fi hardening when on Wi-Fi. Untick what you do not want (Space), Enter. What each does: [The menu](The-menu#start-here-the-first-installation).
+
+    Then, since 0.54.18, **Bluesky (optional)**: *Yes* sets up the account now (its handle, then an app password made
+    at bsky.app → *Settings* → *Privacy and Security* → *App Passwords*; step 20 says the rest); *No* goes on, and the
+    console's first steps then show no summaries' switches until an account is there. Before 0.54.18 the account was
+    only in step 20, and the first steps showed the summaries switched on for an account that did not exist (the
+    owner's fresh card, 25 October 2026).
 16. **The web console** — *Yes*, then its password (10 characters at least, asked twice). The last screen gives its
     address. Optional, in the terminal: `sudo zenithboard console phone-signin on` (a computer signed in by your phone)
     and `sudo apt install -y qrencode` (QR codes drawn in the terminal). Leave the menu (*0 Exit*): the terminal is not
@@ -121,7 +129,8 @@ graphs lived on the card only):
     5. *What to collect*: statistics (for `/stats` and the summaries), graphs1090, the receiver map's database.
     6. *What keeps it running*: the hardware and network watchdogs, logs kept after a restart, Debian's daily security
        fixes, Wi-Fi hardening when on Wi-Fi.
-    7. *Sharing on Bluesky*: the summaries of the day and of the week (the account itself: step 20).
+    7. *Sharing on Bluesky*: the summaries of the day and of the week, once there is an account (without one, this step
+       says how to set it up and shows no switch, 0.54.18).
     8. *Your phone, and this computer*: pair the phone now; computers signed in by the phone, or not.
     9. *Ready*: the changes, applied one after the other; each one's output is in *Activity*.
 
@@ -132,8 +141,8 @@ graphs lived on the card only):
     open the link: the phone is signed in, and stays so as long as it opens the console once a month. From then on,
     with phone sign-in on, a computer's sign-in page shows a QR code: scan it with the phone, check the four digits
     match, say yes.
-20. **Bluesky**, if you post (in the terminal, because it asks for an app password):
-    `sudo zenithboard social setup`. Then in the console, *Sharing*: switch posting on, try a post (*Try a post* posts
+20. **Bluesky**, if you post and did not set it up in *Start here* (in the terminal, because it asks for an app
+    password): `sudo zenithboard social setup`, or menu *7 Options → 3 Bluesky → 2 The account*. Then in the console, *Sharing*: switch posting on, try a post (*Try a post* posts
     nothing), set the summaries' times and posts.
 21. **Check:** the overview shows every service running and the setup card gone; *Reliability → Health* says
     *Nothing to fix*; `/stats` fills at the next quarter hour; the networks' own pages show your station within the

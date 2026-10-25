@@ -620,7 +620,7 @@ window.ZBI18N.start({ part: "console" }, function () {
       var gaps = setupGaps();
       if (gaps.length) out.push(card(t("Finish setting up"), "gear", null, [h("ul", { "class": "ticks no" }, gaps.map(function (g) { return h("li", { text: g }); })),
         h("div", { "class": "actions" }, h("button", { type: "button", "class": "primary", text: t("Open the first steps"), onclick: function () { S.openWizard(); } }))], "w12"));
-      out.push(card(t("Pages"), "link", t("What this Pi shows, and what it can show once switched on."), h("div", { "class": "pages" }, pages()), "w12"));
+      out.push(card(t("Pages"), "link", t("What this Pi shows, and what it can show once switched on."), h("div", { "class": "page-groups" }, pages()), "w12"));
       return out;
     },
 
@@ -1006,15 +1006,21 @@ window.ZBI18N.start({ part: "console" }, function () {
     if (!m) return v;
     try { return new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]).toLocaleString(I.locale(), { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }); } catch (e) { return v; }
   }
-  function pages() {
-    var f = S.facts, c = S.cfg, hh = host(), list = [];
+  // 0.54.18 (the owner's screenshot, 24 October 2026): eleven tiles in one grid became three groups, each one folding to
+  // its title alone: what this Pi shows, the networks it feeds, and Bluesky. Each group remembers, in this browser,
+  // whether it was left folded.
+  function pagesGroups() {
+    var f = S.facts, c = S.cfg, hh = host(), list = [], groups = [];
+    function group(id, title) { list = []; groups.push({ id: id, title: title, items: list }); }
     function page(icon, title, sub, href) { return h("a", { "class": "page", href: href, target: "_blank", rel: "noopener" }, ico(icon), h("div", null, h("b", { text: title }), h("span", { text: sub }))); }
     function later(icon, title, sub, section) { return h("button", { type: "button", "class": "page later", onclick: go(section) }, ico(icon), h("div", null, h("b", { text: title }), h("span", { text: sub }))); }
+    group("pi", t("On this Pi"));
     list.push(page("wall", t("The wall"), (c.DISPLAY_MODE === "flap" ? t("Split-flap") : t("Dot matrix")) + ", " + word(c.THEME || "amber"), "/"));
     list.push(on(c.STATS) ? page("chart", t("Statistics"), t("24 h, 7 days, 30 days"), "/stats") : later("chart", t("Statistics"), t("Off · switch on in Receiver"), "receiver"));
     if (f.map) list.push(page("map", t("Receiver map"), t("tar1090, on port 80"), "http://" + hh + "/tar1090/"));
     if (f.skyaware) list.push(page("map", t("SkyAware"), t("FlightAware's map"), "http://" + hh + "/skyaware/"));
     list.push(f.graphs === "on" ? page("graph", "graphs1090", t("The decoder's graphs, port 8542"), "http://" + hh + ":8542/" + langQ()) : later("graph", "graphs1090", t("Off · switch on in Receiver"), "receiver"));
+    group("feeds", t("The networks you feed"));
     if (f.svc_pfclient !== undefined) list.push(page("plane", t("Plane Finder"), t("Its own page, port 30053"), "http://" + hh + ":30053/"));
     if (f.svc_fr24feed !== undefined) list.push(page("plane", t("Flightradar24"), t("Its feeder's page, port 8754"), "http://" + hh + ":8754/"));
     if (f.svc_adsbexchange_feed !== undefined) list.push(h("a", { "class": "page", href: "https://www.adsbexchange.com/myip/", target: "_blank", rel: "noopener noreferrer" }, ico("link"), h("div", null, h("b", { text: t("ADSB Exchange") }), h("span", { text: t("Your feed, on their site") }))));
@@ -1022,11 +1028,22 @@ window.ZBI18N.start({ part: "console" }, function () {
     // on, but the UUID unreadable here: their myip page carries the same link at its bottom
     else if (f.adsbx_stats === "on") list.push(h("a", { "class": "page", href: "https://www.adsbexchange.com/myip/", target: "_blank", rel: "noopener noreferrer" }, ico("map"), h("div", null, h("b", { text: t("Your aircraft on ADSB Exchange") }), h("span", { text: t("Your feed, on their site") }))));
     else if (f.svc_adsbexchange_feed !== undefined) list.push(later("map", t("Your aircraft on ADSB Exchange"), t("Off · switch on in Receiver"), "receiver"));
+    group("bluesky", t("Bluesky"));
     if (f.bluesky) {
       list.push(page("picture", t("Last post's picture"), t("What 'Try a post' drew"), "/social/preview"));
       ["2", "3", "4"].forEach(function (n) { list.push(page("picture", t("Weekly post {n}", { n: n }), ["", "", t("Cargo and business jets"), t("Military"), t("General aviation")][Number(n)], "/social/preview" + n)); });
     } else list.push(later("share", t("Bluesky posts"), t("No account yet · see Sharing"), "sharing"));
-    return list;
+    return groups.filter(function (g) { return g.items.length; });
+  }
+  function folded(key) { try { return window.localStorage.getItem("zb.fold." + key) === "1"; } catch (e) { return false; } }
+  function remember(key, isFolded) { try { window.localStorage.setItem("zb.fold." + key, isFolded ? "1" : "0"); } catch (e) { /* private window */ } }
+  function pages() {
+    return pagesGroups().map(function (g) {
+      var d = h("details", { "class": "fold", open: folded("pages." + g.id) ? null : true }, h("summary", null, h("bdi", { text: g.title }), h("span", { "class": "n-items", text: "· " + num(g.items.length) })),
+        h("div", { "class": "pages" }, g.items));
+      d.addEventListener("toggle", function () { remember("pages." + g.id, !d.open); });
+      return d;
+    });
   }
 
   // ---- signed-in browsers and phones
@@ -1035,14 +1052,24 @@ window.ZBI18N.start({ part: "console" }, function () {
   }
   function sessionsList() {
     if (!S.sessions) { loadSessions(); return h("p", { "class": "note", text: t("Reading…") }); }
-    return h("div", { "class": "list" }, S.sessions.sessions.map(function (s) {
+    // 0.54.18 (the owner's screenshot): this browser first, the others under one line that unfolds, folded once
+    // there are more than two of them
+    var all = S.sessions.sessions, mine = all.filter(function (s) { return s.id === S.sessions.you; }),
+      others = all.filter(function (s) { return s.id !== S.sessions.you; });
+    if (others.length <= 2) return h("div", { "class": "list" }, mine.concat(others).map(sessionRow));
+    var d = h("details", { "class": "fold", open: folded("sessions.others") ? null : (S.othersOpen ? true : null) },
+      h("summary", { text: tn(others.length, "{n} other browser or phone", "{n} other browsers and phones", { n: num(others.length) }) }),
+      h("div", { "class": "list" }, others.map(sessionRow)));
+    d.addEventListener("toggle", function () { S.othersOpen = d.open; remember("sessions.others", !d.open); });
+    return h("div", null, h("div", { "class": "list" }, mine.map(sessionRow)), d);
+  }
+  function sessionRow(s) {
       var me = s.id === S.sessions.you;
       return h("div", { "class": "li" }, h("div", null, h("b", { text: s.label + (me ? " · " + t("this one") : "") }),
         h("small", { text: t("{how} · since {since} · seen {seen}", { how: s.kind === "paired" ? t("paired") : s.kind === "approved" ? t("by the phone") : t("password"), since: ago(s.created), seen: ago(s.seen) }) })),
         me ? h("span", { "class": "pill ok", text: t("you") }) : h("button", { type: "button", "class": "btn", text: t("Sign out"), onclick: function () {
           api("sessions/revoke", { body: { id: s.id } }).then(function () { loadSessions(); });
         } }));
-    }));
   }
 
   // ---- pairing a phone: a QR code, dark on its own white square (a code on the black page would not scan)
@@ -1250,10 +1277,13 @@ window.ZBI18N.start({ part: "console" }, function () {
         return [h("h3", { text: t("Sharing on Bluesky") }),
           h("p", { "class": "lead", text: acct ? t("Account @{account}. Posting each crossing is switched in Sharing; the summaries here.", { account: acct }) :
             t("No Bluesky account on this Pi: it is set up in the terminal (it asks for an app password): sudo zenithboard social setup. Skip this step until then.") }),
-          wrow(t("Summary of the last 24 hours"), wsw("sum_daily"), t("Every day at its time (21:00 unless changed in Sharing), from the statistics.")),
-          wrow(t("Summary of the week"), wsw("sum_weekly"), t("Sunday 19:00 unless changed; four posts, two minutes apart.")),
-          W.stats !== "on" && (W.sum_daily === "on" || W.sum_weekly === "on") ? h("p", { "class": "note", text: t("They need the statistics: switch them on in step 5.") }) : null,
-          W.sum_daily === "on" || W.sum_weekly === "on" ? summariesBlocked(acct, S.cfg) : null];
+          // 0.54.18: without an account the two switches showed "on" for posts that could not be made (the owner's
+          // fresh card): they wait for the account
+          acct ? null : h("p", { "class": "note", text: t("The summaries come with the account: they are shown here once it is set up.") }),
+          !acct ? null : wrow(t("Summary of the last 24 hours"), wsw("sum_daily"), t("Every day at its time (21:00 unless changed in Sharing), from the statistics.")),
+          !acct ? null : wrow(t("Summary of the week"), wsw("sum_weekly"), t("Sunday 19:00 unless changed; four posts, two minutes apart.")),
+          acct && W.stats !== "on" && (W.sum_daily === "on" || W.sum_weekly === "on") ? h("p", { "class": "note", text: t("They need the statistics: switch them on in step 5.") }) : null,
+          acct && (W.sum_daily === "on" || W.sum_weekly === "on") ? summariesBlocked(acct, S.cfg) : null];
       },
       function () {
         return [h("h3", { text: t("Your phone, and this computer") }),

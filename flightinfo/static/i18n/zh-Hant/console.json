@@ -436,6 +436,7 @@
  "last: {when}": "上次：{when}",
  "next: now": "下次：現在",
  "next: {when}": "下次：{when}",
+ "On this Pi": "本機 Pi",
  "24 h, 7 days, 30 days": "24 小時、7 天、30 天",
  "Off · switch on in Receiver": "關閉 · 可在「接收器」中開啟",
  "Receiver map": "接收器地圖",
@@ -443,6 +444,7 @@
  "SkyAware": "SkyAware",
  "FlightAware's map": "FlightAware 的地圖",
  "The decoder's graphs, port 8542": "解碼器圖表，連接埠 8542",
+ "The networks you feed": "您上傳資料的網路",
  "Its own page, port 30053": "其專屬頁面，連接埠 30053",
  "Its feeder's page, port 8754": "其上傳程式頁面，連接埠 8754",
  "Your feed, on their site": "在其網站上查看您上傳的資料",
@@ -455,6 +457,9 @@
  "General aviation": "普通航空",
  "No account yet · see Sharing": "尚無帳號 · 請見「分享」",
  "Reading…": "讀取中…",
+ "{n} other browsers and phones": {
+  "other": "其他瀏覽器和手機：{n}"
+ },
  "this one": "此裝置",
  "{how} · since {since} · seen {seen}": "{how} · {since}登入 · 最近活動：{seen}",
  "paired": "已配對",
@@ -515,6 +520,7 @@
  "Sharing on Bluesky": "分享到 Bluesky",
  "Account @{account}. Posting each crossing is switched in Sharing; the summaries here.": "帳號 @{account}。每次飛越的發文在「分享」中開關；摘要則在這裡設定。",
  "No Bluesky account on this Pi: it is set up in the terminal (it asks for an app password): sudo zenithboard social setup. Skip this step until then.": "這台 Pi 尚未設定 Bluesky 帳號：須在終端機中設定（會要求輸入應用程式密碼）：sudo zenithboard social setup。設定完成前，請先略過此步驟。",
+ "The summaries come with the account: they are shown here once it is set up.": "摘要隨帳號一起提供：設定帳號後會顯示在這裡。",
  "Summary of the last 24 hours": "過去 24 小時摘要",
  "Every day at its time (21:00 unless changed in Sharing), from the statistics.": "每天在設定時間發布（預設 21:00，可在「分享」中變更），內容取自統計資料。",
  "Summary of the week": "本週摘要",

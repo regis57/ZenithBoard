@@ -436,6 +436,7 @@
  "last: {when}": "마지막: {when}",
  "next: now": "다음: 지금",
  "next: {when}": "다음: {when}",
+ "On this Pi": "이 Pi",
  "24 h, 7 days, 30 days": "24시간, 7일, 30일",
  "Off · switch on in Receiver": "꺼짐 · 수신기에서 켜기",
  "Receiver map": "수신기 지도",
@@ -443,6 +444,7 @@
  "SkyAware": "SkyAware",
  "FlightAware's map": "FlightAware 지도",
  "The decoder's graphs, port 8542": "디코더 그래프, 포트 8542",
+ "The networks you feed": "데이터를 보내는 네트워크",
  "Its own page, port 30053": "자체 페이지, 포트 30053",
  "Its feeder's page, port 8754": "피더 페이지, 포트 8754",
  "Your feed, on their site": "해당 사이트의 내 피드",
@@ -455,6 +457,9 @@
  "General aviation": "일반 항공",
  "No account yet · see Sharing": "계정 없음 · 공유 참조",
  "Reading…": "읽는 중…",
+ "{n} other browsers and phones": {
+  "other": "다른 브라우저 및 휴대폰 {n}개"
+ },
  "this one": "현재 기기",
  "{how} · since {since} · seen {seen}": "{how} · 로그인 {since} · 최근 접속 {seen}",
  "paired": "페어링",
@@ -515,6 +520,7 @@
  "Sharing on Bluesky": "Bluesky 공유",
  "Account @{account}. Posting each crossing is switched in Sharing; the summaries here.": "계정 @{account}. 통과 항공기 게시는 공유에서 켜고 끄며, 요약은 여기서 설정합니다.",
  "No Bluesky account on this Pi: it is set up in the terminal (it asks for an app password): sudo zenithboard social setup. Skip this step until then.": "이 Pi에 Bluesky 계정이 없습니다. 계정은 터미널에서 설정합니다(앱 비밀번호를 묻습니다): sudo zenithboard social setup. 그때까지는 이 단계를 건너뛰세요.",
+ "The summaries come with the account: they are shown here once it is set up.": "요약은 계정과 함께 제공됩니다. 계정을 설정하면 여기에 표시됩니다.",
  "Summary of the last 24 hours": "최근 24시간 요약",
  "Every day at its time (21:00 unless changed in Sharing), from the statistics.": "매일 정해진 시각(공유에서 바꾸지 않으면 21:00)에 통계를 바탕으로 게시합니다.",
  "Summary of the week": "주간 요약",

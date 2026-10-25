@@ -326,7 +326,23 @@ zb_update_components() {
   if [ "$(cfg_get SOCIAL 0)" = 1 ]; then social_install_units; fi
   zb_mlat_guard
   zb_wall_check
+  zb_system_updates_note
   zb_update_verdict
+}
+
+# 0.54.18 (the owner, 25 October 2026: "16 not upgraded: why? will it break something?"). apt's "N not upgraded" counts
+# the system's own packages that have a newer version waiting. Installing one package never upgrades the others, and
+# ZenithBoard never does the system's upgrade for you (it can restart services, and a new kernel wants a reboot), so
+# the count stays until you run it. Nothing is broken meanwhile. Said once, at the end, with the command.
+zb_system_updates_note() {
+  local n
+  n=$(apt-get -s -o Debug::NoLocking=1 dist-upgrade 2>/dev/null | grep -c '^Inst ') || n=0
+  [ "${n:-0}" -gt 0 ] || return 0
+  echo "  Debian has newer versions of $n of this Pi's own packages (apt's \"$n not upgraded\" above). ZenithBoard installs"
+  echo "  only what it needs and never upgrades the rest: nothing is broken meanwhile. When you choose:"
+  echo "      sudo apt full-upgrade     then   sudo reboot   if it says a new kernel came"
+  [ "$(patches_state 2>/dev/null)" = on ] && echo "  The daily security fixes (on) already apply the security ones by themselves."
+  return 0
 }
 
 # 0.53.7: an update whose code pull failed used to end "Update finished", exit 0, and the console toasted "done": the
