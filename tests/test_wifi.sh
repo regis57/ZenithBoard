@@ -109,4 +109,20 @@ check "menu: the Wi-Fi screen says (no Wi-Fi network) rather than nothing" 'grep
 # ---- the boot unit exists and calls the CLI
 check "systemd unit present"                'grep -q "wifi apply" systemd/zenithboard-wifi.service && grep -q "After=NetworkManager.service" systemd/zenithboard-wifi.service'
 
+# ---- 0.54.13 (the audit of 22-23 October 2026): the stand-in nmcli never failed, so wifi_apply (run at every boot) and
+# what wifi_connect says when joining fails were not tested
+mkdir -p "$t/bin"; : > "$t/calls"
+for c in iw rfkill; do printf '#!/bin/bash\necho "%s $*" >> "%s/calls"\n' "$c" "$t" > "$t/bin/$c"; chmod +x "$t/bin/$c"; done
+printf '#!/bin/bash\necho "nmcli $*" >> "%s/calls"\ncase "$*" in "radio wifi") echo enabled ;; *"connection up"*) exit 4 ;; esac\n' "$t" > "$t/bin/nmcli"; chmod +x "$t/bin/nmcli"
+PATH="$t/bin:$PATH"; hash -r
+cfg_set WIFI_COUNTRY FR; cfg_set WIFI 1; wifi_apply
+check "boot: the country set, the radio unblocked and on" 'grep -q "^iw reg set FR" "$t/calls" && grep -q "^rfkill unblock wifi" "$t/calls" && grep -q "^nmcli radio wifi on" "$t/calls"'
+: > "$t/calls"; cfg_set WIFI 0; wifi_apply
+check "boot: off stays off"                     'grep -q "^nmcli radio wifi off" "$t/calls" && ! grep -q "rfkill unblock" "$t/calls"'
+: > "$t/calls"; cfg_del WIFI; wifi_apply
+check "boot: never chosen, the radio left alone" '! grep -q "^nmcli radio" "$t/calls"'
+out=$(ZB_SKIP_SERVICES=0 wifi_connect "Livebox-1A2B" "a good password" 2>&1)
+check "connect: a failed join says it is saved and why it may have failed" 'printf "%s" "$out" | grep -q "is saved and will be joined automatically" && printf "%s" "$out" | grep -q "wrong password, or out of range"'
+check "forget: asks NetworkManager to delete that one" 'wifi_forget 1234-uuid; grep -q "^nmcli connection delete uuid 1234-uuid" "$t/calls"'
+
 [ "$fail" = 0 ] && echo "wifi tests OK" || { echo "wifi tests FAILED"; exit 1; }
