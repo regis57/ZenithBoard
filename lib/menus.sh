@@ -132,7 +132,7 @@ start_console() {
     done
     console_on; menu_pause
   fi
-  wt_msg "Done. Open the web console on your computer or phone:\n\n    http://$(local_ip):$(cfg_get PORT 8080)/console\n\nSign in with the console password. Then:\n  - its first steps (they open by themselves) check what is left\n  - System → Pair a phone\n  - Bluesky, if you post: menu 7 Options here (it asks for an app password)\n\nThe tablet: http://$(local_ip):$(cfg_get PORT 8080)/" 19
+  wt_msg "Done. Open the web console on your computer or phone:\n\n    http://$(local_ip):$(cfg_get PORT 8080)/console\n\nSign in with the console password. Then:\n  - its first steps (they open by themselves) check what is left\n  - System → Signed in → Pair a phone\n  - Bluesky, if you post: menu 7 Options here (it asks for an app password)\n\nThe tablet: http://$(local_ip):$(cfg_get PORT 8080)/" 19
 }
 
 # ---------------------------------------------------------------- 1 ADS-B

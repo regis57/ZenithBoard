@@ -21,7 +21,7 @@ Read the whole file with `zenithboard config`.
 | `LOCAL_DB` | `0` | `zenithboard data localdb on\|off` | Registrations and models from tar1090's aircraft database on this Pi, before adsbdb and hexdb (0.26.0). Offline |
 | `LOCAL_DB_DIR` | `/usr/local/share/tar1090/git-db/db` | `zenithboard config-set LOCAL_DB_DIR PATH` | Where that database is |
 | `PORT` | `8080` | `zenithboard config-set PORT 8090` | The wall's port. Needs a restart of the service |
-| `BIND_ADDRESS` | `0.0.0.0` | `zenithboard config-set BIND_ADDRESS 127.0.0.1` | The interface the wall listens on. `127.0.0.1` keeps it to this Pi (behind a reverse proxy, say). Needs a restart of the service |
+| `BIND_ADDRESS` | `0.0.0.0` | `zenithboard config-set BIND_ADDRESS 127.0.0.1` | The interface the wall listens on. `127.0.0.1` keeps it to this Pi (behind a reverse proxy, say: every visitor then looks like the Pi itself, so the proxy must do the filtering `ALLOW_FROM` did; see [Security](Security)). Needs a restart of the service |
 | `ALLOW_FROM` | `private` | `zenithboard config-set ALLOW_FROM any` | Who may read the wall: `private` (home networks: 10/8, 172.16/12, 192.168/16, the Pi itself, link-local and their IPv6 equivalents), `all`, or a list of networks such as `10.8.0.0/24,100.64.0.0/10`; since 0.45.0 the list may name `private` too (`private,100.64.0.0/10` is what `tailscale on` makes). Anyone else gets a 403. An unreadable value means `private` |
 
 ## Position and region

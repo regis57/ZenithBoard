@@ -11,6 +11,8 @@ One Raspberry Pi 3B, outdoors, on Wi-Fi, with an R820T dongle.
 | Part | What is known |
 |---|---|
 | Install and the menus | Run end to end on a Pi 3B |
+| graphs1090 (0.32.0) | Installed from the console on the reference Pi 3B on 21 October 2026 (about a minute) and running in ZenithBoard's look: 212 MB for every service with it, 518 MB available (21:02) |
+| The web console (0.39.0) | In use on the reference Pi since 21 October 2026: the `.path` unit and the root helper run its changes (graphs1090 installed from the page, statistics, the MLAT guard), an iPhone paired by QR code, a PC signed in with the password, a backup made and downloaded (12:57) |
 | readsb + the wall | Running continuously; the split-flap look is the one in daily use |
 | Feeding ADSB Exchange | Feed received and confirmed |
 | ADSB Exchange's stats (0.52.0) | `adsbx-stats on` run; *Stats Ok* and the *Anywhere* map on their page; 6 MB |
@@ -45,10 +47,10 @@ Treat these as likely-working rather than known-working, and please report what 
 | Fixed IP address | The `nmcli` calls are tested; a real address change was not run. Keep a keyboard and screen at hand |
 | The farthest aircraft named on `/stats` | Written in 0.22.0 and run against the real server with a made-up decoder; the real sky, the real route answers and the thread's cost on a Pi 3 are still to be seen |
 | A fresh install from the README | `install.sh` has been run end to end in a container against a scripted whiptail and stand-ins (0.21.1, `tests/test_install.sh`): flags, wizard, every menu it can reach. Not by that test: the deployed wall answering (`curl` is a stand-in there; the server has its own tests) and the uninstall (a source check only; corrected 0.54.1, it was credited with both). A blank card on a real Pi has not been done |
-| graphs1090 (0.32.0, optional) | Its author's installer was read in full and `on`/`off` tested against stand-ins; never run on a Pi |
+| graphs1090 | collectd's memory over weeks is not measured |
 | The summaries posted by the service (0.33.0–0.38.0) | `weekly test` ran on the Pi; the first scheduled one went out on 21 October 2026 (daily, 09:20), post 1 only, its lists left out by the rule fixed in 0.40.4. The daily and thirty-day summaries and the queue shared by all of them (0.38.0) are tested with a simulated clock only. The first weekly post is due on Sunday 25 October 19:00 if switched on; the airline lists cover a whole week from 1 November |
 | Posts 2 to 4 and the page's lists with real data over weeks | Cargo by callsign prefix (40 operators checked against published sources), military by database mark and address block, countries by ICAO address block: checked on made-up and tar1090-db data; a month of the real sky is still to come |
-| The web console (0.39.0, a test) | Previewed at desktop and phone width against a stand-in `zenithboard`; requests, sessions, pairing and the root helper unit-tested. The `.path` unit, the helper as root, an update run from the page and pairing a real iPhone are still to be done on the Pi |
+| The web console | An update run from the page has not been seen on the Pi yet, nor signing a computer in with the phone (0.40.0) |
 | The page's last 24 hours (0.37.0) | Their lists need the last-seen column written since 0.37.0: complete from a day after the update |
 
 ## Known rough edges
@@ -80,13 +82,7 @@ The audit (build, tests, security, novice journeys, translations) ran on 0.53.3.
 **Batch 6: the tests**: the medium ones and most of the low ones shipped in 0.54.13. Still to write, low:
 - `console_run.py` ~36's timeout, log cap, `KEEP_JOBS` and journal rotation are never exercised; `adsb_menu` (plan, REMOVE, the US UAT rule, `zb_mlat_guard`) has no test; the `nmcli` stub never fails (`wifi_apply`, `wifi_connect`, `wifi_forget`); the Tailscale stub prints nothing (`ts_state`, `tailscale_where`, `console_state_lines`); `summary-when --facts`, `template-tags` and `publish_week` (not dry) have no test; the *draft* languages held back by `web_langs()` are checked by a grep only; `translateDom` and `rebuild` in `i18n.js`; `zb_update_components` is never run end to end (a light test with every `is_*` false: *Update finished*, exit 0).
 
-**Batch 7: the docs** (no version bump)
-- `Testing.md` ~12 and `README.md` ~691: the shellcheck line leaves out `tools/*.sh`; `python3-pil fonts-dejavu-core` are needed or the split-flap tests are skipped; *well under a minute* is about a minute and a half.
-- `Project-status.md` (lines 48, 51) and `Web-console.md` ~240-242 still say that graphs1090, the console's `.path` unit, the root helper and the iPhone pairing never ran on the Pi; the field log of 21 October says they did. Keep *update from the page* and *restore* as not seen.
-- *Checked as you type* (`Fresh-install.md` ~117, `Web-console.md` ~31): the position is checked when Next is pressed.
-- `Moving-to-a-new-card.md` ~100 (*step 4* of *Start here*) and ~102 and `The-menu.md` ~44 (*System → Signed in → Pair a phone*), `menus.sh` ~125 the same.
-- `console.py` ~19's docstring says 12 h and 30 days, the constants (~50-53) say a week and a year; `Command-reference.md` ~189 says *30 days* for a paired phone.
-- `Security.md` ~48 and `Configuration-reference.md` ~24: `BIND_ADDRESS=127.0.0.1` for a reverse proxy makes every visitor look like 127.0.0.1, which gets round `ALLOW_FROM`, the console's network check and the per-address limiter: say the proxy must filter. `Web-console.md` ~202: the lost phone's first step is revoking that one device in the console, then *Sign out the others*.
+**Batch 7: the docs**: shipped with 0.54.13's documentation.
 
 **Decided against (the reviewers' majority), unless something new shows up:** moving the security updates line in the console; a clock-generation counter for sessions; the QR on a tiny link; the framing headers of the wall without a CSP check in Chromium; a `tests/lib.sh` shared harness (each suite stands alone on purpose); a full menu-walk suite for the network screens; `time.sleep(0.4)` of `console.py`; `flags.js` having no `module.exports`; the RTL literals spread over four files.
 
