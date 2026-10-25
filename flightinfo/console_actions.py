@@ -31,7 +31,7 @@ RULES_RE = r"^(all|(%s)(,(%s)){0,4})$" % ("|".join(RULES), "|".join(RULES))
 TEMPLATES_MAX = 1500             # 0.51.0: the owner's templates, all of them (a few lines of 260 characters at most each)
 # 0.47.0: the web pages' languages, the same codes as lib/common.sh (ZB_LANG_CODES) and flightinfo/static/i18n.js; the
 # command itself refuses one this Pi has no catalogue for
-LANGS = ("en", "fr", "de", "nl", "it", "es", "pt-BR", "pl", "fi", "et", "lv", "lt", "id", "sw", "ru", "uk", "ar", "ja", "ko",
+LANGS = ("en", "fr", "de", "nl", "it", "es", "pt-BR", "pl", "fi", "et", "lv", "lt", "id", "sw", "hi", "ru", "uk", "ar", "ja", "ko",
          "zh-Hans", "zh-Hant")
 
 SECTIONS = (
@@ -51,7 +51,7 @@ SECTIONS = (
 #   ask   -- the page asks "are you sure" first
 ACTIONS = {
     # -- the wall
-    "units":        ("wall", "Units", ["units", "{value}"], [("value", "enum", ("metric", "imperial"))], "wall"),
+    "units":        ("wall", "Units", ["units", "{value}"], [("value", "enum", ("metric", "imperial", "aviation"))], "wall"),
     "radius":       ("wall", "Detection radius", ["radius", "{value}"], [("value", "enum", ("1", "2", "5", "10", "15", "30", "50"))], "wall"),
     "color":        ("wall", "Colour", ["color", "{value}"], [("value", "enum", THEMES)], "wall"),
     "mode":         ("wall", "Look", ["mode", "{value}"], [("value", "enum", ("dots", "flap"))], "wall"),
@@ -86,7 +86,7 @@ ACTIONS = {
     "social-test":  ("sharing", "Try a post", ["social", "test"], [], "read long"),
     "social-look":  ("sharing", "Picture", ["social", "look", "{value}"], [("value", "enum", ("dotmap", "flap", "alternate"))], "long"),
     "social-colour": ("sharing", "Picture colour", ["social", "colour", "{value}"], [("value", "enum", THEMES + ("wall", "rotate"))], ""),
-    "social-units": ("sharing", "Units of the posts", ["social", "units", "{value}"], [("value", "enum", ("metric", "imperial", "wall"))], ""),
+    "social-units": ("sharing", "Units of the posts", ["social", "units", "{value}"], [("value", "enum", ("metric", "imperial", "aviation", "wall"))], ""),
     "social-map":   ("sharing", "Map", ["social", "map", "{value}"], [("value", "enum", ("normal", "night", "satellite", "terrain", "none", "rotate"))], ""),
     "social-photolink": ("sharing", "Photo link", ["social", "photolink", "{value}"], [("value", "enum", ON_OFF)], ""),
     "social-sentence": ("sharing", "Words of a post", ["social", "sentence", "{value}"],

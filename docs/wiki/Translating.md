@@ -25,6 +25,7 @@ translation, with a column for your correction. No account, no tool to install, 
 | Lietuvių | Lithuania | 0.48.0 | [lt.csv](https://github.com/regis57/ZenithBoard/blob/main/docs/translations/lt.csv) |
 | Bahasa Indonesia | Indonesia | 0.48.0 | [id.csv](https://github.com/regis57/ZenithBoard/blob/main/docs/translations/id.csv) |
 | Kiswahili | the map of Africa (spoken in many countries) | 0.53.1, not yet reviewed by a native speaker | [sw.csv](https://github.com/regis57/ZenithBoard/blob/main/docs/translations/sw.csv) |
+| हिन्दी | India | 0.55.0, not yet reviewed by a native speaker | [hi.csv](https://github.com/regis57/ZenithBoard/blob/main/docs/translations/hi.csv) |
 | Русский | Russia | 0.48.0 | [ru.csv](https://github.com/regis57/ZenithBoard/blob/main/docs/translations/ru.csv) |
 | Українська | Ukraine | 0.48.0 | [uk.csv](https://github.com/regis57/ZenithBoard/blob/main/docs/translations/uk.csv) |
 | العربية | its letter ʿayn, ع (spoken in many countries); right to left | 0.48.0 | [ar.csv](https://github.com/regis57/ZenithBoard/blob/main/docs/translations/ar.csv) |
@@ -37,6 +38,8 @@ translation, with a column for your correction. No account, no tool to install, 
 differing between Tanzania, Kenya and the software glossaries. **The owner published it on 22 October 2026 (0.53.1)**
 without a native review. Its sheet, `sw.csv`, is the place for a Swahili speaker's corrections: they are checked
 against the English and applied like any other language's (`tools/i18n.py apply sw.csv --dry`).
+
+**Hindi** came in 0.55.0 at the owner's request (25 October 2026), for the web pages and the posts. Asked first whether 90% could be promised for Tamil, Hindi and Urdu, the answer was: not without a native review, Hindi the easiest to reach. The owner asked for Hindi; it is published, like Swahili, without that review. Its words follow Indian software's usage (आप, *सेटिंग*, *पासवर्ड*), the aviation words are the usual Hindi ones (*विमान*, *उड़ान*, *ऊँचाई*), and the commands, names and unit symbols stay as they are. Plurals: one for 0 and 1, other beyond (CLDR). Large numbers on the statistics page follow Indian grouping (*35.8 क॰*, crore). Its sheet, `hi.csv`, waits for a Hindi speaker's corrections. Tamil and Urdu are not in: a native reviewer first.
 
 ![The console in Arabic, right to left](https://raw.githubusercontent.com/regis57/ZenithBoard/main/docs/images/console-ar.png)
 

@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **25 October 2026**, version **0.54.18**.
+Last updated: **25 October 2026**, version **0.55.0**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -88,6 +88,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 25 October 2026, 11:03 (same notes) | **Aviation units** (kt, ft, NM) asked for wherever units are: 0.55.0 adds them as a third choice, on the wall, the posts, the console, the menus and `/stats`, which follows the wall's units for its distances since. **Hindi** for the console: 0.55.0, the pages and the posts, without a native review (the owner's decision; Tamil and Urdu wait for one) |
 | 25 October 2026, 11:03 | The owner's notes from a fresh card and a week of figures (his folder *zenithboard fixing stats*). **The key question on a fresh card** read as an error (the expired key listed first): GitHub's current key now ships with ZenithBoard and is trusted without a question. **ADSB Exchange's update printed the station's UUID** in the pasted output: hidden. **`/stats` counted 2 554 aircraft on 23 October where FlightAware counted 2 878** (11% fewer, every day alike): the quarter-hour sample missed what crossed between two; the wall's five-second look now adds them. The week's **6 673** is distinct aircraft over seven days, not the sum of the days. **The week's messages, 386 530 3…**, were cut in their box: now *386,5 M*. **The first steps showed the summaries switched on with no Bluesky account**: Start here now offers the account, and the step shows no switch without one. **"16 not upgraded"**: the system's own updates, said at the end of an update with the command. The Pages grouped and folding, the other devices folded, the triangle given room |
 | 23 October 2026, 08:21 | The owner on the 41 rows *à trancher*: take the first proposal. 0.53.5 does, all 41, each checked to keep the English's placeholders and tags |
 | 23 October 2026, 08:01 | The owner sent reviewed sheets for all 20 languages (194 rows, 153 with a correction). After `--dry`, 149 corrections were taken, 2 left out (one inexact, one an instruction), and 3 done by hand from the reviewers' notes. The 41 rows marked *à trancher* wait for his word. The first `--dry` also found a bug in `tools/i18n.py`: the sheet reader guessed `doublequote=False` from the header line, so plural rows came out ending in `""}`. Four catalogues were broken that way before the tests caught it; they were put back and applied again with the reader fixed (0.53.4) |

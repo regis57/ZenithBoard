@@ -77,7 +77,7 @@ window.ZBI18N.start({ part: "console" }, function () {
   // words the Pi answers in English (states, colours, choices), shown in the page's language
   var WORD = { on: t("on"), off: t("off"), running: t("running"), queued: t("queued"), refused: t("refused"), done: t("done"),
     "not installed": t("not installed"), posting: t("posting"), amber: t("amber"), green: t("green"), red: t("red"), white: t("white"),
-    turquoise: t("turquoise"), metric: t("metric"), imperial: t("imperial"), dots: t("dot matrix"), flap: t("split-flap"), world: t("world"),
+    turquoise: t("turquoise"), metric: t("metric"), imperial: t("imperial"), aviation: t("aviation"), dots: t("dot matrix"), flap: t("split-flap"), world: t("world"),
     us: t("United States"), daily: t("daily"), weekly: t("weekly"), monthly: t("monthly"),
     factual: t("factual"), story: t("story"), board: t("board"), spotter: t("spotter"), lookup: t("lookup"), custom: t("your own") };
   // graphs1090 answers on another port, so another origin: the language goes with the link
@@ -607,7 +607,7 @@ window.ZBI18N.start({ part: "console" }, function () {
           h("div", { "class": "actions" }, btn(t("Read again"), "refresh", {}, "btn", { noDrawer: true }), btn(t("Status"), "status"), btn(t("Health"), "health"))], "w6"));
       out.push(card(t("At a glance"), "overview", null, h("div", { "class": "glance" },
         chip(t("Wall: {look}, {colour}, {radius}", { look: word(c.DISPLAY_MODE === "flap" ? "flap" : "dots"), colour: word(c.THEME || "amber"),
-          radius: c.RADIUS + (c.UNITS === "imperial" ? " mi" : " km") }), "wall"),
+          radius: c.RADIUS + " " + distUnit(c.UNITS) }), "wall"),
         chip(t("Statistics {state}", { state: stateWord(c.STATS) }), "receiver", on(c.STATS)),
         chip(t("graphs1090 {state}", { state: word(f.graphs) }), "receiver", f.graphs === "on"),
         chip(t("Bluesky {state}", { state: word(on(c.SOCIAL) ? "posting" : "off") }), "sharing", on(c.SOCIAL)),
@@ -625,12 +625,12 @@ window.ZBI18N.start({ part: "console" }, function () {
     },
 
     wall: function () {
-      var c = S.cfg, unit = c.UNITS === "imperial" ? "mi" : "km";
+      var c = S.cfg, unit = distUnit(c.UNITS);
       return [
         card(t("Look"), "wall", t("The default of every screen. A tablet that chose its own with its gear keeps it until Reset in its gear panel."), [
           row(t("Look"), t("Dot matrix, or the split-flap airport board"), seg("mode", ["dots", "flap"], c.DISPLAY_MODE || "dots", [t("Dot matrix"), t("Split-flap")])),
           row(t("Colour"), null, swatches()),
-          row(t("Units"), t("Distances, speeds and heights"), seg("units", ["metric", "imperial"], c.UNITS, [t("km · m"), t("mi · ft")])),
+          row(t("Units"), t("Distances, speeds and heights"), seg("units", ["metric", "imperial", "aviation"], c.UNITS, [t("km · m"), t("mi · ft"), t("NM · kt · ft")])),
           row(t("Detection radius"), t("Aircraft inside it are on the wall, in {unit}", { unit: unit }), seg("radius", ["1", "2", "5", "10", "15", "30", "50"], String(Number(c.RADIUS)))),
           row(t("Seconds per aircraft"), t("2 to 60"), numberApply("cycle", c.CYCLE_SECONDS, 2, 60)),
           h("div", { "class": "actions" }, h("a", { "class": "btn", href: "/", target: "_blank", rel: "noopener", text: t("Open the wall ↗") }))
@@ -694,7 +694,7 @@ window.ZBI18N.start({ part: "console" }, function () {
             [t("The wall's ({colour})", { colour: word(c.THEME || "amber") }), t("Amber"), t("Green"), t("Red"), t("White"), t("Turquoise"), t("In turn")])),
           row(t("Map"), null, select("social-map", ["normal", "night", "satellite", "terrain", "none", "rotate"], c.SOCIAL_MAP || "normal",
             [t("Normal"), t("Night"), t("Satellite"), t("Terrain"), t("None"), t("In turn")])),
-          row(t("Units"), null, seg("social-units", ["wall", "metric", "imperial"], units, [t("The wall's"), t("Metric"), t("Imperial")])),
+          row(t("Units"), null, seg("social-units", ["wall", "metric", "imperial", "aviation"], units, [t("The wall's"), t("Metric"), t("Imperial"), t("Aviation")])),
           row(t("Link to the photo page"), t("Planespotters, at the end of each post"), sw("social-photolink", on(c.SOCIAL_PHOTOLINK))),
           row(t("Language of the posts"), t("The aircraft posts and the summaries' words; the pictures stay in English"),
             select("social-lang", I.langs().indexOf("en") < 0 ? ["en"].concat(I.langs()) : I.langs(), c.SOCIAL_LANG || "en",
@@ -1038,6 +1038,8 @@ window.ZBI18N.start({ part: "console" }, function () {
   function folded(key) { try { return window.localStorage.getItem("zb.fold." + key) === "1"; } catch (e) { return false; } }
   function shown(key) { try { return window.localStorage.getItem("zb.fold." + key) === "0"; } catch (e) { return false; } }   // left open
   function remember(key, isFolded) { try { window.localStorage.setItem("zb.fold." + key, isFolded ? "1" : "0"); } catch (e) { /* private window */ } }
+  // 0.55.0: the radius's unit, by the wall's units (aviation: nautical miles, as pilots count)
+  function distUnit(u) { return u === "imperial" ? "mi" : u === "aviation" ? "NM" : "km"; }
   function pages() {
     return pagesGroups().map(function (g) {
       var d = h("details", { "class": "fold", open: folded("pages." + g.id) ? null : true }, h("summary", null, h("bdi", { text: g.title }), h("span", { "class": "n-items", text: "· " + num(g.items.length) })),
@@ -1235,7 +1237,7 @@ window.ZBI18N.start({ part: "console" }, function () {
         return [h("h3", { text: t("Where the antenna is") }),
           h("p", { "class": "lead", text: t("The decoder, MLAT and the wall's distances need it; it is never shown on the wall or in a post. A right-click on your roof in a map gives the two numbers.") }),
           wrow(t("Region"), wseg("region", ["world", "us"], [t("World"), t("United States")])),
-          wrow(t("Units"), wseg("units", ["metric", "imperial"], [t("km · m"), t("mi · ft")])),
+          wrow(t("Units"), wseg("units", ["metric", "imperial", "aviation"], [t("km · m"), t("mi · ft"), t("NM · kt · ft")])),
           h("div", { "class": "fields" }, field(t("Latitude"), lat), field(t("Longitude"), lon), field(t("Alt. m"), alt)),
           err ? h("p", { "class": "err", text: err }) : null];
       },

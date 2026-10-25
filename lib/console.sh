@@ -216,7 +216,7 @@ console_state_lines() {
 # not chosen its own with the flag at the top. Empty until chosen: the console then asks at its first visit.
 # 0.53.8: the menu named 14 of the 21 languages (the seven added since 0.48.0 were missing, though `console lang pl` took
 # them). Arabic is written in Latin letters here: whiptail does not shape or reverse Arabic, which would come out broken.
-CONSOLE_LANG_NAMES="en:English fr:Français de:Deutsch nl:Nederlands it:Italiano es:Español pt-BR:Português_(Brasil) pl:Polski fi:Suomi et:Eesti lv:Latviešu lt:Lietuvių id:Bahasa_Indonesia sw:Kiswahili ru:Русский uk:Українська ar:Arabic ja:日本語 ko:한국어 zh-Hans:简体中文 zh-Hant:繁體中文"
+CONSOLE_LANG_NAMES="en:English fr:Français de:Deutsch nl:Nederlands it:Italiano es:Español pt-BR:Português_(Brasil) pl:Polski fi:Suomi et:Eesti lv:Latviešu lt:Lietuvių id:Bahasa_Indonesia sw:Kiswahili hi:हिन्दी ru:Русский uk:Українська ar:Arabic ja:日本語 ko:한국어 zh-Hans:简体中文 zh-Hant:繁體中文"
 # the audit of 22-23 October 2026: the menu said "en" where the command said "not chosen yet"; one word for both
 console_lang_now() { local l; l=$(cfg_get CONSOLE_LANG ""); echo "${l:-not chosen yet}"; }
 console_lang_menu() {

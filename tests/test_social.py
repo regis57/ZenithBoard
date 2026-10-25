@@ -644,6 +644,12 @@ class PictureTest(unittest.TestCase):
         self.assertEqual(social.units_of({"SOCIAL_UNITS": "feet"}), "metric")
         t = social.post_text(EZY, dict(CFG, UNITS="metric", SOCIAL_UNITS="imperial"))
         self.assertIn("altitude 37\u00a0000\u00a0ft", t)
+        # 0.55.0: aviation, as pilots count: feet and knots, a range record in nautical miles (never the figure)
+        self.assertEqual(social.units_of({"UNITS": "aviation"}), "aviation")
+        self.assertIn("altitude 37\u00a0000\u00a0ft", social.post_text(EZY, dict(CFG, UNITS="aviation")))
+        self.assertEqual(social.speed_words(453, "aviation"), "453\u00a0kt")
+        self.assertEqual(social.range_words(332, units="aviation"), "over 175\u00a0NM out")     # 332 km = 179 NM, down to 25
+        self.assertEqual(social.range_words(30, units="aviation"), "over 25\u00a0NM out")
 
     def test_the_picture_s_colour_setting(self):
         self.assertEqual(social.theme_of({"THEME": "red"}), "red")                          # the wall's, by default

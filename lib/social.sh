@@ -362,9 +362,9 @@ social_set_colour() {
     *) echo "Picture colour: $(or_text "$c" "the wall's ($(wall_theme))")." ;;
   esac
 }
-social_set_units() {     # 0.24.3: the posts in metric or imperial, or the wall's own units (empty)
+social_set_units() {     # 0.24.3: the posts in metric or imperial, or the wall's own units (empty); 0.55.0: aviation
   local u=${1:-}
-  social_valid_in "$u" metric imperial wall || { echo "Units: metric (m, km/h, km), imperial (ft, knots, mi), or wall (the wall's own, $(cfg_get UNITS metric))"; return 1; }
+  social_valid_in "$u" metric imperial aviation wall || { echo "Units: metric (m, km/h, km), imperial (ft, knots, mi), aviation (ft, kt, NM), or wall (the wall's own, $(cfg_get UNITS metric))"; return 1; }
   [ "$u" != wall ] || u=""
   cfg_set SOCIAL_UNITS "$u"
   echo "Post units: $(or_text "$u" "the wall's ($(cfg_get UNITS metric))")."
@@ -605,7 +605,8 @@ social_setup_picture() {
   units=$(wt_radio "Units of the posts: the picture and the text" \
       wall "The wall's own ($(cfg_get UNITS metric))" "$( [ "$cur" = wall ] && echo ON || echo OFF )" \
       metric "Metric: m, km/h, km" "$( [ "$cur" = metric ] && echo ON || echo OFF )" \
-      imperial "Imperial: ft, knots, mi" "$( [ "$cur" = imperial ] && echo ON || echo OFF )") || return 1
+      imperial "Imperial: ft, knots, mi" "$( [ "$cur" = imperial ] && echo ON || echo OFF )" \
+      aviation "Aviation: ft, kt, NM" "$( [ "$cur" = aviation ] && echo ON || echo OFF )") || return 1
   cur=$(cfg_get SOCIAL_MAP normal)
   map=$(wt_radio "The map beside the wall or the board (from EOX's map service, credited on every post)" \
       normal "OpenStreetMap" "$( [ "$cur" = normal ] && echo ON || echo OFF )" \

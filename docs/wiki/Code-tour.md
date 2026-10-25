@@ -73,7 +73,7 @@ One file, read top to bottom in five parts:
 | `i18n.js`, `i18n.css`, `i18n/<lang>/*.json` | The pages' languages (0.47.0): `t()` and `tn()` with the English as key, the catalogues, the flag and the list at the top, the first visit's choice. `tools/i18n.py` finds the keys, checks the catalogues and makes the review sheets (`docs/translations/`) |
 | `console.webmanifest`, `console-icon-*.png`, `console-sw.js` | The console as an app (0.53.0): the manifest, the icons (`tools/make_console_icons.js` draws them from `shapes.js` and `font5x7.js`), a service worker that keeps nothing |
 | `console.html`, `console.css`, `console.js` | The web console (0.39.0): one section at a time, the wizard, Activity, pairing a phone with a QR code (`vendor/qrcode.js`, MIT). Reads `/console/api/*` |
-| `font5x7.js`, `format.js` | The dot font, and formatting numbers in metric or imperial units |
+| `font5x7.js`, `format.js` | The dot font, and formatting numbers in metric, imperial or aviation units |
 
 The constants at the top of `app.js` — `GW`, `GH`, `SIL_BOX`, `PHOTO_BOX` — are the layout. Change one and `tests/test_layout.js` will tell you whether the settings gear still fits. See [The wall](The-wall).
 

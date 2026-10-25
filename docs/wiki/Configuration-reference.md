@@ -10,7 +10,7 @@ Read the whole file with `zenithboard config`.
 
 | Key | Default | Set with | What it does |
 |---|---|---|---|
-| `UNITS` | `metric` | `zenithboard units metric\|imperial` | km, km/h, m — or miles, knots, feet |
+| `UNITS` | `metric` | `zenithboard units metric\|imperial\|aviation` | km, km/h, m — or miles, knots, feet — or nautical miles, knots, feet (aviation, 0.55.0). The radius is read in the same unit, and `/stats` gives its distances in it |
 | `THEME` | `amber` | `zenithboard color amber\|green\|red\|white\|turquoise` | Dot colour of every wall. A tablet can override it with a link. `blue` (taken out in 0.23.0) shows amber |
 | `DISPLAY_MODE` | `dots` | `zenithboard mode dots\|flap` | Dot matrix, or the airport split-flap board |
 | `RADIUS` | `10` | `zenithboard radius N` | Detection radius in your unit. Allowed: 1, 2, 5, 10, 15, 30, 50 |
@@ -92,7 +92,7 @@ The dynamic-DNS **token is not stored here.** It is asked for interactively and 
 | `SOCIAL_SENTENCE` | `factual` | `zenithboard social sentence LIST` | The words of a post: `factual`, `story`, `board`, `spotter`, `lookup`, `custom` (your own templates, 0.51.0), several (`story,lookup`) or `random` (0.29.0) |
 | `SOCIAL_LANG` | `en` | `zenithboard social lang CODE` | The posts' language (0.51.0): every word of the aircraft posts and the summaries, numbers and dates as that language writes them; the pictures keep English |
 | `SOCIAL_PHOTOLINK` | `0` | `zenithboard social photolink on\|off` | `1`: a last line linking to the aircraft's Planespotters photo page, with the photographer's name (0.25.0) |
-| `SOCIAL_UNITS` | empty | `zenithboard social units metric\|imperial\|wall` | The posts' units, picture and text; empty = the wall's `UNITS` (0.24.3) |
+| `SOCIAL_UNITS` | empty | `zenithboard social units metric\|imperial\|aviation\|wall` | The posts' units, picture and text; empty = the wall's `UNITS` (0.24.3) |
 | `SOCIAL_THEME` | empty | `zenithboard social colour NAME\|wall\|rotate` | The picture's colour: `amber`, `green`, `red`, `white`, `turquoise`; empty = the wall's `THEME`; `rotate` = the colours in turn. `blue` (taken out in 0.23.0) gives the wall's colour |
 | `SOCIAL_MAP` | `normal` | `zenithboard social map NAME` | The map of the `dotmap` and `flap` pictures: `normal`, `night`, `satellite`, `terrain`, `none` (no map, nothing fetched), `rotate` (the four maps in turn) |
 | `PATCHES` | `0` | `zenithboard patches on\|off` | Debian security fixes installed daily by themselves. See [Security](Security) |

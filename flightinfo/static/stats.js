@@ -226,8 +226,13 @@ window.ZBI18N.start({ part: "stats" }, function () {
   // out rather than guessed: no airline, no route, no city each simply drop their part.
   function altText(ft, units) {
     if (typeof ft !== "number") return null;
-    return units === "imperial" ? fmt(Math.round(ft / 100) * 100) + " ft" : fmt(Math.round(ft * 0.3048 / 10) * 10) + " m";
+    return units === "imperial" || units === "aviation" ? fmt(Math.round(ft / 100) * 100) + " ft" : fmt(Math.round(ft * 0.3048 / 10) * 10) + " m";
   }
+  // 0.55.0: the distances in the wall's units: km, miles, or nautical miles (aviation, as pilots count). Before, the
+  // page said km whatever the units.
+  var UNITS = "metric";
+  function unitName(u) { u = u || UNITS; return u === "imperial" ? "mi" : u === "aviation" ? "NM" : "km"; }
+  function dist(km, u) { u = u || UNITS; return Math.round(u === "imperial" ? km / 1.609344 : u === "aviation" ? km / 1.852 : km); }
   function place(a) {
     if (!a) return null;
     var where = a.city || a.name, code = a.iata || a.icao;
@@ -247,8 +252,9 @@ window.ZBI18N.start({ part: "stats" }, function () {
     if (alt) parts.push(alt);
     // "near" up to 50 km; beyond, over the sea or open country, the distance says how near it really was
     var city = r.near && r.near.name ? r.near.name + (r.near.country ? ", " + r.near.country : "") : "";
-    var near = !city ? "" : r.near.km <= 50 ? t(", near {city} ({km} km)", { city: city, km: fmt(r.near.km) }) : t(", {km} km from {city}", { city: city, km: fmt(r.near.km) });
-    parts.push(fmt(r.km) + " km" + near);
+    var near = !city ? "" : r.near.km <= 50 ? t(", near {city} ({n} {unit})", { city: city, n: fmt(dist(r.near.km, units)), unit: unitName(units) }) :
+      t(", {n} {unit} from {city}", { city: city, n: fmt(dist(r.near.km, units)), unit: unitName(units) });
+    parts.push(fmt(dist(r.km, units)) + " " + unitName(units) + near);
     return parts.join(" \u00b7 ");
   }
 
@@ -264,6 +270,7 @@ window.ZBI18N.start({ part: "stats" }, function () {
 
 
   function render(d) {
+    UNITS = d.units === "imperial" || d.units === "aviation" ? d.units : "metric";
     var w = d.window || {}, tot = w.totals || {}, per = t(w.label || "the last 30 days"), days = w.range !== "24h";
     $("sub").textContent = tn(d.samples, "{n} sample of 15 minutes since {since}, 30 days kept · {period}", "{n} samples of 15 minutes since {since}, 30 days kept · {period}", { n: fmt(d.samples), since: d.since, period: per });
     // the four boxes: all of them the period's (0.43.0: the fourth was the thirty days' best, whatever the toggle)
@@ -273,7 +280,7 @@ window.ZBI18N.start({ part: "stats" }, function () {
     $("t-messages").title = fmt(tot.messages || 0);
     $("t-busiest").textContent = tot.busiest_hour === null || tot.busiest_hour === undefined ? t("nothing yet") :
       t("busiest hour {hour}:00, {n}", { hour: (tot.busiest_hour < 10 ? "0" : "") + tot.busiest_hour, n: fmt(tot.busiest_messages) });
-    $("t-far").textContent = (tot.farthest_km || 0) + " km";
+    $("t-far").textContent = dist(tot.farthest_km || 0) + " " + unitName();
     $("t-far-d").textContent = tot.farthest_when ? t("on {day} at {time}", { day: shortDay(tot.farthest_when.slice(0, 10)), time: tot.farthest_when.slice(11) }) : per;
     var b = w.busiest;
     $("t-best-k").textContent = days ? t("Busiest day") : t("Busiest hour");
@@ -318,14 +325,14 @@ window.ZBI18N.start({ part: "stats" }, function () {
       bars($("c-alt"), fl.altitudes.labels, fl.altitudes.counts, "", phone ? 2 : 1, fl.altitudes.counts.indexOf(Math.max.apply(null, fl.altitudes.counts)), wide);
       $("c-alt-sub").textContent = t("· distinct aircraft by the altitude last seen, in {unit}, {period}", { unit: fl.alt_unit || "km", period: per });
     } else { $("c-alt").innerHTML = ""; $("c-alt-sub").textContent = t("· nothing in this period yet"); }
-    var mv = w.messages || [], fv = w.farthest || [], av = w.aircraft || [];
+    var mv = w.messages || [], fv = (w.farthest || []).map(function (v) { return v === null || v === undefined ? v : dist(v); }), av = w.aircraft || [];
     $("c-msgs-sub").textContent = days ? t("· per day, {period}", { period: per }) : t("· per hour, {period}", { period: per });
     bars($("c-msgs"), labels, mv, "", every, mv.indexOf(Math.max.apply(null, mv)), wide);
-    $("c-far-sub").textContent = days ? t("· km, the farthest each day, {period}", { period: per }) : t("· km, the farthest each hour, {period}", { period: per });
+    $("c-far-sub").textContent = days ? t("· {unit}, the farthest each day, {period}", { unit: unitName(), period: per }) : t("· {unit}, the farthest each hour, {period}", { unit: unitName(), period: per });
     $("c-planes-sub").textContent = "· " + t(w.aircraft_note || "") + ", " + per;
-    line($("c-far"), labels, fv, " km", every, fv.indexOf(Math.max.apply(null, fv.filter(function (v) { return v !== null; }).concat([0]))), half);
+    line($("c-far"), labels, fv, " " + unitName(), every, fv.indexOf(Math.max.apply(null, fv.filter(function (v) { return v !== null; }).concat([0]))), half);
     bars($("c-planes"), labels, av, "", every, av.indexOf(Math.max.apply(null, av)), half);
-    var rows = "<tr><th>" + esc(days ? t("Day") : t("Hour")) + "</th><th>" + esc(days ? t("Aircraft") : t("With a position")) + "</th><th>" + esc(t("Messages")) + "</th><th>" + esc(t("Farthest km")) + "</th></tr>";
+    var rows = "<tr><th>" + esc(days ? t("Day") : t("Hour")) + "</th><th>" + esc(days ? t("Aircraft") : t("With a position")) + "</th><th>" + esc(t("Messages")) + "</th><th>" + esc(t("Farthest ({unit})", { unit: unitName() })) + "</th></tr>";
     for (var i = n - 1; i >= 0; i--) rows += "<tr><td>" + labels[i] + "</td><td>" + fmt(av[i] || 0) + "</td><td>" + fmt(mv[i] || 0) + "</td><td>" + (fv[i] === null || fv[i] === undefined ? "\u2013" : fv[i]) + "</td></tr>";
     $("table").innerHTML = rows;
   }

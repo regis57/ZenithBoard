@@ -27,7 +27,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.54.18"
+VERSION = "0.55.0"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -54,17 +54,19 @@ import console  # noqa: E402  (the web console, 0.39.0: off unless CONSOLE=1)
 SERVER_ID = str(int(time.time()))  # changes on restart -> browsers reload themselves
 
 KM_PER_MI = 1.609344
+KM_PER_NM = 1.852
+UNITS = ("metric", "imperial", "aviation")        # 0.55.0: aviation = nautical miles, knots, feet
 RADIUS_PRESETS = [1, 2, 5, 10, 15, 30, 50]
 THEMES = ("amber", "green", "red", "white", "turquoise")      # 0.23.0: the dark blue (#0404e2) is gone, turquoise stays
 MAX_POSITION_AGE_S = 30  # ignore aircraft whose position is older than this
 
 DEFAULTS = {
-    "UNITS": "metric",          # metric | imperial
+    "UNITS": "metric",          # metric | imperial | aviation (0.55.0: NM, kt, ft)
     "THEME": "amber",           # amber | green | red | white | turquoise
     "LAT": "0",
     "LON": "0",
     "DECODER": "readsb",        # readsb | dump1090-fa
-    "RADIUS": "10",             # in km (metric) or miles (imperial)
+    "RADIUS": "10",             # in km (metric), miles (imperial) or nautical miles (aviation)
     "CYCLE_SECONDS": "14",
     "SHOW_PHOTOS": "1",
     "FLAGS": "1",               # the registration and maker flags on the dot-matrix wall
@@ -633,7 +635,7 @@ def read_fleet(cfg, stats_dir=None, now=None, since=None, rng=None):
                 alts.append(int(alt))
         except ValueError:
             pass                                 # "ground" or garbled: not a height, not counted
-    imperial = public_config(cfg)["units"] == "imperial"
+    imperial = public_config(cfg)["units"] in ("imperial", "aviation")          # 0.55.0: aviation counts in feet too
     step = 5000 if imperial else 1000 / 0.3048                   # bands of 5 000 ft, or of 1 km
     top_band = 9 if imperial else 13
     bands = [0] * (top_band + 1)
@@ -779,7 +781,7 @@ def wall_host_ok(cfg, host):
 
 
 def radius_to_km(radius, units):
-    return radius * KM_PER_MI if units == "imperial" else radius
+    return radius * KM_PER_MI if units == "imperial" else radius * KM_PER_NM if units == "aviation" else radius
 
 
 def aircraft_json_path(cfg):
@@ -1925,7 +1927,7 @@ def web_langs():
 
 def public_config(cfg):
     units = cfg.get("UNITS", "metric")
-    if units not in ("metric", "imperial"):
+    if units not in UNITS:
         units = "metric"
     theme = cfg.get("THEME", "amber")
     langs, lang = web_langs(), str(cfg.get("CONSOLE_LANG", ""))

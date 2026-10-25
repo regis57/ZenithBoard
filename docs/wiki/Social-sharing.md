@@ -59,7 +59,7 @@ And then for the picture:
 | Question | Choices | Default |
 |---|---|---|
 | The look | `dotmap` (the dot-matrix wall beside a map), `flap` (the split-flap board beside a map) or `alternate` (the two in turn) | `dotmap` |
-| The units, picture and text (0.24.3) | the wall's own, `metric` (m, km/h, km) or `imperial` (ft, knots, mi) | the wall's |
+| The units, picture and text (0.24.3) | the wall's own, `metric` (m, km/h, km), `imperial` (ft, knots, mi) or `aviation` (ft, kt, NM; 0.55.0: a range record then says *over 175 NM*, rounded down to 25 NM, never the figure) | the wall's |
 | The colour of the letters and the track | the wall's own colour, or amber, green, red, white, turquoise — the wall's colours, read from its own style sheet | the wall's |
 | The map | `normal`, `night`, `satellite`, `terrain`, `none` (the track on black, nothing fetched), `rotate` | `normal` |
 
@@ -112,7 +112,7 @@ Several shapes, comma-separated (`story,spotter,lookup`), or `random`: one is dr
 ## The posts' language (0.51.0)
 
 English until you choose another: `sudo zenithboard social lang fr` (menu *7 Options → 3 Bluesky → 4 How a post looks → 3*, or the console's
-*Sharing → Language of the posts*). Every language of the web pages is offered, Swahili too since 0.53.1. It covers every word of the aircraft posts, in all five shapes and your own templates, and the summaries'
+*Sharing → Language of the posts*). Every language of the web pages is offered, Swahili too since 0.53.1, Hindi since 0.55.0. It covers every word of the aircraft posts, in all five shapes and your own templates, and the summaries'
 four texts. The alt texts come along too. The numbers, the dates, the weekdays and the country names are written as
 that language writes them (Unicode's CLDR data): *11 280 m* and *12–18 octobre* in French, *11.280 m* and
 *12.–18. Oktober* in German, *10月12日～10月18日* in Japanese. Since 0.52.1 the time of day and the metric units

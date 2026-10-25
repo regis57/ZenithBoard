@@ -199,7 +199,7 @@ def units_of(c):
     """The posts' units: their own setting (0.24.3), else the wall's UNITS, else metric."""
     for k in ("SOCIAL_UNITS", "UNITS"):
         u = str(c.get(k, "") or "").strip().lower()
-        if u in ("metric", "imperial"):
+        if u in ("metric", "imperial", "aviation"):        # 0.55.0: aviation, feet, knots and nautical miles
             return u
     return "metric"
 
@@ -604,7 +604,7 @@ def metres(alt_ft, units, lang=None):
     if alt_ft is None:
         return None
     lang = lang or post_lang.get("en")
-    if units == "imperial":
+    if units in ("imperial", "aviation"):
         return lang.num(int(round(alt_ft / 100.0) * 100)) + NBSP + "ft"
     return lang.unit(int(round(alt_ft * 0.3048 / 10.0) * 10), "meter")       # 0.52.1: 10 670 м in Russian
 
@@ -656,9 +656,13 @@ def hashtag_callsign(flight):
     return ("#" + flight) if server.CALLSIGN_RE.match(flight or "") else flight
 
 
-def range_words(km, lang=None):
-    """A range record, said without placing the antenna: rounded DOWN to 50 km ("over 300 km"), never the figure."""
+def range_words(km, lang=None, units="metric"):
+    """A range record, said without placing the antenna: rounded DOWN to 50 km ("over 300 km"), never the figure.
+    0.55.0: in aviation units, down to 25 NM ("over 150 NM"): the ICAO abbreviation, the same in every language."""
     lang = lang or post_lang.get("en")
+    if units == "aviation":
+        step = int(km / 1.852 // 25) * 25
+        return lang.t("over {distance} out", distance=lang.num(max(step, 25)) + NBSP + "NM")
     step = int(km // 50) * 50
     return lang.t("over {distance} out", distance=lang.unit(max(step, 50), "kilometer"))
 
@@ -731,7 +735,7 @@ def speed_words(gs_kt, units, lang=None):
     """839 km/h, or 453 kt; 0.52.1: km/h as the posts' language writes it (839 км/ч, 839 km/j, 839 km/u)."""
     if not gs_kt:
         return ""
-    if units == "imperial":
+    if units in ("imperial", "aviation"):
         return "%d%skt" % (int(round(gs_kt)), NBSP)
     n = int(round(gs_kt * 1.852))
     return (lang or post_lang.get("en")).unit(n, "kilometer-per-hour", str(n))
@@ -742,7 +746,7 @@ def height_words(alt_ft, units, lang=None):
     if not alt_ft:
         return ""
     lang = lang or post_lang.get("en")
-    if units == "imperial":
+    if units in ("imperial", "aviation"):
         n = int(round(alt_ft / 100.0) * 100)
         return ("{:,}".format(n) if lang.code == "en" else lang.num(n)) + NBSP + "ft"
     return lang.unit(alt_ft * 0.3048 / 1000.0, "kilometer", lang.dec(alt_ft * 0.3048 / 1000.0, 1))
@@ -859,7 +863,7 @@ def post_text(p, c, why=None, credit=None, photo=None, shape=None):
     height = L.t("altitude {altitude}", altitude=alt) if alt else ""
     if record:
         parts.append(height)
-        parts.append(L.join([L.t("range record for 30 days: {range}", range=range_words(p["distance_km"], L)), seen_from(c, L)]))
+        parts.append(L.join([L.t("range record for 30 days: {range}", range=range_words(p["distance_km"], L, units)), seen_from(c, L)]))
     else:
         parts.append(height)
         parts.append(area_words(c, L))

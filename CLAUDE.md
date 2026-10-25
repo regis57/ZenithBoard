@@ -87,12 +87,13 @@ on Wi-Fi, near Trémery (Moselle). The owner tests on it; a session never reache
 - Menus: every menu has exactly one way out (`tests/test_menus.sh`). Destructive steps are never the last
   entry before Exit.
 - Posts and the wall never give the receiver's position away.
-- The web pages are translated (0.47.0; 20 languages since 0.48.0, 21 with Swahili since 0.53.1): a word shown goes through `t("…")` (static HTML:
+- The web pages are translated (0.47.0; 20 languages since 0.48.0, 21 with Swahili since 0.53.1, 22 with Hindi since 0.55.0): a word shown goes through `t("…")` (static HTML:
   `data-t`), the English is the key. **The owner's rule (22 October 2026): every new or changed English string on the
   console, `/stats` or graphs1090's page is translated into every language in the same commit** — `python3 tools/i18n.py
   sync LANG`, translate, `review LANG`, `check` (`tests/test_i18n.sh` fails otherwise). A reviewer's correction is
   checked against the English before it goes in (`apply FILE --dry`); an inexact one is left out (`--skip ID`) and a
   translation of ours found wrong is corrected in the catalogue and its sheet. The terminal, the menu and what the Pi
   prints stay English. Hausa and Yoruba were left out (90% not reachable); Swahili was held back
-  (`i18n/<lang>/draft.txt`, the mechanism kept) and published by the owner on 22 October 2026 without a native review;
+  (`i18n/<lang>/draft.txt`, the mechanism kept) and published by the owner on 22 October 2026 without a native review; Hindi was
+  added at the owner's request on 25 October 2026, also without a native review (Tamil and Urdu wait for one);
   Arabic is right to left.

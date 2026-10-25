@@ -20,6 +20,12 @@ assert.strictEqual(L.footer, "1/1 7.6MI NNE");
 assert.strictEqual(L.from, ""); assert.strictEqual(L.to, "");       // no route known -> two blank rows
 
 assert.ok(Math.abs(Fmt.radiusToKm(10, "imperial") - 16.09344) < 1e-6);
+// 0.55.0: aviation, as pilots count: feet, knots, nautical miles (12.3 km = 6.6 NM)
+L = Fmt.planeLines(plane, "aviation", 0, 1, 14);
+assert.strictEqual(L.alt, "ALT  35000 FT"); assert.strictEqual(L.spd, "SPD  450 KT");
+assert.strictEqual(L.footer, "1/1 6.6NM NNE");
+assert.ok(Math.abs(Fmt.radiusToKm(10, "aviation") - 18.52) < 1e-6);
+assert.strictEqual(Fmt.radiusLabel(5, "aviation"), "R 5 NM"); assert.strictEqual(Fmt.distUnit("metric"), "KM");
 assert.strictEqual(Fmt.compass(359), "N"); assert.strictEqual(Fmt.compass(90), "E");
 
 // ---- route rows: the city when it fits, otherwise the airport's name, otherwise the city cut at a word; plain capitals only
@@ -56,7 +62,7 @@ assert.strictEqual(Fmt.planeLines({ ...plane, type_name: null, type: null, regis
 // every text row must fit the 14-character text column and use only glyphs that exist, whatever the data looks like
 const NASTY = [ap("\u00c5lesund Airport, Vigra \u2013 \u201cLong\u201d & Odd/Name #1 (Intl)", "\u00c5lesund"), ap("\u5317\u4eac\u9996\u90fd\u56fd\u9645\u673a\u573a", "\u5317\u4eac"),
                ap("A".repeat(80), "B".repeat(80)), ap("x", ""), { iata: "ZZZ" }];
-for (const u of ["metric", "imperial"]) for (const from of NASTY) for (const to of NASTY) {
+for (const u of ["metric", "imperial", "aviation"]) for (const from of NASTY) for (const to of NASTY) {
   const l = Fmt.planeLines({ ...plane, flight: "LONGCALLSIGN", airline: "A VERY LONG AIRLINE NAME", alt_ft: 41000, gs_kt: 999, route: { from, to } }, u, 99, 120, 14);
   assert.ok(l.callsign.length <= 7, "callsign too long");
   for (const k of ["airline", "type", "alt", "spd", "from", "to", "footer"]) {

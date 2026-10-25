@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.55.0
+Two of the owner's requests of 25 October 2026.
+- **Aviation units: nautical miles, knots and feet**, as pilots and air traffic control count, a third choice beside metric and imperial: `sudo zenithboard units aviation`, the installer's units screen, the wall menu, the console (*Wall → Units*, the first steps), a tablet's own (`?units=aviation`, its gear, a preset).
+  - The wall: `ALT 35000 FT`, `SPD 450 KT`, `6.6NM NNE` on its last line; the radius in nautical miles (`WITHIN 10 NM`).
+  - The posts (`sudo zenithboard social units aviation`, or the wall's own): feet and knots; a range record *over 175 NM*, rounded down to 25 NM, never the figure; the map's scale in NM. NM, kt and ft are the ICAO abbreviations, the same in every language.
+  - `/stats` now follows the wall's units for its distances, in imperial and aviation too (the farthest box and line, the chart and the table, in mi or NM); before, they were in km whatever the units. Its altitudes were already in feet with imperial. The reviewed translations kept their words: only *km* became the unit's place.
+- **Hindi (हिन्दी)**, with India's flag: the console, `/stats`, graphs1090's page and the Bluesky posts, 834 strings. Asked first whether Tamil, Hindi and Urdu could reach 90%, the answer was not without a native review, Hindi the easiest; the owner asked for Hindi, published like Swahili before its review. Its review sheet is `docs/translations/hi.csv`. Plurals: one for 0 and 1 (CLDR); large numbers in crore on `/stats` (*35.8 क॰*). Tamil and Urdu are not in.
+- New console strings, in every language: *aviation*, *Aviation*, *NM · kt · ft*; on `/stats` the farthest distance's words now take the unit (`{n} {unit}`).
+
 ## 0.54.18
 The owner's notes from a fresh card and a week of figures (25 October 2026).
 - **A fresh card no longer asks about GitHub's signing key.** The first update listed GitHub's keys, the expired one first, and asked to compare with the *Verified* badge: it read as an error. That question came right after `install.sh` had run as root from the same clone, so it added no check. GitHub's current key (`968479A1…B5690EEEBB952194`, the key ID of `main`'s signature, and the key file as the owner's fresh card read it) now ships in `lib/versions.sh` and is trusted without a question. A key GitHub adds later is still shown and asked about. Expired keys are no longer listed.

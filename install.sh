@@ -88,7 +88,7 @@ wizard_stop() { echo "Stopped before the first questions were all answered. The 
 
 first_run_wizard() {
   grep -q '^LAT=.' "$ZB_CONFIG" && grep -q '^LON=.' "$ZB_CONFIG" && return 0
-  wt_msg "Welcome to ZenithBoard - ADSB Flight Info.\n\nA few questions first:\n  1. Your region (decides whether 978 MHz UAT is offered)\n  2. Units (metric or imperial)\n  3. Where your antenna is\n  4. The default detection radius\n\nThen the menu: 'Start here' takes you through the rest, step by step. Moving from another card with a backup? Answer these anyway: the backup puts its own back." 18 || wizard_stop
+  wt_msg "Welcome to ZenithBoard - ADSB Flight Info.\n\nA few questions first:\n  1. Your region (decides whether 978 MHz UAT is offered)\n  2. Units (metric, imperial or aviation)\n  3. Where your antenna is\n  4. The default detection radius\n\nThen the menu: 'Start here' takes you through the rest, step by step. Moving from another card with a backup? Answer these anyway: the backup puts its own back." 18 || wizard_stop
   settings_region || wizard_stop
   [ "$(cfg_get REGION world)" != us ] || cfg_set UNITS imperial     # a sensible start for the US; the next screen lets you change it
   settings_units || wizard_stop
@@ -104,9 +104,11 @@ settings_region() {
 }
 
 settings_units() {
-  local cur u m i; cur=$(cfg_get UNITS metric); m=OFF; i=OFF; [ "$cur" = imperial ] && i=ON || m=ON
-  u=$(wt_radio "Units for the wall and the radius.\n\nmetric   : distance km, speed km/h, altitude m, climb m/s\nimperial : distance miles, speed knots, altitude ft, climb ft/min" \
-      metric "Metric (km, km/h, m)" "$m" imperial "Imperial (miles, knots, feet)" "$i") || return 1
+  local cur u m i a; cur=$(cfg_get UNITS metric); m=OFF; i=OFF; a=OFF
+  case "$cur" in imperial) i=ON ;; aviation) a=ON ;; *) m=ON ;; esac
+  # 0.55.0: aviation, as on a pilot's or a controller's screen (the owner, 25 October 2026)
+  u=$(wt_radio "Units for the wall, the radius and the posts.\n\nmetric   : distance km, speed km/h, altitude m\nimperial : distance miles, speed knots, altitude ft\naviation : distance nautical miles (NM), speed knots (kt), altitude feet (ft): the way pilots and air traffic control count" \
+      metric "Metric (km, km/h, m)" "$m" imperial "Imperial (miles, knots, feet)" "$i" aviation "Aviation (NM, kt, ft)" "$a") || return 1
   cfg_set UNITS "$u"
 }
 
@@ -153,7 +155,7 @@ settings_color() {
 presets_menu() {
   local c n v out pairs
   while true; do
-    c=$(wt_menu "Presets: a second screen opens  http://PI:8080/?p=NAME  and gets these choices, with no long address to type.\nKeys: $PRESET_KEYS   (mode dots|flap, units metric|imperial, flags 0|1)\n\n$(preset_list | head -8)" \
+    c=$(wt_menu "Presets: a second screen opens  http://PI:8080/?p=NAME  and gets these choices, with no long address to type.\nKeys: $PRESET_KEYS   (mode dots|flap, units metric|imperial|aviation, flags 0|1)\n\n$(preset_list | head -8)" \
       add "Add or change a preset" \
       del "Forget a preset" \
       back "Return to the previous menu") || return 0
