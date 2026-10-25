@@ -70,6 +70,9 @@ class ActionsTest(unittest.TestCase):
         self.assertEqual(actions.build("adsbx-stats", {"value": "off"}), ["adsbx-stats", "off"])
         self.assertEqual(set(), {"long", "ask"} - set(actions.flags("adsbx-stats")))
         self.assertEqual(actions.catalog()["adsbx-stats"]["section"], "receiver")
+        # 0.54.8: switching sharing or the picture on may install Node or Pillow first, longer than the five minutes
+        self.assertIn("long", actions.flags("social"))
+        self.assertIn("long", actions.flags("social-look"))
         for v in ("url", "status", "on;id", ""):
             with self.assertRaises(actions.Refused, msg=v):
                 actions.build("adsbx-stats", {"value": v})

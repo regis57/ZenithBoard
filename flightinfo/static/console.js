@@ -248,7 +248,10 @@ window.ZBI18N.start({ part: "console" }, function () {
           stopPhoneSignin(); box.hidden = false;
           // a page left open renews its code a few times, then waits for a click (no endless requests)
           if (PS.renewals++ < 5 && document.visibilityState === "visible") phoneSignin();
-          else { qr.hidden = true; note.textContent = t("The code is out of date."); count.textContent = ""; $("gate-code").textContent = ""; }
+          else {
+            qr.hidden = true; count.textContent = ""; $("gate-code").textContent = ""; note.textContent = t("The code is out of date.") + " ";
+            note.appendChild(h("button", { type: "button", "class": "btn", text: t("New code"), onclick: function () { PS.renewals = 0; phoneSignin(); } }));
+          }
         }
       }, 1000);
       PS.poll = setInterval(function () {
@@ -519,7 +522,7 @@ window.ZBI18N.start({ part: "console" }, function () {
   // the output of a button, under it in its own card, as it comes
   function inlineTerm(j) {
     var pre = h("pre", { text: termText(j) }), st = pillOf(j);
-    var links = j.state === "done" && (j.action === "social-test" || j.action === "summary-test") ? h("div", { "class": "actions" },
+    var links = j.state === "done" && j.rc === 0 && (j.action === "social-test" || j.action === "summary-test") ? h("div", { "class": "actions" },
       h("a", { "class": "btn", href: "/social/preview", target: "_blank", rel: "noopener", text: j.action === "summary-test" ? postName(1) : t("The picture ↗") }),
       j.action === "summary-test" ? ["2", "3", "4"].map(function (n) { return h("a", { "class": "btn", href: "/social/preview" + n, target: "_blank", rel: "noopener", text: postName(n) }); }) : null) : null;
     // 0.45.1: Tailscale's sign-in link, as a button, while it waits for it (only its own address is taken)
@@ -652,8 +655,8 @@ window.ZBI18N.start({ part: "console" }, function () {
           row(t("Region"), t("The United States adds the optional 978 MHz UAT step (menu 1)"), seg("region", ["world", "us"], c.REGION || "world", [t("World"), t("United States")])),
           h("div", { "class": "row" }, h("div", { "class": "what" }, h("b", { text: t("Position") }), h("span", { text: t("Decimal degrees, altitude in metres. Written everywhere it is stored; never shown on the wall or in a post.") })),
             h("div", { "class": "fields" }, field(t("Latitude"), lat), field(t("Longitude"), lon), field(t("Alt. m"), alt),
-              h("button", { type: "button", "class": "btn", text: S.pending.location ? t("Applying…") : t("Apply"), disabled: S.pending.location ? true : null,
-                onclick: function () { run("location", { lat: lat.value.trim(), lon: lon.value.trim(), alt: alt.value.trim() }); } })))
+              [lat, lon].reduce(function (b, inp) { return onEnter(inp, b); }, onEnter(alt, h("button", { type: "button", "class": "btn", text: S.pending.location ? t("Applying…") : t("Apply"), disabled: S.pending.location ? true : null,
+                onclick: function () { run("location", { lat: lat.value.trim(), lon: lon.value.trim(), alt: alt.value.trim() }); } })))))
         ], "w6"),
         card(t("Measure"), "chart", null, [
           row(t("Statistics"), t("A sample every 15 minutes, 30 days kept, about 30 KB a day"), [sw("stats", on(c.STATS)), on(c.STATS) ? h("a", { href: "/stats", target: "_blank", rel: "noopener", text: t("Open ↗") }) : null]),
@@ -680,7 +683,7 @@ window.ZBI18N.start({ part: "console" }, function () {
           row(t("Place name"), t("Two or three words, as the posts say it: a town name alone gets the posts' word for above (above Trémery); empty: no place. Never the receiver's position."),
             textApply("social-area", c.SOCIAL_AREA, 40, t("none"), function (v) { return v.replace(/\s+/g, " ").trim() || "none"; }, "none")),
           row(t("Sharing radius"), t("Kilometres; an aircraft inside it is a candidate. Not the wall's radius."), numberApply("social-radius", c.SOCIAL_RADIUS_KM, 1, 200)),
-          row(t("What is worth a post"), t("Everything: every crossing, the special ones first"), rulesChips(c.SOCIAL_RULES)),
+          row(t("What is worth a post"), c.SOCIAL_RULES === "all" || c.SOCIAL_RULES === "any" ? t("Everything: every crossing, the special ones first") : t("Only the kinds lit; Everything posts every crossing"), rulesChips(c.SOCIAL_RULES)),
           row(t("Least time between posts"), t("Minutes; 0 = every crossing posted once"), numberApply("social-gap", c.SOCIAL_GAP_MIN, 0, 1440)),
           row(t("Town names on the maps"), t("From GeoNames, made on the Pi (a few minutes); off: the lists shipped with ZenithBoard"), sw("social-places", on(c.SOCIAL_PLACES))),
           h("div", { "class": "actions" }, btn(t("Try a post (posts nothing)"), "social-test"), h("a", { "class": "btn", href: "/social/preview", target: "_blank", rel: "noopener", text: t("Last picture ↗") }), btn(t("Status"), "social-status"))
@@ -704,6 +707,8 @@ window.ZBI18N.start({ part: "console" }, function () {
         card(t("Summaries"), "chart", t("From the statistics, at their time on the Pi's clock; the posts go in one queue, two minutes apart. Posts: 1 the period, 2 cargo and business jets, 3 military, 4 general aviation."),
           [summaryRow("daily", t("24 hours")), summaryRow("weekly", t("The week")), summaryRow("monthly", t("30 days")),
             on(c.STATS) ? null : h("p", { "class": "note", text: t("Statistics are off: no summary can be made until they are on (Receiver).") }),
+            // the audit of 22-23 October 2026: they could be switched on with no account, or sharing off, and nothing said they would not go out
+            summariesBlocked(acct, c),
             h("div", { "class": "actions" }, btn(t("All summaries"), "summaries"),
               ["2", "3", "4"].map(function (n) { return h("a", { "class": "btn", href: "/social/preview" + n, target: "_blank", rel: "noopener", text: postName(n) }); })),
             h("p", { "class": "note", text: t("Each summary goes once at its time: moved to later today, it goes today; set to a time already past, from the next one. Why one did not go out: sudo zenithboard social summary why") }),
@@ -817,17 +822,24 @@ window.ZBI18N.start({ part: "console" }, function () {
     return h("button", { type: "button", "class": "chip" + (lit ? " on" : ""), text: text, onclick: go(section) });
   }
   function field(label, input) { return h("div", { "class": "field" }, h("label", { text: label }), input); }
+  // Enter in a field does what its button does (the audit: only a click applied it)
+  function onEnter(inp, button) {
+    inp.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" && !e.isComposing && !button.disabled) { e.preventDefault(); button.click(); }
+    });
+    return button;
+  }
   function numberApply(action, value, min, max) {
     var inp = h("input", { type: "number", value: value, min: min, max: max, "aria-label": (S.catalog[action] || {}).label });
-    return [inp, h("button", { type: "button", "class": "btn", text: S.pending[action] ? "…" : t("Apply"), disabled: S.pending[action] ? true : null,
-      onclick: function () { if (String(inp.value) !== String(value)) run(action, { value: String(inp.value) }); } })];
+    return [inp, onEnter(inp, h("button", { type: "button", "class": "btn", text: S.pending[action] ? "…" : t("Apply"), disabled: S.pending[action] ? true : null,
+      onclick: function () { if (String(inp.value) !== String(value)) run(action, { value: String(inp.value) }); } }))];
   }
   // 0.50.0: a line of text and its Set; prep turns what was typed into the value sent (empty: the word for none)
   function textApply(action, value, max, placeholder, prep, none) {
     var cur = String(value || "");
     var inp = h("input", { type: "text", value: cur === none ? "" : cur, maxlength: max, placeholder: placeholder || null, "aria-label": t((S.catalog[action] || {}).label || action) });
-    return [inp, h("button", { type: "button", "class": "btn", text: S.pending[action] ? "…" : t("Set"), disabled: S.pending[action] ? true : null,
-      onclick: function () { var v = prep(inp.value); if (v !== (cur || none)) run(action, { value: v }); } })];
+    return [inp, onEnter(inp, h("button", { type: "button", "class": "btn", text: S.pending[action] ? "…" : t("Set"), disabled: S.pending[action] ? true : null,
+      onclick: function () { var v = prep(inp.value); if (v !== (cur || none)) run(action, { value: v }); } }))];
   }
   function rulesChips(cur) {
     var five = ["military", "helicopter", "heavy", "rare", "farthest"], every = cur === "all" || cur === "any";   // "any": its name before 0.19.1
@@ -928,7 +940,12 @@ window.ZBI18N.start({ part: "console" }, function () {
         h("button", { type: "button", "class": "primary", text: S.pending["social-templates"] ? t("Save") + "…" : t("Save"), disabled: S.pending["social-templates"] ? true : null,
           onclick: function () {
             var v = text();
-            run("social-templates", { text: v || "none" }, { card: title }).then(function (j) {
+            // an emptied field deletes them all: through the button that asks first, not a silent "none"
+            if (!v) {
+              if (!(S.templates || "").trim()) return toast(t("Write a template first."), true);
+              return run("social-templates-delete", {}, { card: title }).then(function (j) { if (j && j.rc === 0) { S.tplDraft = null; loadState(); } });
+            }
+            run("social-templates", { text: v }, { card: title }).then(function (j) {
               if (!j || j.rc !== 0) return;
               S.templates = v;
               if (S.tplDraft === null || S.tplDraft === undefined || text() === v) {   // a draft typed meanwhile stays
@@ -942,6 +959,11 @@ window.ZBI18N.start({ part: "console" }, function () {
         S.templates && S.templates.trim() ? tplButton(t("Delete them all"), "social-templates-delete", "danger") : null,
         S.templatesBefore ? tplButton(t("Put back the previous ones"), "social-templates-undo", "btn") : null)
     ], "w12");
+  }
+  function summariesBlocked(acct, c) {
+    if (!acct) return h("p", { "class": "note", text: t("No Bluesky account yet: no summary goes out until one is set up (Sharing → Bluesky).") });
+    if (!on(c.SOCIAL)) return h("p", { "class": "note", text: t("Posting is off: no summary goes out until “Post the aircraft overhead” is on (Sharing → Bluesky).") });
+    return null;
   }
   function summaryRow(p, title) {
     var c = S.cfg, k = "SOCIAL_" + p.toUpperCase(), at = c[k + "_AT"] || "", parts = (c[k + "_PARTS"] || "1").split(","), lit = on(c[k]);
@@ -957,10 +979,10 @@ window.ZBI18N.start({ part: "console" }, function () {
       h("div", { "class": "ctl" },
         sw("summary", lit, { period: p }, "summary-" + p, title),
         dIn, tIn,
-        h("button", { type: "button", "class": "btn", text: S.pending[keyAt] ? "…" : t("Set"), disabled: S.pending[keyAt] ? true : null, onclick: function () {
+        onEnter(tIn, h("button", { type: "button", "class": "btn", text: S.pending[keyAt] ? "…" : t("Set"), disabled: S.pending[keyAt] ? true : null, onclick: function () {
           var when = (dIn ? String(dIn.value).trim() + " " : "") + tIn.value;
           if (when !== at) run("summary-at", { period: p, when: when }, { key: keyAt });
-        } }),
+        } })),
         h("div", { "class": "chips" }, ["1", "2", "3", "4"].map(function (n) {
           var has = parts.indexOf(n) >= 0;
           return h("button", { type: "button", "class": "chip" + (has ? " on" : "") + (n === "1" ? " static" : ""), text: n, title: n === "1" ? t("The first always goes") : null,
@@ -1016,7 +1038,7 @@ window.ZBI18N.start({ part: "console" }, function () {
     return h("div", { "class": "list" }, S.sessions.sessions.map(function (s) {
       var me = s.id === S.sessions.you;
       return h("div", { "class": "li" }, h("div", null, h("b", { text: s.label + (me ? " · " + t("this one") : "") }),
-        h("small", { text: t("{how} · since {since} · seen {seen}", { how: s.kind === "paired" ? t("paired") : t("password"), since: ago(s.created), seen: ago(s.seen) }) })),
+        h("small", { text: t("{how} · since {since} · seen {seen}", { how: s.kind === "paired" ? t("paired") : s.kind === "approved" ? t("by the phone") : t("password"), since: ago(s.created), seen: ago(s.seen) }) })),
         me ? h("span", { "class": "pill ok", text: t("you") }) : h("button", { type: "button", "class": "btn", text: t("Sign out"), onclick: function () {
           api("sessions/revoke", { body: { id: s.id } }).then(function () { loadSessions(); });
         } }));
@@ -1103,7 +1125,7 @@ window.ZBI18N.start({ part: "console" }, function () {
       termPre = h("pre"); termPill = h("span", { "class": "pill" });
       body.appendChild(h("div", { "class": "term" }, h("div", { "class": "th" }, ico("terminal"), h("b", { text: j.label }), termPill), termPre));
       drawTerm();
-      if (j.state === "done" && (j.action === "social-test" || j.action === "summary-test")) {
+      if (j.state === "done" && j.rc === 0 && (j.action === "social-test" || j.action === "summary-test")) {
         body.appendChild(h("div", { "class": "actions" }, h("a", { "class": "btn", href: "/social/preview", target: "_blank", rel: "noopener", text: j.action === "summary-test" ? postName(1) : t("The picture ↗") }),
           j.action === "summary-test" ? ["2", "3", "4"].map(function (n) { return h("a", { "class": "btn", href: "/social/preview" + n, target: "_blank", rel: "noopener", text: postName(n) }); }) : null));
       }
@@ -1140,7 +1162,6 @@ window.ZBI18N.start({ part: "console" }, function () {
   }
   function closeModal() { $("modal").hidden = true; $("modal-panel").innerHTML = ""; S.wizardOpen = false; }
 
-  // ---- the wizard: the first time, five short steps; only what differs from the Pi's settings is applied
   // ---- the first steps (0.39.0; 0.41.0: the antenna, the feeders, sharing, the phone; open again at any time from
   // System or the overview). Only what differs from the Pi's settings is applied, in the review's order.
   var FEEDERS = [["adsbexchange_feed", t("ADSB Exchange"), "https://www.adsbexchange.com/myip/"], ["piaware", t("FlightAware"), "https://www.flightaware.com/adsb/piaware/claim"],
@@ -1148,7 +1169,7 @@ window.ZBI18N.start({ part: "console" }, function () {
   function setupGaps() {
     var c = S.cfg, f = S.facts, out = [];
     if (!(Number(c.LAT) || Number(c.LON))) out.push(t("The antenna's position is not set"));
-    if (!f.decoder) out.push(t("No decoder yet: sudo zenithboard menu → 1 ADSB"));
+    if (!f.decoder) out.push(t("No decoder yet: sudo zenithboard menu → 1 ADS-B → 1 Decoder and networks"));
     if (!on(c.STATS)) out.push(t("Statistics are off"));
     if (f.watchdog !== "on" || f.netwatch !== "on") out.push(t("The watchdogs are not both on"));
     return out;
@@ -1173,10 +1194,10 @@ window.ZBI18N.start({ part: "console" }, function () {
           h("p", { "class": "lead", text: t("ZenithBoard's settings from this browser. The menu and the zenithboard command stay as they are; each change here runs the same command, and you see what it prints.") }),
           h("ul", { "class": "ticks" },
             h("li", { text: t("This Pi: {model}, ZenithBoard {version}", { model: f.model || "Raspberry Pi", version: S.session.version || "" }) }),
-            h("li", { text: t("Decoder: {name}", { name: f.decoder || t("none yet (sudo zenithboard menu → 1 ADSB)") }) }),
+            h("li", { text: t("Decoder: {name}", { name: f.decoder || t("none yet (sudo zenithboard menu → 1 ADS-B → 1 Decoder and networks)") }) }),
             h("li", { text: t("Feeding: {list}", { list: feeders.join(", ") || t("nobody yet") }) }),
             h("li", { text: t("Answers your home network only; uninstalling, Wi-Fi and passwords stay in the terminal") })),
-          h("p", { "class": "note", text: t("Seven short steps, then a review: nothing changes before you apply it. Open them again at any time: System → First steps again.") }),
+          h("p", { "class": "note", text: t("{n} short steps, then a review: nothing changes before you apply it. Open them again at any time: System → First steps again.", { n: STEPS.length - 2 }) }),
           h("p", { "class": "note", text: t("Moving from an old card? Restore its backup first, in the terminal (sudo zenithboard backup restore FILE): the settings, what was on, the statistics and the networks' identities come back, and these steps are then only a check.") })];
       },
       function () {
@@ -1202,7 +1223,7 @@ window.ZBI18N.start({ part: "console" }, function () {
       function () {
         var hh = host();
         return [h("h3", { text: t("Feeding the networks") }),
-          h("p", { "class": "lead", text: t("Each network is added in the terminal: sudo zenithboard menu → 1 ADSB. Their own installers ask questions as they go (a station name, an e-mail, a sharing key) and give a claim link or code to keep: the console runs commands that ask nothing, and keeps no key.") }),
+          h("p", { "class": "lead", text: t("Each network is added in the terminal: sudo zenithboard menu → 1 ADS-B → 1 Decoder and networks. Their own installers ask questions as they go (a station name, an e-mail, a sharing key) and give a claim link or code to keep: the console runs commands that ask nothing, and keeps no key.") }),
           h("div", { "class": "list" }, [["readsb", t("Decoder (readsb)")], ["dump1090_fa", t("Decoder (dump1090-fa)")]].filter(function (x) { return f["svc_" + x[0]] !== undefined; }).concat(FEEDERS).map(function (x) {
             var st = svcWord(x[0]), url = x[2] ? (x[2][0] === ":" ? "http://" + hh + x[2] + "/" : x[2]) : null;
             return h("div", { "class": "li" }, h("div", null, h("b", { text: x[1] }), h("small", { text: word(st) })),
@@ -1231,7 +1252,8 @@ window.ZBI18N.start({ part: "console" }, function () {
             t("No Bluesky account on this Pi: it is set up in the terminal (it asks for an app password): sudo zenithboard social setup. Skip this step until then.") }),
           wrow(t("Summary of the last 24 hours"), wsw("sum_daily"), t("Every day at its time (21:00 unless changed in Sharing), from the statistics.")),
           wrow(t("Summary of the week"), wsw("sum_weekly"), t("Sunday 19:00 unless changed; four posts, two minutes apart.")),
-          W.stats !== "on" && (W.sum_daily === "on" || W.sum_weekly === "on") ? h("p", { "class": "note", text: t("They need the statistics: switch them on in step 5.") }) : null];
+          W.stats !== "on" && (W.sum_daily === "on" || W.sum_weekly === "on") ? h("p", { "class": "note", text: t("They need the statistics: switch them on in step 5.") }) : null,
+          W.sum_daily === "on" || W.sum_weekly === "on" ? summariesBlocked(acct, S.cfg) : null];
       },
       function () {
         return [h("h3", { text: t("Your phone, and this computer") }),

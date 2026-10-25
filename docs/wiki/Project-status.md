@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **23 October 2026**, version **0.54.7**.
+Last updated: **25 October 2026**, version **0.54.8**.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -64,17 +64,8 @@ The audit (build, tests, security, novice journeys, translations) ran on 0.53.3.
 
 **Before starting a batch:** read the CHANGELOG from 0.54.7 up, `git log`, and the open pull requests; then grep each item below in the code. Line numbers are those of 0.53.3 and have moved; an item already fixed is crossed out of this list in the same pull request that fixes the rest. The owner's standing instruction (23 October 2026): do the low-severity findings batch by batch, novice journeys first, merge each through the squash merge, report once per batch.
 
-**Batch 1: the console's words** (translated into the 21 languages, `python3 tools/i18n.py sync LANG`, `review`, `check`)
-- The *Summaries* card turns them on with no account and sharing off, and says nothing (`console.js` ~1218, and the wizard's step 7): one note.
-- *Try a post* on an empty sky ends in *exit 1* with a *The picture* button that leads to a bare *not found*: the button only when the exit code is 0 (also in the drawer, ~1093); the 404 of `/social/preview` explained; the wiki's advice in `social.py` ~1697.
-- The line *Everything: every crossing* under the five default rules is static (`console.js` ~671): show it only when the rule is `every`.
-- *Seven short steps* sits under a header counting 9 screens (`console.js` ~1166, comment ~1130): a `{n}` placeholder.
-- Phone sign-in: *The code is out of date.* has no button after five renewals (`console.js` ~251); a computer signed in by a phone is listed *password* (`console.js` ~1007, `console.py` ~703): *by phone*; a pairing link made in the browser dies when the wall restarts and the 401 names only the terminal (`console.py` ~744); the pairing window names Safari for every phone.
-- Saving an emptied templates field runs `social template set -- none` with no confirmation, beside the Delete button that asks (`console.js` ~919): route it to the delete.
-- *Menu 1 ADSB* in three console strings (`console.js` ~1138, 1163, 1192) and in the README (lines ~456, 673): *1 ADS-B → 1 Decoder and networks*.
-- `social` and `social-look` are not `long` in `console_actions.py` (~83), though the first activation may install Node and Pillow: not measured; check on the Pi first.
-- Enter in a text or number field of the console does nothing (`console.js` ~808, 814, `summaryRow`): one helper, no new string, a line in the wiki.
-- Optional (a majority of the reviewers against): the *Finish setting up* card counting stats off and no watchdog as gaps (`console.js` ~1135); the off `/stats` page offering only the SSH command (`stats.html` ~30); the gear panel pointing at `zenithboard config` (`index.html` ~38).
+**Batch 1: the console's words**: shipped in 0.54.8. Left, optional (a majority of the reviewers against):
+- the *Finish setting up* card counting stats off and no watchdog as gaps (`console.js` ~1135); the off `/stats` page offering only the SSH command (`stats.html` ~30); the gear panel pointing at `zenithboard config` (`index.html` ~38).
 
 **Batch 2: the Bluesky menu and wizard, in the terminal** (English only)
 - The Bluesky menu has 14 entries plus *Return*, which falls under the fold (`social.sh` ~664, 678): at least *Return* first or a shorter header, ideally grouped like the console; a test counting the entries of every `wt_menu`.

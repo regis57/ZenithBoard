@@ -527,7 +527,7 @@ case "${1:-}" in
     esac ;;
   region)
     case "${2:-}" in
-      world|us) root_or_die; cfg_set REGION "$2"; echo "Region: $2. $( [ "$2" = us ] && echo "Menu 1 ADSB now offers the 978 MHz UAT step (needs a 2nd dongle)." || echo "1090 MHz only." )" ;;
+      world|us) root_or_die; cfg_set REGION "$2"; echo "Region: $2. $( [ "$2" = us ] && echo "Menu 1 ADS-B → 1 Decoder and networks now offers the 978 MHz UAT step (needs a 2nd dongle)." || echo "1090 MHz only." )" ;;
       "") echo "Region: $(cfg_get REGION world)" ;;
       *) die "Usage: zenithboard region world|us" ;;
     esac ;;

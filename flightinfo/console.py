@@ -742,8 +742,11 @@ class Console(object):
         if not self.pairs.redeem(body.get("token"), label):
             self.limiter.miss(ip)
             audit("pairing link refused from %s" % ip)
-            return Reply(401, {"error": "This pairing code is used or out of date: make a new one (sudo zenithboard console pair). "
-                                        "It is valid five minutes, once."})
+            # the audit of 22-23 October 2026: a code made in the browser dies when the wall restarts, and the
+            # message named only the terminal
+            return Reply(401, {"error": "This pairing code is used or out of date (or the wall restarted since): make a new one, "
+                                        "on a computer signed in (System → Signed in → Pair a phone) or over SSH "
+                                        "(sudo zenithboard console pair). It is valid five minutes, once."})
         token, rec = self.sessions.create("paired", label)
         audit("paired: %s %s from %s" % (label, rec["id"], ip))
         return Reply(200, {"ok": True}, cookie=_cookie(token, PAIRED_LIFE_S))
