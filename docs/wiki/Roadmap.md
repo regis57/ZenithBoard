@@ -81,7 +81,11 @@ Swahili and Hindi are published without a native review, said as such in [Transl
 
 What is asked during the freeze, kept here so that nothing is lost, and done after 1.0:
 
-* *(nothing yet)*
+* **Telegram alerts, from the Pi** (asked by the owner, 25 October 2026). A message in a private Telegram chat or group when:
+  * an aircraft inside the social sharing radius is seen, the same rule as the Bluesky crossings;
+  * an aircraft, anywhere the antenna receives, broadcasts the emergency squawk codes 7500, 7600 or 7700.
+
+  At most one message per flight, the repeat rule Bluesky applies. The squawk alerts go to the owner's chat only and are never published: an emergency is not a fact to broadcast, and the crew and the rescue services are not an audience. The Pi reads `aircraft.json` itself; the bot token lives in a file readable by the service's user alone and is set up from the terminal (`zenithboard telegram setup`, to be written), then tuned in the web console. The proof of concept is in French and English; every other console language follows with a native review, as the translation rule asks. Nothing is built before 1.0 is out: a service change restarts the hands-off clock.
 
 ## Next — once the above is proven
 
