@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.99.1 — release candidate, fix
+- **The console no longer reloads at each tap on a section** (the owner's iPhone, 27 October 2026). Through Tailscale, away from home, each section tapped in the bottom bar reloaded the whole page, the home-screen app and a Chrome tab alike. It showed as Chrome's progress bar, then a second of black. A computer only changed the `#` of the address, and `/stats` stayed steady. The page now shows the section itself and writes the `#` without the browser navigating. Back and forward still go through the sections, and a long press still opens one in a new tab.
+- **The bottom bar's labels stay in their tabs**: *VUE D'ENSEMBLE* ran off the left edge of the iPhone, and *SYSTÈME* off the right.
+- A fix for the console only, so the hands-off clock goes on.
+
 ## 0.99.0 — release candidate for 1.0
 - **Feature freeze** (the owner, 25 October 2026, 13:42). The code is 0.55.2's; from here, fixes only (0.99.x), and what is asked meanwhile waits for 1.1 ([Roadmap → The freeze](https://github.com/regis57/ZenithBoard/wiki/Roadmap#the-freeze), *Waiting for 1.1*). 1.0 comes once the open caveats are lifted, a fresh card has been done from the wiki alone, and the reference Pi has run a month hands-off on this candidate: **until 25 November 2026** (the owner, the same day: the release candidate runs one month).
 

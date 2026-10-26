@@ -266,7 +266,10 @@ input.day { width: 4.5em; }
   .tabs { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); position: fixed; left: 0; right: 0; bottom: 0; z-index: 5;
     height: calc(var(--tabs) + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom);
     background: rgba(8, 8, 8, .96); border-top: 1px solid var(--line2); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
-  .tabs a { flex-direction: column; justify-content: center; gap: 4px; font-size: 9px; letter-spacing: .06em; border-radius: 0; position: relative; }
+  .tabs a { flex-direction: column; justify-content: center; gap: 4px; font-size: 9px; letter-spacing: .06em; border-radius: 0; position: relative;
+    min-width: 0; padding-left: 2px; padding-right: 2px; }
+  /* 0.99.1: "VUE D'ENSEMBLE" ran off the left edge of an iPhone and "SYSTÈME" off the right; a label now stays in its tab */
+  .tabs a span { max-width: 100%; text-align: center; overflow-wrap: anywhere; hyphens: auto; line-height: 1.2; }
   .tabs a.on { color: var(--on); }
   .tabs a.on::before { content: ""; position: absolute; top: 0; left: 30%; right: 30%; height: 2px; background: var(--on); box-shadow: 0 0 6px var(--on); }
   .tabs a .dot { position: absolute; top: 8px; right: 26%; margin: 0; }
