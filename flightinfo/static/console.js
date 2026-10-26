@@ -326,6 +326,7 @@ window.ZBI18N.start({ part: "console" }, function () {
     }).catch(function () { /* the wall restarting: the next poll draws */ });
   }
   window.addEventListener("hashchange", route);
+  window.addEventListener("popstate", route);      // back and forward through the sections (0.99.1: pushState)
   function route() {
     var want = (location.hash || "#overview").slice(1);
     if (want === "first-steps") { history.replaceState(null, "", location.pathname + "#overview"); want = "overview"; setTimeout(S.openWizard, 0); }
@@ -342,7 +343,7 @@ window.ZBI18N.start({ part: "console" }, function () {
       var id = sec[0], busy = Object.keys(S.pending).some(function (k) { return S.catalog[k] && S.catalog[k].section === id; });
       [navEl, tabs].forEach(function (where) {
         var short = where === tabs && id === "reliability" ? t("Reliable") : t(sec[1]);
-        where.appendChild(h("a", { href: "#" + id, "class": id === S.section ? "on" : "", "aria-current": id === S.section ? "page" : null },
+        where.appendChild(h("a", { href: "#" + id, "class": id === S.section ? "on" : "", "aria-current": id === S.section ? "page" : null, onclick: showSection(id) },
           ico(SECTION_ICON[id]), h("span", { text: short }), busy ? h("i", { "class": "dot" }) : null));
       });
     });
@@ -550,7 +551,21 @@ window.ZBI18N.start({ part: "console" }, function () {
     ["adsbexchange_feed", t("ADSB Exchange")], ["adsbexchange_stats", t("ADSB Exchange stats")], ["piaware", t("FlightAware")], ["fr24feed", t("Flightradar24")], ["pfclient", t("Plane Finder")],
     ["zenithboard_flightinfo", t("The wall")], ["zenithboard_social", t("Bluesky posts")], ["graphs1090", "graphs1090"], ["lighttpd", t("Receiver map's web server")]
   ];
-  function go(section) { return function () { location.hash = "#" + section; }; }
+  function go(section) { return showSection(section); }
+  // 0.99.1 (the owner's recordings, 27 October 2026): on an iPhone, through Tailscale, every tap on a section reloaded
+  // the whole page (Chrome's progress bar, a second of black), where a computer only changed the address's #. The
+  // section is now shown by the page itself, the address updated without the browser navigating at all; the link
+  // stays a link (a long press, a new tab).
+  function showSection(section) {
+    return function (e) {
+      if (e && (e.metaKey || e.ctrlKey || e.shiftKey || e.button > 0)) return;     // a new tab or window: the browser's
+      if (e) e.preventDefault();
+      if (location.hash !== "#" + section) {
+        try { history.pushState(null, "", location.pathname + "#" + section); } catch (err) { location.hash = "#" + section; return; }
+      }
+      route();
+    };
+  }
 
   // ---- 0.53.0: the console as an app (the owner, 22 October 2026). The manifest and icons let a browser install
   // it; Chrome's own Install button needs https, so over the Pi's plain http home address the card says which menu

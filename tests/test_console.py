@@ -675,6 +675,21 @@ class AppTest(unittest.TestCase):
         self.assertIn('register("/console-sw.js", { scope: "/console" })', js)
         self.assertIn("window.isSecureContext", js)
 
+    def test_a_section_is_shown_without_the_browser_navigating(self):
+        # 0.99.1: on the owner's iPhone, through Tailscale, every tap on a section reloaded the page
+        with open(os.path.join(self.STATIC, "console.js"), encoding="utf-8") as fh:
+            js = fh.read()
+        i = js.index("function nav()")
+        self.assertIn("onclick: showSection(id)", js[i:i + 1200], "both the side bar and the bottom tabs")
+        j = js.index("function showSection(")
+        body = js[j:j + 800]
+        self.assertIn("e.preventDefault()", body)
+        self.assertIn("history.pushState(null, \"\", location.pathname + \"#\" + section)", body)
+        self.assertIn("route();", body)
+        self.assertIn('addEventListener("popstate", route)', js, "back and forward still change the section")
+        with open(os.path.join(self.STATIC, "console.css"), encoding="utf-8") as fh:
+            self.assertIn("overflow-wrap: anywhere", fh.read(), "a long label stays in its tab")
+
     def test_served_with_their_types_and_the_console_headers(self):
         import http.client, threading
         import server

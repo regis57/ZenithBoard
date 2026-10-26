@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **25 October 2026**, version **0.99.0**, release candidate for 1.0.
+Last updated: **25 October 2026**, version **0.99.1**, release candidate for 1.0.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -88,6 +88,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 27 October 2026, 00:44 | The owner's iPhone, away from home through Tailscale: the console blinked, every tap on a section reloading the whole page (Chrome's progress bar, a second of black), the home-screen app and the Chrome tab alike; `/stats` steady, the computer steady, the wall's server not restarting (its log). The bottom tabs also ran off the screen in French. 0.99.1 shows a section without the browser navigating, and keeps each label in its tab. A console fix: the hands-off clock goes on |
 | 25 October 2026, 16:52 | The owner: **the release candidate runs for one month** to validate 1.0. The hands-off clock of 13:51 now ends on **25 November 2026** (it was two to four weeks); 1.0 that day at the earliest, if the open caveats are lifted. Said on GitHub (README, wiki) and on [zenithboard.app](https://zenithboard.app/) |
 | 25 October 2026, 14:06 | The owner: an update run from the console and a computer signed in by the phone, done several times today on two Pis. The web console's caveat is lifted |
 | 25 October 2026, 13:51 CET | **The hands-off clock starts** (the owner): the reference Pi on 0.99.0, left alone from now. Two weeks on 8 November, four on 22 November. The same minute, CodeQL's two notes on the tests (a file read without `with`, in `tests/test_server.py`) fixed in the tests alone: nothing for the Pi, the clock goes on |

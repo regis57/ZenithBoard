@@ -117,7 +117,7 @@ stays in English, like the menu. A word that reads wrong: [Translating](Translat
 
 ## What it does
 
-One section on screen at a time: a side bar on a computer, tabs at the bottom of a phone. The side bar's foot links to the wall, the statistics page, the project's site [zenithboard.app](https://zenithboard.app/) (*Learn more ↗*, 0.53.2) and the running version's release notes.
+One section on screen at a time: a side bar on a computer, tabs at the bottom of a phone. A section is shown by the page itself, the address's `#` written without the browser navigating (0.99.1: on an iPhone through Tailscale each tap used to reload the whole page); back and forward go through the sections. The side bar's foot links to the wall, the statistics page, the project's site [zenithboard.app](https://zenithboard.app/) (*Learn more ↗*, 0.53.2) and the running version's release notes.
 
 | Section | What is in it |
 |---|---|
