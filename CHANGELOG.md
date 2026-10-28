@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.99.2 — release candidate, fix
+- **A callsign's other leg is no longer posted as the route** (the owner's post of 28 October 2026). CCA897, over the Moselle and heading south-west, was posted *Madrid → São Paulo*. The callsign flies Beijing → Madrid → São Paulo, and the aircraft was still on the first leg (Google: Beijing 14:49, Madrid 20:09). The check took a point 1 240 km short of Madrid for part of the long second leg, because a fifth of its 8 400 km made a very wide corridor. An aircraft on a leg is now never farther from the destination than the origin is, nor farther from the origin than the destination is, beyond a 120 km detour. The other leg is dropped, and hexdb's second opinion can give the right one (*Beijing → Madrid*), or none.
+- **The altitude whole in a 12-letter row.** Beside the flags, *ALT  38000 FT* lost its T (*ALT  38000 F* on the same post). A row too long now drops a space before it drops a letter (*ALT  38000FT*). The wall and the posts, in feet (imperial and aviation) and in km/h above 999.
+- These touch what the posts say, so by the freeze's rule this release restarts the hands-off clock.
+
 ## 0.99.1 — release candidate, fix
 - **The console no longer reloads at each tap on a section** (the owner's iPhone, 27 October 2026). Through Tailscale, away from home, each section tapped in the bottom bar reloaded the whole page, the home-screen app and a Chrome tab alike. It showed as Chrome's progress bar, then a second of black. A computer only changed the `#` of the address, and `/stats` stayed steady. The page now shows the section itself and writes the `#` without the browser navigating. Back and forward still go through the sections, and a long press still opens one in a new tab.
 - **The bottom bar's labels stay in their tabs**: *VUE D'ENSEMBLE* ran off the left edge of the iPhone, and *SYSTÈME* off the right.
