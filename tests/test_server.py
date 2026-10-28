@@ -288,6 +288,19 @@ class OnlyHexTest(unittest.TestCase):
 
 
 class RouteTests(unittest.TestCase):
+    def test_a_callsign_s_other_leg_is_not_this_flight(self):
+        # 0.99.2, the owner's post of 28 October 2026: CCA897 (Beijing → Madrid → São Paulo) over the Moselle, heading
+        # south-west, was posted "Madrid → São Paulo": a point 1 240 km short of Madrid fitted the long leg's corridor
+        mad = {"iata": "MAD", "lat": 40.4719, "lon": -3.5626}
+        gru = {"iata": "GRU", "lat": -23.4356, "lon": -46.4731}
+        pek = {"iata": "PEK", "lat": 40.0801, "lon": 116.5846}
+        self.assertIsNone(server.route_plausible({"from": mad, "to": gru}, 49.2, 6.3, 225, 492), "not there yet")
+        self.assertTrue(server.route_plausible({"from": pek, "to": mad}, 49.2, 6.3, 225, 492), "the leg it is on")
+        self.assertIsNone(server.route_plausible({"from": pek, "to": mad}, 38.9, -9.5, 230, 480), "past the destination")
+        self.assertTrue(server.route_plausible({"from": mad, "to": gru}, 38.9, -9.5, 230, 480))
+        # just after take-off, a turn back over the field is still the flight
+        self.assertTrue(server.route_plausible({"from": mad, "to": gru}, 40.9, -3.2, 60, 250))
+
     def test_parse_real_adsbdb_answer(self):
         r = server.parse_route(ADSBDB_SAMPLE)
         self.assertEqual(r["from"], {"iata": "MUC", "icao": "EDDM", "name": "Munich Airport", "city": "Munich", "country": "DE"})
