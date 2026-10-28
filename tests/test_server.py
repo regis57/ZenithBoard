@@ -299,7 +299,7 @@ class RouteTests(unittest.TestCase):
         self.assertIsNone(server.route_plausible({"from": pek, "to": mad}, 38.9, -9.5, 230, 480), "past the destination")
         self.assertTrue(server.route_plausible({"from": mad, "to": gru}, 38.9, -9.5, 230, 480))
         # just after take-off, a turn back over the field is still the flight
-        self.assertTrue(server.route_plausible({"from": mad, "to": gru}, 40.9, -3.2, 60, 250))
+        self.assertTrue(server.route_plausible({"from": mad, "to": gru}, 40.7, -3.4, 60, 250))
 
     def test_parse_real_adsbdb_answer(self):
         r = server.parse_route(ADSBDB_SAMPLE)
