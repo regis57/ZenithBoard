@@ -111,6 +111,14 @@
     var alt = p.on_ground ? "GROUND" : (c.alt == null ? "---" : String(Math.round(imp ? c.alt : c.alt / 10) * (imp ? 1 : 10)) + " " + c.altUnit);
     var spd = c.speed == null ? "---" : Math.round(c.speed) + " " + c.speedUnit;
     function fit(s) { return String(s).slice(0, W); }
+    // 0.99.2 (the owner's post of 28 October 2026): "ALT  38000 FT" is 13 letters, and beside the flags a row has 12:
+    // the post showed "ALT  38000 F". A row too long loses its spaces before it loses a letter of the figure or unit
+    function fitRow(label, value) {
+      var s = label + "  " + value;
+      if (s.length > W) s = label + "  " + value.replace(/ (?=[A-Z]+$)/, "");
+      if (s.length > W) s = label + " " + value.replace(/ (?=[A-Z]+$)/, "");
+      return fit(s);
+    }
     var r = routeLines(p.route, W), top = topRows(p, W);
     return {
       callsign: callsign,
@@ -120,8 +128,8 @@
       // The same two rows uncut. The dot-matrix wall scrolls them when the flag has taken the last characters.
       airlineFull: (p.airline || "").toUpperCase(),
       typeFull: modelScroll(p, W),
-      alt: fit("ALT  " + alt),
-      spd: fit("SPD  " + spd),
+      alt: fitRow("ALT", alt),
+      spd: fitRow("SPD", spd),
       from: r.from,
       to: r.to,
       footer: (index + 1) + "/" + total + " " + distTxt + " " + compass(p.bearing).slice(0, 3)      // full-width row: nothing on its right any more

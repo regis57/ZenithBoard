@@ -25,7 +25,13 @@ L = Fmt.planeLines(plane, "aviation", 0, 1, 14);
 assert.strictEqual(L.alt, "ALT  35000 FT"); assert.strictEqual(L.spd, "SPD  450 KT");
 assert.strictEqual(L.footer, "1/1 6.6NM NNE");
 assert.ok(Math.abs(Fmt.radiusToKm(10, "aviation") - 18.52) < 1e-6);
-assert.strictEqual(Fmt.radiusLabel(5, "aviation"), "R 5 NM"); assert.strictEqual(Fmt.distUnit("metric"), "KM");
+assert.strictEqual(Fmt.radiusLabel(5, "aviation"), "R 5 NM");
+// 0.99.2: twelve letters beside the flags; "ALT  38000 FT" lost its T on a real post
+const high = { ...plane, alt_ft: 38000, gs_kt: 492 };
+assert.strictEqual(Fmt.planeLines(high, "aviation", 0, 1, 12).alt, "ALT  38000FT");
+assert.strictEqual(Fmt.planeLines(high, "aviation", 0, 1, 14).alt, "ALT  38000 FT", "with room, the space stays");
+assert.strictEqual(Fmt.planeLines(high, "metric", 0, 1, 12).alt, "ALT  11580 M");
+assert.strictEqual(Fmt.planeLines({ ...high, gs_kt: 600 }, "metric", 0, 1, 12).spd, "SPD  1111KMH"); assert.strictEqual(Fmt.distUnit("metric"), "KM");
 assert.strictEqual(Fmt.compass(359), "N"); assert.strictEqual(Fmt.compass(90), "E");
 
 // ---- route rows: the city when it fits, otherwise the airport's name, otherwise the city cut at a word; plain capitals only

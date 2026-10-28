@@ -27,7 +27,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.99.1"
+VERSION = "0.99.2"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -1349,6 +1349,13 @@ def route_plausible(route, plat, plon, track=None, gs=None, strict=False):
     if length < 30:
         return None
     if _leg_distance_km(plat, plon, pa, pb) > max(ROUTE_CORRIDOR_MIN_KM, ROUTE_CORRIDOR_FRACTION * length):
+        return None
+    # 0.99.2 (the owner's post of 28 October 2026): CCA897 over the Moselle was posted "Madrid → São Paulo", the second
+    # leg of a callsign flown Beijing → Madrid → São Paulo, while the aircraft was still on the first. The corridor of a
+    # long route (a fifth of 8 400 km) took in a point 1 240 km short of Madrid. An aircraft on a leg is never farther
+    # from the destination than the origin is, nor farther from the origin than the destination is, beyond a detour.
+    slack = ROUTE_CORRIDOR_MIN_KM
+    if haversine_km(plat, plon, pb[0], pb[1]) > length + slack or haversine_km(plat, plon, pa[0], pa[1]) > length + slack:
         return None
     far = min(haversine_km(plat, plon, pa[0], pa[1]), haversine_km(plat, plon, pb[0], pb[1])) > 50
     if far and isinstance(track, (int, float)) and isinstance(gs, (int, float)) and gs >= 100:
