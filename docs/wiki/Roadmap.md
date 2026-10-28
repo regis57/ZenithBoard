@@ -38,11 +38,11 @@ No dates except those the sky sets (a monthly summary, a month of lists). Zenith
 
 **What counts as a fix:** something that does not do what the docs say, a crash, a wrong figure, a security or privacy hole, a mistranslation, a doc that a novice cannot follow (the fresh-card try will find some), a provider that moved a file. **What does not:** a new option, a new tag, a new screen or card, a new language, a new look, an improvement to something that works as documented.
 
-**The hands-off clock started on 25 October 2026 at 13:51 CET** (the owner, the reference Pi on 0.99.0); written in the field log of [Project status](Project-status). The month ends on **25 November 2026**. An update that only carries fixes for something else does not reset it; a reboot forced by a watchdog, a crash in the logs, or a fix to the services, the posts or the watchdogs does.
+**The hands-off clock restarts with 0.99.2** (28 October 2026, the owner's choice: the posts' route and altitude fixed now rather than after the month). It first ran from 25 October 2026, 13:51 CET on 0.99.0; it now starts when the reference Pi runs 0.99.2, the time written in the field log of [Project status](Project-status), and the month ends a month later (around 28 November). An update that only carries fixes for something else does not reset it; a reboot forced by a watchdog, a crash in the logs, or a fix to the services, the posts or the watchdogs does.
 
 Swahili and Hindi are published without a native review, said as such in [Translating](Translating): that is not a caveat for 1.0.
 
-**Earliest date:** the monthly summary on 1 November, a month of lists around 20 November, the release candidate's month hands-off: **25 November 2026 at the earliest**, with the fresh card and the fixed address done meanwhile. A caveat still open then moves the date, not the bar.
+**Earliest date:** the monthly summary on 1 November, a month of lists around 20 November, the release candidate's month hands-off: **around 28 November 2026 at the earliest** (the clock restarted with 0.99.2), with the fresh card and the fixed address done meanwhile. A caveat still open then moves the date, not the bar.
 
 ## Watched during the release candidate
 
