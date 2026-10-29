@@ -27,7 +27,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.99.2"
+VERSION = "0.99.3"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -994,19 +994,40 @@ def describe_type(ac, types=None):
 
 # --------------------------------------------------------------------------- planes
 def checked_route(flight, lat, lon, track, gs, route_lookup, route_fallback):
-    """-> (route the aircraft can really be on, or None; True while an answer is still on its way).
-    adsbdb first; hexdb's second opinion only when adsbdb's answer cannot be this flight."""
+    """-> (route the aircraft can really be on, or None; True while an answer is still on its way; why there is no
+    route, in words for the log, or None). adsbdb first; hexdb's second opinion when adsbdb's answer cannot be this
+    flight, and since 0.99.3 when adsbdb does not know the callsign at all (the owner's posts of 29 October 2026:
+    EZY41AY and RYR26XQ went out with no route, unknown to adsbdb, while hexdb had Luton -> Zurich and Stansted ->
+    Perugia)."""
     route = route_lookup(flight) if route_lookup is not None else None
     waiting = bool(route is None and route_lookup is not None and getattr(route_lookup, "pending", None) and route_lookup.pending(flight))
+    first = getattr(route_lookup, "state", None)
+    first = first(flight) if first else None
     checked = route_plausible(route, lat, lon, track, gs)
-    if route and not checked and route_fallback is not None:      # a second opinion, only when the first answer is wrong
+    asked_second = False
+    if not checked and route_fallback is not None and (route or first == "unknown"):
+        asked_second = True
         for leg in route_fallback(flight) or ():
             checked = route_plausible(leg, lat, lon, track, gs, strict=True)
             if checked:
                 break
         if not checked and getattr(route_fallback, "pending", None) and route_fallback.pending(flight):
             waiting = True
-    return checked, waiting
+    why = None
+    if not checked and route_lookup is not None and not waiting:
+        # 0.99.3 (the owner's post of RYR73JA, 29 October 2026, Charleroi -> Turin known to adsbdb half an hour later,
+        # and nothing in the journal to say why): a post without a route says why in the social log
+        second = getattr(route_fallback, "state", None)
+        second = second(flight) if (second and asked_second) else None
+        words = {"unknown": "did not know the callsign", "failed": "did not answer", "queue full": "was not asked (too many lookups at once)",
+                 "found": "gave a route this aircraft cannot be on", None: "was not asked"}
+        if route:
+            why = "adsbdb " + words["found"]
+        else:
+            why = "adsbdb " + words.get(first, first or "was not asked")
+        if asked_second:
+            why += ", hexdb " + words.get(second, second or "was not asked")
+    return checked, waiting, why
 
 
 def build_planes(data, lat, lon, radius_km, airlines=None, photo_lookup=None, demo=False, types=None, route_lookup=None,
@@ -1044,11 +1065,11 @@ def build_planes(data, lat, lon, radius_km, airlines=None, photo_lookup=None, de
         # went out with no route — adsbdb had another flight under those callsigns (Berlin-Stansted, Salzburg-
         # Aalborg), rightly refused, while hexdb had the right one (Charleroi-Reggio Calabria, Menorca-Cologne) on its
         # way a few seconds later
-        pending = []
+        pending, route_why = [], None
         if demo and ac.get("demo_route"):
             route = ac["demo_route"]
         else:
-            route, waiting = checked_route(flight, ac["lat"], ac["lon"], ac.get("track"), ac.get("gs"), route_lookup, route_fallback)
+            route, waiting, route_why = checked_route(flight, ac["lat"], ac["lon"], ac.get("track"), ac.get("gs"), route_lookup, route_fallback)
             if waiting:
                 pending.append("route")
         # The decoder only knows the type and the registration when its aircraft database has the airframe. When it
@@ -1092,6 +1113,7 @@ def build_planes(data, lat, lon, radius_km, airlines=None, photo_lookup=None, de
             "photo_credit": credit,
             "photo_link": link,
             "route": route,
+            "route_why": route_why,                          # 0.99.3: why there is no route, for the social log
             "pending": pending,
         })
     planes.sort(key=lambda p: p["distance_km"])
@@ -1133,7 +1155,8 @@ class ThrottledLookup(object):
             if e and (e["queued"] or e["retry_at"] is None or now < e["retry_at"]):
                 return e["value"]
             value = e["value"] if e else None
-            self.cache[key] = {"value": value, "retry_at": now + self.retry, "queued": True}
+            self.cache[key] = {"value": value, "retry_at": now + self.retry, "queued": True,
+                               "state": e.get("state") if e else None}
             if self.worker is None:
                 self.worker = threading.Thread(target=self._loop, daemon=True)
                 self.worker.start()
@@ -1143,6 +1166,7 @@ class ThrottledLookup(object):
             with self.lock:
                 if key in self.cache:
                     self.cache[key]["queued"] = False
+                    self.cache[key]["state"] = "queue full"
         return value
 
     def pending(self, key):
@@ -1151,6 +1175,20 @@ class ThrottledLookup(object):
         with self.lock:
             e = self.cache.get(key)
             return bool(e and e["queued"] and e["value"] is None)
+
+    def state(self, key):
+        """What the service last said about this key, for a log line (0.99.3): "found", "unknown" (it answered that
+        it does not know), "failed" (no answer: timeout, refusal), "queue full" (never asked: too many at once),
+        "waiting" (asked, no answer yet) or None (never asked)."""
+        with self.lock:
+            e = self.cache.get(key)
+            if not e:
+                return None
+            if e["value"] is not None:
+                return "found"
+            if e["queued"]:
+                return "waiting"
+            return e.get("state")
 
     def _loop(self):
         last = 0.0
@@ -1166,15 +1204,15 @@ class ThrottledLookup(object):
             last = time.monotonic()
             now = last
             if ok and value is not None:
-                retry_at = None if self.found_ttl is None else now + self.found_ttl
+                retry_at, state = (None if self.found_ttl is None else now + self.found_ttl), "found"
             elif ok:
-                retry_at = now + self.miss_retry
+                retry_at, state = now + self.miss_retry, "unknown"
             else:
-                value, retry_at = None, now + self.retry
+                value, retry_at, state = None, now + self.retry, "failed"
             with self.lock:
                 if len(self.cache) > self.max_entries:
                     self.cache.clear()
-                self.cache[key] = {"value": value, "retry_at": retry_at, "queued": False}
+                self.cache[key] = {"value": value, "retry_at": retry_at, "queued": False, "state": state}
 
 
 # --------------------------------------------------------------------------- photos (Planespotters, optional)
@@ -1393,6 +1431,7 @@ def lookup_route(callsign):
 
 
 lookup_route.pending = lambda callsign: _routes.pending((callsign or "").strip().upper())
+lookup_route.state = lambda callsign: _routes.state((callsign or "").strip().upper())
 
 
 # --------------------------------------------------------------------------- routes, second opinion (hexdb.io, optional)
@@ -1533,6 +1572,7 @@ def lookup_route_fallback(callsign):
 
 
 lookup_route_fallback.pending = lambda callsign: _routes2.pending((callsign or "").strip().upper())
+lookup_route_fallback.state = lambda callsign: _routes2.state((callsign or "").strip().upper())
 
 
 # --------------------------------------------------------------------------- aircraft model (adsbdb.com, optional)
@@ -1876,7 +1916,7 @@ def describe_farthest(rec, cfg, route_lookup=None, route_fallback=None, aircraft
     they are known, the nearest large city; neither the aircraft's position nor the antenna's. "pending" lists what is
     still being looked up, so the timer can wait a few seconds for it."""
     flight, pending = rec.get("flight") or "", []
-    route, waiting = checked_route(flight, rec["lat"], rec["lon"], rec.get("track"), rec.get("gs"), route_lookup, route_fallback)
+    route, waiting, _ = checked_route(flight, rec["lat"], rec["lon"], rec.get("track"), rec.get("gs"), route_lookup, route_fallback)
     if waiting:
         pending.append("route")
     reg, code, found = rec.get("registration"), rec.get("type"), None
