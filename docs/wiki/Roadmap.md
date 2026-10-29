@@ -2,7 +2,7 @@
 
 No dates except those the sky sets (a monthly summary, a month of lists). ZenithBoard is a spare-time project and any other date would be a fiction. What this page promises is an order.
 
-**Where it stands (26 October 2026): 0.99.0, the release candidate for 1.0.** Features are frozen since 25 October 2026, 13:42 (the owner); only fixes ship until 1.0 (0.99.1, 0.99.2, 0.99.3…). The reference Pi runs 0.99.0 hands-off since 25 October, 13:51 CET, for a month. So this page reads, in order: what 1.0 still takes; what is watched on the Pi meanwhile; what was asked during the freeze (*Waiting for 1.1*); what comes after 1.0; what is done; what will not be done.
+**Where it stands (29 October 2026): 0.99.3, the release candidate for 1.0.** Features are frozen since 25 October 2026, 13:42 (the owner); only fixes ship until 1.0 (0.99.1, 0.99.2, 0.99.3…), and they do not move the date. The reference Pi runs hands-off since 25 October, 13:51 CET, to 25 November; the fixes it takes meanwhile do not move that date. So this page reads, in order: what 1.0 still takes; what is watched on the Pi meanwhile; what was asked during the freeze (*Waiting for 1.1*); what comes after 1.0; what is done; what will not be done.
 
 ## What 1.0 takes
 
@@ -34,15 +34,15 @@ No dates except those the sky sets (a monthly summary, a month of lists). Zenith
 
 ### The freeze
 
-**Frozen since 25 October 2026, 13:42** (the owner: *on gèle à partir de maintenant, on ne passe qu'en correction*): **0.99.0** is the release candidate, the same code as 0.55.2. From it only fixes are made (0.99.1, 0.99.2…): no new feature, no new setting, no new screen, no new language. The hands-off weeks are counted from there; a fix that has to be shipped during them restarts nothing unless it touches what the weeks are proving (the services, the posts, the watchdogs). What is asked during the freeze waits for 1.1, written down below in *Waiting for 1.1*.
+**Frozen since 25 October 2026, 13:42** (the owner: *on gèle à partir de maintenant, on ne passe qu'en correction*): **0.99.0** is the release candidate, the same code as 0.55.2. From it only fixes are made (0.99.1, 0.99.2…): no new feature, no new setting, no new screen, no new language. The hands-off weeks are counted from there, and a fix shipped during them restarts nothing (the owner, 29 October 2026: *on fait des corrections, pas des nouvelles fonctions*). What is asked during the freeze waits for 1.1, written down below in *Waiting for 1.1*.
 
 **What counts as a fix:** something that does not do what the docs say, a crash, a wrong figure, a security or privacy hole, a mistranslation, a doc that a novice cannot follow (the fresh-card try will find some), a provider that moved a file. **What does not:** a new option, a new tag, a new screen or card, a new language, a new look, an improvement to something that works as documented.
 
-**The hands-off clock restarts with 0.99.3** (29 October 2026, the owner's choice: routes asked of hexdb when adsbdb does not know them, and a post without a route says why). It first ran from 25 October 2026, 13:51 CET on 0.99.0, then from 28 October, 19:29 CET on 0.99.2; it now starts when the reference Pi runs 0.99.3, the time written in the field log of [Project status](Project-status), and the month ends a month later (around 29 November). An update that only carries fixes for something else does not reset it; a reboot forced by a watchdog, a crash in the logs, or a fix to the services, the posts or the watchdogs does.
+**The hands-off clock runs from 25 October 2026, 13:51 CET to 25 November 2026**, and the fixes do not move it (the owner, 29 October 2026: *arrête de pousser la date de la RC, on fait des corrections ici, pas des nouvelles fonctions*). 0.99.1, 0.99.2 and 0.99.3 were fixes and the Pi took them in its stride; for two days the date had been pushed to 28 and then 29 November, which is withdrawn. What would stop the clock is what the month is there to catch: a crash in the logs, a reboot forced by a watchdog, a service that stops. Those are written in the field log of [Project status](Project-status), and one of them moves the date.
 
 Swahili and Hindi are published without a native review, said as such in [Translating](Translating): that is not a caveat for 1.0.
 
-**Earliest date:** the monthly summary on 1 November, a month of lists around 20 November, the release candidate's month hands-off: **around 29 November 2026 at the earliest** (the clock restarted with 0.99.3), with the fresh card and the fixed address done meanwhile. A caveat still open then moves the date, not the bar.
+**Earliest date:** the monthly summary on 1 November, a month of lists around 20 November, the release candidate's month hands-off: **25 November 2026 at the earliest**, with the fresh card and the fixed address done meanwhile. A caveat still open then moves the date, not the bar.
 
 ## Watched during the release candidate
 

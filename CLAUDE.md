@@ -38,7 +38,9 @@ The owner froze the features for 1.0: **0.99.x is the release candidate, fixes o
 not doing what the docs say, a security or privacy hole, a mistranslation, a doc a novice cannot follow, a provider that
 moved a file). A request for anything new during the freeze is **not built**: say so to the owner, in French, and write
 it under *Waiting for 1.1* in `docs/wiki/Roadmap.md`. Every release is a patch of 0.99 until the owner says 1.0. What
-1.0 still needs, and the hands-off clock, are in Roadmap → What 1.0 takes.
+1.0 still needs, and the hands-off clock, are in Roadmap → What 1.0 takes. **A fix never moves the release candidate's
+date** (the owner, 29 October 2026): the clock runs 25 October to 25 November 2026; only what the month is there to catch
+(a crash, a forced reboot, a service down on the Pi) can move it. Never offer to restart the clock for a fix.
 
 ## Workflow for a change
 
