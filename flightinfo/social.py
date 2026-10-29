@@ -1684,8 +1684,10 @@ def cmd_run():
                 except Exception as exc:                 # a picture that cannot be drawn must not stop the service
                     results = {"bluesky": "FAILED: %s" % exc}
                 ok = not str(results.get("bluesky", "FAILED")).startswith("FAILED")
-                print("social: %s %s (%s): %s" % ("posted" if ok else "could not post", p.get("flight") or p.get("hex"), why,
-                                                  json.dumps(results)), flush=True)
+                # 0.99.3: a post without a route says why (RYR73JA, 29 October 2026, left no trace of it)
+                no_route = "" if p.get("route") or not p.get("route_why") else " (no route: %s)" % p["route_why"]
+                print("social: %s %s (%s)%s: %s" % ("posted" if ok else "could not post", p.get("flight") or p.get("hex"), why,
+                                                    no_route, json.dumps(results)), flush=True)
                 if ok:
                     state["last_post"] = now
                     remember(state, p, now)

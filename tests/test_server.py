@@ -201,6 +201,19 @@ class ThrottledLookupTests(unittest.TestCase):
         time.sleep(0.5)
         self.assertEqual(len([c for c in self.calls if c[0] == "x1"]), 2, "a stale value must be looked up again")
 
+    def test_the_state_says_what_the_service_last_answered(self):
+        # 0.99.3: for the log line of a post without a route
+        lk = self.make()
+        self.assertIsNone(lk.state("a1"))
+        lk.get("a1"); lk.get("ref403"); lk.get("nopic")
+        self.assertEqual(lk.state("nopic"), "waiting")
+        time.sleep(0.9)
+        self.assertEqual((lk.state("a1"), lk.state("ref403"), lk.state("nopic")), ("found", "failed", "unknown"))
+        full = server.ThrottledLookup(lambda k: (time.sleep(1), (None, True))[1], gap=0, retry=5, miss_retry=5, max_queue=1)
+        for k in ("k1", "k2", "k3", "k4"):
+            full.get(k)
+        self.assertIn("queue full", [full.state(k) for k in ("k1", "k2", "k3", "k4")])
+
     def test_a_crashing_fetch_does_not_kill_the_worker(self):
         seen = []
 
@@ -451,6 +464,63 @@ class RouteTests(unittest.TestCase):
         unchecked = [{"from": {"city": "A"}, "to": {"city": "B"}}]
         planes, _ = server.build_planes(data, 50.6, 3.9, 10, {}, None, False, None, lambda cs: {"from": ema, "to": dict(ema)}, None, lambda cs: unchecked)
         self.assertIsNone(planes[0]["route"])
+
+    def test_hexdb_is_asked_when_adsbdb_does_not_know_the_callsign(self):
+        # 0.99.3, the owner's posts of 29 October 2026: EZY41AY over Trémery heading south-east, unknown to adsbdb;
+        # hexdb (asked by hand that morning) had EGGW-LSZH, Luton -> Zurich
+        ltn = {"iata": "LTN", "icao": "EGGW", "city": "Luton", "lat": 51.8747, "lon": -0.3683}
+        zrh = {"iata": "ZRH", "icao": "LSZH", "city": "Zurich", "lat": 47.4647, "lon": 8.5492}
+        data = {"aircraft": [{"hex": "4ca001", "flight": "EZY41AY", "lat": 49.24, "lon": 6.23, "seen_pos": 0, "track": 140, "gs": 478}]}
+        first = lambda cs: None
+        first.pending = lambda cs: False
+        first.state = lambda cs: "unknown"
+        asked = []
+        def second(cs):
+            asked.append(cs)
+            return [{"from": ltn, "to": zrh}]
+        second.pending = lambda cs: False
+        second.state = lambda cs: "found"
+        planes, _ = server.build_planes(data, 49.25, 6.2, 50, {}, None, False, None, first, None, second)
+        self.assertEqual(asked, ["EZY41AY"])
+        self.assertEqual(planes[0]["route"]["to"]["iata"], "ZRH")
+        self.assertIsNone(planes[0]["route_why"])
+        # adsbdb did not answer at all (timeout): hexdb is not asked, adsbdb is asked again in a minute
+        asked.clear()
+        first.state = lambda cs: "failed"
+        planes, _ = server.build_planes(data, 49.25, 6.2, 50, {}, None, False, None, first, None, second)
+        self.assertEqual(asked, [])
+        self.assertIsNone(planes[0]["route"])
+        self.assertEqual(planes[0]["route_why"], "adsbdb did not answer")
+
+    def test_a_missing_route_says_why(self):
+        # RYR95AL, 29 October 2026: adsbdb and hexdb both say Bergamo -> Cologne, the aircraft flies south over Metz
+        bgy = {"iata": "BGY", "icao": "LIME", "city": "Bergamo", "lat": 45.6739, "lon": 9.70417}
+        cgn = {"iata": "CGN", "icao": "EDDK", "city": "Cologne", "lat": 50.8659, "lon": 7.14274}
+        data = {"aircraft": [{"hex": "4ca002", "flight": "RYR95AL", "lat": 49.24, "lon": 6.23, "seen_pos": 0, "track": 180, "gs": 414}]}
+        first = lambda cs: {"from": bgy, "to": cgn}
+        first.pending = lambda cs: False
+        first.state = lambda cs: "found"
+        second = lambda cs: [{"from": bgy, "to": cgn}]
+        second.pending = lambda cs: False
+        second.state = lambda cs: "found"
+        planes, _ = server.build_planes(data, 49.25, 6.2, 50, {}, None, False, None, first, None, second)
+        self.assertIsNone(planes[0]["route"])
+        self.assertEqual(planes[0]["route_why"], "adsbdb gave a route this aircraft cannot be on, hexdb gave a route this aircraft cannot be on")
+        # neither knows it
+        first = lambda cs: None
+        first.pending = lambda cs: False
+        first.state = lambda cs: "unknown"
+        second = lambda cs: None
+        second.pending = lambda cs: False
+        second.state = lambda cs: "unknown"
+        planes, _ = server.build_planes(data, 49.25, 6.2, 50, {}, None, False, None, first, None, second)
+        self.assertEqual(planes[0]["route_why"], "adsbdb did not know the callsign, hexdb did not know the callsign")
+        # still on its way: no reason yet (social waits), and routes off: nothing to say
+        second.pending = lambda cs: True
+        planes, _ = server.build_planes(data, 49.25, 6.2, 50, {}, None, False, None, first, None, second)
+        self.assertEqual((planes[0]["pending"], planes[0]["route_why"]), (["route"], None))
+        planes, _ = server.build_planes(data, 49.25, 6.2, 50, {}, None, False, None, None, None, None)
+        self.assertIsNone(planes[0]["route_why"])
 
     def test_only_airline_callsigns_are_looked_up(self):
         asked = []
