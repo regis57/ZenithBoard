@@ -515,12 +515,43 @@ class RouteTests(unittest.TestCase):
         second.state = lambda cs: "unknown"
         planes, _ = server.build_planes(data, 49.25, 6.2, 50, {}, None, False, None, first, None, second)
         self.assertEqual(planes[0]["route_why"], "adsbdb did not know the callsign, hexdb did not know the callsign")
-        # still on its way: no reason yet (social waits), and routes off: nothing to say
+        # still on its way: said so (0.99.4: social posts after two minutes anyway), and routes off: nothing to say
         second.pending = lambda cs: True
         planes, _ = server.build_planes(data, 49.25, 6.2, 50, {}, None, False, None, first, None, second)
-        self.assertEqual((planes[0]["pending"], planes[0]["route_why"]), (["route"], None))
+        self.assertEqual((planes[0]["pending"], planes[0]["route_why"]), (["route"], "adsbdb did not know the callsign, hexdb's answer still on its way"))
         planes, _ = server.build_planes(data, 49.25, 6.2, 50, {}, None, False, None, None, None, None)
         self.assertIsNone(planes[0]["route_why"])
+
+    def test_a_post_before_the_answer_says_it_was_still_on_its_way(self):
+        # 0.99.4, EJU81FR at 21:27 on 29 October 2026: posted after the two-minute wait with hexdb's answer (Brussels ->
+        # Nice) still on its way, and the log said nothing
+        data = {"aircraft": [{"hex": "440001", "flight": "EJU81FR", "lat": 49.3, "lon": 6.2, "seen_pos": 0, "track": 160, "gs": 492}]}
+        first = lambda cs: None
+        first.pending = lambda cs: False
+        first.state = lambda cs: "unknown"
+        second = lambda cs: None
+        second.pending = lambda cs: True
+        second.state = lambda cs: "waiting"
+        second.backlog = lambda: 14
+        planes, _ = server.build_planes(data, 49.25, 6.2, 50, {}, None, False, None, first, None, second)
+        self.assertEqual(planes[0]["pending"], ["route"])
+        self.assertEqual(planes[0]["route_why"], "adsbdb did not know the callsign, hexdb's answer still on its way (14 lookups queued)")
+        first.pending = lambda cs: True
+        first.state = lambda cs: "waiting"
+        first.backlog = lambda: 3
+        planes, _ = server.build_planes(data, 49.25, 6.2, 50, {}, None, False, None, first, None, second)
+        self.assertEqual(planes[0]["route_why"], "adsbdb's answer still on its way (3 lookups queued)")
+
+    def test_a_registration_is_said_not_looked_up_rather_than_not_asked(self):
+        # 0.99.4: "adsbdb was not asked" for T7NYD or 399127 read like a fault
+        self.assertEqual(server.lookup_route.state("T7NYD"), "not an airline callsign")
+        self.assertEqual(server.lookup_route.state(""), "no callsign")
+        data = {"aircraft": [{"hex": "399127", "lat": 49.3, "lon": 6.2, "seen_pos": 0, "track": 160, "gs": 200},
+                             {"hex": "4d0001", "flight": "T7NYD", "lat": 49.31, "lon": 6.2, "seen_pos": 0, "track": 160, "gs": 200}]}
+        planes, _ = server.build_planes(data, 49.25, 6.2, 50, {}, None, False, None, server.lookup_route, None, None)
+        whys = sorted(p["route_why"] for p in planes)
+        self.assertEqual(whys, ["no callsign, routes are looked up for airline callsigns only",
+                                "not an airline callsign, routes are looked up for airline callsigns only"])
 
     def test_only_airline_callsigns_are_looked_up(self):
         asked = []

@@ -27,7 +27,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.99.3"
+VERSION = "0.99.4"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -1014,14 +1014,24 @@ def checked_route(flight, lat, lon, track, gs, route_lookup, route_fallback):
         if not checked and getattr(route_fallback, "pending", None) and route_fallback.pending(flight):
             waiting = True
     why = None
-    if not checked and route_lookup is not None and not waiting:
+    if not checked and route_lookup is not None and waiting:
+        # 0.99.4 (the owner's post of EJU81FR, 29 October 2026, 21:27): the service posts after two minutes even
+        # when an answer is still on its way, and that post said nothing in the log (hexdb had Brussels -> Nice)
+        which, lk = ("hexdb", route_fallback) if asked_second else ("adsbdb", route_lookup)
+        n = getattr(lk, "backlog", None)
+        n = n() if n else None
+        why = ("adsbdb did not know the callsign, " if asked_second and not route else "adsbdb gave a route this aircraft cannot be on, " if asked_second else "") + \
+              "%s's answer still on its way" % which + (" (%d lookups queued)" % n if isinstance(n, int) else "")
+    elif not checked and route_lookup is not None:
         # 0.99.3 (the owner's post of RYR73JA, 29 October 2026, Charleroi -> Turin known to adsbdb half an hour later,
         # and nothing in the journal to say why): a post without a route says why in the social log
         second = getattr(route_fallback, "state", None)
         second = second(flight) if (second and asked_second) else None
         words = {"unknown": "did not know the callsign", "failed": "did not answer", "queue full": "was not asked (too many lookups at once)",
                  "found": "gave a route this aircraft cannot be on", None: "was not asked"}
-        if route:
+        if first in ("no callsign", "not an airline callsign"):
+            why = first + ", routes are looked up for airline callsigns only"
+        elif route:
             why = "adsbdb " + words["found"]
         else:
             why = "adsbdb " + words.get(first, first or "was not asked")
@@ -1175,6 +1185,10 @@ class ThrottledLookup(object):
         with self.lock:
             e = self.cache.get(key)
             return bool(e and e["queued"] and e["value"] is None)
+
+    def backlog(self):
+        """How many lookups wait their turn (0.99.4: said when a post goes out before its answer came)."""
+        return self.queue.qsize()
 
     def state(self, key):
         """What the service last said about this key, for a log line (0.99.3): "found", "unknown" (it answered that
@@ -1431,7 +1445,19 @@ def lookup_route(callsign):
 
 
 lookup_route.pending = lambda callsign: _routes.pending((callsign or "").strip().upper())
-lookup_route.state = lambda callsign: _routes.state((callsign or "").strip().upper())
+def _route_state(callsign):
+    """0.99.4: a registration or a missing callsign is never looked up, and the log said "adsbdb was not asked"
+    (T7NYD, PHVER, 399127... on 29 October 2026), which read like a fault."""
+    cs = (callsign or "").strip().upper()
+    if not cs:
+        return "no callsign"
+    if not CALLSIGN_RE.match(cs):
+        return "not an airline callsign"
+    return _routes.state(cs)
+
+
+lookup_route.state = _route_state
+lookup_route.backlog = lambda: _routes.backlog()
 
 
 # --------------------------------------------------------------------------- routes, second opinion (hexdb.io, optional)
@@ -1573,6 +1599,7 @@ def lookup_route_fallback(callsign):
 
 lookup_route_fallback.pending = lambda callsign: _routes2.pending((callsign or "").strip().upper())
 lookup_route_fallback.state = lambda callsign: _routes2.state((callsign or "").strip().upper())
+lookup_route_fallback.backlog = lambda: _routes2.backlog()
 
 
 # --------------------------------------------------------------------------- aircraft model (adsbdb.com, optional)
