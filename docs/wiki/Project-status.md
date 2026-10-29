@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **29 October 2026**, version **0.99.3**, release candidate for 1.0.
+Last updated: **29 October 2026**, version **0.99.4**, release candidate for 1.0.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -88,6 +88,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 29 October 2026, 23:02 | The social log on 0.99.3 (`zenithboard logs social \| grep "no route"`), 13:52 to 21:41: twenty-two posts without a route, each with its reason. Seven registrations or addresses (T7NYD, PHVER, 399127…), never looked up by design, written *adsbdb was not asked*; eleven unknown to both services (CTM1277, BNJ1357, JFA41T…); four with a route neither could make fit (WMT6X, QAJ2, VLG6025). And one with no line: EJU81FR at 21:27, empty route, while hexdb had *Brussels → Nice* (asked by hand at 23:10). It went out after the two-minute wait with hexdb's answer still on its way, a case 0.99.3 did not write. 0.99.4: that case is written with the queue length, and a callsign that is not an airline's is said so |
 | 29 October 2026, 21:20 | The owner: **the fixes do not move the release candidate's date** (*arrête de pousser la date de la RC, on fait des corrections ici, pas des nouvelles fonctions*). The hands-off clock runs from 25 October, 13:51 CET to 25 November 2026, as set on 25 October; the restarts written for 0.99.2 and 0.99.3 (28 then 29 November) are withdrawn |
 | 27 October 2026, 01:09 | The owner, on his iPhone: 0.99.1 ended the console's reload at each tap on a section (*c'est bon*) |
 | 29 October 2026, 09:20 | Five posts in twenty minutes with an empty route row: EZY9004, RYR95AL, EZY41AY, RYR73JA, RYR26XQ. Not 0.99.2's check: each asked by hand of adsbdb and hexdb. EZY9004 (*Bristol → Madrid*, *Liverpool → Luton*) and RYR95AL (*Bergamo → Cologne* from both, the aircraft flying south) rightly refused. EZY41AY and RYR26XQ unknown to adsbdb, known to hexdb (*Luton → Zurich*, *Stansted → Perugia*), which was asked only when adsbdb was wrong. RYR73JA: adsbdb's *Charleroi → Turin* is plausible but was not there at 09:02; the journal holds no failure between 08:40 and 09:10, and an unknown callsign or a full queue writes nothing. 0.99.3 (the owner's choice): hexdb asked when adsbdb does not know; a post without a route says why |
