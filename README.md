@@ -79,7 +79,7 @@ The story behind the project: [ZenithBoard on regis-hennequin.info](https://regi
 
 | Board | ADS-B + feeders + wall + social sharing |
 |---|---|
-| **Pi 3B / 3B+ (1 GB)** | **Measured: comfortable**, with ADS-B Exchange and three more feeders (FlightAware, Flightradar24, Plane Finder): 575 MB of 1 GB still available. Ethernet or a strong Wi-Fi signal, and the official power supply |
+| **Pi 3B / 3B+ (1 GB)** | **Measured: comfortable**, with ADS-B Exchange and four more feeders (FlightAware, Flightradar24, Plane Finder, AirNav Radar), Bluesky, Telegram, graphs1090 and Tailscale: 436 MB of 905 still available (31 October 2026). Ethernet or a strong Wi-Fi signal, and the official power supply |
 | **Pi 4, 1 GB** | Comfortable (estimate: the same software, a faster processor) |
 | **Pi 4, 2 GB or more / Pi 5** | Comfortable, and nothing more to gain for these over a Pi 3B (estimate) |
 | Pi Zero 2 W (512 MB) / Pi 2 | ADS-B and the wall only, no extra feeders (estimate) |
