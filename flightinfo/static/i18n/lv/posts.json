@@ -169,5 +169,14 @@
  "a dark relief map with the main roads": "tumša reljefa karte ar galvenajiem ceļiem",
  "a terrain map": "apvidus karte",
  "a satellite map": "satelīta karte",
- "a plain dark background": "vienkāršs tumšs fons"
+ "a plain dark background": "vienkāršs tumšs fons",
+ "Unlawful interference (hijacking)": "Nelikumīga iejaukšanās (gaisa kuģa nolaupīšana)",
+ "Radio failure (lost communications)": "Radiosakaru atteice (sakari zaudēti)",
+ "General emergency": "Vispārēja avārijas situācija",
+ "Squawk {squawk}: {meaning}": "Transpondera kods {squawk}: {meaning}",
+ "Test message, not a real event:": "Testa ziņa, nav īsts notikums:",
+ "ZenithBoard is connected to this chat. The aircraft crossing the sharing radius and the emergency squawks the antenna hears will be written here.": "ZenithBoard ir pievienots šai tērzēšanai. Šeit tiks rakstīts par gaisa kuģiem, kas šķērso kopīgošanas rādiusu, un antenas uztvertajiem avārijas transpondera kodiem.",
+ "near {place}": "netālu no {place}",
+ "{distance} from {place} ({country})": "{distance} no {place} ({country})",
+ "position not known": "pozīcija nav zināma"
 }

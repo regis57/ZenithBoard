@@ -4,15 +4,16 @@
 [![CI](https://github.com/regis57/ZenithBoard/actions/workflows/ci.yml/badge.svg)](https://github.com/regis57/ZenithBoard/actions/workflows/ci.yml)
 <a href="https://buymeacoffee.com/regis57"><img src="https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20beer&emoji=%F0%9F%8D%BA&slug=regis57&button_colour=FFDD00&font_colour=000000&font_family=Cookie&outline_colour=000000&coffee_colour=ffffff" alt="Buy me a beer" height="20"></a>
 
-> **Release candidate for 1.0 (0.99.x), until 25 November 2026.** Features are frozen: only fixes ship for a month while the reference Pi runs hands-off; 1.0 follows if nothing is left open ([what 1.0 takes](https://github.com/regis57/ZenithBoard/wiki/Roadmap#what-10-takes)). Trying it now is welcome: a report in the [issues](https://github.com/regis57/ZenithBoard/issues) helps most.
+> **Release candidate for 1.0 (0.99.x).** 0.99.6 (30 October 2026) brought AirNav Radar and Telegram messages, at the owner's word, so the month hands-off starts again: 30 days from the reference Pi's update to 0.99.6, **29 November 2026 at the earliest**. Only fixes ship meanwhile; 1.0 follows if nothing is left open ([what 1.0 takes](https://github.com/regis57/ZenithBoard/wiki/Roadmap#what-10-takes)). Trying it now is welcome: a report in the [issues](https://github.com/regis57/ZenithBoard/issues) helps most.
 
 **See the planes flying right above your house, on an old tablet, in glowing dot-matrix lights — and share the same antenna with the big flight-tracking networks.**
 
 ZenithBoard turns a Raspberry Pi (4 or newer recommended) and a cheap USB radio dongle into:
 
-1. **An ADS-B receiver** that feeds **ADSB Exchange** (mandatory base layer) and, if you want, **FlightAware**, **Flightradar24** and **Plane Finder** — with **one single MLAT client**, because several at once overload a Raspberry Pi.
+1. **An ADS-B receiver** that feeds **ADSB Exchange** (mandatory base layer) and, if you want, **FlightAware**, **Flightradar24**, **Plane Finder** and **AirNav Radar** — with **one single MLAT client**, because several at once overload a Raspberry Pi.
 2. **FlightInfo**, a responsive **flight wall** for any tablet or screen with a browser, in **dot matrix** or in the style of an **old airport split-flap board**. It automatically cycles through every aircraft inside the radius you choose (1, 2, 5, 10, 15, 30 or 50 km / miles) — callsign, type, altitude, speed, where the flight comes from and goes to, distance and direction — and refreshes itself.
 3. **Social sharing** *(optional)*: the aircraft crossing a radius you choose, posted to **Bluesky** as a picture of the wall beside a map of its track.
+4. **Telegram messages** *(optional, 0.99.6)*: the same crossings, and the **emergency squawks** (7500, 7600, 7700) heard anywhere in range, written to **your own Telegram chat** or group — never posted publicly.
 
 Everything is installed from one menu, and you can come back at any time to add or remove parts.
 
@@ -45,7 +46,7 @@ The story behind the project: [ZenithBoard on regis-hennequin.info](https://regi
 | **2. Network** | [Wi-Fi](#wi-fi) · [Fixed IP](#fixed-ip-address) · [A name for your wall](#a-name-for-your-wall) · [Ports](#network-ports-what-answers-where) |
 | **3. The wall** | [What it shows](#what-the-wall-shows) · [Look](#look-dot-matrix-or-airport-split-flap-board) · [Colours](#colours) · [Units, radius, position](#units-radius-and-position) · [Silhouettes](#aircraft-silhouettes) · [Routes and models](#flight-routes) · [Photos](#photos) · [Demo](#try-it-without-any-hardware) |
 | **4. The receiver** | [Gain](#gain-tune-the-dongle-optional) · [978 MHz UAT (US)](#978-mhz-uat-united-states) · [Statistics](#statistics-messages-per-hour-range-aircraft-per-day-optional) |
-| **5. Keep it running** | [Update](#updating-and-uninstalling) · [Logs](#logs-size-review-clean-optional) · [Share on Bluesky](#share-what-flies-over-on-bluesky-optional) · [Reliability](#reliability-when-the-pi-freezes-or-loses-its-network-optional) · [Web console](#web-console-settings-from-a-browser-or-a-phone-optional-a-test) · [Security](#security) · [When a provider changes something](#when-flightaware-adsb-exchange-flightradar24-or-plane-finder-change-something) · [Troubleshooting](#troubleshooting) · [Known limits](#known-limits) |
+| **5. Keep it running** | [Update](#updating-and-uninstalling) · [Logs](#logs-size-review-clean-optional) · [Share on Bluesky](#share-what-flies-over-on-bluesky-optional) · [Telegram](#telegram-messages-to-your-own-chat-optional) · [Reliability](#reliability-when-the-pi-freezes-or-loses-its-network-optional) · [Web console](#web-console-settings-from-a-browser-or-a-phone-optional-a-test) · [Security](#security) · [When a provider changes something](#when-flightaware-adsb-exchange-flightradar24-or-plane-finder-change-something) · [Troubleshooting](#troubleshooting) · [Known limits](#known-limits) |
 | **Every command** | One table per subject, with what each one is for: **[Command reference](https://github.com/regis57/ZenithBoard/wiki/Command-reference)** (wiki) |
 | **The wiki** | [Roadmap](https://github.com/regis57/ZenithBoard/wiki/Roadmap) · [Project status](https://github.com/regis57/ZenithBoard/wiki/Project-status) · [Architecture](https://github.com/regis57/ZenithBoard/wiki/Architecture) · [Settings](https://github.com/regis57/ZenithBoard/wiki/Configuration-reference) · [Commands](https://github.com/regis57/ZenithBoard/wiki/Command-reference) · [Testing](https://github.com/regis57/ZenithBoard/wiki/Testing) · [Security](https://github.com/regis57/ZenithBoard/wiki/Security) · [Providers](https://github.com/regis57/ZenithBoard/wiki/Providers) · [Social sharing](https://github.com/regis57/ZenithBoard/wiki/Social-sharing) · [Web console](https://github.com/regis57/ZenithBoard/wiki/Web-console) |
 
@@ -63,7 +64,7 @@ The story behind the project: [ZenithBoard on regis-hennequin.info](https://regi
 | Micro-SD card 16 GB+ | |
 | **RTL-SDR dongle** + **1090 MHz antenna** | A dongle with a built-in 1090 filter (e.g. "ADS-B" or "FlightAware Pro Stick") gives the best range. |
 | An old tablet or any screen | Anything with a modern browser on your home Wi-Fi. |
-| Accounts | A free [ADSB Exchange](https://www.adsbexchange.com/myip/) key is asked during setup. FlightAware / Flightradar24 / Plane Finder accounts only if you choose them. |
+| Accounts | A free [ADSB Exchange](https://www.adsbexchange.com/myip/) key is asked during setup. FlightAware / Flightradar24 / Plane Finder / AirNav Radar accounts only if you choose them. |
 
 ### Which Raspberry Pi?
 
@@ -145,7 +146,7 @@ Everything in the menus also exists as a command, which is quicker once you know
 <p align="center"><img src="docs/images/menu-start.png" alt="Start here: the five steps of the first installation" width="400">&nbsp;<img src="docs/images/menu-options.png" alt="7 Options: statistics, graphs1090, Bluesky, web console" width="400"></p>
 <p align="center"><img src="docs/images/menu-connectivity.png" alt="3 Connectivity: Wi-Fi, fixed address, from outside your home safely, domain name, status" width="400">&nbsp;<img src="docs/images/menu-backup.png" alt="6 Backup: make, put back, manage, uninstall, settings file" width="400"></p>
 
-**ADS-B, in detail** (menu *1 ADS-B → 1*, or step 2 of *Start here*) — pick the decoder (**readsb** is recommended; **dump1090-fa** is supported as an alternative; both feed the same local port so every feeder works with either). Then tick where to share. *ADSB Exchange is always on.* The ADSB Exchange script will ask for a station name and your position, and prints a link to see your feed. FlightAware prints a claim link; **Flightradar24** runs FR24's own sign-up after printing what to answer (paste your *sharing key* — flightradar24.com → account → *My data sharing* — if you already feed FR24; otherwise Enter); Beast, `127.0.0.1`, port `30005` and MLAT no are enforced afterwards; Plane Finder finishes setup on a small web page. Unticking an installed feeder removes it after a confirmation.
+**ADS-B, in detail** (menu *1 ADS-B → 1*, or step 2 of *Start here*) — pick the decoder (**readsb** is recommended; **dump1090-fa** is supported as an alternative; both feed the same local port so every feeder works with either). Then tick where to share. *ADSB Exchange is always on.* The ADSB Exchange script will ask for a station name and your position, and prints a link to see your feed. FlightAware prints a claim link; **Flightradar24** runs FR24's own sign-up after printing what to answer (paste your *sharing key* — flightradar24.com → account → *My data sharing* — if you already feed FR24; otherwise Enter); Beast, `127.0.0.1`, port `30005` and MLAT no are enforced afterwards; Plane Finder finishes setup on a small web page; **AirNav Radar** (0.99.6) comes from AirNav's own repository, its key checked against the fingerprint pinned in `lib/versions.sh`, makes its sharing key by itself and prints it with its claim page (airnavradar.com/raspberry-pi/claim), its MLAT switched off (`autostart_mlat=false`). Unticking an installed feeder removes it after a confirmation (AirNav Radar's sharing key is kept on the Pi, so ticking it again is the same station).
 
 **ADSB Exchange's stats** (0.52.0, optional, off by default): a tick in the same list, `sudo zenithboard adsbx-stats on`, or the console's *Receiver*. It installs ADSB Exchange's own *stats package*, which fills *Feed Details* on their [myip](https://www.adsbexchange.com/myip/) page (*Feed UID Not Found / No Stats* without it). You get their map of only the aircraft your antenna hears, viewable from anywhere, and your receiver's statistics. In exchange, the Pi sends them every 5 seconds the aircraft list their feed already gets, with its power warnings. `off` removes it and the packages it added. `zenithboard adsbx-stats url` prints the link to your map: keep it to yourself, since the aircraft on it show roughly where the antenna is. Details: [Providers](https://github.com/regis57/ZenithBoard/wiki/Providers#adsb-exchanges-stats-0520-optional).
 
@@ -348,7 +349,7 @@ Each tablet can have its own look through the link you open. The settings are re
 sudo zenithboard location 49.1193 6.1757 180      # latitude, longitude, altitude in metres
 ```
 
-(or menu *1 ADS-B → 2 The antenna*). The position is updated **everywhere ZenithBoard can reach**: the wall, readsb / dump1090-fa, ADSB Exchange (including its MLAT) and Plane Finder. A summary then lists anything only the provider's website can change (FlightAware and Flightradar24 hold your position in your online account) with the page to open.
+(or menu *1 ADS-B → 2 The antenna*). The position is updated **everywhere ZenithBoard can reach**: the wall, readsb / dump1090-fa, ADSB Exchange (including its MLAT), Plane Finder and AirNav Radar. A summary then lists anything only the provider's website can change (FlightAware and Flightradar24 hold your position in your online account) with the page to open.
 
 All settings live in one readable file: `/etc/zenithboard/config.env`.
 
@@ -356,7 +357,7 @@ All settings live in one readable file: `/etc/zenithboard/config.env`.
 >
 > * **Altitude** is the height of the *antenna above sea level*: ground elevation at your house **plus** the antenna's height above the ground. `zenithboard location` takes it in **metres**.
 > * **Precision:** 4 decimals (about 10 m) is plenty, e.g. `49.1193 6.1757`.
-> * Updated automatically by `zenithboard location`: ZenithBoard, readsb / dump1090-fa, ADSB Exchange (feeder and MLAT), Plane Finder when its config file is found.
+> * Updated automatically by `zenithboard location`: ZenithBoard, readsb / dump1090-fa, ADSB Exchange (feeder and MLAT), Plane Finder when its config file is found, AirNav Radar (its `rbfeeder.ini`).
 > * **Flightradar24 — by hand:** [flightradar24.com](https://www.flightradar24.com) → your account → *My data sharing* → your receiver → edit latitude, longitude and altitude. FR24 wants the altitude in **feet** (metres × 3.281; 180 m ≈ 591 ft). The position is stored in your FR24 account, not on the Pi.
 > * **FlightAware — by hand** (only if PiAware is installed): [flightaware.com/adsb/stats](https://flightaware.com/adsb/stats) → *My ADS-B* → your site → edit the location. Check the unit shown next to the altitude field before typing.
 > * **Plane Finder — by hand** if the command could not do it: open `http://<pi-address>:30053` and change the position there (check the unit shown).
@@ -469,7 +470,7 @@ In the United States many general-aviation aircraft transmit on **978 MHz (UAT)*
 
 ## Updating and uninstalling
 
-**One command updates everything** (ZenithBoard itself from GitHub, readsb / dump1090-fa, ADSB Exchange, FlightAware, Flightradar24, Plane Finder, FlightInfo). Your settings are kept:
+**One command updates everything** (ZenithBoard itself from GitHub, readsb / dump1090-fa, ADSB Exchange, FlightAware, Flightradar24, Plane Finder, AirNav Radar, FlightInfo). Your settings are kept:
 
 ```bash
 sudo zenithboard update
@@ -510,7 +511,7 @@ zenithboard settings export                    # zenithboard-settings-HOST-DATE.
 sudo zenithboard settings import FILE          # the file from before is kept as config.env.bak-DATE
 ```
 
-Nothing that looks like a secret leaves with it: the Bluesky app password and the feeders' keys stay in their own root-only files. An import takes only `KEY=VALUE` lines and says how many it skipped.
+Nothing that looks like a secret leaves with it: the Bluesky app password, the Telegram bot's token and the feeders' keys stay in their own root-only files. An import takes only `KEY=VALUE` lines and says how many it skipped.
 
 **Moving to a new card: a backup of everything** (0.42.0), the same menu or:
 
@@ -519,7 +520,7 @@ sudo zenithboard backup make                   # settings, what is on, statistic
 sudo zenithboard backup restore FILE           # on the new card, before menu 1: asks you to type RESTORE
 ```
 
-The new card carries on where the old one stopped: the same stations on ADSB Exchange, FlightAware, Flightradar24 and Plane Finder, the same statistics and graphs, the old logs readable, and every feature that was on switched on again. The file holds Flightradar24's key: keep it to yourself. Switch the old card off first. Details, and why the MAC address does not get in the way: wiki [Backup and restore](https://github.com/regis57/ZenithBoard/wiki/Backup-and-restore). The web console makes one too, without the networks' identities.
+The new card carries on where the old one stopped: the same stations on ADSB Exchange, FlightAware, Flightradar24, Plane Finder and AirNav Radar, the same statistics and graphs, the old logs readable, and every feature that was on switched on again. The file holds Flightradar24's key: keep it to yourself. Switch the old card off first. Details, and why the MAC address does not get in the way: wiki [Backup and restore](https://github.com/regis57/ZenithBoard/wiki/Backup-and-restore). The web console makes one too, without the networks' identities.
 
 **One exception: readsb is never removed automatically.** Its installer builds it from source and provides no way back, so ZenithBoard says so and prints the commands to run by hand rather than deleting system files it did not put there. Everything else is removed normally.
 
@@ -580,6 +581,32 @@ sudo zenithboard social template add '{airline} {flight}[, {from} → {to}] at {
 **Summaries of the last 24 hours, the week and the last 30 days** are switches of their own, each at the day and time you choose with the posts you pick: `sudo zenithboard social summary weekly on` (off by default; `social summary weekly test` shows them first; menu *7 Options → 3 Bluesky → 5*). Aircraft heard, messages, the busiest day and hour, the airlines and models most seen, with a picture of the week by hour, then, two minutes apart, the cargo airlines and the business jets, the military aircraft by country with their flags, and general aviation (helicopters, light aircraft, gliders, drones), from the statistics; never a distance, a direction or a registration. Details: [Social sharing](https://github.com/regis57/ZenithBoard/wiki/Social-sharing#the-weeks-summary-0330-optional).
 
 Or menu *7 Options → 3 Bluesky*. The wizard tries the account before going on, then asks for the place to name in the posts (your words), the sharing radius, the minimum gap between posts, the rules, and the picture: its look, its colour (the wall's, or any of its five), its map. **Nothing that gives your position away leaves the Pi**: no distance, no bearing, no photo; the track and the map are centred on the aircraft and nothing marks the receiver. The map comes from EOX's tile service, credited and linked in every post, cached on the Pi for a month. The secret lives in a root-owned file the service alone can read, the picture is drawn in memory and deleted after each post, and `zenithboard security` checks all of it. Why Bluesky and not X, Threads or Instagram, how to get the app password step by step, what each rule and each map means: wiki **[Social sharing](https://github.com/regis57/ZenithBoard/wiki/Social-sharing)**.
+
+## Telegram: messages to your own chat (optional)
+
+Off by default (0.99.6). The Pi writes to **your own Telegram chat**, or a group of yours, a short text message:
+
+* for **each aircraft crossing the sharing radius** (the Bluesky posts' radius, one message per crossing; all of them, or only military aircraft, helicopters or heavies);
+* for **each emergency squawk** — 7500 (unlawful interference), 7600 (radio failure), 7700 (general emergency) — heard **anywhere in the antenna's range**, once per flight and code, with what it means and where the aircraft is (the town nearest it, never a distance from the antenna). **Never posted to Bluesky**: an emergency is not a fact to broadcast.
+
+```
+🚨 Squawk 7700: General emergency
+EZY17QZ · easyJet · Airbus A320 · G-EZWA 🇬🇧
+Manchester (MAN) → Verona (VRN)
+3 660 m · 556 km/h · descending
+near Kelsterbach
+14:05 · https://globe.adsbexchange.com/?icao=4ca7b1
+```
+
+Make a bot in Telegram with **@BotFather** (`/newbot`: it gives you a token), then:
+
+```bash
+sudo zenithboard telegram setup     # the bot's token (hidden, tried at once), then the chat: send /start to your bot, or add it to your group
+zenithboard telegram test           # each message filled on an aircraft overhead now; sent nowhere (add send: to the chat, marked as a test)
+sudo zenithboard telegram on        # from now on; off at any time
+```
+
+Or menu *7 Options → 5 Telegram*. The token stays on the Pi (`/etc/zenithboard/telegram.env`, root:zenithboard 0640), typed in the terminal only: never in the console, a log or a backup. The rest is in the web console, *Sharing → Telegram*: which crossings, the squawks, the messages' language and units (the posts' by default), and **your own messages**, one for each kind, with the posts' tags plus `{near}` and `{meaning}`. Paced as Telegram asks (about 20 messages a minute into a group). Details: [Telegram](https://github.com/regis57/ZenithBoard/wiki/Telegram) (wiki).
 
 ## Reliability: when the Pi freezes or loses its network (optional)
 
@@ -657,9 +684,10 @@ readsb (or dump1090-fa) --- aircraft.json ---> FlightInfo server ---> tablet (do
                                       +--> FlightAware     (MLAT off)
                                       +--> Flightradar24   (MLAT off)
                                       +--> Plane Finder
+                                      +--> AirNav Radar    (MLAT off)
 ```
 
-**Single MLAT:** ADSB Exchange owns the only MLAT client. The installer switches MLAT off in PiAware and Flightradar24, and `zenithboard status` counts running MLAT processes so you can verify it is exactly one.
+**Single MLAT:** ADSB Exchange owns the only MLAT client. The installer switches MLAT off in PiAware, Flightradar24 and AirNav Radar, and `zenithboard status` counts running MLAT processes so you can verify it is exactly one.
 
 The processes, the files each one reads and writes, and the timers are set out in the wiki: **[Architecture](https://github.com/regis57/ZenithBoard/wiki/Architecture)**.
 
@@ -682,7 +710,7 @@ The processes, the files each one reads and writes, and the timers are set out i
 * **FlightAware and Flightradar24 store your antenna position on their websites**: after `zenithboard location`, update it there too (the command tells you where).
 * **The airline name list is built in** (about 90 major airlines). Other airlines are named from the route lookup, once it has answered for one of their flights since the last restart; until then, and with routes off, they show the callsign only.
 * **Routes are looked up by callsign, not by flight.** A callsign can be reused for the other direction, so impossible answers are dropped rather than shown — a blank route row is better than a wrong one.
-* **Some parts have never run on real hardware**, among them the 978 MHz UAT receiver and the fixed-IP menu. Plane Finder has fed from the reference Pi since 20 October 2026. They are written and unit-tested against stand-in programs, which proves the logic and nothing about the hardware.
+* **Some parts have never run on real hardware**, among them the 978 MHz UAT receiver, the fixed-IP menu, AirNav Radar and the Telegram messages (0.99.6). Plane Finder has fed from the reference Pi since 20 October 2026. They are written and unit-tested against stand-in programs, which proves the logic and nothing about the hardware.
 
 Which is which, what has been proven on a real Pi, and the field log of what has actually gone wrong: **[Project status](https://github.com/regis57/ZenithBoard/wiki/Project-status)** in the wiki.
 

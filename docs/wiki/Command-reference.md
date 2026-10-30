@@ -68,6 +68,19 @@ Every `zenithboard` command, grouped by what you are trying to do. `zenithboard`
 | `zenithboard social post [HEX]` | | Post now, once, whatever the gap. That aircraft then counts as posted for its crossing |
 | `zenithboard social check` | yes | Try the account: open a session on Bluesky |
 | `zenithboard social remove` | yes | Forget the account, stop the service, delete its state (the 30 days of history behind `rare` and `farthest`) and its map tiles. Asks you to type `remove` (0.54.9); `remove --yes` does not ask |
+| `zenithboard telegram setup` | yes | The Telegram bot and the chat (0.99.6): asks for the bot's token from @BotFather (hidden, never on the command line), tries it, then lists the chats that wrote to the bot (you after `/start`, or a group the bot was added to) and lets you choose one; sends a first message and offers to switch on. See [Telegram](Telegram) |
+| `zenithboard telegram on` · `off` · `status` | yes (on, off) | Messages to your own Telegram chat: the aircraft crossing the sharing radius, and the emergency squawks anywhere in range (off by default). `on` needs the bot and the chat; `off` keeps them. `status`: what it sends, what it sent today and in seven days, the last refusal |
+| `zenithboard telegram chat` | yes | Choose the chat again (your own, or a group the bot was added to), among those that wrote to the bot |
+| `zenithboard telegram check` | yes | Does the bot's token answer? Telegram's own answer (getMe) |
+| `zenithboard telegram hello` | yes | Send the *connected* message to the chat |
+| `zenithboard telegram test [crossing\|squawk] [send]` | `send`: yes | Each message filled on an aircraft overhead now (or a sample), printed, sent nowhere; `send` sends them to the chat, each marked as a test |
+| `zenithboard telegram crossings on` · `off` | yes (to change) | The aircraft crossing the sharing radius (`social radius`), one message per crossing, as the Bluesky posts. On by default once Telegram is on |
+| `zenithboard telegram squawks on` · `off` | yes (to change) | The emergency squawks 7500, 7600, 7700 anywhere the antenna hears them, once per flight and code, with where the aircraft is. On by default once Telegram is on. Never posted to Bluesky |
+| `zenithboard telegram rules [all\|LIST]` | yes (to change) | Which crossings: `all` (the default), or some of `military,helicopter,heavy` |
+| `zenithboard telegram lang [CODE\|posts]` | yes (to change) | The messages' language; `posts` (the default): the posts' own (`social lang`) |
+| `zenithboard telegram units [metric\|imperial\|aviation\|posts]` | yes (to change) | The messages' units; `posts` (the default): the posts' own |
+| `zenithboard telegram template crossing\|squawk [show\|default\|tags\|set TEXT\|test [TEXT]\|undo]` | yes (set, undo) | Your own message for each kind: a whole message, lines kept, tried before it is saved; the one before kept as `.bak` (`undo` puts it back); `set none`: the default again |
+| `zenithboard telegram remove` | yes | Forget the token and the chat, stop the service, delete what it remembers. Asks you to type `remove`; your templates stay |
 | `zenithboard photos on` · `off` | yes | Aircraft photos from Planespotters. Off: the animated sky scene instead |
 | `zenithboard photos test [HEX]` | | Can this Pi reach Planespotters? One real request, and the answer |
 | `zenithboard routes on` · `off` | yes | Origin and destination, looked up by callsign. Off: no callsign leaves the Pi |
@@ -88,7 +101,7 @@ A tablet can override the colour, look, units, radius, cycle and flags for itsel
 | `zenithboard gain log show` · `status` · `path` | | Print the table, how many measurements it holds, where the file is |
 | `zenithboard gain log clear` | yes | Empty it and start again (before testing a new gain) |
 | `zenithboard region world` · `us` | yes | `us` offers the optional 978 MHz UAT receiver in the menu |
-| `zenithboard mlat-guard` | yes | Put the single-MLAT rule back, if a feeder update switched its own MLAT on |
+| `zenithboard mlat-guard` | yes | Put the single-MLAT rule back, if a feeder update switched its own MLAT on (FlightAware, Flightradar24, and AirNav Radar's `autostart_mlat` since 0.99.6) |
 | `zenithboard adsbx-stats on` · `off` · `status` · `url` | yes for on and off | ADSB Exchange's stats package, off by default (0.52.0). It fills *Feed Details* on their [myip](https://www.adsbexchange.com/myip/) page, with their map of only the aircraft your antenna hears, viewable from anywhere, and your receiver's statistics. `on` needs ADSB Exchange's feed and runs their own script. Every 5 seconds the Pi then sends them the aircraft list their feed already gets, with its power warnings. `off` runs their uninstaller and removes the packages it added. `url` prints the link to your map, the feed's UUID in it: keep it to yourself. See [ADSB Exchange's stats](Providers#adsb-exchanges-stats-0520-optional) |
 
 How to read a day of the gain log, and why a quiet hour cannot judge the gain: [Gain tuning](Gain-tuning).
@@ -135,8 +148,8 @@ All three are off until you turn them on. How they decide, and how to read a bad
 | Command | sudo | What it is for |
 |---|---|---|
 | `zenithboard logs` | | The wall's own service, last 100 lines |
-| `zenithboard logs decoder` · `uat` · `social` | | The last 100 lines of that service |
-| `zenithboard logs adsbexchange` · `piaware` · `fr24` · `planefinder` | | The last 100 lines of that feeder's service (0.54.6: a failing feeder had no log to read); one that is not installed says so |
+| `zenithboard logs decoder` · `uat` · `social` · `telegram` | | The last 100 lines of that service |
+| `zenithboard logs adsbexchange` · `piaware` · `fr24` · `planefinder` · `radarbox` | | The last 100 lines of that feeder's service (0.54.6: a failing feeder had no log to read); one that is not installed says so |
 | `zenithboard logs usage` | | How much space the system logs take |
 | `zenithboard logs review` | | Size, plus the recent warnings |
 | `zenithboard logs limit MB` · `default` | yes | Cap the system logs, 10–2000 MB |
@@ -150,7 +163,7 @@ All three are off until you turn them on. How they decide, and how to read a bad
 | `sudo zenithboard update` | yes | **The normal way to update.** ZenithBoard first — after checking the signature on the new code, see below — then the decoder and the feeders |
 | `zenithboard update quick` | yes | ZenithBoard and the wall only, in seconds: the code is pulled, the wall restarted, the feeders left as they are (no `apt`). The menu's first Update entry since 0.21.0 |
 | `zenithboard update list` | | What is installed, and the names `update only` accepts |
-| `zenithboard update only NAME…` | yes | Just those, e.g. `readsb flightinfo`. Names: `zenithboard readsb dump1090 adsbx piaware fr24 planefinder flightinfo graphs1090` |
+| `zenithboard update only NAME…` | yes | Just those, e.g. `readsb flightinfo`. Names: `zenithboard readsb dump1090 adsbx piaware fr24 planefinder radarbox flightinfo graphs1090` |
 | `zenithboard data update` | yes | Refresh the aircraft-model list now |
 | `zenithboard data status` | | When it was last refreshed |
 | `zenithboard data auto on` · `off` | yes | The monthly refresh (on by default) |

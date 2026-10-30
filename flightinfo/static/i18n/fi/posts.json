@@ -157,5 +157,14 @@
  "a dark relief map with the main roads": "tumma korkokuvakartta pääteineen",
  "a terrain map": "maastokartta",
  "a satellite map": "satelliittikartta",
- "a plain dark background": "tasainen tumma tausta"
+ "a plain dark background": "tasainen tumma tausta",
+ "Unlawful interference (hijacking)": "Laiton puuttuminen (kaappaus)",
+ "Radio failure (lost communications)": "Radiovika (radioyhteys menetetty)",
+ "General emergency": "Yleinen hätätilanne",
+ "Squawk {squawk}: {meaning}": "Transponderikoodi {squawk}: {meaning}",
+ "Test message, not a real event:": "Testiviesti, ei todellinen tapahtuma:",
+ "ZenithBoard is connected to this chat. The aircraft crossing the sharing radius and the emergency squawks the antenna hears will be written here.": "ZenithBoard on yhdistetty tähän keskusteluun. Tänne kirjoitetaan koneet, jotka lentävät jakamisen säteen läpi, ja antennin kuulemat transponderin hätäkoodit.",
+ "near {place}": "lähellä paikkakuntaa {place}",
+ "{distance} from {place} ({country})": "{distance} päässä kaupungista {place} ({country})",
+ "position not known": "sijainti tuntematon"
 }

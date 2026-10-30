@@ -145,5 +145,14 @@
  "a dark relief map with the main roads": "peta relief gelap dengan jalan-jalan utama",
  "a terrain map": "peta medan",
  "a satellite map": "peta satelit",
- "a plain dark background": "latar gelap polos"
+ "a plain dark background": "latar gelap polos",
+ "Unlawful interference (hijacking)": "Tindakan melawan hukum (pembajakan)",
+ "Radio failure (lost communications)": "Kegagalan radio (komunikasi terputus)",
+ "General emergency": "Keadaan darurat umum",
+ "Squawk {squawk}: {meaning}": "Kode transponder {squawk}: {meaning}",
+ "Test message, not a real event:": "Pesan uji, bukan kejadian nyata:",
+ "ZenithBoard is connected to this chat. The aircraft crossing the sharing radius and the emergency squawks the antenna hears will be written here.": "ZenithBoard terhubung ke obrolan ini. Pesawat yang melintasi radius berbagi dan kode transponder darurat yang ditangkap antena akan ditulis di sini.",
+ "near {place}": "dekat {place}",
+ "{distance} from {place} ({country})": "{distance} dari {place} ({country})",
+ "position not known": "posisi tidak diketahui"
 }

@@ -8,11 +8,11 @@
 |---|---|
 | **Patch** (0.10.2 → 0.10.3) | A fix, a wording change, a small improvement to something that exists |
 | **Minor** (0.10.x → 0.11.0) | A new feature, a new menu, a new command |
-| **Major** | Reserved for 1.0, which means "validated on real hardware, no caveats in [Project status](Project-status)": the caveats lifted one by one, a feature freeze (release candidates 0.99.x, fixes only), a month of release candidate hands-off counted from the freeze (25 October to 25 November 2026), and a fresh install from the README alone. The list, kept up to date, is in [Roadmap → What 1.0 takes](Roadmap#what-10-takes) |
+| **Major** | Reserved for 1.0, which means "validated on real hardware, no caveats in [Project status](Project-status)": the caveats lifted one by one, a feature freeze (release candidates 0.99.x, fixes only), a month of release candidate hands-off (25 October 2026 to 25 November; started again by the owner with 0.99.6's two features, 30 days from the reference Pi's update to it), and a fresh install from the README alone. The list, kept up to date, is in [Roadmap → What 1.0 takes](Roadmap#what-10-takes) |
 
 Most releases are patches. When in doubt it is a patch.
 
-**During the freeze (from 0.99.0, 25 October 2026, until 1.0)** every release is a patch of 0.99 and a fix only; what counts as one is in [Roadmap → The freeze](Roadmap#the-freeze). A feature asked meanwhile goes to *Waiting for 1.1* in the Roadmap, not into the code.
+**During the freeze (from 0.99.0, 25 October 2026, until 1.0)** every release is a patch of 0.99 and a fix only; what counts as one is in [Roadmap → The freeze](Roadmap#the-freeze). A feature asked meanwhile goes to *Waiting for 1.1* in the Roadmap, not into the code, unless the owner decides otherwise: then it ships as the next 0.99.x and the hands-off month starts again (0.99.6, 30 October 2026: AirNav Radar and Telegram).
 
 ## The version lives in two files
 

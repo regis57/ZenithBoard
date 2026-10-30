@@ -2,7 +2,7 @@
 # shellcheck disable=SC2034
 # shellcheck shell=bash
 # Third-party pins. Bump here when an upstream moves; everything else reads these.
-ZB_VERSION="0.99.5"
+ZB_VERSION="0.99.6"
 
 # FlightAware APT repository package (provides piaware and dump1090-fa). FlightAware renamed it from
 # piaware-repository (9.0.1) to flightaware-apt-repository; see https://www.flightaware.com/adsb/piaware/install
@@ -47,6 +47,18 @@ FR24_INSTALL_URL="https://repo-feed.flightradar24.com/install_fr24_rpi.sh"
 # 2026-02-01. The key is only installed if it has exactly this fingerprint (the one apt reports as "missing").
 FR24_KEY_URL="https://repo-feed.flightradar24.com/flightradar24.2026.pub"
 FR24_KEY_FPR="ED843290A602413685E57D436F7703F65FA1BDAF"
+
+# AirNav Radar (RadarBox), 0.99.6: rbfeeder from AirNav's own apt repository. Their installer script could not be read
+# from where this was written (30 October 2026), so the repository is added the way the community's container adds it
+# (github.com/sdr-enthusiasts/docker-airnavradar, its Dockerfile read that day): key 1D043681, suite bookworm, package
+# rbfeeder. The key is installed only with exactly this fingerprint, read from keyserver.ubuntu.com the same day
+# ("AirNav Systems", made 30 January 2018). The claim page is the one that container's README gives.
+RB24_REPO_URL="https://apt.rb24.com/"
+RB24_SUITE="bookworm"
+RB24_KEY_FPR="78F6D790E30AE7F360B716FED4F914061D043681"
+RB24_KEY_URL="https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x${RB24_KEY_FPR}"
+RB24_CLAIM_URL="https://www.airnavradar.com/raspberry-pi/claim"
+RB24_STATION_URL="https://www.radarbox.com/stations/"   # + the station's serial (EXTRPI...), as AirNav's blog links them
 
 # Plane Finder client. Check https://planefinder.net/sharing/client for newer versions.
 PF_VERSION_ARMHF="5.4.211"

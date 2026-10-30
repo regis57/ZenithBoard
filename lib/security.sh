@@ -108,6 +108,13 @@ sec_secrets() {
     if [ "$m" = 640 ] && [ "$o" = "root:$ZB_USER" ]; then sec_line OK "social.env is root:$ZB_USER, mode 640 (the service reads it, nobody else)"
     else sec_line WARN "social.env is $o mode $m: the social account secrets may be readable by others" "sudo chown root:$ZB_USER $f && sudo chmod 640 $f"; fi
   fi
+  # 0.99.6: the Telegram bot's token, the same way: the service reads it as the wall's user
+  f="${TELEGRAM_SECRETS:-$ZB_ETC/telegram.env}"
+  if [ -f "$f" ]; then
+    m=$(stat -c %a "$f" 2>/dev/null); o=$(stat -c %U:%G "$f" 2>/dev/null)
+    if [ "$m" = 640 ] && [ "$o" = "root:$ZB_USER" ]; then sec_line OK "telegram.env is root:$ZB_USER, mode 640 (the service reads it, nobody else)"
+    else sec_line WARN "telegram.env is $o mode $m: the Telegram bot's token may be readable by others" "sudo chown root:$ZB_USER $f && sudo chmod 640 $f"; fi
+  fi
 }
 
 # 0.39.0: the web console, when on: who it answers, how one signs in, and its root helper said for what it is

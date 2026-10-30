@@ -17,7 +17,7 @@ ZenithBoard runs as root on a machine in your home, listens on your network, and
 | Downloads run as root | Private `mktemp` folder (mode 700), https only, no downgrade on redirect | 0.12.0, fixed in 0.12.1 |
 | Third-party installers | **Trusted, not checked** — written down below | always |
 | Package signatures | Never turned off. The Flightradar24 key is installed only if its fingerprint matches | always |
-| Secrets | The dynamic-DNS token and the Bluesky app password never go on a command line, into `config.env` or into a log; they live in root-owned files (the social one readable by the service's group) | always; social 0.18.0 |
+| Secrets | The dynamic-DNS token, the Bluesky app password and the Telegram bot's token never go on a command line, into `config.env` or into a log; they live in root-owned files (the social and Telegram ones readable by their service's group, checked by `zenithboard security`) | always; social 0.18.0; Telegram 0.99.6 |
 | The operating system | Debian's security fixes can install themselves daily, from the security channel only; the feeders are left alone | 0.15.0 |
 | Checking all of it | `zenithboard security` reads the running Pi and says what is open and how to close it | 0.15.0 |
 | The repository | CodeQL, shellcheck, pinned actions, Dependabot, a monthly check of the download addresses | 0.11.1 |
@@ -26,6 +26,7 @@ ZenithBoard runs as root on a machine in your home, listens on your network, and
 | Backups | A backup holds Flightradar24's sharing key and the stations' identities, so it is written for its owner only (mode 600) and `backup show` names them without their values; the Bluesky app password and the console password never go in. A restore unpacks only the names a backup holds, refuses links, devices and paths outside, asks for the typed word `RESTORE`, and keeps what it replaces. The console's backup leaves the identities out and is never restored from the console | 0.42.0 |
 | Secrets in the repository | GitHub secret scanning and push protection are on | October 2026 |
 | Statistics | Off by default. Its sample runs as the `zenithboard` user in the same kind of sandbox, and the `/stats` page answers the same networks as the wall | 0.16.0 |
+| Telegram messages | Off by default (0.99.6). Text only, to the owner's own chat; the emergency squawks go there and never to Bluesky; no distance or bearing from the antenna (a squawk names the town nearest the aircraft); the token typed in the terminal only, never in the console, a backup or a log, and taken out of any network error before it is written; the service runs as the `zenithboard` user in the same sandbox as the Bluesky one, reaching api.telegram.org only | 0.99.6 |
 | Social sharing | Off by default. Posts carry no distance, no bearing and no photo; a map, when chosen, is centred on the track with nothing marking the receiver, and its tiles come from a fixed address (EOX) over HTTPS, checked to be images and capped in size; the service runs as the `zenithboard` user in the wall's sandbox; the account's secret is root:zenithboard 0640, checked by the audit; the picture is drawn in memory and deleted after the post. Bluesky only since 0.19.0: an update removes a Mastodon token left on the Pi | 0.18.0, map 0.19.0 |
 
 ## What is exposed on your network
@@ -128,6 +129,7 @@ The installer runs other people's installers, as root, straight from the network
 | `stats.sh`, only with `adsbx-stats on` (0.52.0, off by default) | adsbexchange.com, then their GitHub |
 | `install_fr24_rpi.sh` | repo-feed.flightradar24.com |
 | `.deb` packages | FlightAware, Plane Finder |
+| `rbfeeder`, from AirNav's apt repository (0.99.6, only when AirNav Radar is ticked) | apt.rb24.com, its key installed only with the fingerprint pinned in `lib/versions.sh`; nothing of theirs is run as a script |
 
 **This is a real trust decision, and it is not hidden.** Installing ZenithBoard means trusting those projects as much as you trust this one. Pinning a checksum for each would break on every one of their releases, so what is pinned instead is the *address*, in `lib/versions.sh`, where you can read it before running anything. A monthly check (below) says when one of those addresses stops answering, and [When a provider changes something](Providers) says what happens then.
 

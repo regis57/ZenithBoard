@@ -14,7 +14,7 @@ menu_onoff() { [ "$1" = on ] && echo ON || echo OFF; }
 menu_status_line() {
   local d feeds="" url
   d=$(installed_decoder); [ -n "$d" ] || d="none yet"
-  is_adsbx && feeds+=", ADSB Exchange"; is_piaware && feeds+=", FlightAware"; is_fr24 && feeds+=", Flightradar24"; is_planefinder && feeds+=", Plane Finder"
+  is_adsbx && feeds+=", ADSB Exchange"; is_piaware && feeds+=", FlightAware"; is_fr24 && feeds+=", Flightradar24"; is_planefinder && feeds+=", Plane Finder"; is_radarbox && feeds+=", AirNav Radar"
   feeds=${feeds#, }; [ -n "$feeds" ] || feeds="nobody yet"
   url="http://$(local_ip):$(cfg_get PORT 8080)"
   printf 'Decoder: %s    Feeding: %s\\nThe wall: %s    Console: %s' "$d" "$feeds" \
@@ -36,7 +36,7 @@ main_menu() {
       4 "4  Troubleshoot - health, logs, watchdogs" \
       5 "5  Updates      - ZenithBoard, the feeders, security fixes" \
       6 "6  Backup       - keep it, move to a new card, uninstall" \
-      7 "7  Options      - statistics, graphs, Bluesky, web console" \
+      7 "7  Options      - statistics, graphs, Bluesky, Telegram, web console" \
       0 "0  Exit") || exit 0
     case "$c" in
       start) start_here ;;
@@ -66,7 +66,7 @@ start_here() {
   fi
   # 2 · ADS-B
   if [ -z "$(installed_decoder)" ] || ! is_adsbx; then
-    wt_msg "ADS-B first: the decoder that reads the dongle, and ADSB Exchange (always fed: it runs the one MLAT client; MLAT locates aircraft that send no position, by comparing when several receivers heard them). On the next screens tick the other networks you want: FlightAware, Flightradar24, Plane Finder. Their installers are theirs and ask their own questions in the terminal (a station name, an e-mail, a key): the screen tells you what to answer.\n\nA backup restored a moment ago gave each network its identity back: they find it by themselves." 16 || return 0
+    wt_msg "ADS-B first: the decoder that reads the dongle, and ADSB Exchange (always fed: it runs the one MLAT client; MLAT locates aircraft that send no position, by comparing when several receivers heard them). On the next screens tick the other networks you want: FlightAware, Flightradar24, Plane Finder, AirNav Radar. Their installers are theirs and ask their own questions in the terminal (a station name, an e-mail, a key): the screen tells you what to answer.\n\nA backup restored a moment ago gave each network its identity back: they find it by themselves." 16 || return 0
     adsb_menu
     if [ -z "$(installed_decoder)" ]; then
       if [ -n "${ADSB_CANCELLED:-}" ]; then wt_msg "You left the ADS-B step before the end, so no decoder is installed and the rest waits: the wall and the console need one.\n\nChoose Start here again to do it." 11
@@ -314,7 +314,7 @@ troubleshoot_menu() {
       status) clear; "$ZB_HOME/bin/zenithboard" status; menu_pause ;;
       memory) clear; python3 "$ZB_HOME/tools/memory_report.py"; menu_pause ;;
       logs)
-        l=$(wt_radio "Whose log? (the last 100 lines)" flightinfo "The wall" ON decoder "The decoder" OFF social "Bluesky posts" OFF uat "978 MHz UAT" OFF) || continue
+        l=$(wt_radio "Whose log? (the last 100 lines)" flightinfo "The wall" ON decoder "The decoder" OFF social "Bluesky posts" OFF telegram "Telegram messages" OFF radarbox "AirNav Radar" OFF uat "978 MHz UAT" OFF) || continue
         clear; "$ZB_HOME/bin/zenithboard" logs "$l"; menu_pause ;;
       security) clear; security_check; menu_pause ;;
       reliability) reliability_menu ;;
@@ -365,11 +365,12 @@ backup_section_menu() {
 options_menu() {
   local c
   while true; do
-    c=$(wt_menu "Options, each off until you switch it on (graphs1090's look excepted)\n\nStatistics: $(stats_state)    graphs1090: $(graphs_state)    Bluesky: $(social_state)    Web console: $(console_state)" \
+    c=$(wt_menu "Options, each off until you switch it on (graphs1090's look excepted)\n\nStatistics: $(stats_state)    graphs1090: $(graphs_state)    Bluesky: $(social_state)    Telegram: $(telegram_state)    Web console: $(console_state)" \
       stats "1  Statistics, the /stats page: $(stats_state)" \
       graphs "2  graphs1090, years of graphs: $(graphs_state)" \
       social "3  Bluesky posts and summaries: $(social_state)" \
       console "4  Web console, from a browser: $(console_state)" \
+      telegram "5  Telegram messages to your own chat: $(telegram_state)" \
       back "Return to the previous menu") || return 0
     case "$c" in
       stats)
@@ -380,6 +381,7 @@ options_menu() {
         fi ;;
       graphs) graphs_menu ;;
       social) social_menu ;;
+      telegram) telegram_menu ;;
       console) console_menu ;;
       *) return 0 ;;
     esac

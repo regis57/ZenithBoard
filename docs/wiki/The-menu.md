@@ -162,7 +162,8 @@ everything (a typed word), and the settings file alone. [Moving to a new card](M
 ![7 Options](https://raw.githubusercontent.com/regis57/ZenithBoard/main/docs/images/menu-options.png)
 
 Statistics ([Statistics](Statistics)), graphs1090 and its look, Bluesky ([Social sharing](Social-sharing)), the web
-console ([Web console](Web-console), its entry *7* the language of the web pages). Each is off until switched on, graphs1090's look excepted: ZenithBoard's by
+console ([Web console](Web-console), its entry *7* the language of the web pages), and *5 Telegram* (0.99.6, [Telegram](Telegram)):
+switch it, the bot and the chat (the token is asked here, never in the console), try the messages or send a test, status, remove. Each is off until switched on, graphs1090's look excepted: ZenithBoard's by
 default, graphs1090's own with `sudo zenithboard graphs look original`.
 
 *3 Bluesky* (0.54.9, seven entries and Return, like the console's Sharing page): *1* switch sharing on or off, *2* the

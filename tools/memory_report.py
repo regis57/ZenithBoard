@@ -25,7 +25,7 @@ NAMES = {
     "readsb": "decoder", "dump1090-fa": "decoder", "dump978-fa": "978 MHz decoder", "skyaware978": "978 MHz map data",
     "tar1090": "receiver map (history)", "lighttpd": "web server (maps)", "adsbexchange-feed": "ADSB Exchange feed",
     "adsbexchange-mlat": "ADSB Exchange MLAT", "adsbexchange-stats": "ADSB Exchange stats", "piaware": "FlightAware",
-    "fr24feed": "Flightradar24", "pfclient": "Plane Finder", "zenithboard-flightinfo": "the wall",
+    "fr24feed": "Flightradar24", "pfclient": "Plane Finder", "rbfeeder": "AirNav Radar", "zenithboard-telegram": "Telegram messages", "zenithboard-flightinfo": "the wall",
     "zenithboard-social": "Bluesky posts", "collectd": "graphs1090 (collect)", "graphs1090": "graphs1090 (draw)",
     "NetworkManager": "network", "systemd-journald": "system logs", "sshd": "SSH", "ssh": "SSH", "cron": "cron",
     "avahi-daemon": "network name (mDNS)", "dbus": "system bus", "wpa_supplicant": "Wi-Fi", "rsyslog": "system logs (text)",

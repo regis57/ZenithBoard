@@ -145,5 +145,14 @@
  "a dark relief map with the main roads": "주요 도로가 표시된 어두운 음영 기복도",
  "a terrain map": "지형도",
  "a satellite map": "위성 지도",
- "a plain dark background": "단색의 어두운 배경"
+ "a plain dark background": "단색의 어두운 배경",
+ "Unlawful interference (hijacking)": "불법 방해(하이재킹)",
+ "Radio failure (lost communications)": "무선 통신 장애(통신 두절)",
+ "General emergency": "비상 상황",
+ "Squawk {squawk}: {meaning}": "스쿼크 {squawk}: {meaning}",
+ "Test message, not a real event:": "테스트 메시지이며 실제 상황이 아닙니다:",
+ "ZenithBoard is connected to this chat. The aircraft crossing the sharing radius and the emergency squawks the antenna hears will be written here.": "ZenithBoard가 이 채팅에 연결되었습니다. 공유 반경을 통과하는 항공기와 안테나가 수신한 비상 스쿼크를 여기에 알려 드립니다.",
+ "near {place}": "{place} 부근",
+ "{distance} from {place} ({country})": "{place}({country})에서 {distance}",
+ "position not known": "위치 미상"
 }

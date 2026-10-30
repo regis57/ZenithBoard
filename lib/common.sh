@@ -122,6 +122,7 @@ arch() { dpkg --print-architecture; }
 is_readsb()      { [ -x /usr/bin/readsb ] || [ -x /usr/local/bin/readsb ]; }
 is_dump1090()    { pkg_installed dump1090-fa; }
 is_adsbx()       { unit_exists adsbexchange-feed; }
+is_radarbox()    { pkg_installed rbfeeder; }       # 0.99.6: AirNav Radar
 is_piaware()     { pkg_installed piaware; }
 is_fr24()        { pkg_installed fr24feed; }
 is_planefinder() { pkg_installed pfclient; }
@@ -203,6 +204,28 @@ ini_set() {  # ini_set FILE KEY VALUE  -> KEY="VALUE" (replace or append)
   local f="$1" k="$2" v="$3"
   touch "$f"
   if grep -qE "^$k=" "$f"; then sed -i -E "s|^$k=.*|$k=\"$v\"|" "$f"; else printf '%s="%s"\n' "$k" "$v" >> "$f"; fi
+}
+
+# 0.99.6: an ini file with [sections] and plain key=value lines (AirNav Radar's rbfeeder.ini)
+ini_sec_get() {   # ini_sec_get FILE SECTION KEY
+  awk -v sec="$2" -v k="$3" '
+    /^[ \t]*\[.*\][ \t]*$/ { s = $0; gsub(/[][ \t]/, "", s); insec = (s == sec); next }
+    insec { line = $0; sub(/^[ \t]+/, "", line); if (index(line, k "=") == 1 || line ~ ("^" k "[ \t]+=")) { sub(/^[^=]*=[ \t]*/, "", line); sub(/[ \t\r]+$/, "", line); print line; exit } }' "$1" 2>/dev/null
+}
+ini_sec_set() {   # ini_sec_set FILE SECTION KEY VALUE: replaced inside its section, added at its end, or a new section
+  local f="$1" tmp
+  [ -f "$f" ] || : > "$f"
+  tmp=$(mktemp "$f.XXXXXX") || return 1
+  # blank lines are held back, so a line added to a section goes before the blank lines that end it
+  awk -v sec="$2" -v k="$3" -v v="$4" '
+    function blanks() { while (nb > 0) { print ""; nb-- } }
+    function flush() { if (insec && !done) { print k "=" v; done = 1 } }
+    /^[ \t]*$/ { nb++; next }
+    /^[ \t]*\[.*\][ \t]*$/ { flush(); blanks(); s = $0; gsub(/[][ \t]/, "", s); insec = (s == sec); if (insec) seen = 1; print; next }
+    insec { line = $0; sub(/^[ \t]+/, "", line); if (index(line, k "=") == 1 || line ~ ("^" k "[ \t]+=")) { blanks(); if (!done) print k "=" v; done = 1; next } }
+    { blanks(); print }
+    END { flush(); blanks(); if (!seen) { print ""; print "[" sec "]"; print k "=" v } }' "$f" > "$tmp" && cat "$tmp" > "$f"
+  local rc=$?; rm -f "$tmp"; return "$rc"
 }
 
 # ------------------------------------------------------------------ whiptail helpers (all return non-zero on Cancel)

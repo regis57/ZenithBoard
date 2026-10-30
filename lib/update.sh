@@ -196,7 +196,7 @@ _zb_sync_source() {
 }
 
 # Components that can be updated one by one (the name is what `zenithboard update only NAME...` and the menu use).
-ZB_COMPONENTS="zenithboard readsb dump1090 adsbx piaware fr24 planefinder flightinfo graphs1090"
+ZB_COMPONENTS="zenithboard readsb dump1090 adsbx piaware fr24 planefinder radarbox flightinfo graphs1090"
 zb_component_label() {
   case "$1" in
     zenithboard) echo "ZenithBoard itself (installer, menu, wall code)" ;;
@@ -206,6 +206,7 @@ zb_component_label() {
     piaware) echo "FlightAware (piaware)" ;;
     fr24) echo "Flightradar24 (fr24feed)" ;;
     planefinder) echo "Plane Finder" ;;
+    radarbox) echo "AirNav Radar (rbfeeder)" ;;
     flightinfo) echo "FlightInfo wall + aircraft data" ;;
     graphs1090) echo "graphs1090 (the decoder's graphs)" ;;
   esac
@@ -214,7 +215,7 @@ zb_component_installed() {
   case "$1" in
     zenithboard) return 0 ;;
     readsb) is_readsb ;; dump1090) is_dump1090 ;; adsbx) is_adsbx ;; piaware) is_piaware ;;
-    fr24) is_fr24 ;; planefinder) is_planefinder ;; flightinfo) is_flightinfo ;; graphs1090) is_graphs ;;
+    fr24) is_fr24 ;; planefinder) is_planefinder ;; radarbox) is_radarbox ;; flightinfo) is_flightinfo ;; graphs1090) is_graphs ;;
     *) return 1 ;;
   esac
 }
@@ -226,6 +227,7 @@ zb_component_version() {   # a short version when it is cheap to know, else noth
     dump1090) v=$(dpkg-query -W -f='${Version}' dump1090-fa 2>/dev/null) ;;
     piaware) v=$(dpkg-query -W -f='${Version}' piaware 2>/dev/null) ;;
     fr24) v=$(dpkg-query -W -f='${Version}' fr24feed 2>/dev/null) ;;
+    radarbox) v=$(dpkg-query -W -f='${Version}' rbfeeder 2>/dev/null) ;;
     graphs1090) v=$(graphs_version) ;;
   esac
   printf '%s' "$v"
@@ -285,7 +287,7 @@ zb_update_components() {
   ! want_c fr24 || [ -z "$(fr24_source_file)" ] || fr24_repair_key || warn "Flightradar24 signing key not refreshed (see above)."
   # 0.54.6: `update quick` is documented as "no apt, in seconds" and ran apt-get update on every call; only the components
   # that apt itself upgrades need it (readsb, ADSB Exchange and Plane Finder fetch their own scripts and packages)
-  if { want_c dump1090 && is_dump1090; } || { want_c piaware && is_piaware; } || { want_c fr24 && is_fr24; }; then apt-get update -qq; fi
+  if { want_c dump1090 && is_dump1090; } || { want_c piaware && is_piaware; } || { want_c fr24 && is_fr24; } || { want_c radarbox && is_radarbox; }; then apt-get update -qq; fi
   if want_c readsb && is_readsb; then
     log "readsb"; rb=$(zb_tmp readsb-install.sh) && fetch "$READSB_INSTALL_URL" "$rb" && bash "$rb" || warn "readsb update failed"
   fi
@@ -304,6 +306,11 @@ zb_update_components() {
   want_c fr24 && is_fr24 && { log "fr24feed"; apt_install --only-upgrade fr24feed || warn "fr24feed update failed"; }
   if want_c planefinder && is_planefinder; then
     log "Plane Finder"; install_planefinder || warn "Plane Finder update failed (check lib/versions.sh)"
+  fi
+  # 0.99.6: AirNav Radar from its repository; its settings put right again afterwards (an upgrade may bring its own)
+  if want_c radarbox && is_radarbox; then
+    log "AirNav Radar"; apt_install --only-upgrade rbfeeder || warn "rbfeeder update failed"
+    rb24_write_ini; systemctl try-restart rbfeeder 2>/dev/null || true
   fi
   if want_c flightinfo && is_flightinfo; then
     log "FlightInfo"; ensure_zb_user          # also repairs the folder modes of older installs
@@ -326,6 +333,7 @@ zb_update_components() {
   zb_retired_colours
   social_migrate
   if [ "$(cfg_get SOCIAL 0)" = 1 ]; then social_install_units; fi
+  if [ "$(cfg_get TELEGRAM 0)" = 1 ]; then telegram_install_units; fi       # 0.99.6: the new code, at once
   zb_mlat_guard
   zb_wall_check
   zb_system_updates_note

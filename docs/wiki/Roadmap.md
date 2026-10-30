@@ -2,7 +2,7 @@
 
 No dates except those the sky sets (a monthly summary, a month of lists). ZenithBoard is a spare-time project and any other date would be a fiction. What this page promises is an order.
 
-**Where it stands (29 October 2026): 0.99.3, the release candidate for 1.0.** Features are frozen since 25 October 2026, 13:42 (the owner); only fixes ship until 1.0 (0.99.1, 0.99.2, 0.99.3…), and they do not move the date. The reference Pi runs hands-off since 25 October, 13:51 CET, to 25 November; the fixes it takes meanwhile do not move that date. So this page reads, in order: what 1.0 still takes; what is watched on the Pi meanwhile; what was asked during the freeze (*Waiting for 1.1*); what comes after 1.0; what is done; what will not be done.
+**Where it stands (30 October 2026): 0.99.6, the release candidate for 1.0.** Features are frozen since 25 October 2026, 13:42 (the owner); only fixes ship until 1.0 (0.99.1 to 0.99.5), and they do not move the date. On 30 October the owner let two features in, AirNav Radar and Telegram messages (0.99.6), and started the month again: **30 days from the reference Pi's update to 0.99.6**, 29 November 2026 if it is updated on 30 October. So this page reads, in order: what 1.0 still takes; what is watched on the Pi meanwhile; what was asked during the freeze (*Waiting for 1.1*); what comes after 1.0; what is done; what will not be done.
 
 ## What 1.0 takes
 
@@ -34,15 +34,15 @@ No dates except those the sky sets (a monthly summary, a month of lists). Zenith
 
 ### The freeze
 
-**Frozen since 25 October 2026, 13:42** (the owner: *on gèle à partir de maintenant, on ne passe qu'en correction*): **0.99.0** is the release candidate, the same code as 0.55.2. From it only fixes are made (0.99.1, 0.99.2…): no new feature, no new setting, no new screen, no new language. The hands-off weeks are counted from there, and a fix shipped during them restarts nothing (the owner, 29 October 2026: *on fait des corrections, pas des nouvelles fonctions*). What is asked during the freeze waits for 1.1, written down below in *Waiting for 1.1*.
+**Frozen since 25 October 2026, 13:42** (the owner: *on gèle à partir de maintenant, on ne passe qu'en correction*): **0.99.0** is the release candidate, the same code as 0.55.2. From it only fixes are made (0.99.1, 0.99.2…): no new feature, no new setting, no new screen, no new language. The hands-off weeks are counted from there, and a fix shipped during them restarts nothing (the owner, 29 October 2026: *on fait des corrections, pas des nouvelles fonctions*). What is asked during the freeze waits for 1.1, written down below in *Waiting for 1.1*, unless the owner lets it in: **0.99.6** (30 October 2026) brought AirNav Radar and the Telegram messages, and the 30 days started again with it.
 
 **What counts as a fix:** something that does not do what the docs say, a crash, a wrong figure, a security or privacy hole, a mistranslation, a doc that a novice cannot follow (the fresh-card try will find some), a provider that moved a file. **What does not:** a new option, a new tag, a new screen or card, a new language, a new look, an improvement to something that works as documented.
 
-**The hands-off clock runs from 25 October 2026, 13:51 CET to 25 November 2026**, and the fixes do not move it (the owner, 29 October 2026: *arrête de pousser la date de la RC, on fait des corrections ici, pas des nouvelles fonctions*). 0.99.1, 0.99.2 and 0.99.3 were fixes and the Pi took them in its stride; for two days the date had been pushed to 28 and then 29 November, which is withdrawn. What would stop the clock is what the month is there to catch: a crash in the logs, a reboot forced by a watchdog, a service that stops. Those are written in the field log of [Project status](Project-status), and one of them moves the date.
+**The hands-off clock started on 25 October 2026, 13:51 CET, for 25 November 2026, and starts again with 0.99.6** (the owner, 30 October 2026: *repart pour 30 jours de RC à la suite*): 30 days from the reference Pi's update to 0.99.6, written in the field log of [Project status](Project-status) when it happens. The fixes do not move it (the owner, 29 October 2026: *arrête de pousser la date de la RC, on fait des corrections ici, pas des nouvelles fonctions*). 0.99.1, 0.99.2 and 0.99.3 were fixes and the Pi took them in its stride; for two days the date had been pushed to 28 and then 29 November, which is withdrawn. What would stop the clock is what the month is there to catch: a crash in the logs, a reboot forced by a watchdog, a service that stops. Those are written in the field log of [Project status](Project-status), and one of them moves the date.
 
 Swahili and Hindi are published without a native review, said as such in [Translating](Translating): that is not a caveat for 1.0.
 
-**Earliest date:** the monthly summary on 1 November, a month of lists around 20 November, the release candidate's month hands-off: **25 November 2026 at the earliest**, with the fresh card and the fixed address done meanwhile. A caveat still open then moves the date, not the bar.
+**Earliest date:** the monthly summary on 1 November, a month of lists around 20 November, the release candidate's 30 days hands-off from the update to 0.99.6: **29 November 2026 at the earliest**, with the fresh card and the fixed address done meanwhile. A caveat still open then moves the date, not the bar.
 
 ## Watched during the release candidate
 
@@ -81,11 +81,9 @@ Two items of *After 1.0* are to be built from what the reference Pi measures, no
 
 What is asked during the freeze, kept here so that nothing is lost, and done after 1.0:
 
-* **Telegram alerts, from the Pi** (asked by the owner, 25 October 2026). A message in a private Telegram chat or group when:
-  * an aircraft inside the social sharing radius is seen, the same rule as the Bluesky crossings;
-  * an aircraft, anywhere the antenna receives, broadcasts the emergency squawk codes 7500, 7600 or 7700.
+* **Receiver health by trend** (asked by the owner, 26 October 2026). The statistics already keep thirty days of messages per hour. An alert when the rate falls well below the same hour one week earlier would catch a dongle losing strength, a degraded antenna or a cut cable, before a receiver goes quiet for days: the most useful alert for a Pi that runs without anyone watching it. It depends on what the sky looks like, so the threshold waits for the counters to show a normal week (`zenithboard stats gaps` and the field log), not a guess. Off by default, by command and by menu; the Telegram chat of 0.99.6 is where it would be said.
 
-  At most one message per flight, the repeat rule Bluesky applies. The squawk alerts go to the owner's chat only and are never published: an emergency is not a fact to broadcast, and the crew and the rescue services are not an audience. The Pi reads `aircraft.json` itself; the bot token lives in a file readable by the service's user alone and is set up from the terminal (`zenithboard telegram setup`, to be written), then tuned in the web console. The proof of concept is in French and English; every other console language follows with a native review, as the translation rule asks. Nothing is built before 1.0 is out: a service change restarts the hands-off clock.
+* **Emergency squawk banner on the wall** (asked by the owner, 26 October 2026). When 7500, 7600 or 7700 is heard anywhere in the antenna's range, not only inside the wall's radius, the wall shows a banner for 30 seconds, longer than its usual time for an aircraft, with the code and its meaning; a checkbox in the wall's settings (the gear), off by default, and a command. Nothing published: an emergency is not a fact to broadcast. The detection is 0.99.6's (`flightinfo/telegram.py`, heard on two reads in a row); to be previewed on the real wall before it ships.
 
 ## After 1.0
 
@@ -98,7 +96,6 @@ What was planned before the freeze and is not a fix, in the order it would come.
   2. **Let's Encrypt by DNS, with the DuckDNS name**: the DNS-01 challenge proves the name with a TXT record instead of a connection from outside; DuckDNS sets it through its API, and `acme.sh` does it by itself (`dns_duckdns`). The name can point at the Pi's home address (192.168.x.x): nothing is opened to the internet. *Limits:* some home routers refuse a DNS answer that points at a private address (their DNS-rebinding protection) and need an exception for the name; the certificate lasts 90 days, so the Pi renews it on a timer.
 
   Not considered: a self-signed certificate or a local authority (`mkcert`), which every phone and computer would have to install by hand, and with which passkeys stay unreliable.
-* **A decision on AirNav RadarBox:** a fifth feeder is only worth it if its MLAT does not fight the single-MLAT rule. Waiting on a few nights of data first.
 * **978 MHz UAT validated by someone in the United States:** experimental, outside 1.0, since 25 October 2026 (written and tested, never run for real).
 * **More languages:** Tamil and Urdu (asked about on 24 October 2026) only with a native reviewer: 90% could not be promised without one; Hindi came without (0.55.0, the owner's request). Hausa and Yoruba likewise (left out in 0.48.0). Swahili and Hindi wait for their native review ([Translating](Translating)).
 
@@ -106,6 +103,8 @@ What was planned before the freeze and is not a fix, in the order it would come.
 
 Kept so the question is not asked twice. Newest first.
 
+* ~~Telegram alerts, from the Pi~~ — built in 0.99.6 (30 October 2026), let in during the release candidate by the owner: each crossing of the sharing radius and each emergency squawk (7500, 7600, 7700) anywhere in range, once per flight, to the owner's own chat or group; never to Bluesky. The token in the terminal only, the finer settings in the console, every language. See [Telegram](Telegram).
+* ~~A decision on AirNav RadarBox~~ — built in 0.99.6 (30 October 2026) at the owner's word, with its MLAT off (`autostart_mlat=false`): ADSB Exchange keeps the only MLAT client, so it does not fight the rule. See [Providers](Providers#airnav-radar-radarbox).
 * ~~Posts, small things: a lower threshold of town names for a sparse region; the farthest aircraft named for the whole month~~ — settled 26 October 2026: the region's own list (`sudo zenithboard social places on`, 0.27.0, 20 October) names towns anywhere, ranked by GeoNames' place type rather than a population threshold; the farthest aircraft is named every day since 0.22.0 (19 October), so the unnamed days leave the thirty-day page around 18 November.
 * ~~The web console, `/console`~~ — built in 0.39.0 (21 October 2026) at the owner's request, off by default and removable; computers signed in by the phone in 0.40.0 (21 October); an update from the page and a phone sign-in done on two Pis (25 October). See [Web console](Web-console). Never through it, by design: Wi-Fi and fixed-address changes, the uninstall, the Bluesky app password.
 * ~~Translations~~ — the web console, `/stats`, graphs1090's page and the posts: French in 0.47.0 (21 October 2026), twenty languages in 0.48.0 (22 October), Swahili in 0.53.1 (22 October), Hindi in 0.55.0 (25 October); twenty-two in all, each with its review sheet ([Translating](Translating), [Translation plan](Translation-plan)).

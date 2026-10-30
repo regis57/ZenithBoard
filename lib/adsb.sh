@@ -4,7 +4,7 @@
 #
 # Architecture (identical for both decoders):
 #   SDR dongle -> decoder -> Beast TCP on 127.0.0.1:30005 -> every feeder reads from there.
-#   Exactly ONE MLAT client may run (it is ADSB Exchange's). FlightAware / FR24 MLAT are switched off.
+#   Exactly ONE MLAT client may run (it is ADSB Exchange's). FlightAware / FR24 / AirNav Radar MLAT are switched off.
 
 # ------------------------------------------------------------------ MLAT guard
 mlat_count() { pgrep -fc 'mlat-client' || true; }
@@ -19,6 +19,11 @@ zb_mlat_guard() {
     ini_set /etc/fr24feed.ini mlat no
     ini_set /etc/fr24feed.ini mlat-without-gps no
     unit_active fr24feed && systemctl restart fr24feed || true
+  fi
+  # 0.99.6: AirNav's own line for it (the owner, 30 October 2026): autostart_mlat=false in [mlat], then a restart
+  if is_radarbox && [ -f "$RB24_INI" ] && [ "$(ini_sec_get "$RB24_INI" mlat autostart_mlat)" != false ]; then
+    ini_sec_set "$RB24_INI" mlat autostart_mlat false
+    unit_active rbfeeder && systemctl restart rbfeeder || true
   fi
   sleep 3
   local n; n=$(mlat_count)
@@ -260,6 +265,116 @@ install_planefinder() {
 }
 remove_planefinder() { systemctl disable --now pfclient 2>/dev/null || true; apt_remove pfclient; }
 
+# --- AirNav Radar (RadarBox) -------------------------------------------------------------------------------------
+# 0.99.6, asked for by the owner (30 October 2026). rbfeeder from AirNav's own repository, added with its key pinned
+# (lib/versions.sh says where each value was read). It reads the decoder's Beast port like every other feeder, makes its
+# own sharing key at its first start and keeps it in /etc/rbfeeder.ini, and its MLAT is off: ADSB Exchange keeps the only
+# MLAT client. rbfeeder.ini has sections ([client], [network], [mlat]) and plain key=value lines, hence a setter of its
+# own, ini_sec_set in lib/common.sh (ini_set writes KEY="VALUE" at the top level, the form of fr24feed.ini).
+RB24_INI="${RB24_INI:-/etc/rbfeeder.ini}"
+rb24_keyring() { echo "${ZB_APT_DIR:-/etc/apt}/keyrings/zenithboard-rb24.gpg"; }
+rb24_our_source() { echo "${ZB_APT_DIR:-/etc/apt}/sources.list.d/zenithboard-rb24.list"; }
+rb24_source_file() { grep -rl "apt.rb24.com" "${ZB_APT_DIR:-/etc/apt}/sources.list" "${ZB_APT_DIR:-/etc/apt}/sources.list.d" 2>/dev/null | head -1; }
+
+# true when `apt-get update` complains about AirNav's repository (no such suite, a key apt refuses)
+rb24_repo_broken() { apt-get update 2>&1 | grep -i "rb24" | grep -qi -E "not signed|signature|NO_PUBKEY|GPG error|Release file|404|Err:"; }
+
+# The repository, once: a source that already points at it (AirNav's own installer, an earlier run) is used as it is.
+# The suite is this system's own when AirNav has it, else bookworm, the one the community's container uses.
+rb24_add_repo() {
+  local apt_dir="${ZB_APT_DIR:-/etc/apt}" tmp fprs suite keyring src
+  if [ -n "$(rb24_source_file)" ]; then apt-get update -qq >/dev/null 2>&1 || true; return 0; fi   # its lists, fresh
+  keyring=$(rb24_keyring); src=$(rb24_our_source)
+  command -v gpg >/dev/null 2>&1 || apt_install gpg || return 1
+  tmp=$(mktemp -d) || return 1
+  if ! fetch "$RB24_KEY_URL" "$tmp/key.asc"; then rm -rf "$tmp"; return 1; fi
+  fprs=$(gpg --batch --show-keys --with-colons "$tmp/key.asc" 2>/dev/null | awk -F: '$1=="fpr"{print toupper($10)}')
+  if ! printf '%s\n' "$fprs" | grep -qx "$RB24_KEY_FPR"; then
+    err "AirNav's key does not have the expected fingerprint ($RB24_KEY_FPR): NOT installed, nothing added."
+    err "AirNav may have changed its key: check lib/versions.sh against https://www.airnavradar.com/sharing-data"
+    rm -rf "$tmp"; return 1
+  fi
+  install -d -m 755 "$(dirname "$keyring")" "$(dirname "$src")"
+  if ! { gpg --batch --yes --dearmor -o "$tmp/key.gpg" "$tmp/key.asc" && install -m 644 "$tmp/key.gpg" "$keyring"; }; then
+    rm -rf "$tmp"; err "AirNav's key could not be written to $keyring"; return 1
+  fi
+  rm -rf "$tmp"
+  suite=$(sed -n -E 's/^VERSION_CODENAME="?([a-z]+)"?$/\1/p' "${ZB_OS_RELEASE:-/etc/os-release}" 2>/dev/null | head -1)   # read, never sourced
+  printf 'deb [signed-by=%s] %s %s main\n' "$keyring" "$RB24_REPO_URL" "${suite:-$RB24_SUITE}" > "$src"
+  if rb24_repo_broken && [ "${suite:-$RB24_SUITE}" != "$RB24_SUITE" ]; then
+    log "AirNav's repository has no '$suite' suite: using '$RB24_SUITE', the one the community's container uses"
+    printf 'deb [signed-by=%s] %s %s main\n' "$keyring" "$RB24_REPO_URL" "$RB24_SUITE" > "$src"
+  fi
+  if rb24_repo_broken; then
+    err "apt refuses AirNav's repository on this system (see the line about rb24 in: sudo apt-get update)."
+    err "It was taken away again; nothing was changed about signature checking."
+    rm -f "$src" "$keyring"; apt-get update -qq >/dev/null 2>&1 || true
+    return 1
+  fi
+}
+
+# Its settings, every time it is installed (a wrong one is put right): the decoder's Beast port, the antenna, MLAT off.
+rb24_write_ini() {
+  local alt; alt=$(awk -v a="$(cfg_get ALT_M 0)" 'BEGIN { printf "%.0f", a }')
+  ini_sec_set "$RB24_INI" client network_mode true
+  ini_sec_set "$RB24_INI" client lat "$(cfg_get LAT)"
+  ini_sec_set "$RB24_INI" client lon "$(cfg_get LON)"
+  ini_sec_set "$RB24_INI" client alt "$alt"
+  ini_sec_set "$RB24_INI" network mode beast
+  ini_sec_set "$RB24_INI" network external_host 127.0.0.1
+  ini_sec_set "$RB24_INI" network external_port 30005
+  ini_sec_set "$RB24_INI" mlat autostart_mlat false
+}
+rb24_key() { local k; k=$(ini_sec_get "$RB24_INI" client key); [[ $k =~ ^[A-Za-z0-9]{8,64}$ ]] && printf '%s' "$k"; }
+# The station's serial (EXTRPI...), which its page on AirNav's site is named by: rbfeeder prints it when the server
+# accepts the key ("This is your station serial number: EXTRPI000000"); kept in config.env once seen (not a secret: the
+# page is public). Read from this boot's journal only, which stays quick on a Pi 3.
+rb24_station() {
+  local s; s=$(cfg_get RADARBOX_STATION "")
+  if [ -z "$s" ] && is_radarbox; then
+    s=$(journalctl -u rbfeeder -b --no-pager -o cat 2>/dev/null | sed -n 's/.*station serial number: *\([A-Za-z0-9]\{6,20\}\).*/\1/p' | tail -1)
+    [ -z "$s" ] || [ "$(id -u)" -ne 0 ] || cfg_set RADARBOX_STATION "$s"
+  fi
+  printf '%s' "$s"
+}
+
+install_radarbox() {
+  local k
+  log "Installing AirNav Radar (rbfeeder)"
+  rb24_add_repo || return 1
+  # as piaware: what AirNav only recommends (a decoder of its own among them) is not wanted beside readsb
+  apt_install --no-install-recommends rbfeeder || { err "rbfeeder could not be installed from AirNav's repository."; return 1; }
+  # 0.99.6: a key from a backup, or the one kept when it was removed, makes it the same station again: nothing to claim
+  if [ -f "${BK_PENDING:-/nonexistent}/rb24key" ]; then bk_pending_apply radarbox
+  elif [ -z "$(rb24_key)" ] && [[ $(cat "$(rb24_kept)" 2>/dev/null) =~ ^[A-Za-z0-9]{8,64}$ ]]; then
+    ini_sec_set "$RB24_INI" client key "$(cat "$(rb24_kept)")" && rm -f "$(rb24_kept)" && echo "    AirNav Radar: the sharing key kept when it was removed is set again; the same station."
+  fi
+  rb24_write_ini
+  systemctl enable rbfeeder 2>/dev/null || true
+  systemctl restart rbfeeder || true
+  for _ in 1 2 3 4 5 6 7 8 9 10 11 12; do k=$(rb24_key); [ -n "$k" ] && break; [ "${ZB_SKIP_SERVICES:-}" = 1 ] && break; sleep 5; done   # a minute at most
+  if [ -n "$k" ]; then
+    log "AirNav Radar configured (Beast 127.0.0.1:30005, MLAT off)."
+    # shown on this terminal only, never logged: the claim page asks for it
+    printf '    Your sharing key:  %s   (kept in %s; a backup keeps it too)\n' "$k" "$RB24_INI" >&2
+    echo "    Claim this station at $RB24_CLAIM_URL (from the same public IP as this Pi), or nothing to do if it is yours already."
+  else
+    warn "rbfeeder has not written its sharing key yet. In a minute:  sudo rbfeeder --showkey --no-start  then claim the station at $RB24_CLAIM_URL"
+  fi
+}
+# its sharing key is the station: kept when it is removed (root only, not among a restore's waiting identities, which
+# would tick it again in menu 1), so a station taken off and put back is the same one
+rb24_kept() { echo "${BK_DATA:-$ZB_DATA}/radarbox-key-kept"; }
+remove_radarbox() {
+  local k; k=$(rb24_key)
+  if [ -n "$k" ]; then mkdir -p "$(dirname "$(rb24_kept)")"; ( umask 077; printf '%s\n' "$k" > "$(rb24_kept)" ); fi
+  systemctl disable --now rbfeeder 2>/dev/null || true
+  apt_remove rbfeeder
+  # what ZenithBoard added for it, and only that; a source of AirNav's own installer stays
+  if [ -f "$(rb24_our_source)" ]; then rm -f "$(rb24_our_source)" "$(rb24_keyring)"; apt-get update -qq >/dev/null 2>&1 || true; fi
+  cfg_del RADARBOX_STATION 2>/dev/null || true
+}
+
 # ------------------------------------------------------------------ menu 1
 # shellcheck disable=SC2034  # ADSB_CANCELLED is read by start_here (lib/menus.sh)
 adsb_menu() {
@@ -274,8 +389,8 @@ adsb_menu() {
   dev=$(wt_input "ADS-B dongle serial number (or index).\nLeave empty if you have a single dongle.\nNeeded when a 2nd dongle is used for 978 MHz UAT." "$(cfg_get ADSB_SDR)") || { ADSB_CANCELLED=1; return 0; }
   cfg_set ADSB_SDR "$dev"
 
-  local st_fa=OFF st_fr=OFF st_pf=OFF
-  is_piaware && st_fa=ON; is_fr24 && st_fr=ON; is_planefinder && st_pf=ON
+  local st_fa=OFF st_fr=OFF st_pf=OFF st_rb=OFF
+  is_piaware && st_fa=ON; is_fr24 && st_fr=ON; is_planefinder && st_pf=ON; is_radarbox && st_rb=ON
   local st_axs=OFF; is_adsbx_stats && st_axs=ON
   # 0.54.5: after a restore on a new card, the networks the backup fed are ticked: their identities wait in restore-pending/
   # for exactly this step, and the list used to start with everything unticked, as if the backup had said nothing
@@ -283,8 +398,9 @@ adsb_menu() {
   [ -f "$pend/piaware-feeder-id" ] && { st_fa=ON; ticked=1; }
   [ -f "$pend/fr24key" ] && { st_fr=ON; ticked=1; }
   [ -f "$pend/pfclient-config.json" ] && { st_pf=ON; ticked=1; }
+  [ -f "$pend/rb24key" ] && { st_rb=ON; ticked=1; }
   [ -f "${BK_DATA:-/nonexistent}/adsbx-stats-wanted" ] && { st_axs=ON; ticked=1; }      # a mark of its own: restore-pending/ must stay empty once the networks are in
-  local -a items=(ADSBX "ADSB Exchange (mandatory)" ON ADSBX_STATS "ADSB Exchange stats: their map of your aircraft" "$st_axs" FLIGHTAWARE "FlightAware (piaware)" "$st_fa" FR24 "Flightradar24" "$st_fr" PLANEFINDER "Plane Finder" "$st_pf")
+  local -a items=(ADSBX "ADSB Exchange (mandatory)" ON ADSBX_STATS "ADSB Exchange stats: their map of your aircraft" "$st_axs" FLIGHTAWARE "FlightAware (piaware)" "$st_fa" FR24 "Flightradar24" "$st_fr" PLANEFINDER "Plane Finder" "$st_pf" RADARBOX "AirNav Radar (RadarBox)" "$st_rb")
   local st_uat=OFF
   is_uat978 && st_uat=ON
   # 978 MHz UAT is only used in the United States; a region that has it installed keeps seeing it so it can be removed
@@ -298,7 +414,7 @@ adsb_menu() {
   elif is_adsbx_stats; then plan+="- REMOVE ADSB Exchange stats\n"
   elif [ -f "$AXS_STATE" ]; then plan+="- Finish removing ADSB Exchange stats (what an earlier attempt left)\n"; fi
   local pair f name checker
-  for pair in "FLIGHTAWARE:is_piaware" "FR24:is_fr24" "PLANEFINDER:is_planefinder"; do
+  for pair in "FLIGHTAWARE:is_piaware" "FR24:is_fr24" "PLANEFINDER:is_planefinder" "RADARBOX:is_radarbox"; do
     f=${pair%%:*}; checker=${pair##*:}
     if [[ "$feeders" == *" $f "* ]]; then $checker || plan+="- Install $f\n"
     else $checker && plan+="- REMOVE $f\n"; fi
@@ -306,7 +422,7 @@ adsb_menu() {
   if is_region_us || is_uat978; then
     if [[ "$feeders" == *" UAT978 "* ]]; then is_uat978 || plan+="- Install 978 MHz UAT (2nd dongle)\n"; else is_uat978 && plan+="- REMOVE 978 MHz UAT\n"; fi
   fi
-  local n_extra=0; for f in FLIGHTAWARE FR24 PLANEFINDER; do [[ "$feeders" == *" $f "* ]] && n_extra=$((n_extra+1)); done
+  local n_extra=0; for f in FLIGHTAWARE FR24 PLANEFINDER RADARBOX; do [[ "$feeders" == *" $f "* ]] && n_extra=$((n_extra+1)); done
   if is_low_mem && [ "$n_extra" -gt 2 ]; then plan+="\nNOTE: $(mem_total_mb) MB RAM is low for $n_extra extra feeders: consider fewer.\n"; fi
   [ -z "$plan" ] && plan="Nothing to change. (Feeders and MLAT policy will simply be re-checked.)\n"
   wt_yesno "Planned changes:\n\n$plan\nContinue?" 18 || { ADSB_CANCELLED=1; return 0; }
@@ -327,12 +443,14 @@ adsb_menu() {
   elif is_adsbx_stats || [ -f "$AXS_STATE" ]; then
     adsbx_stats_off
   fi
-  for pair in "FLIGHTAWARE:piaware" "FR24:fr24" "PLANEFINDER:planefinder"; do
+  for pair in "FLIGHTAWARE:piaware" "FR24:fr24" "PLANEFINDER:planefinder" "RADARBOX:radarbox"; do
     f=${pair%%:*}; name=${pair##*:}
     if [[ "$feeders" == *" $f "* ]]; then
-      case $name in piaware) is_piaware || install_piaware ;; fr24) is_fr24 || install_fr24 ;; planefinder) is_planefinder || install_planefinder ;; esac
+      case $name in piaware) is_piaware || install_piaware ;; fr24) is_fr24 || install_fr24 ;; planefinder) is_planefinder || install_planefinder ;;
+        radarbox) is_radarbox || install_radarbox || warn "AirNav Radar was not installed (the lines above say why)." ;; esac
     else
-      case $name in piaware) is_piaware && remove_piaware ;; fr24) is_fr24 && remove_fr24 ;; planefinder) is_planefinder && remove_planefinder ;; esac
+      case $name in piaware) is_piaware && remove_piaware ;; fr24) is_fr24 && remove_fr24 ;; planefinder) is_planefinder && remove_planefinder ;;
+        radarbox) is_radarbox && remove_radarbox ;; esac
     fi
   done
   if is_region_us || is_uat978; then
@@ -380,6 +498,11 @@ zb_apply_location() {  # zb_apply_location LAT LON [ALT_M]
   fi
   if is_fr24; then
     _loc_line "Flightradar24" "MANUAL: edit your receiver on https://www.flightradar24.com (My data sharing)"
+  fi
+  if is_radarbox && [ -f "$RB24_INI" ]; then
+    ini_sec_set "$RB24_INI" client lat "$lat"; ini_sec_set "$RB24_INI" client lon "$lon"
+    ini_sec_set "$RB24_INI" client alt "$(awk -v a="$alt" 'BEGIN { printf "%.0f", a }')"
+    systemctl restart rbfeeder 2>/dev/null; _loc_line "AirNav Radar" "updated"
   fi
   if is_planefinder; then
     local f="${ZB_PF_CONFIG:-/etc/pfclient-config.json}"

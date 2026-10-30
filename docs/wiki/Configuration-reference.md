@@ -76,8 +76,15 @@ The dynamic-DNS **token is not stored here.** It is asked for interactively and 
 | `CONSOLE_LANG` | *(empty)* | `zenithboard console lang CODE` | The web pages' language (console, `/stats`, graphs1090's page) for the browsers that did not choose their own with the flag at the top: `en`, `fr` (0.47.0; only the languages translated on this Pi). Empty: the console asks at its first visit, then sets it |
 | `CONSOLE_PHONE_SIGNIN` | `0` | `zenithboard console phone-signin on\|off` | A computer's console sign-in page shows a QR code that a phone already signed in approves (0.40.0) |
 | `CONSOLE_HOSTS` | — | `zenithboard config-set CONSOLE_HOSTS name1,name2` | Names, besides an address, `*.local`, `*.lan`, `*.home.arpa` and the Pi's own name, that the console may be opened by (a guard against DNS rebinding). Since 0.54.0 the wall's data (`/api/*`, `/social/preview*`) answers to the same names, and to `DDNS_HOST`; a router's own name (`pi.fritz.box`) goes here. Not asked when `ALLOW_FROM=any` |
+| `TELEGRAM` | `0` | `zenithboard telegram on\|off` | Text messages to your own Telegram chat (0.99.6). See [Telegram](Telegram). The bot's token and the chat are in `telegram.env`, not here |
+| `TELEGRAM_CROSSINGS` | `1` | `zenithboard telegram crossings on\|off` | A message for each aircraft crossing the sharing radius (`SOCIAL_RADIUS_KM`), once per crossing |
+| `TELEGRAM_SQUAWKS` | `1` | `zenithboard telegram squawks on\|off` | A message for each emergency squawk (7500, 7600, 7700) anywhere in range, once per flight and code. Never posted to Bluesky |
+| `TELEGRAM_RULES` | `all` | `zenithboard telegram rules LIST` | Which crossings: `all`, or some of `military,helicopter,heavy` |
+| `TELEGRAM_LANG` | *(empty)* | `zenithboard telegram lang CODE\|posts` | The messages' language; empty: the posts' (`SOCIAL_LANG`) |
+| `TELEGRAM_UNITS` | *(empty)* | `zenithboard telegram units NAME\|posts` | The messages' units; empty: the posts' |
+| `RADARBOX_STATION` | — | written by ZenithBoard | AirNav Radar's station serial (`EXTRPI…`), once rbfeeder has printed it: the console links its page. Not a secret (the page is public); removed with AirNav Radar (0.99.6) |
 | `SOCIAL` | `0` | `zenithboard social on\|off` | Post the aircraft overhead to Bluesky. See [Social sharing](Social-sharing). The account's secret is in `social.env`, not here |
-| `SOCIAL_RADIUS_KM` | `15` | `zenithboard social words` | An aircraft is a candidate while inside it. Separate from `RADIUS` |
+| `SOCIAL_RADIUS_KM` | `15` | `zenithboard social words` | An aircraft is a candidate while inside it. Separate from `RADIUS`. The Telegram messages' crossings use it too (0.99.6) |
 | `SOCIAL_AREA` | empty | same | The place named in the posts, in your words: a town name (`Trémery`) reads *above Trémery*, a phrase (`near Metz`) is kept. Never derived from the position |
 | `SOCIAL_GAP_MIN` | `0` | same | At least this many minutes between two posts; `0`, the default since 0.20.0, is none: every crossing of the sharing radius is posted, once. (0.19.x defaulted to 120 and never went under 10.) A config file that still says `120` keeps it: set `0` with `social words` for every crossing |
 | `SOCIAL_RULES` | `rare,military,helicopter,heavy,farthest` | same | What is worth a post; `all` is every rule at once: everything that flies over, the special aircraft first |

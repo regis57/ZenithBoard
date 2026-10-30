@@ -59,7 +59,7 @@ Asked about on the reference Pi in October 2026, with a Pi 4 (2 GB) to hand; aft
 
 * **The system.** Raspberry Pi OS is one image for the Pi 3, 4 and 5; a card written for one starts on the others.
 * **ZenithBoard.** It stores nothing about the board. It reads the model and the memory when it needs them — `zenithboard health` will name the new board. It does not touch the boot files (`config.txt`, `cmdline.txt`).
-* **The feeders' identities**, which live on the card: Flightradar24's sharing key in `/etc/fr24feed.ini`; PiAware's feeder ID in `/var/cache/piaware/feeder_id`, which is how FlightAware recognises a site set up since 2017, rather than by the board's network address ([FlightAware's explanation](https://discussions.flightaware.com/t/how-piaware-feeders-are-identified-updated-2017-07-16/19811?page=2)); ADS-B Exchange's client keeps its own ID on the card too. Write down the PiAware one before you move: `cat /var/cache/piaware/feeder_id`.
+* **The feeders' identities**, which live on the card: Flightradar24's sharing key in `/etc/fr24feed.ini`; AirNav Radar's in `/etc/rbfeeder.ini` (0.99.6); PiAware's feeder ID in `/var/cache/piaware/feeder_id`, which is how FlightAware recognises a site set up since 2017, rather than by the board's network address ([FlightAware's explanation](https://discussions.flightaware.com/t/how-piaware-feeders-are-identified-updated-2017-07-16/19811?page=2)); ADS-B Exchange's client keeps its own ID on the card too. Write down the PiAware one before you move: `cat /var/cache/piaware/feeder_id`.
 * **MLAT**, since the antenna, and so the position, does not move.
 * **Your settings, history and statistics**: all on the card.
 

@@ -31,6 +31,8 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$ROOT/lib/graphs.sh"
 # shellcheck source=lib/social.sh
 . "$ROOT/lib/social.sh"
+# shellcheck source=lib/telegram.sh
+. "$ROOT/lib/telegram.sh"
 . "$ROOT/lib/uat.sh"
 . "$ROOT/lib/wifi.sh"
 . "$ROOT/lib/network.sh"
@@ -190,10 +192,12 @@ uninstall_all() {
   # 0.54.0: the Bluesky service was left running (and enabled) by "uninstall everything". Off, not removed: the account
   # goes with the settings if they are deleted below, and stays with them if they are kept
   [ "$(social_state)" != on ] || social_off >/dev/null
+  [ "$(telegram_state)" != on ] || telegram_off >/dev/null      # 0.99.6, the same way
   [ -z "$(acars_leftovers)" ] || acars_remove --yes
   if is_graphs || [ -f "$GRAPHS_STATE" ]; then graphs_off; fi
   is_flightinfo && remove_flightinfo
   is_planefinder && remove_planefinder
+  is_radarbox && remove_radarbox
   is_fr24 && remove_fr24
   is_piaware && remove_piaware
   # 0.52.0: ADSB Exchange's stats, also when their feed was removed by hand first (its uninstaller leaves them running)

@@ -157,5 +157,14 @@
  "a dark relief map with the main roads": "eine dunkle Reliefkarte mit den Hauptstraßen",
  "a terrain map": "eine Geländekarte",
  "a satellite map": "eine Satellitenkarte",
- "a plain dark background": "ein schlichter dunkler Hintergrund"
+ "a plain dark background": "ein schlichter dunkler Hintergrund",
+ "Unlawful interference (hijacking)": "Widerrechtlicher Eingriff (Entführung)",
+ "Radio failure (lost communications)": "Funkausfall (Verbindung verloren)",
+ "General emergency": "Allgemeiner Notfall",
+ "Squawk {squawk}: {meaning}": "Transpondercode {squawk}: {meaning}",
+ "Test message, not a real event:": "Testnachricht, kein echtes Ereignis:",
+ "ZenithBoard is connected to this chat. The aircraft crossing the sharing radius and the emergency squawks the antenna hears will be written here.": "ZenithBoard ist mit diesem Chat verbunden. Hier erscheinen die Flugzeuge, die den Radius für Beiträge durchqueren, und die Transponder-Notfallcodes, die die Antenne empfängt.",
+ "near {place}": "in der Nähe von {place}",
+ "{distance} from {place} ({country})": "{distance} von {place} ({country}) entfernt",
+ "position not known": "Position unbekannt"
 }

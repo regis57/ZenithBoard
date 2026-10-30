@@ -1,0 +1,47 @@
+[Unit]
+Description=ZenithBoard Telegram messages (the aircraft crossing the sharing radius, the emergency squawks, to a private chat)
+After=network-online.target time-sync.target zenithboard-flightinfo.service
+Wants=network-online.target
+
+[Service]
+ExecStart=/usr/bin/python3 /opt/zenithboard/flightinfo/telegram.py run
+Restart=always
+RestartSec=10
+# Runs as the wall's own user (0.99.6): it reads the decoder's aircraft.json under /run, asks the wall on the loopback,
+# keeps what it sent under /var/lib/zenithboard/telegram, and sends text to api.telegram.org. It draws nothing and
+# needs no root. Its token is read from /etc/zenithboard/telegram.env (root:zenithboard, 0640).
+User=zenithboard
+Group=zenithboard
+Environment=ZENITHBOARD_CONFIG=/etc/zenithboard/config.env
+ReadWritePaths=/var/lib/zenithboard/telegram
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+# Text only: Python and the standard library, about 25 MB
+MemoryAccounting=yes
+MemoryMax=120M
+# Sandbox, as for the wall server and the Bluesky service. Measure with: systemd-analyze security zenithboard-telegram
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+ProtectProc=invisible
+ProcSubset=pid
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+CapabilityBoundingSet=
+AmbientCapabilities=
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target
