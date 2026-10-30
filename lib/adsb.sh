@@ -357,10 +357,21 @@ install_radarbox() {
     log "AirNav Radar configured (Beast 127.0.0.1:30005, MLAT off)."
     # shown on this terminal only, never logged: the claim page asks for it
     printf '    Your sharing key:  %s   (kept in %s; a backup keeps it too)\n' "$k" "$RB24_INI" >&2
-    echo "    Claim this station at $RB24_CLAIM_URL (from the same public IP as this Pi), or nothing to do if it is yours already."
+    rb24_claim_steps
   else
-    warn "rbfeeder has not written its sharing key yet. In a minute:  sudo rbfeeder --showkey --no-start  then claim the station at $RB24_CLAIM_URL"
+    warn "rbfeeder has not written its sharing key yet. In a minute, show it with:  sudo rbfeeder --showkey --no-start"
+    rb24_claim_steps
   fi
+}
+# 0.99.7 (the owner, 30 October 2026): the claim, step by step, as AirNav's page asks it (read that day): an AirNav Radar
+# account, then the key typed into the page's *Sharing Key* field. The key never goes into the address, and the claim
+# does not depend on the public IP (0.99.6 said it did, wrongly)
+rb24_claim_steps() {
+  echo "    To link this station to your AirNav Radar account (once; nothing to do if it is yours already):"
+  echo "      1. Sign in at https://www.airnavradar.com (a free account; ZenithBoard never creates it)."
+  echo "      2. Open $RB24_CLAIM_URL"
+  echo "      3. Paste the sharing key into the 'Sharing Key' field and press 'Claim!'."
+  echo "    The key again, at any time:  sudo rbfeeder --showkey --no-start"
 }
 # its sharing key is the station: kept when it is removed (root only, not among a restore's waiting identities, which
 # would tick it again in menu 1), so a station taken off and put back is the same one

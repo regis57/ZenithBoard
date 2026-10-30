@@ -91,6 +91,7 @@ install -d -m 700 "$t/data/restore-pending"; echo "b4ckupk3yb4ckupk3y" > "$t/dat
 install_radarbox > "$t/out" 2>&1
 check "install: from AirNav's repository, the backup's key" 'grep -q "apt_install --no-install-recommends rbfeeder" "$t/apt.log" && [ "$(rb24_key)" = b4ckupk3yb4ckupk3y ] && [ ! -e "$t/data/restore-pending/rb24key" ]'
 check "...MLAT off and the claim page said"                 '[ "$(ini_sec_get "$RB24_INI" mlat autostart_mlat)" = false ] && grep -q "airnavradar.com/raspberry-pi/claim" "$t/out"'
+check "...the claim in steps: the field, the button, the key again (0.99.7)" 'grep -q "Sharing Key" "$t/out" && grep -q "Claim!" "$t/out" && grep -q "sudo rbfeeder --showkey --no-start" "$t/out" && ! grep -q "same public IP" "$t/out"'
 remove_radarbox > /dev/null 2>&1
 check "remove: the key kept (root only), our source gone"   '[ "$(cat "$(rb24_kept)")" = b4ckupk3yb4ckupk3y ] && [ "$(stat -c %a "$(rb24_kept)")" = 600 ] && [ ! -e "$(rb24_our_source)" ] && [ ! -e "$(rb24_keyring)" ] && grep -q "apt_remove rbfeeder" "$t/apt.log"'
 check "...and not among a restore's waiting identities"     '[ ! -e "$t/data/restore-pending/rb24key" ]'

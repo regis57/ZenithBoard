@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **30 October 2026**, version **0.99.6**, release candidate for 1.0.
+Last updated: **30 October 2026**, version **0.99.7**, release candidate for 1.0.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -90,6 +90,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 30 October 2026, 22:47 | The owner: say how to claim the Pi on AirNav Radar (`sudo rbfeeder --showkey --no-start`, then where the key goes). Read on AirNav's claim page that evening: an account, then a *Sharing Key* field and a *Claim!* button; the key is not put in the address. 0.99.6's terminal gave the page alone, and said the claim worked from the Pi's public IP, which is FlightAware's way. 0.99.7 prints the steps. Asked the same evening whether AirTeamImages could add photos beside Planespotters: its terms (read that evening) forbid any reproduction outside a paid usage agreement and it has no public API; not planned (Roadmap) |
 | 30 October 2026, evening | The owner: **two features during the release candidate** (*c'est mon projet, je suis en RC maintenant mais on va faire deux choses*), AirNav Radar as a fifth network with its MLAT off, and Telegram messages (the crossings of the sharing radius, the emergency squawks anywhere in range); then *repart pour 30 jours de RC à la suite*. 0.99.6. **The hands-off clock starts again** when the reference Pi runs 0.99.6: 30 days from that update (29 November 2026 if it is on 30 October). Its time goes here |
 | 30 October 2026, 09:05 | Counted by hand on the Pi, 24–30 October: `cat seen-* \| sort -u \| wc -l` gives **6 855** distinct aircraft, `cat seen-* \| wc -l` **16 994** aircraft-days; each aircraft came back on 2.5 days of the seven on average. The page's 6 838 at 08:19 was right. The same morning CodeQL's note #84 (a variable set twice in `read_stats`, left by 0.99.5) was cleared, no change in behaviour |
 | 30 October 2026, 08:19 | The owner's `/stats#7d`: 6 838 distinct aircraft over the week against about 2 600 a day (he expected more), messages 340.5 M with *busiest hour 18:00, 19 587 531*, the farthest box *183 NM on 30/10 at 00:30* while the line below gave SQ308 at 262 NM on 25/10, busiest day 29/10 with 2 826. Checked: the week's distinct count is right (the union of the day files: the same airframes fly over day after day, as on 18–24 October); the busiest day is the day file's exact count; the messages are the decoder's quarter hours added up. Two wrong: the farthest box read the decoder's quarter-hour figure only, and the busiest hour added up seven days. 0.99.5 |
