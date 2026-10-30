@@ -27,7 +27,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.99.4"
+VERSION = "0.99.5"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -224,6 +224,15 @@ def read_stats(stats_dir=None, now=None, rng="30d"):
     heat = [{"day": d, "hours": [round(cells[(d, h)][0] / float(cells[(d, h)][1]), 1) if (d, h) in cells else None
                                  for h in range(24)]} for d in heat_days]
     far = read_farthest(stats_dir, now, rng)
+    recs = far.pop("_all", [])
+    window = _with_farthest(stats_window(rows, stats_dir, now, rng), recs, now)
+    # 0.99.4: the day's farthest is the larger of the two measures: the decoder's quarter-hour figure (the CSV) and
+    # the wall's five-second watch (the farthest-DAY file), which sees aircraft the quarter hour misses
+    for r in recs:
+        e = days.get(r["day"])
+        if e is not None and int(round(r["km"])) > e["farthest_km"]:
+            e["farthest_km"] = int(round(r["km"]))
+    best = max(day_list, key=lambda d: d["farthest_km"]) if day_list else None
     if best:                              # the box's best day: were its details written down? (not before 0.22.0)
         far["best_box_detailed"] = os.path.exists(os.path.join(stats_dir, "farthest-" + best["day"]))
     return {
@@ -238,8 +247,42 @@ def read_stats(stats_dir=None, now=None, rng="30d"):
         "days": day_list,
         "farthest": far,
         "heat": heat,
-        "window": _with_heat(stats_window(rows, stats_dir, now, rng), heat),
+        "window": _with_heat(window, heat),
     }
+
+
+def _with_farthest(w, recs, now):
+    """0.99.4 (the owner's /stats#7d, 30 October 2026): the box said *183 NM, on 30/10 at 00:30* while the line under it
+    gave the week's farthest as SQ308 at 262 NM on 25/10. The box and the chart read the decoder's farthest once a
+    quarter hour; the line reads the wall's watch, every five seconds, written down once a day. Each slot of the
+    window, and the box, now take the larger of the two, so the box and the line agree."""
+    labels, tot, series = w.get("labels") or [], w.get("totals") or {}, list(w.get("farthest") or [])
+    for r in recs:
+        try:
+            when = datetime.datetime.strptime("%s %s" % (r["day"], r.get("time") or "00:00"), "%Y-%m-%d %H:%M")
+        except ValueError:
+            continue
+        if when > now:
+            continue
+        if w.get("range") == "24h":
+            start = (now - datetime.timedelta(hours=23)).replace(minute=0, second=0, microsecond=0)
+            if when < start:
+                continue
+            i = int((when - start).total_seconds() // 3600)
+        else:
+            label = "%02d/%02d" % (when.day, when.month)
+            if label not in labels or when.date() < (now - datetime.timedelta(days=len(labels))).date():
+                continue
+            i = labels.index(label)
+        if not 0 <= i < len(series):
+            continue
+        km = int(round(r["km"]))
+        if series[i] is None or km > series[i]:
+            series[i] = km
+        if km > (tot.get("farthest_km") or 0):
+            tot["farthest_km"], tot["farthest_when"] = km, when.strftime("%Y-%m-%d %H:%M")
+    w["farthest"] = series
+    return w
 
 
 def _with_heat(w, heat):
@@ -285,6 +328,7 @@ def stats_window(rows, stats_dir, now, rng):
         index = {k: i for i, k in enumerate(keys)}
     msgs, far, pos, cnt = [0] * len(keys), [0] * len(keys), [0] * len(keys), [0] * len(keys)
     by_hour = [0] * 24
+    hour_days = [set() for _ in range(24)]
     best_when = None
     for when, m, fk, p, seen in rows:
         i = index.get(slot(when))
@@ -294,6 +338,7 @@ def stats_window(rows, stats_dir, now, rng):
         cnt[i] += 1
         pos[i] += p
         by_hour[when.hour] += m
+        hour_days[when.hour].add(when.date())
         if fk > far[i]:
             far[i] = fk
             if fk >= max(far):
@@ -316,6 +361,9 @@ def stats_window(rows, stats_dir, now, rng):
             aircraft.append(len(s_))
         note = "distinct aircraft per day, a floor"
         total = len(seen_all)
+    # 0.99.4 (the owner's /stats#7d, 30 October 2026: "busiest hour 18:00, 19 587 531" read as one hour's messages,
+    # and was the seven days' 18:00 added up): an hour of one day, on average over the days it was sampled
+    by_hour = [round(by_hour[h] / float(len(hour_days[h]))) if hour_days[h] else 0 for h in range(24)]
     bh = max(range(24), key=lambda h: by_hour[h]) if any(by_hour) else None
     # a slot with no sample (the hour not yet reached, the receiver off) has no farthest: a gap in the line, not a 0
     far_series = [far[i] if cnt[i] else None for i in range(len(keys))]
@@ -711,7 +759,8 @@ def read_farthest(stats_dir, now, rng=None):
         inside = [r for r in recs if r["day"] >= first]
     return {"today": next((r for r in recs if r["day"] == today), None),
             "best": max(recs, key=lambda r: (r["km"], r["day"])) if recs else None,
-            "period": max(inside, key=lambda r: (r["km"], r["day"])) if inside else None}
+            "period": max(inside, key=lambda r: (r["km"], r["day"])) if inside else None,
+            "_all": recs}
 
 
 # --------------------------------------------------------------------------- who may read the wall

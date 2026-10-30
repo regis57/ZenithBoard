@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.99.5 — release candidate, fix
+- **/stats: the farthest box agrees with the farthest line** (the owner's `/stats#7d`, 30 October 2026). The box said *183 NM, on 30/10 at 00:30*, the line under it *SQ308, 262 NM, 25/10 15:17*. The box and the chart read the decoder's maximum once a quarter hour; the line reads the wall's five-second watch, written down once a day, which saw farther. Each day (or hour), the box and the table now take the larger of the two.
+- **/stats: the busiest hour is one hour.** *Busiest hour 18:00, 19 587 531* was the week's seven 18:00 hours added up. It is now that hour in one day, on average over the days of the period (24 hours: unchanged). The week's message total stays the sum of every quarter hour.
+- Checked and right as they were: the distinct aircraft over 7 days (6 838, an aircraft seen on several days counts once, documented since 0.37.0) and the busiest day (the day file's exact count).
+- A fix: the hands-off clock goes on (25 November 2026).
+
 ## 0.99.4 — release candidate, fix
 - **A post that goes out before its route came says so** (the owner's post of EJU81FR, 29 October 2026, 21:27). The service waits two minutes for the lookups, then posts with what is known. EJU81FR went out with an empty route and no line in the log, which 0.99.3 had promised: hexdb, asked because adsbdb did not know the callsign, had *Brussels → Nice* but had not answered yet. The line now reads *(no route: adsbdb did not know the callsign, hexdb's answer still on its way (N lookups queued))*. The queue length is there to measure whether hexdb, asked more often since 0.99.3, keeps up.
 - **A callsign that is not an airline's is said so.** *adsbdb was not asked* (T7NYD, PHVER, 399127… on the same day's log) read like a fault; routes are looked up for airline callsigns only, and the line now says *not an airline callsign* or *no callsign*.
