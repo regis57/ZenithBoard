@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.99.8 — release candidate, fix
+- **AirNav Radar, formerly RadarBox, said everywhere** (the owner, 31 October 2026: is it said that RadarBox is already airnavradar.com?). The station's page is now linked on airnavradar.com, in `zenithboard status` and on the console's overview: the radarbox.com address of 0.99.6 answers 302 to `https://www.airnavradar.com/stations/SERIAL` (checked that night). The console names it *AirNav Radar, formerly RadarBox* on the overview and in the first steps, in the 22 languages, and the menu's list of networks says *AirNav Radar (formerly RadarBox)*. The feeder keeps its own name, rbfeeder.
+- A fix: the hands-off clock goes on.
+
 ## 0.99.7 — release candidate, fix
 - **AirNav Radar's claim, step by step** (the owner, 30 October 2026). The terminal gave the claim page alone and said it worked *from the same public IP as this Pi*, which is FlightAware's way, not AirNav's. AirNav's page, read that day, asks for an account and the sharing key typed into its *Sharing Key* field, then *Claim!*; the key never goes into the address. The terminal now prints the three steps under the key, and how to show the key again (`sudo rbfeeder --showkey --no-start`), also when rbfeeder has not written it yet. README, Fresh install and Providers say the same.
 - A fix: the hands-off clock goes on.

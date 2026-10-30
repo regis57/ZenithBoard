@@ -2,7 +2,7 @@
 # shellcheck disable=SC2034
 # shellcheck shell=bash
 # Third-party pins. Bump here when an upstream moves; everything else reads these.
-ZB_VERSION="0.99.7"
+ZB_VERSION="0.99.8"
 
 # FlightAware APT repository package (provides piaware and dump1090-fa). FlightAware renamed it from
 # piaware-repository (9.0.1) to flightaware-apt-repository; see https://www.flightaware.com/adsb/piaware/install
@@ -58,7 +58,7 @@ RB24_SUITE="bookworm"
 RB24_KEY_FPR="78F6D790E30AE7F360B716FED4F914061D043681"
 RB24_KEY_URL="https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x${RB24_KEY_FPR}"
 RB24_CLAIM_URL="https://www.airnavradar.com/raspberry-pi/claim"
-RB24_STATION_URL="https://www.radarbox.com/stations/"   # + the station's serial (EXTRPI...), as AirNav's blog links them
+RB24_STATION_URL="https://www.airnavradar.com/stations/"   # + the station's serial (EXTRPI...). 0.99.8: radarbox.com/stations/ answers 302 to this address (checked 31 October 2026): RadarBox is AirNav Radar's former name
 
 # Plane Finder client. Check https://planefinder.net/sharing/client for newer versions.
 PF_VERSION_ARMHF="5.4.211"

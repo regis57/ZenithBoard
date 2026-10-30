@@ -411,7 +411,7 @@ adsb_menu() {
   [ -f "$pend/pfclient-config.json" ] && { st_pf=ON; ticked=1; }
   [ -f "$pend/rb24key" ] && { st_rb=ON; ticked=1; }
   [ -f "${BK_DATA:-/nonexistent}/adsbx-stats-wanted" ] && { st_axs=ON; ticked=1; }      # a mark of its own: restore-pending/ must stay empty once the networks are in
-  local -a items=(ADSBX "ADSB Exchange (mandatory)" ON ADSBX_STATS "ADSB Exchange stats: their map of your aircraft" "$st_axs" FLIGHTAWARE "FlightAware (piaware)" "$st_fa" FR24 "Flightradar24" "$st_fr" PLANEFINDER "Plane Finder" "$st_pf" RADARBOX "AirNav Radar (RadarBox)" "$st_rb")
+  local -a items=(ADSBX "ADSB Exchange (mandatory)" ON ADSBX_STATS "ADSB Exchange stats: their map of your aircraft" "$st_axs" FLIGHTAWARE "FlightAware (piaware)" "$st_fa" FR24 "Flightradar24" "$st_fr" PLANEFINDER "Plane Finder" "$st_pf" RADARBOX "AirNav Radar (formerly RadarBox)" "$st_rb")
   local st_uat=OFF
   is_uat978 && st_uat=ON
   # 978 MHz UAT is only used in the United States; a region that has it installed keeps seeing it so it can be removed
