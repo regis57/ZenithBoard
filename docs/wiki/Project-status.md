@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **29 October 2026**, version **0.99.5**, release candidate for 1.0.
+Last updated: **30 October 2026**, version **0.99.6**, release candidate for 1.0.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -45,6 +45,8 @@ Treat these as likely-working rather than known-working, and please report what 
 | Part | What is missing |
 |---|---|
 | 978 MHz UAT (United States) | No US hardware has run it. **Experimental, outside 1.0** (the owner, 25 October 2026) |
+| AirNav Radar (0.99.6) | Written from the community's container and AirNav's documented settings; the key, the repository, the settings, the MLAT guard and the backup are tested against stand-ins (`tests/test_radarbox.sh`). Not yet installed on a Pi: AirNav's repository on Debian 13 (a key apt may refuse there, as Flightradar24's was), the station's serial in the journal, its page's address (radarbox.com/stations/SERIAL, as AirNav's blog links them) |
+| Telegram messages (0.99.6) | The messages, the squawk rule, the pacing and Telegram's answers are tested with a stand-in for its Bot API (`tests/test_telegram.py`, `tests/test_telegram.sh`); not yet sent from a Pi. A real emergency squawk is rare: the test message (`sudo zenithboard telegram test squawk send`) shows its shape |
 | Fixed IP address | The `nmcli` calls are tested; a real address change was not run. Keep a keyboard and screen at hand |
 | The farthest aircraft named on `/stats` | Seen on the real page (*20/10 08:20 · easyJet EZY17QZ · Manchester → Verona · 335 km, near Cergy-Pontoise*, the owner's export of 24 October 2026); the thread's cost on a Pi 3 is not measured on its own |
 | A fresh install from the README | `install.sh` has been run end to end in a container against a scripted whiptail and stand-ins (0.21.1, `tests/test_install.sh`): flags, wizard, every menu it can reach. Not by that test: the deployed wall answering (`curl` is a stand-in there; the server has its own tests) and the uninstall (a source check only; corrected 0.54.1, it was credited with both). A blank card on a real Pi has not been done |
@@ -88,6 +90,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 30 October 2026, evening | The owner: **two features during the release candidate** (*c'est mon projet, je suis en RC maintenant mais on va faire deux choses*), AirNav Radar as a fifth network with its MLAT off, and Telegram messages (the crossings of the sharing radius, the emergency squawks anywhere in range); then *repart pour 30 jours de RC à la suite*. 0.99.6. **The hands-off clock starts again** when the reference Pi runs 0.99.6: 30 days from that update (29 November 2026 if it is on 30 October). Its time goes here |
 | 30 October 2026, 09:05 | Counted by hand on the Pi, 24–30 October: `cat seen-* \| sort -u \| wc -l` gives **6 855** distinct aircraft, `cat seen-* \| wc -l` **16 994** aircraft-days; each aircraft came back on 2.5 days of the seven on average. The page's 6 838 at 08:19 was right. The same morning CodeQL's note #84 (a variable set twice in `read_stats`, left by 0.99.5) was cleared, no change in behaviour |
 | 30 October 2026, 08:19 | The owner's `/stats#7d`: 6 838 distinct aircraft over the week against about 2 600 a day (he expected more), messages 340.5 M with *busiest hour 18:00, 19 587 531*, the farthest box *183 NM on 30/10 at 00:30* while the line below gave SQ308 at 262 NM on 25/10, busiest day 29/10 with 2 826. Checked: the week's distinct count is right (the union of the day files: the same airframes fly over day after day, as on 18–24 October); the busiest day is the day file's exact count; the messages are the decoder's quarter hours added up. Two wrong: the farthest box read the decoder's quarter-hour figure only, and the busiest hour added up seven days. 0.99.5 |
 | 29 October 2026, 23:02 | The social log on 0.99.3 (`zenithboard logs social \| grep "no route"`), 13:52 to 21:41: twenty-two posts without a route, each with its reason. Seven registrations or addresses (T7NYD, PHVER, 399127…), never looked up by design, written *adsbdb was not asked*; eleven unknown to both services (CTM1277, BNJ1357, JFA41T…); four with a route neither could make fit (WMT6X, QAJ2, VLG6025). And one with no line: EJU81FR at 21:27, empty route, while hexdb had *Brussels → Nice* (asked by hand at 23:10). It went out after the two-minute wait with hexdb's answer still on its way, a case 0.99.3 did not write. 0.99.4: that case is written with the queue length, and a callsign that is not an airline's is said so |

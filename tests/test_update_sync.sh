@@ -141,7 +141,7 @@ check "ADSB Exchange's settings complete: filtered; one missing: their setup run
 rm -rf "$d"
 
 # ---- 0.54.6: `update quick` is documented as "no apt": apt-get update only for a component that apt itself upgrades
-check "apt-get update only when dump1090, piaware or fr24 is concerned" "$(sed -n '/^zb_update_components()/,/^}/p' "$HERE/lib/update.sh" | grep -c 'if { want_c dump1090 && is_dump1090; } || { want_c piaware && is_piaware; } || { want_c fr24 && is_fr24; }; then apt-get update -qq; fi')" "1"
+check "apt-get update only when dump1090, piaware, fr24 or AirNav Radar (0.99.6) is concerned" "$(sed -n '/^zb_update_components()/,/^}/p' "$HERE/lib/update.sh" | grep -c 'if { want_c dump1090 && is_dump1090; } || { want_c piaware && is_piaware; } || { want_c fr24 && is_fr24; } || { want_c radarbox && is_radarbox; }; then apt-get update -qq; fi')" "1"
 check "and no unconditional apt-get update is left" "$(sed -n '/^zb_update_components()/,/^}/p' "$HERE/lib/update.sh" | grep -c '^  apt-get update')" "0"
 res=$(ZB_HOME="$T/gone" zb_update 2>&1)
 check "a gone download folder prints the path and the commands, not just 'clone it again'" "$(printf '%s' "$res" | grep -c 'git clone https://github.com/regis57/ZenithBoard.git')" "1"
@@ -149,7 +149,7 @@ check "a gone download folder prints the path and the commands, not just 'clone 
 # 0.54.14 (the audit of 22-23 October 2026): the whole of zb_update_components was never run. Light version: a Pi with
 # nothing installed, every step after it a stand-in; it must reach "Update finished" and exit 0, never apt
 res=$(
-  for f in is_dump1090 is_piaware is_fr24 is_readsb is_adsbx is_planefinder is_flightinfo is_graphs; do eval "$f() { return 1; }"; done
+  for f in is_dump1090 is_piaware is_fr24 is_readsb is_adsbx is_planefinder is_radarbox is_flightinfo is_graphs; do eval "$f() { return 1; }"; done
   for f in fr24_source_file acars_notice zb_refresh_units wifi_install_unit ddns_install_units logs_auto_on netwatch_install_units \
            gain_log_install_units stats_install_units console_prepare_dirs console_install_units zb_retired_colours social_migrate \
            social_install_units zb_mlat_guard zb_wall_check; do eval "$f() { :; }"; done

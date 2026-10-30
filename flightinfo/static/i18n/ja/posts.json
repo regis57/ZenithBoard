@@ -145,5 +145,14 @@
  "a dark relief map with the main roads": "主要道路入りの暗い陰影起伏図",
  "a terrain map": "地形図",
  "a satellite map": "衛星地図",
- "a plain dark background": "無地の暗い背景"
+ "a plain dark background": "無地の暗い背景",
+ "Unlawful interference (hijacking)": "不法妨害（ハイジャック）",
+ "Radio failure (lost communications)": "通信機故障（通信途絶）",
+ "General emergency": "緊急事態",
+ "Squawk {squawk}: {meaning}": "スコーク{squawk}：{meaning}",
+ "Test message, not a real event:": "テストメッセージです。実際の出来事ではありません：",
+ "ZenithBoard is connected to this chat. The aircraft crossing the sharing radius and the emergency squawks the antenna hears will be written here.": "ZenithBoardがこのチャットに接続されました。共有半径を通過する航空機と、アンテナが受信した緊急スコークをここにお知らせします。",
+ "near {place}": "{place}付近",
+ "{distance} from {place} ({country})": "{place}（{country}）から{distance}",
+ "position not known": "位置不明"
 }

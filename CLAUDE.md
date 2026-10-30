@@ -6,7 +6,8 @@ Read this first. It holds what the owner (Régis, regis57) has settled over the 
 ## What this is
 
 A Raspberry Pi that listens to ADS-B and shows the aircraft overhead on a tablet as a dot-matrix wall or a
-split-flap board, feeds ADSB Exchange / FlightAware / Flightradar24 / Plane Finder, and posts the aircraft crossing a radius to Bluesky. GPL-3.0-or-later. One reference Pi: a 3B (1 GB), outdoors,
+split-flap board, feeds ADSB Exchange / FlightAware / Flightradar24 / Plane Finder / AirNav Radar, posts the aircraft crossing a radius to Bluesky,
+and writes them, with the emergency squawks heard anywhere in range, to the owner's own Telegram chat. GPL-3.0-or-later. One reference Pi: a 3B (1 GB), outdoors,
 on Wi-Fi, near Trémery (Moselle). The owner tests on it; a session never reaches it.
 
 ## Language
@@ -39,8 +40,10 @@ not doing what the docs say, a security or privacy hole, a mistranslation, a doc
 moved a file). A request for anything new during the freeze is **not built**: say so to the owner, in French, and write
 it under *Waiting for 1.1* in `docs/wiki/Roadmap.md`. Every release is a patch of 0.99 until the owner says 1.0. What
 1.0 still needs, and the hands-off clock, are in Roadmap → What 1.0 takes. **A fix never moves the release candidate's
-date** (the owner, 29 October 2026): the clock runs 25 October to 25 November 2026; only what the month is there to catch
-(a crash, a forced reboot, a service down on the Pi) can move it. Never offer to restart the clock for a fix.
+date** (the owner, 29 October 2026); only what the month is there to catch (a crash, a forced reboot, a service down on
+the Pi) can move it. Never offer to restart the clock for a fix. **The owner alone lets a feature in during the freeze**
+(30 October 2026: AirNav Radar and Telegram, 0.99.6); then the clock starts again, 30 days from the reference Pi's
+update to it (29 November 2026 if it is updated on 30 October).
 
 ## Workflow for a change
 
@@ -83,7 +86,7 @@ date** (the owner, 29 October 2026): the clock runs 25 October to 25 November 20
 - `install.sh` — the menu; `bin/zenithboard` — the command; `lib/*.sh` — one file per subject (social, stats,
   settings, wifi, update…); `flightinfo/server.py` — the wall's server; `flightinfo/static/app.js` — the
   128×80 dot wall; `format.js` the row text; `flags.js`, `shapes.js`; `flightinfo/social.py` — the Bluesky
-  service; `tools/social-render.js` — the dots picture; `flightinfo/social_card.py` — the split-flap picture.
+  service; `flightinfo/telegram.py` — the Telegram service (`lib/telegram.sh` its commands, 0.99.6); `tools/social-render.js` — the dots picture; `flightinfo/social_card.py` — the split-flap picture.
 - Tests run against stand-ins (stubs for systemctl, nmcli, apt, Bluesky, the wall): a green suite proves the
   logic, never the hardware. `docs/wiki/Project-status.md` says what has run on the real Pi.
 - The owner shares his Pi by pasting `zenithboard health`, `sudo zenithboard social status`,

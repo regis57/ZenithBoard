@@ -181,5 +181,14 @@
  "a dark relief map with the main roads": "тёмная карта рельефа с основными дорогами",
  "a terrain map": "карта местности",
  "a satellite map": "спутниковая карта",
- "a plain dark background": "однотонный тёмный фон"
+ "a plain dark background": "однотонный тёмный фон",
+ "Unlawful interference (hijacking)": "Незаконное вмешательство (захват)",
+ "Radio failure (lost communications)": "Отказ радиосвязи (потеря связи)",
+ "General emergency": "Аварийная ситуация",
+ "Squawk {squawk}: {meaning}": "Код транспондера {squawk}: {meaning}",
+ "Test message, not a real event:": "Тестовое сообщение, это не настоящее событие:",
+ "ZenithBoard is connected to this chat. The aircraft crossing the sharing radius and the emergency squawks the antenna hears will be written here.": "ZenithBoard подключён к этому чату. Сюда будут приходить сообщения о бортах, пролетающих в радиусе публикаций, и об аварийных кодах транспондера, которые принимает антенна.",
+ "near {place}": "около {place}",
+ "{distance} from {place} ({country})": "в {distance} от {place} ({country})",
+ "position not known": "местоположение неизвестно"
 }

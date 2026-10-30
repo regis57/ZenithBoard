@@ -143,5 +143,14 @@
  "a dark relief map with the main roads": "标有主要道路的深色地势图",
  "a terrain map": "地形图",
  "a satellite map": "卫星地图",
- "a plain dark background": "纯深色背景"
+ "a plain dark background": "纯深色背景",
+ "Unlawful interference (hijacking)": "非法干扰（劫机）",
+ "Radio failure (lost communications)": "无线电失效（通信中断）",
+ "General emergency": "紧急情况",
+ "Squawk {squawk}: {meaning}": "应答机编码 {squawk}：{meaning}",
+ "Test message, not a real event:": "测试消息，并非真实事件：",
+ "ZenithBoard is connected to this chat. The aircraft crossing the sharing radius and the emergency squawks the antenna hears will be written here.": "ZenithBoard 已连接到此聊天。飞越分享半径的飞机，以及天线收到的紧急应答机编码，都会发到这里。",
+ "near {place}": "{place} 附近",
+ "{distance} from {place} ({country})": "距 {place}（{country}）{distance}",
+ "position not known": "位置未知"
 }

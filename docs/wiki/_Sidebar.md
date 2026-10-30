@@ -19,6 +19,7 @@
 * [The wall](The-wall)
 * [Statistics](Statistics)
 * [Social sharing](Social-sharing)
+* [Telegram](Telegram)
 * [Web console](Web-console)
 
 *Running it*

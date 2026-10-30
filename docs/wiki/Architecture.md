@@ -12,6 +12,7 @@ readsb (or dump1090-fa) --- aircraft.json ---> FlightInfo server ---> tablet / T
                                       +--> FlightAware     (MLAT off)
                                       +--> Flightradar24   (MLAT off)
                                       +--> Plane Finder
+                                      +--> AirNav Radar    (MLAT off, 0.99.6)
 ```
 
 One chain. An ACARS chain (acarsdec, an ingester into SQLite, Grafana) was part of ZenithBoard until 0.29.0 and left it in 0.30.0.
@@ -54,7 +55,7 @@ The server never writes to the config. It reads it at each request, so a setting
 
 ## The two rules that are not obvious from the code
 
-**One MLAT client.** Multilateration needs your receiver's timing, and several clients doing it at once on one receiver degrade all of them. ADSB Exchange owns the only MLAT client; the installer switches MLAT off in PiAware and Flightradar24. `zenithboard status` counts running MLAT processes so you can check it is exactly one, and `zenithboard mlat-guard` puts it back if a package update re-enables one.
+**One MLAT client.** Multilateration needs your receiver's timing, and several clients doing it at once on one receiver degrade all of them. ADSB Exchange owns the only MLAT client; the installer switches MLAT off in PiAware, Flightradar24 and AirNav Radar (`autostart_mlat=false` in `/etc/rbfeeder.ini`, 0.99.6). `zenithboard status` counts running MLAT processes so you can check it is exactly one, and `zenithboard mlat-guard` puts it back if a package update re-enables one.
 
 ## Timers
 

@@ -26,9 +26,9 @@ networks' identities: see [below](#from-the-web-console).
 | Your own post templates (0.51.0) | `/etc/zenithboard/social-templates.txt` | Copied back; the ones it replaces are kept in `before-restore-DATE/` |
 | graphs1090's history | Dumped to XML by graphs1090's own `rrd-dump.sh` (collectd stopped first, so the day kept in memory is written) | Put back with its `rrd-restore.sh`, which reads XML made on another architecture (32-bit → 64-bit), [as graphs1090's README says](https://github.com/wiedehopf/graphs1090) |
 | Logs kept after a restart | `/var/log/journal/MACHINE-ID` (50 MB at most) | Beside the new card's, in the old card's own folder: `journalctl -m` shows both, `journalctl -D /var/log/journal/OLD-ID` the old alone |
-| The networks' identities | ADSB Exchange's UUID, FlightAware's feeder ID, Flightradar24's sharing key, Plane Finder's settings with its share code | Given back to each network: now if it is installed, else kept (root only) for its installation in menu 1 |
+| The networks' identities | ADSB Exchange's UUID, FlightAware's feeder ID, Flightradar24's sharing key, Plane Finder's settings with its share code, AirNav Radar's sharing key (0.99.6) | Given back to each network: now if it is installed, else kept (root only) for its installation in menu 1 |
 
-**Never in it:** the Bluesky app password, the console password, the domain name's token. A new Bluesky app
+**Never in it:** the Bluesky app password, the Telegram bot's token (0.99.6: the switch and your own messages are in it; `telegram setup` asks for the token again), the console password, the domain name's token. A new Bluesky app
 password takes a minute (bsky.app → *Settings* → *Privacy and security* → *App passwords*), then
 `sudo zenithboard social setup`; the console: `sudo zenithboard console password && sudo zenithboard console on`.
 The restore lists them at its end, under *Still to do*.
@@ -130,7 +130,7 @@ chip, not to the system on the card. Two places use it all the same:
   The backup carries the feeder ID; on the same board, a station still known by its MAC stays the same too. On a new
   board, the feeder ID is what keeps the station.
 
-ADSB Exchange (its UUID), Flightradar24 (its sharing key) and Plane Finder (its share code) do not use the MAC.
+ADSB Exchange (its UUID), Flightradar24 (its sharing key), Plane Finder (its share code) and AirNav Radar (its sharing key) do not use the MAC.
 
 ## From the web console
 

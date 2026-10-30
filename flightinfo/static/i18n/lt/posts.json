@@ -181,5 +181,14 @@
  "a dark relief map with the main roads": "tamsus reljefo žemėlapis su pagrindiniais keliais",
  "a terrain map": "vietovės žemėlapis",
  "a satellite map": "palydovinis žemėlapis",
- "a plain dark background": "vienspalvis tamsus fonas"
+ "a plain dark background": "vienspalvis tamsus fonas",
+ "Unlawful interference (hijacking)": "Neteisėtas kišimasis (orlaivio užgrobimas)",
+ "Radio failure (lost communications)": "Radijo ryšio gedimas (ryšys prarastas)",
+ "General emergency": "Bendroji avarinė padėtis",
+ "Squawk {squawk}: {meaning}": "Atsakiklio kodas {squawk}: {meaning}",
+ "Test message, not a real event:": "Bandomoji žinutė, ne tikras įvykis:",
+ "ZenithBoard is connected to this chat. The aircraft crossing the sharing radius and the emergency squawks the antenna hears will be written here.": "ZenithBoard prijungtas prie šio pokalbio. Čia bus rašoma apie orlaivius, kertančius dalijimosi spindulį, ir antenos priimtus avarinius atsakiklio kodus.",
+ "near {place}": "netoli {place}",
+ "{distance} from {place} ({country})": "{distance} nuo {place} ({country})",
+ "position not known": "padėtis nežinoma"
 }

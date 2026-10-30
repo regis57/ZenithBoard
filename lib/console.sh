@@ -185,7 +185,7 @@ console_state_lines() {
   printf 'load=%s\n' "$(cut -d' ' -f1-3 /proc/loadavg 2>/dev/null)"
   printf 'ip=%s\n' "$(local_ip)"
   d=$(installed_decoder); printf 'decoder=%s\n' "$d"
-  for svc in "$d" adsbexchange-feed adsbexchange-stats piaware fr24feed pfclient dump978-fa zenithboard-flightinfo zenithboard-social graphs1090 lighttpd; do
+  for svc in "$d" adsbexchange-feed adsbexchange-stats piaware fr24feed pfclient rbfeeder dump978-fa zenithboard-flightinfo zenithboard-social zenithboard-telegram graphs1090 lighttpd; do
     [ -n "$svc" ] || continue
     if systemctl list-unit-files "$svc.service" 2>/dev/null | grep -q "^$svc.service"; then
       printf 'svc_%s=%s\n' "${svc//-/_}" "$(systemctl is-active "$svc" 2>/dev/null || true)"
@@ -200,6 +200,9 @@ console_state_lines() {
     ! is_adsbx_stats || printf 'adsbx_map=%s\n' "$(adsbx_stats_url)"
   fi
   printf 'bluesky=%s\n' "$(social_account)"
+  # 0.99.6: the Telegram chat's name only (never its token or its id), and AirNav Radar's station for its page
+  printf 'telegram_chat=%s\n' "$(declare -F telegram_chat >/dev/null && telegram_chat)"
+  ! is_radarbox || printf 'radarbox_station=%s\n' "$(rb24_station)"
   # 0.48.0: when each summary last went out and goes next, beside its row in Sharing (the owner, 21 October)
   [ -f "${SOCIAL_PY:-}" ] && python3 "$SOCIAL_PY" summary-when --facts 2>/dev/null
   if declare -F ts_state >/dev/null; then                 # 0.45.1: Tailscale on the overview and its own card

@@ -87,6 +87,21 @@ Each feeder fails on its own. A 404 from Plane Finder does not stop FlightAware 
 | **If it moves** | A warning: *the Plane Finder package URL may have changed* |
 | **Also worth knowing** | This is the feeder that has **never been watched feeding** on a real Pi ([Project status](Project-status)) |
 
+### AirNav Radar (RadarBox)
+
+0.99.6 (30 October 2026), at the owner's word. Ticked in menu *1 ADS-B → 1 Decoder and networks*.
+
+| | |
+|---|---|
+| **Fetched** | The package `rbfeeder` from AirNav's own apt repository (`https://apt.rb24.com/`), added by ZenithBoard as `/etc/apt/sources.list.d/zenithboard-rb24.list` with its key in `/etc/apt/keyrings/zenithboard-rb24.gpg`. A source of AirNav's own (their installer, an earlier setup) is used as it is |
+| **Pinned** | The key's full fingerprint, `78F6D790E30AE7F360B716FED4F914061D043681` (*AirNav Systems*, made 30 January 2018, read on keyserver.ubuntu.com on 30 October 2026). A key with another fingerprint is refused and nothing is added. The suite is the system's own when AirNav has it, else `bookworm`, the one the community's container (sdr-enthusiasts/docker-airnavradar) uses. A repository apt refuses is taken away again; signature checking is never switched off |
+| **Settings** | `/etc/rbfeeder.ini`, written again at each install and update: `[client] network_mode=true`, the antenna's `lat`, `lon` and `alt` (whole metres); `[network] mode=beast`, `external_host=127.0.0.1`, `external_port=30005`; **`[mlat] autostart_mlat=false`**: ADSB Exchange keeps the only MLAT client. `zenithboard mlat-guard` puts it back to `false` and restarts `rbfeeder` |
+| **Its identity** | The sharing key, made by rbfeeder at its first start (`key=` in `[client]`; `sudo rbfeeder --showkey --no-start` prints it). Shown once on the terminal with the claim page, `https://www.airnavradar.com/raspberry-pi/claim`. A backup keeps it; it is kept on the Pi when AirNav Radar is removed, so putting it back is the same station |
+| **Its page** | The station's serial (`EXTRPI…`) that rbfeeder prints once the key is accepted; the console links `https://www.radarbox.com/stations/SERIAL`, as AirNav's blog does |
+| **Kept current by** | apt: `sudo zenithboard update` (or `update only radarbox`) upgrades `rbfeeder`, then writes its settings again |
+| **If it moves** | The repository is refused or the key changed: the installer says so and adds nothing. Check the key on AirNav's [sharing-data](https://www.airnavradar.com/sharing-data) page and `lib/versions.sh` |
+| **Also worth knowing** | Written from the container and AirNav's documented settings: **not yet run on a Pi** ([Project status](Project-status)). On Debian 13 (trixie), a key apt finds too weak would be refused as Flightradar24's first key was: the installer then stops cleanly |
+
 ### readsb — the decoder, not a feeder
 
 | | |

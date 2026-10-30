@@ -157,5 +157,14 @@
  "a dark relief map with the main roads": "ramani nyeusi ya miinuko yenye barabara kuu",
  "a terrain map": "ramani ya ardhi",
  "a satellite map": "ramani ya setilaiti",
- "a plain dark background": "mandharinyuma meusi tupu"
+ "a plain dark background": "mandharinyuma meusi tupu",
+ "Unlawful interference (hijacking)": "Uingiliaji haramu (utekaji nyara wa ndege)",
+ "Radio failure (lost communications)": "Hitilafu ya redio (mawasiliano yamepotea)",
+ "General emergency": "Dharura ya jumla",
+ "Squawk {squawk}: {meaning}": "Msimbo wa transponda {squawk}: {meaning}",
+ "Test message, not a real event:": "Ujumbe wa majaribio, si tukio halisi:",
+ "ZenithBoard is connected to this chat. The aircraft crossing the sharing radius and the emergency squawks the antenna hears will be written here.": "ZenithBoard imeunganishwa na gumzo hili. Ndege zinazopita ndani ya nusukipenyo cha kushiriki na misimbo ya dharura ya transponda inayopokelewa na antena zitaandikwa hapa.",
+ "near {place}": "karibu na {place}",
+ "{distance} from {place} ({country})": "{distance} kutoka {place} ({country})",
+ "position not known": "mahali hapajulikani"
 }

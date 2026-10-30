@@ -2,7 +2,7 @@
 
 A Raspberry Pi that listens to the aircraft overhead and shows them on a tablet or a TV as a dot-matrix wall or an airport split-flap board. It can also feed what it hears to ADSB Exchange, FlightAware, Flightradar24 and Plane Finder, and post the aircraft crossing a radius to Bluesky.
 
-Current version: **0.99.5** (release candidate for 1.0: features frozen since 25 October 2026, for a month of validation on the Pi, to 25 November 2026) · Licence: **GPL-3.0-or-later** · [Repository](https://github.com/regis57/ZenithBoard)
+Current version: **0.99.6** (release candidate for 1.0. AirNav Radar and Telegram messages came in during it, at the owner's word, so the month of validation on the Pi starts again: 30 days from the reference Pi's update to 0.99.6, 29 November 2026 at the earliest) · Licence: **GPL-3.0-or-later** · [Repository](https://github.com/regis57/ZenithBoard)
 
 ## Installing it
 
@@ -33,6 +33,7 @@ Installation, the menus and every setting are in the [README](https://github.com
 * **[Code tour](Code-tour)** — a map of the modules and the systemd units.
 * **[Testing](Testing)** — the test suite and the two patterns it is built on.
 * **[Social sharing](Social-sharing)** — the aircraft worth a post, on Bluesky, as a picture of the wall: dot-matrix with a map, split-flap with a map, or dot-matrix with the track in dots; off by default.
+* **[Telegram](Telegram)** — text messages to your own chat or group (0.99.6): the aircraft crossing the sharing radius, and the emergency squawks anywhere in range, never posted to Bluesky; off by default.
 * **[Statistics](Statistics)** — messages per hour, the farthest aircraft, aircraft per day; off by default.
 * **[Translation plan](Translation-plan)** — the console, the pages and the posts in 22 languages, and your own post templates with tags. French is out (0.47.0).
 * **[Translating](Translating)** — the review sheets: correct your language beside the English, no account needed.

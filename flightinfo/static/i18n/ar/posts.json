@@ -205,5 +205,14 @@
  "a dark relief map with the main roads": "خريطة تضاريس داكنة مع الطرق الرئيسية",
  "a terrain map": "خريطة طبوغرافية",
  "a satellite map": "خريطة أقمار صناعية",
- "a plain dark background": "خلفية داكنة سادة"
+ "a plain dark background": "خلفية داكنة سادة",
+ "Unlawful interference (hijacking)": "تدخّل غير مشروع (اختطاف)",
+ "Radio failure (lost communications)": "عطل لاسلكي (انقطاع الاتصالات)",
+ "General emergency": "حالة طوارئ عامة",
+ "Squawk {squawk}: {meaning}": "رمز المرسل المستجيب {squawk}: {meaning}",
+ "Test message, not a real event:": "رسالة اختبار، وليست حدثًا حقيقيًا:",
+ "ZenithBoard is connected to this chat. The aircraft crossing the sharing radius and the emergency squawks the antenna hears will be written here.": "ZenithBoard متصل بهذه المحادثة. ستُكتب هنا الطائرات التي تعبر نصف قطر المشاركة ورموز الطوارئ التي يلتقطها الهوائي.",
+ "near {place}": "قرب {place}",
+ "{distance} from {place} ({country})": "على بُعد {distance} من {place} ({country})",
+ "position not known": "الموقع غير معروف"
 }

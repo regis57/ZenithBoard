@@ -160,5 +160,14 @@
  "a dark relief map with the main roads": "मुख्य सड़कों के साथ गहरे रंग का उभरा हुआ नक्शा",
  "a terrain map": "भू-भाग का नक्शा",
  "a satellite map": "उपग्रह नक्शा",
- "a plain dark background": "सादी गहरी पृष्ठभूमि"
+ "a plain dark background": "सादी गहरी पृष्ठभूमि",
+ "Unlawful interference (hijacking)": "गैरकानूनी हस्तक्षेप (विमान अपहरण)",
+ "Radio failure (lost communications)": "रेडियो विफलता (संपर्क टूट गया)",
+ "General emergency": "सामान्य आपातकाल",
+ "Squawk {squawk}: {meaning}": "स्क्वॉक {squawk}: {meaning}",
+ "Test message, not a real event:": "परीक्षण संदेश, कोई वास्तविक घटना नहीं:",
+ "ZenithBoard is connected to this chat. The aircraft crossing the sharing radius and the emergency squawks the antenna hears will be written here.": "ZenithBoard इस चैट से जुड़ गया है। साझा करने के दायरे से गुज़रने वाले विमान और एंटीना द्वारा सुने गए आपातकालीन स्क्वॉक यहाँ लिखे जाएँगे।",
+ "near {place}": "{place} के पास",
+ "{distance} from {place} ({country})": "{place} ({country}) से {distance} दूर",
+ "position not known": "जगह अज्ञात"
 }

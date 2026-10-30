@@ -157,5 +157,14 @@
  "a dark relief map with the main roads": "tume reljeefkaart peamiste teedega",
  "a terrain map": "maastikukaart",
  "a satellite map": "satelliitkaart",
- "a plain dark background": "ühtlane tume taust"
+ "a plain dark background": "ühtlane tume taust",
+ "Unlawful interference (hijacking)": "Ebaseaduslik sekkumine (kaaperdamine)",
+ "Radio failure (lost communications)": "Raadioside rike (side kadunud)",
+ "General emergency": "Üldine hädaolukord",
+ "Squawk {squawk}: {meaning}": "Transpondrikood {squawk}: {meaning}",
+ "Test message, not a real event:": "Testsõnum, mitte tegelik sündmus:",
+ "ZenithBoard is connected to this chat. The aircraft crossing the sharing radius and the emergency squawks the antenna hears will be written here.": "ZenithBoard on selle vestlusega ühendatud. Siia kirjutatakse jagamise raadiusest läbi lendavad lennukid ja hädaolukorra transpondrikoodid, mida antenn vastu võtab.",
+ "near {place}": "{place} lähedal",
+ "{distance} from {place} ({country})": "{distance} linnast {place} ({country})",
+ "position not known": "asukoht teadmata"
 }

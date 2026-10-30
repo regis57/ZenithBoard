@@ -45,7 +45,7 @@ PAGES = {
                 "flightinfo/console_actions.py", "flightinfo/console.py"],
     "stats": ["flightinfo/static/i18n.js", "flightinfo/static/stats.html", "flightinfo/static/stats.js", "flightinfo/server.py"],
     "graphs": ["flightinfo/static/i18n.js", "tools/graphs1090-look/zenithboard.js"],
-    "posts": ["flightinfo/social.py", "flightinfo/social_week.py", "flightinfo/social_card.py"],
+    "posts": ["flightinfo/social.py", "flightinfo/social_week.py", "flightinfo/social_card.py", "flightinfo/telegram.py"],
 }
 
 JS_STR = r'"((?:[^"\\\n]|\\.)*)"'
@@ -151,7 +151,7 @@ def keys_of_file(rel):
         return [(k, None, "%s:%d" % (os.path.basename(rel), ln)) for k, ln in p.keys]
     tree = ast.parse(src)
     base = os.path.basename(rel)
-    if base in ("social.py", "social_week.py", "social_card.py"):
+    if base in ("social.py", "social_week.py", "social_card.py", "telegram.py"):
         return post_keys(tree, base)
     if base == "console_actions.py":            # the sections' and the actions' names, shown by the console
         for node in ast.walk(tree):

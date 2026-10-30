@@ -34,6 +34,8 @@ graphs lived on the card only):
 | FlightAware feeder ID | Your FlightAware account, <https://flightaware.com/adsb/stats/user/>: the station's *Unique Identifier* ([FlightAware's own guide](https://discussions.flightaware.com/t/for-beginners-how-to-get-back-existing-station-number-in-a-fresh-install/30981)) | After step 13: `sudo piaware-config feeder-id THE-ID && sudo systemctl restart piaware` |
 | Flightradar24 sharing key | `grep fr24key /etc/fr24feed.ini` on the old card, or flightradar24.com → *Account* → *My data sharing* | Pasted when step 13 asks for it |
 | Plane Finder share code | Its page on the old Pi, `http://OLDPI:30053`, or your planefinder.net account | Entered on its page at step 13 |
+| AirNav Radar sharing key (0.99.6) | `grep key= /etc/rbfeeder.ini` or `sudo rbfeeder --showkey --no-start` on the old card | A backup carries it. Without one: tick AirNav Radar at step 13, then write `key=YOURKEY` under `[client]` in `/etc/rbfeeder.ini` and `sudo systemctl restart rbfeeder` |
+| The Telegram bot (0.99.6) | Nothing to save: @BotFather gives the token again (`/token`) | `sudo zenithboard telegram setup` |
 | The Bluesky account | Nothing to save: an app password can be made again at bsky.app → *Settings* → *Privacy and security* → *App passwords* | Step 20 |
 
 ## A · The card, on your computer
@@ -95,6 +97,8 @@ graphs lived on the card only):
     * **Flightradar24**: its sign-up asks for an e-mail, or your **sharing key** if you already feed; the screen says
       what to answer to the other questions and sets them right afterwards.
     * **Plane Finder**: finish on its page, `http://zenithboard.local:30053`: a new share code, or your old one.
+    * **AirNav Radar** (0.99.6): nothing to answer. It makes its sharing key and prints it with its claim page,
+      <https://www.airnavradar.com/raspberry-pi/claim>; its MLAT is switched off for you.
 
     This is the step the console cannot do for you: see [why](#why-the-networks-are-added-in-the-terminal).
 14. **The wall** — *Yes*. At the end it prints its address, `http://192.168.1.x:8080/`. Open it on the tablet;

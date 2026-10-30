@@ -157,5 +157,14 @@
  "a dark relief map with the main roads": "een donkere reliëfkaart met de hoofdwegen",
  "a terrain map": "een terreinkaart",
  "a satellite map": "een satellietkaart",
- "a plain dark background": "een effen donkere achtergrond"
+ "a plain dark background": "een effen donkere achtergrond",
+ "Unlawful interference (hijacking)": "Wederrechtelijke inmenging (kaping)",
+ "Radio failure (lost communications)": "Radio-uitval (verbinding verloren)",
+ "General emergency": "Algemene noodsituatie",
+ "Squawk {squawk}: {meaning}": "Transpondercode {squawk}: {meaning}",
+ "Test message, not a real event:": "Testbericht, geen echte gebeurtenis:",
+ "ZenithBoard is connected to this chat. The aircraft crossing the sharing radius and the emergency squawks the antenna hears will be written here.": "ZenithBoard is verbonden met deze chat. De vliegtuigen die de straal voor berichten passeren en de noodcodes die de antenne opvangt, verschijnen hier.",
+ "near {place}": "bij {place}",
+ "{distance} from {place} ({country})": "op {distance} van {place} ({country})",
+ "position not known": "positie onbekend"
 }

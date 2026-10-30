@@ -12,7 +12,7 @@
 # installed it — a Pi that had it before keeps it exactly as it was.
 PATCHES_CONF="${ZB_APT_CONF_DIR:-/etc/apt/apt.conf.d}/52zenithboard-security-patches"
 PATCHES_LOG="${ZB_UU_LOG:-/var/log/unattended-upgrades/unattended-upgrades.log}"
-PATCHES_FEEDERS="dump1090-fa piaware fr24feed pfclient adsbexchange-feed adsbexchange-stats readsb"   # never touched; belt and braces, the origin filter already leaves them out
+PATCHES_FEEDERS="dump1090-fa piaware fr24feed pfclient rbfeeder adsbexchange-feed adsbexchange-stats readsb"   # never touched; belt and braces, the origin filter already leaves them out
 
 patches_state() { [ -f "$PATCHES_CONF" ] && echo on || echo off; }
 

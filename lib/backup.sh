@@ -12,11 +12,13 @@
 #   stats/              /var/lib/zenithboard/stats, the 30 days behind /stats and the summaries
 #   social/state.json   what was posted and when the last summaries went out (no double post after a move)
 #   social/templates.txt  the owner's own post templates (0.51.0), his words
+#   telegram/crossing.txt, telegram/squawk.txt  his own Telegram messages (0.99.6), his words
 #   graphs-xml.tar.gz   graphs1090's history, dumped to XML by its own rrd-dump.sh: readable on another architecture
 #   journal/ID/         the logs kept after a restart, when they are kept
-#   feeders.env         the networks' identities: ADSB Exchange's UUID, FlightAware's feeder ID, the FR24 sharing key
+#   feeders.env         the networks' identities: ADSB Exchange's UUID, FlightAware's feeder ID, the FR24 sharing key,
+#                       AirNav Radar's sharing key (0.99.6)
 #   pfclient-config.json  Plane Finder's settings, its share code with them
-# Never: the Bluesky app password, the console password, the domain-name token. They are made again in a minute.
+# Never: the Bluesky app password, the Telegram bot's token, the console password, the domain-name token. They are made again in a minute.
 # The console's backup (`--console`) leaves the networks' identities out too: it goes through a browser.
 #
 # Restore runs at any time; best right after the installer's first questions, before menu 1 (Fresh install, step 13).
@@ -35,7 +37,7 @@ BK_PF_CONFIG="${ZB_PF_CONFIG:-/etc/pfclient-config.json}"
 BK_PIAWARE_CACHE="${ZB_PIAWARE_ID_CACHE:-/var/cache/piaware/feeder_id}"
 BK_CMD="${ZB_BACKUP_CMD:-$ZB_HOME/bin/zenithboard}"
 BK_CONSOLE_OUT="${ZB_CONSOLE_DIR:-/var/lib/zenithboard/console}/out/backup.tar.gz"
-BK_FEATURES="stats graphs watchdog netwatch keeplogs patches wifi_harden logs_auto gain_log social console phone_signin adsbx_stats"
+BK_FEATURES="stats graphs watchdog netwatch keeplogs patches wifi_harden logs_auto gain_log social telegram console phone_signin adsbx_stats"
 BK_MAX_MB=2048
 
 bk_svc() { [ "${ZB_SKIP_SERVICES:-}" = 1 ] || systemctl "$@" >/dev/null 2>&1 || true; }
@@ -49,6 +51,7 @@ bk_feature_state() {
     keeplogs) keeplogs_state ;; patches) patches_state ;; wifi_harden) wifi_harden_state ;; gain_log) gain_log_state ;;
     logs_auto) [ "$(cfg_get LOG_AUTOCLEAN 0)" = 1 ] && echo on || echo off ;;
     social) social_state ;; console) console_state ;;
+    telegram) declare -F telegram_state >/dev/null && telegram_state || echo off ;;
     phone_signin) [ "$(cfg_get CONSOLE_PHONE_SIGNIN 0)" = 1 ] && echo on || echo off ;;
     adsbx_stats) declare -F adsbx_stats_state >/dev/null && adsbx_stats_state || echo off ;;
     *) echo off ;;
@@ -64,7 +67,7 @@ bk_feature_label() {
   case "$1" in
     stats) echo "Statistics" ;; graphs) echo "graphs1090" ;; watchdog) echo "Hardware watchdog" ;; netwatch) echo "Network watchdog" ;;
     keeplogs) echo "Logs kept after a restart" ;; patches) echo "Daily security fixes" ;; wifi_harden) echo "Wi-Fi hardening" ;;
-    logs_auto) echo "Daily log clean-up" ;; gain_log) echo "Gain log" ;; social) echo "Bluesky posts" ;; console) echo "Web console" ;;
+    logs_auto) echo "Daily log clean-up" ;; gain_log) echo "Gain log" ;; social) echo "Bluesky posts" ;; telegram) echo "Telegram messages" ;; console) echo "Web console" ;;
     phone_signin) echo "Computers signed in by a phone" ;; adsbx_stats) echo "ADSB Exchange stats" ;; *) echo "$1" ;;
   esac
 }
@@ -79,6 +82,8 @@ bk_read_ids() {
   bk_id_ok "$v" && echo "PIAWARE_FEEDER_ID=$v"
   v=$(sed -n -E 's/^fr24key="?([A-Za-z0-9]+)"?.*/\1/p' "${FR24_INI:-/etc/fr24feed.ini}" 2>/dev/null | head -1)
   bk_key_ok "$v" && echo "FR24_KEY=$v"
+  v=$(ini_sec_get "${RB24_INI:-/etc/rbfeeder.ini}" client key)
+  bk_key_ok "$v" && echo "RB24_KEY=$v"
   return 0
 }
 
@@ -100,6 +105,9 @@ backup_make() {
   [ -d "$STATS_DIR" ] && cp -a "$STATS_DIR" "$b/stats"
   if [ -f "$SOCIAL_DIR/state.json" ]; then mkdir -p "$b/social"; cp -p "$SOCIAL_DIR/state.json" "$b/social/"; fi
   if [ -s "$SOCIAL_TEMPLATES" ]; then mkdir -p "$b/social"; cp -p "$SOCIAL_TEMPLATES" "$b/social/templates.txt"; fi
+  for f in crossing squawk; do       # 0.99.6: the owner's Telegram messages, his words (never the token)
+    [ -s "$ZB_ETC/telegram-$f.txt" ] || continue; mkdir -p "$b/telegram"; cp -p "$ZB_ETC/telegram-$f.txt" "$b/telegram/$f.txt"
+  done
   # graphs1090's own way, from its README: collectd stopped so the day kept in memory is written to the card first
   if [ -d "$BK_RRD" ] && [ -x "$BK_GRAPHS_TOOLS/rrd-dump.sh" ]; then
     bk_svc stop collectd
@@ -142,7 +150,7 @@ bk_unpack() {
 import sys, tarfile
 src, dest, max_mb = sys.argv[1], sys.argv[2], int(sys.argv[3])
 TOP = {"MANIFEST", "settings.env", "features.env", "feeders.env", "pfclient-config.json", "graphs-xml.tar.gz",
-       "stats", "social", "journal"}
+       "stats", "social", "telegram", "journal"}
 try:
     t = tarfile.open(src, "r:gz")
 except (OSError, tarfile.TarError) as e:
@@ -181,6 +189,7 @@ bk_describe() {   # bk_describe DIR(zb)
     [ -n "$(bk_get ADSBX_UUID "$b/feeders.env")" ] && printf ' ADSB Exchange UUID;'
     [ -n "$(bk_get PIAWARE_FEEDER_ID "$b/feeders.env")" ] && printf ' FlightAware feeder ID;'
     [ -n "$(bk_get FR24_KEY "$b/feeders.env")" ] && printf ' Flightradar24 sharing key;'
+    [ -n "$(bk_get RB24_KEY "$b/feeders.env")" ] && printf ' AirNav Radar sharing key;'
     [ -f "$b/pfclient-config.json" ] && printf ' Plane Finder share code;'
     echo
   else
@@ -268,6 +277,13 @@ bk_apply_ids() {   # bk_apply_ids DIR(zb) BEFORE_DIR
       echo "  Flightradar24: your sharing key is back."
     else bk_pending_put fr24key "$v"; echo "  Flightradar24: your sharing key waits for menu 1 (Flightradar24 ticked)."; fi
   fi
+  v=$(bk_get RB24_KEY "$b/feeders.env")
+  if bk_key_ok "$v"; then
+    if [ -f "${RB24_INI:-/etc/rbfeeder.ini}" ]; then
+      cp -p "${RB24_INI:-/etc/rbfeeder.ini}" "$before/rbfeeder.ini"; ini_sec_set "${RB24_INI:-/etc/rbfeeder.ini}" client key "$v"; bk_svc restart rbfeeder
+      echo "  AirNav Radar: your sharing key is back."
+    else bk_pending_put rb24key "$v"; echo "  AirNav Radar: your sharing key waits for menu 1 (AirNav Radar ticked)."; fi
+  fi
   if [ -f "$b/pfclient-config.json" ]; then
     if [ -f "$BK_PF_CONFIG" ] || command -v pfclient >/dev/null 2>&1; then
       [ ! -f "$BK_PF_CONFIG" ] || cp -p "$BK_PF_CONFIG" "$before/pfclient-config.json"
@@ -280,7 +296,7 @@ bk_apply_ids() {   # bk_apply_ids DIR(zb) BEFORE_DIR
 }
 
 # Called by the installers (lib/adsb.sh, lib/graphs.sh) once their part is in place.
-bk_pending_apply() {   # bk_pending_apply piaware|fr24|planefinder|graphs
+bk_pending_apply() {   # bk_pending_apply piaware|fr24|planefinder|radarbox|graphs
   local v
   case "$1" in
     piaware)
@@ -291,6 +307,10 @@ bk_pending_apply() {   # bk_pending_apply piaware|fr24|planefinder|graphs
       v=$(cat "$BK_PENDING/fr24key" 2>/dev/null); bk_key_ok "$v" || return 0
       ini_set "${FR24_INI:-/etc/fr24feed.ini}" fr24key "$v" && rm -f "$BK_PENDING/fr24key" \
         && echo "    Flightradar24: the sharing key from your backup is set." ;;
+    radarbox)
+      v=$(cat "$BK_PENDING/rb24key" 2>/dev/null); bk_key_ok "$v" || return 0
+      ini_sec_set "${RB24_INI:-/etc/rbfeeder.ini}" client key "$v" && rm -f "$BK_PENDING/rb24key" \
+        && echo "    AirNav Radar: the sharing key from your backup is set; the same station, nothing to claim." ;;
     planefinder)
       [ -f "$BK_PENDING/pfclient-config.json" ] || return 1
       install -m 644 "$BK_PENDING/pfclient-config.json" "$BK_PF_CONFIG" && rm -f "$BK_PENDING/pfclient-config.json" && bk_svc restart pfclient \
@@ -326,10 +346,11 @@ backup_restore() {
   # 0.53.8: the console's copy leaves the networks' identities out. Restored on a card with no network yet, every network
   # starts as a new station, and nothing said so before the typed word (the audit of 22-23 October 2026)
   if [ "$(bk_get KIND "$b/MANIFEST")" = console ] && ! { declare -F is_adsbx >/dev/null && is_adsbx; } && ! { declare -F is_piaware >/dev/null && is_piaware; } \
-     && ! { declare -F is_fr24 >/dev/null && is_fr24; } && ! { declare -F is_planefinder >/dev/null && is_planefinder; }; then
+     && ! { declare -F is_fr24 >/dev/null && is_fr24; } && ! { declare -F is_planefinder >/dev/null && is_planefinder; } \
+     && ! { declare -F is_radarbox >/dev/null && is_radarbox; }; then
     echo
-    echo "!! This is the console's copy: it holds no network identity, so ADSB Exchange, FlightAware, Flightradar24 and"
-    echo "   Plane Finder would each start as a NEW station here. Moving to a new card? Make the full backup on the old one first:"
+    echo "!! This is the console's copy: it holds no network identity, so ADSB Exchange, FlightAware, Flightradar24,"
+    echo "   Plane Finder and AirNav Radar would each start as a NEW station here. Moving to a new card? Make the full backup on the old one first:"
     echo "   sudo zenithboard backup make"
   fi
   echo "Restoring replaces this Pi's settings, statistics and posting history with the backup's (what is here now is"
@@ -345,6 +366,7 @@ backup_restore() {
   [ ! -d "$STATS_DIR" ] || cp -a "$STATS_DIR" "$before/stats"
   [ ! -f "$SOCIAL_DIR/state.json" ] || cp -p "$SOCIAL_DIR/state.json" "$before/social-state.json"
   [ ! -f "$SOCIAL_TEMPLATES" ] || cp -p "$SOCIAL_TEMPLATES" "$before/social-templates.txt"
+  for w in crossing squawk; do [ ! -f "$ZB_ETC/telegram-$w.txt" ] || cp -p "$ZB_ETC/telegram-$w.txt" "$before/telegram-$w.txt"; done
 
   echo "1. Settings"
   [ ! -f "$b/settings.env" ] || settings_import "$b/settings.env" | sed 's/^/  /'
@@ -377,6 +399,10 @@ backup_restore() {
     install -d -m 755 "$(dirname "$SOCIAL_TEMPLATES")"; install -m 644 "$b/social/templates.txt" "$SOCIAL_TEMPLATES"
     echo "  Your own post templates: $(grep -c . "$SOCIAL_TEMPLATES" || true), back"
   fi
+  for w in crossing squawk; do
+    [ -f "$b/telegram/$w.txt" ] || continue
+    install -d -m 755 "$ZB_ETC"; install -m 644 "$b/telegram/$w.txt" "$ZB_ETC/telegram-$w.txt"; echo "  Your own Telegram $w message: back"
+  done
   echo "3. Logs"
   mid=$(tr -d ' \n' < "$BK_MACHINE_ID" 2>/dev/null)
   if [ -d "$b/journal" ]; then
@@ -401,6 +427,8 @@ backup_restore() {
       phone_signin) console_has_password || continue ;;
       social)
         if [ ! -s "$SOCIAL_SECRETS" ]; then cfg_set SOCIAL 0; later="$later\n  sudo zenithboard social setup        (a new app password: bsky.app > Settings > Privacy and security > App passwords)"; continue; fi ;;
+      telegram)
+        if [ ! -s "${TELEGRAM_SECRETS:-$ZB_ETC/telegram.env}" ]; then cfg_set TELEGRAM 0; later="$later\n  sudo zenithboard telegram setup      (the bot's token again: @BotFather, /token)"; continue; fi ;;
       wifi_harden) [ -n "$(wifi_iface 2>/dev/null)" ] || continue ;;
       # 0.52.0: they need ADSB Exchange's feed, which a fresh card gets from menu 1; the UUID came back with step 4
       adsbx_stats) is_adsbx || { install -d -m 755 "$BK_DATA"; : > "$BK_DATA/adsbx-stats-wanted"; later="$later\n  sudo zenithboard adsbx-stats on      (after ADSB Exchange: menu 1 ADS-B → 1 Decoder and networks)"; continue; } ;;

@@ -94,6 +94,8 @@ SHOWN_KEYS = {
     "SOCIAL_WEEKLY": "0", "SOCIAL_WEEKLY_AT": "sun 19:00", "SOCIAL_WEEKLY_PARTS": "1,2,3,4",
     "SOCIAL_MONTHLY": "0", "SOCIAL_MONTHLY_AT": "1 09:00", "SOCIAL_MONTHLY_PARTS": "1,2,3,4",
     "NETWATCH": "0", "WIFI_HARDEN": "0", "LOG_AUTOCLEAN": "0", "CONSOLE_PHONE_SIGNIN": "0", "CONSOLE_LANG": "",
+    # 0.99.6: Telegram's settings (its token and chat are in telegram.env, never here)
+    "TELEGRAM": "0", "TELEGRAM_CROSSINGS": "1", "TELEGRAM_SQUAWKS": "1", "TELEGRAM_RULES": "all", "TELEGRAM_LANG": "", "TELEGRAM_UNITS": "",
 }
 
 
@@ -481,6 +483,22 @@ def post_templates():
         return ""
 
 
+TELEGRAM_ETC = os.environ.get("ZENITHBOARD_ETC", "/etc/zenithboard")
+
+
+def telegram_templates():
+    """0.99.6: the owner's own Telegram messages, one template per kind, as the files have them (his words, no secret);
+    empty: the default is used."""
+    out = {}
+    for kind in ("crossing", "squawk"):
+        try:
+            with open(os.path.join(TELEGRAM_ETC, "telegram-%s.txt" % kind), encoding="utf-8", errors="replace") as fh:
+                out[kind] = fh.read(4096)
+        except OSError:
+            out[kind] = ""
+    return out
+
+
 def post_templates_before():
     """0.53.3: whether the templates before the last change (their .bak) can be put back: kept, not empty, and not the
     same as today's."""
@@ -774,6 +792,7 @@ class Console(object):
             shown = {k: str(req.cfg.get(k, d)) for k, d in SHOWN_KEYS.items()}
             return Reply(200, {"cfg": shown, "facts": snap.get("facts") or {}, "facts_at": snap.get("at"), "backup": backup_info(),
                                "templates": post_templates(), "templates_before": post_templates_before(),
+                               "telegram_templates": telegram_templates(),
                                "catalog": actions.catalog(), "sections": actions.SECTIONS, "now": int(now())})
         if api == "job":
             st = job_status(req.q("id"), int(req.q("from", "0") or 0) if req.q("from", "0").isdigit() else 0)

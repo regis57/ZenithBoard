@@ -316,6 +316,7 @@ window.ZBI18N.start({ part: "console" }, function () {
       S.cfg = r.data.cfg || {}; S.facts = r.data.facts || {}; S.factsAt = r.data.facts_at || 0; S.backup = r.data.backup || null;
       S.templates = typeof r.data.templates === "string" ? r.data.templates : "";
       S.templatesBefore = !!r.data.templates_before;
+      S.tgTemplates = r.data.telegram_templates && typeof r.data.telegram_templates === "object" ? r.data.telegram_templates : {};   // 0.99.6
       S.catalog = r.data.catalog || {}; S.sections = r.data.sections || [];
       theme(S.cfg.THEME);
       // the overview's facts are read as root by the helper after each change; older than two minutes: again
@@ -386,6 +387,8 @@ window.ZBI18N.start({ part: "console" }, function () {
     update: [t("Update everything?"), t("ZenithBoard, the decoder and every feeder, one after the other: several minutes. The wall restarts during it; this page follows. A new GitHub signing key is never accepted from here: the update says so, and it is answered over SSH.")],
     "phone-signin": [t("Sign computers in with a phone"), t("When on, a computer's sign-in page shows a QR code. A phone already signed in scans it, sees the computer, its address and a four-digit code, and says yes: the computer is signed in, no password. Off again: computers use the password.")],
     "social-templates-delete": [t("Delete all your templates?"), t("The posts go on with the other words you ticked (factual when none is left). They are kept on the Pi: Put back brings them again.")],
+    "telegram-test-send": [t("Send a test to the chat?"), t("The two messages, filled on an aircraft overhead now (or a sample), go to your Telegram chat, each marked as a test.")],
+    "telegram-template-delete": [t("Back to the default message?"), t("Your own message is deleted and the default is used again. It is kept on the Pi: sudo zenithboard telegram template crossing undo (or squawk) brings it back.")],
     "social-templates-undo": [t("Put back your previous templates?"), t("The templates before the last change come back; today's are kept in their place, so it can be undone too.")],
     "backup-delete": [t("Delete the console's backup?"), t("Only the copy kept here for download: the files you already downloaded, and the Pi itself, are not touched.")],
     tailscale: [t("Tailscale"), t("Switching it on installs Tailscale the first time (from its own repository, a few minutes), then prints a sign-in link in this card: open it, sign in to YOUR Tailscale account, approve the Pi. The wall then answers your Tailscale devices too. Off disconnects the Pi from your Tailscale network; it stays installed. The wall restarts either way: this page reconnects by itself. Have your Tailscale account ready (tailscale.com, free) and its app on your phone: the switch waits up to an hour for the sign-in, and other changes wait behind it. To give up, switch it off.")],
@@ -548,8 +551,8 @@ window.ZBI18N.start({ part: "console" }, function () {
   // ---- the sections
   var SVC_NAMES = [
     ["readsb", t("Decoder (readsb)")], ["dump1090_fa", t("Decoder (dump1090-fa)")], ["dump978_fa", t("978 MHz UAT")],
-    ["adsbexchange_feed", t("ADSB Exchange")], ["adsbexchange_stats", t("ADSB Exchange stats")], ["piaware", t("FlightAware")], ["fr24feed", t("Flightradar24")], ["pfclient", t("Plane Finder")],
-    ["zenithboard_flightinfo", t("The wall")], ["zenithboard_social", t("Bluesky posts")], ["graphs1090", "graphs1090"], ["lighttpd", t("Receiver map's web server")]
+    ["adsbexchange_feed", t("ADSB Exchange")], ["adsbexchange_stats", t("ADSB Exchange stats")], ["piaware", t("FlightAware")], ["fr24feed", t("Flightradar24")], ["pfclient", t("Plane Finder")], ["rbfeeder", t("AirNav Radar")],
+    ["zenithboard_flightinfo", t("The wall")], ["zenithboard_social", t("Bluesky posts")], ["zenithboard_telegram", t("Telegram messages")], ["graphs1090", "graphs1090"], ["lighttpd", t("Receiver map's web server")]
   ];
   function go(section) { return showSection(section); }
   // 0.99.1 (the owner's recordings, 27 October 2026): on an iPhone, through Tailscale, every tap on a section reloaded
@@ -599,6 +602,8 @@ window.ZBI18N.start({ part: "console" }, function () {
     }
     return card(t("The console as an app"), "phone", t("Its own icon and its own window, on the phone or the computer. Nothing is downloaded: it is this same page, from this Pi."), body, "w6");
   }
+  // 0.99.6: AirNav Radar's station serial, as rbfeeder prints it (EXTRPI000000), only when it looks like one
+  function rbStation() { var s = S.facts.radarbox_station || ""; return /^[A-Za-z0-9]{6,20}$/.test(s) ? s : null; }
   // 0.52.0: the link to ADSB Exchange's map of this antenna's aircraft, only when it is theirs
   function adsbxMap() { var u = S.facts.adsbx_map || ""; return /^https:\/\/www\.adsbexchange\.com\/api\/feeders\/\?feed=[0-9A-Fa-f-]{36}$/.test(u) ? u : null; }
 
@@ -613,7 +618,7 @@ window.ZBI18N.start({ part: "console" }, function () {
         tile(t("Memory free"), mem, f.mem_total_mb ? t("of {size}", { size: size(f.mem_total_mb) }) : ""),
         tile(t("Card free"), card_, f.disk_total_mb ? t("of {size}", { size: size(f.disk_total_mb) }) : "")));
       var svcs = SVC_NAMES.filter(function (s) { return f["svc_" + s[0]] !== undefined; }).map(function (s) {
-        var st = f["svc_" + s[0]], quiet = (s[0] === "zenithboard_social" && !on(c.SOCIAL));
+        var st = f["svc_" + s[0]], quiet = (s[0] === "zenithboard_social" && !on(c.SOCIAL)) || (s[0] === "zenithboard_telegram" && !on(c.TELEGRAM));
         return h("div", { "class": "svc" }, h("i", { "class": st === "active" ? "ok" : (quiet ? "" : "bad") }), h("span", { text: s[1] }),
           h("em", { text: st === "active" ? word("running") : (quiet ? word("off") : st) }));
       });
@@ -627,6 +632,7 @@ window.ZBI18N.start({ part: "console" }, function () {
         chip(t("graphs1090 {state}", { state: word(f.graphs) }), "receiver", f.graphs === "on"),
         chip(t("Bluesky {state}", { state: word(on(c.SOCIAL) ? "posting" : "off") }), "sharing", on(c.SOCIAL)),
         chip(t("Summaries: {list}", { list: ["DAILY", "WEEKLY", "MONTHLY"].filter(function (p) { return on(c["SOCIAL_" + p]); }).map(function (p) { return word(p.toLowerCase()); }).join(", ") || word("off") }), "sharing"),
+        chip(t("Telegram {state}", { state: stateWord(c.TELEGRAM) }), "sharing", on(c.TELEGRAM)),
         chip(t("Watchdog {state}", { state: word(f.watchdog) }), "reliability", f.watchdog === "on"),
         chip(t("Network watchdog {state}", { state: word(f.netwatch) }), "reliability", f.netwatch === "on"),
         f.tailscale && f.tailscale !== "not installed" ? chip(t("Tailscale {state}", { state: word(f.tailscale) }), "system", f.tailscale === "on") : null,
@@ -719,6 +725,8 @@ window.ZBI18N.start({ part: "console" }, function () {
             textApply("social-hashtags", c.SOCIAL_HASHTAGS, 340, t("none"), function (v) { return v.replace(/[,\s]+/g, " ").trim() || "none"; }, "none"))
         ], "w6"),
         acct ? templatesCard() : null,
+        telegramCard(),
+        f.telegram_chat ? telegramTemplatesCard() : null,
         card(t("Summaries"), "chart", t("From the statistics, at their time on the Pi's clock; the posts go in one queue, two minutes apart. Posts: 1 the period, 2 cargo and business jets, 3 military, 4 general aviation."),
           [summaryRow("daily", t("24 hours")), summaryRow("weekly", t("The week")), summaryRow("monthly", t("30 days")),
             on(c.STATS) ? null : h("p", { "class": "note", text: t("Statistics are off: no summary can be made until they are on (Receiver).") }),
@@ -734,7 +742,7 @@ window.ZBI18N.start({ part: "console" }, function () {
 
     reliability: function () {
       var f = S.facts, logsSel = h("select", { "aria-label": t("Which log") },
-        [["flightinfo", t("The wall")], ["decoder", t("The decoder")], ["social", t("Bluesky posts")], ["uat", t("978 MHz UAT")]].map(function (o) { return h("option", { value: o[0], text: o[1] }); }));
+        [["flightinfo", t("The wall")], ["decoder", t("The decoder")], ["social", t("Bluesky posts")], ["telegram", t("Telegram messages")], ["radarbox", t("AirNav Radar")], ["uat", t("978 MHz UAT")]].map(function (o) { return h("option", { value: o[0], text: o[1] }); }));
       return [
         card(t("Keep it running"), "shield", t("All off by default; each one off again puts back what it found."), [
           row(t("Hardware watchdog"), t("The Pi's own chip restarts it after a complete freeze"), sw("watchdog", f.watchdog === "on")),
@@ -811,7 +819,7 @@ window.ZBI18N.start({ part: "console" }, function () {
           h("ul", { "class": "ticks no" },
             h("li", { text: t("Uninstalling, and anything that asks for a typed word") }),
             h("li", { text: t("Wi-Fi, fixed addresses (they can cut this page off)") }),
-            h("li", { text: t("Passwords, tokens and keys: Bluesky, the domain name, this console's own") }),
+            h("li", { text: t("Passwords, tokens and keys: Bluesky, Telegram, the domain name, this console's own") }),
             h("li", { text: t("Posting to Bluesky, emptying statistics or logs, importing settings, restoring a backup") })),
           h("p", { "class": "note", text: t("This page travels unencrypted on your home network (plain HTTP), like the wall. It answers home addresses only.") }),
           h("div", { "class": "actions" }, btn(t("Turn the console off"), "console-off", {}, "danger"))
@@ -976,6 +984,86 @@ window.ZBI18N.start({ part: "console" }, function () {
         S.templatesBefore ? tplButton(t("Put back the previous ones"), "social-templates-undo", "btn") : null)
     ], "w12");
   }
+  // 0.99.6: Telegram, the messages to the owner's own chat. The bot's token and the chat are set up over SSH (a token is
+  // never typed here); everything else is here.
+  function tgRulesChips(cur) {
+    var three = ["military", "helicopter", "heavy"], every = !cur || cur === "all";
+    var picked = every ? three.slice() : String(cur).split(",").filter(function (w) { return three.indexOf(w) >= 0; });
+    var names = { military: t("Military"), helicopter: t("Helicopters"), heavy: t("Heavies") };
+    var waiting = S.pending["telegram-rules"];
+    var chips = three.map(function (w) {
+      var lit = picked.indexOf(w) >= 0;
+      return h("button", { type: "button", "class": "chip" + (lit ? " on" : "") + (every ? " static" : ""), "aria-pressed": lit ? "true" : "false", text: names[w],
+        disabled: (every || waiting) ? true : null, onclick: function () {
+          var next = lit ? picked.filter(function (x) { return x !== w; }) : picked.concat([w]);
+          if (!next.length) return toast(t("At least one."));
+          run("telegram-rules", { value: three.filter(function (x) { return next.indexOf(x) >= 0; }).join(",") });
+        } });
+    });
+    chips.push(h("button", { type: "button", "class": "chip" + (every ? " on" : ""), "aria-pressed": every ? "true" : "false", text: t("Everything"), disabled: waiting ? true : null,
+      onclick: function () { run("telegram-rules", { value: every ? three.join(",") : "all" }); } }));
+    return h("div", { "class": "chips" }, chips);
+  }
+  function telegramCard() {
+    var c = S.cfg, chat = S.facts.telegram_chat, langs = ["posts"].concat(I.langs().indexOf("en") < 0 ? ["en"].concat(I.langs()) : I.langs());
+    return card(t("Telegram"), "share", chat ? t("To the chat {chat}. The bot and the chat are set up over SSH (it asks for the bot's token): sudo zenithboard telegram setup", { chat: chat }) :
+      t("No Telegram bot yet. Set it up over SSH, it asks for the bot's token from @BotFather and lets you choose the chat: sudo zenithboard telegram setup"), [
+      row(t("Send the messages"), t("Text only, to your own chat or group; never public."), chat ? sw("telegram", on(c.TELEGRAM)) : h("span", { "class": "state", text: t("needs a bot") })),
+      row(t("Aircraft crossing the sharing radius"), t("One message per crossing, as the Bluesky posts, inside the sharing radius ({n} km)", { n: c.SOCIAL_RADIUS_KM || "15" }), sw("telegram-crossings", on(c.TELEGRAM_CROSSINGS))),
+      on(c.TELEGRAM_CROSSINGS) ? row(t("Which crossings"), c.TELEGRAM_RULES === "all" || !c.TELEGRAM_RULES ? t("Everything: every crossing") : t("Only the kinds lit; Everything writes every crossing"), tgRulesChips(c.TELEGRAM_RULES)) : null,
+      row(t("Emergency squawks"), t("7500, 7600, 7700 anywhere the antenna hears them, not only in the radius; once per flight, with where the aircraft is. Never posted to Bluesky."), sw("telegram-squawks", on(c.TELEGRAM_SQUAWKS))),
+      row(t("Language of the messages"), null, select("telegram-lang", langs, c.TELEGRAM_LANG || "posts", langs.map(function (l) { return l === "posts" ? t("The posts' ({lang})", { lang: I.name(c.SOCIAL_LANG || "en") }) : I.name(l); }))),
+      row(t("Units"), null, seg("telegram-units", ["posts", "metric", "imperial", "aviation"], c.TELEGRAM_UNITS || "posts", [t("The posts'"), t("Metric"), t("Imperial"), t("Aviation")])),
+      h("div", { "class": "actions" }, btn(t("Try the messages (sends nothing)"), "telegram-test"), chat ? btn(t("Send a test to the chat"), "telegram-test-send") : null, btn(t("Status"), "telegram-status"))
+    ], "w6");
+  }
+  // the owner's own message for each kind: the whole message, lines kept, the tags a click away
+  var TG_TAGS = TAGS.filter(function (x) { return x[0] !== "hashtags"; }).concat([["near", t("where the aircraft is: the town nearest it, or a city and how far (never from the antenna)")],
+    ["meaning", t("what the emergency squawk means, in the messages' language")], ["hex", t("the aircraft's ICAO address (4ca7b1)")]]);
+  function telegramTemplatesCard() {
+    var title = t("Your own Telegram messages"), kind = S.tgKind || "crossing", saved = ((S.tgTemplates || {})[kind] || "").replace(/\s+$/, "");
+    S.tgDraft = S.tgDraft || {};
+    var ta = h("textarea", { rows: 7, dir: "auto", spellcheck: "false", "aria-label": title,
+      placeholder: kind === "squawk" ? "🚨 Squawk {squawk}: {meaning}\n{flight}[ · {airline}][ · {type}]\n[{near}]\n{time}[ · {tracker}]" : "✈ {flight}[ · {airline}]\n[{from} → {to}]\n[{altitude}][ · {speed}]\n{time}[ · {area}]" });
+    ta.value = S.tgDraft[kind] !== undefined && S.tgDraft[kind] !== null ? S.tgDraft[kind] : saved;
+    ta.addEventListener("input", function () { S.tgDraft[kind] = ta.value; });
+    function insert(tag) {
+      var a = ta.selectionStart || 0, b = ta.selectionEnd || 0, v = ta.value;
+      ta.value = v.slice(0, a) + "{" + tag + "}" + v.slice(b); S.tgDraft[kind] = ta.value;
+      ta.focus(); ta.selectionStart = ta.selectionEnd = a + tag.length + 2;
+    }
+    function text() { return ta.value.replace(/\r\n?/g, "\n").split("\n").map(function (l) { return l.replace(/\s+$/, ""); }).join("\n").replace(/^\n+|\n+$/g, ""); }
+    function after(j) { if (j && j.rc === 0) { S.tgDraft[kind] = null; loadState(); } }
+    var help = h("details", { "class": "tags-help", open: S.tgHelp ? true : null, ontoggle: function () { S.tgHelp = help.open; } },
+      h("summary", { text: t("The tags: click one to put it in") }),
+      h("div", { "class": "chips" }, TG_TAGS.map(function (x) { return h("button", { type: "button", "class": "chip", title: x[1], text: "{" + x[0] + "}", onclick: function () { insert(x[0]); } }); })),
+      h("ul", { "class": "tags-list" }, TG_TAGS.map(function (x) { return h("li", null, h("code", { text: "{" + x[0] + "}" }), " " + x[1]); }),
+        h("li", null, h("code", { text: "[ … ]" }), " " + t("a part left out when a tag inside it is empty: [{from} → {to}]")),
+        h("li", null, h("code", { text: "{tag|cap}" }), " " + t("with a capital letter"))));
+    var kinds = h("div", { "class": "seg", role: "group" }, [["crossing", t("Crossing")], ["squawk", t("Emergency squawk")]].map(function (k) {
+      return h("button", { type: "button", "class": k[0] === kind ? "on" : "", "aria-pressed": k[0] === kind ? "true" : "false", text: k[1], onclick: function () { S.tgKind = k[0]; draw(); } });
+    }));
+    return card(title, "picture", t("Each kind of message in your words, lines kept; ZenithBoard fills in the tags, in the messages' language. Empty: the default. Nothing gives the receiver's position away."), [
+      row(t("The message"), (S.tgTemplates || {})[kind] && (S.tgTemplates || {})[kind].trim() ? t("Yours") : t("The default, until you save one"), kinds),
+      ta, help,
+      h("div", { "class": "actions" },
+        h("button", { type: "button", "class": "btn", text: t("Show the default"), disabled: S.pending["telegram-template-default"] ? true : null,
+          onclick: function () { run("telegram-template-default", { kind: kind }, { card: title }); } }),
+        h("button", { type: "button", "class": "btn", text: S.pending["telegram-template-try"] ? t("Try (sends nothing)") + "…" : t("Try (sends nothing)"), disabled: S.pending["telegram-template-try"] ? true : null,
+          onclick: function () { var v = text(); if (!v) return toast(t("Write a template first."), true); run("telegram-template-try", { kind: kind, text: v }, { card: title }); } }),
+        h("button", { type: "button", "class": "primary", text: S.pending["telegram-template"] ? t("Save") + "…" : t("Save"), disabled: S.pending["telegram-template"] ? true : null,
+          onclick: function () {
+            var v = text();
+            if (!v) {
+              if (!saved.trim()) return toast(t("Write a template first."), true);
+              return run("telegram-template-delete", { kind: kind }, { card: title }).then(after);
+            }
+            run("telegram-template", { kind: kind, text: v }, { card: title }).then(after);
+          } }),
+        saved.trim() ? h("button", { type: "button", "class": "danger", text: t("Back to the default"), disabled: S.pending["telegram-template-delete"] ? true : null,
+          onclick: function () { run("telegram-template-delete", { kind: kind }, { card: title }).then(after); } }) : null)
+    ], "w12");
+  }
   function summariesBlocked(acct, c) {
     if (!acct) return h("p", { "class": "note", text: t("No Bluesky account yet: no summary goes out until one is set up (Sharing → Bluesky).") });
     if (!on(c.SOCIAL)) return h("p", { "class": "note", text: t("Posting is off: no summary goes out until “Post the aircraft overhead” is on (Sharing → Bluesky).") });
@@ -1039,6 +1127,9 @@ window.ZBI18N.start({ part: "console" }, function () {
     group("feeds", t("The networks you feed"));
     if (f.svc_pfclient !== undefined) list.push(page("plane", t("Plane Finder"), t("Its own page, port 30053"), "http://" + hh + ":30053/"));
     if (f.svc_fr24feed !== undefined) list.push(page("plane", t("Flightradar24"), t("Its feeder's page, port 8754"), "http://" + hh + ":8754/"));
+    // 0.99.6: AirNav Radar has no page on the Pi: its station's page on their site once rbfeeder said its serial, else where to claim it
+    if (f.svc_rbfeeder !== undefined) list.push(h("a", { "class": "page", href: rbStation() ? "https://www.radarbox.com/stations/" + rbStation() : "https://www.airnavradar.com/raspberry-pi/claim", target: "_blank", rel: "noopener noreferrer" },
+      ico("link"), h("div", null, h("b", { text: t("AirNav Radar") }), h("span", { text: rbStation() ? t("Station {serial}, on their site", { serial: rbStation() }) : t("Claim this station, on their site") }))));
     if (f.svc_adsbexchange_feed !== undefined) list.push(h("a", { "class": "page", href: "https://www.adsbexchange.com/myip/", target: "_blank", rel: "noopener noreferrer" }, ico("link"), h("div", null, h("b", { text: t("ADSB Exchange") }), h("span", { text: t("Your feed, on their site") }))));
     if (adsbxMap()) list.push(h("a", { "class": "page", href: adsbxMap(), target: "_blank", rel: "noopener noreferrer" }, ico("map"), h("div", null, h("b", { text: t("Your aircraft on ADSB Exchange") }), h("span", { text: t("Their map: only what your antenna hears") }))));
     // on, but the UUID unreadable here: their myip page carries the same link at its bottom
@@ -1211,7 +1302,7 @@ window.ZBI18N.start({ part: "console" }, function () {
   // ---- the first steps (0.39.0; 0.41.0: the antenna, the feeders, sharing, the phone; open again at any time from
   // System or the overview). Only what differs from the Pi's settings is applied, in the review's order.
   var FEEDERS = [["adsbexchange_feed", t("ADSB Exchange"), "https://www.adsbexchange.com/myip/"], ["piaware", t("FlightAware"), "https://www.flightaware.com/adsb/piaware/claim"],
-    ["fr24feed", t("Flightradar24"), ":8754"], ["pfclient", t("Plane Finder"), ":30053"]];
+    ["fr24feed", t("Flightradar24"), ":8754"], ["pfclient", t("Plane Finder"), ":30053"], ["rbfeeder", t("AirNav Radar"), "https://www.airnavradar.com/raspberry-pi/claim"]];
   function setupGaps() {
     var c = S.cfg, f = S.facts, out = [];
     if (!(Number(c.LAT) || Number(c.LON))) out.push(t("The antenna's position is not set"));
@@ -1275,7 +1366,7 @@ window.ZBI18N.start({ part: "console" }, function () {
             return h("div", { "class": "li" }, h("div", null, h("b", { text: x[1] }), h("small", { text: word(st) })),
               st !== "not installed" && url ? h("a", { href: url, target: "_blank", rel: "noopener noreferrer", text: t("Its page ↗") }) : h("span", { "class": "pill " + (st === "running" ? "ok" : "queued"), text: st === "running" ? t("ok") : st === "not installed" ? t("terminal") : word(st) }));
           })),
-          h("p", { "class": "note", text: t("ADSB Exchange comes first and is always on; FlightAware, Flightradar24 and Plane Finder only if you want them. Their state is also on the overview.") })];
+          h("p", { "class": "note", text: t("ADSB Exchange comes first and is always on; FlightAware, Flightradar24, Plane Finder and AirNav Radar only if you want them. Their state is also on the overview.") })];
       },
       function () {
         return [h("h3", { text: t("What to collect") }), h("p", { "class": "lead", text: t("All of it stays on the card; nothing is sent anywhere.") }),

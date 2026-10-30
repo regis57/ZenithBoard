@@ -9,7 +9,7 @@ not written below. A value is only ever one of the values listed, a number in it
 
 Left out on purpose, and done over SSH: uninstalling, Wi-Fi on/off/connect/forget/country and fixed addresses (one
 mistake cuts the Pi off the network the console is reached through), anything asking for a password, token or key
-(the Bluesky account, the domain name), posting to Bluesky, emptying statistics or logs, importing settings or
+(the Bluesky account, the Telegram bot, the domain name), posting to Bluesky, emptying statistics or logs, importing settings or
 restoring a backup (0.42.0: a backup is made here and downloaded, but put back over SSH; the networks' keys never
 travel through the console, so its backup leaves them out),
 `config-set` (any key, any value), and the old ACARS removal.
@@ -29,6 +29,11 @@ AREA_RE = r"[^\W_][\w '\u2019.,-]{0,39}"
 RULES = ("military", "helicopter", "heavy", "rare", "farthest")
 RULES_RE = r"^(all|(%s)(,(%s)){0,4})$" % ("|".join(RULES), "|".join(RULES))
 TEMPLATES_MAX = 1500             # 0.51.0: the owner's templates, all of them (a few lines of 260 characters at most each)
+# 0.99.6: Telegram, the messages to the owner's own chat: which crossings, the two kinds of message, one template each
+TG_RULES = ("military", "helicopter", "heavy")
+TG_RULES_RE = r"^(all|(%s)(,(%s)){0,2})$" % ("|".join(TG_RULES), "|".join(TG_RULES))
+TG_KINDS = ("crossing", "squawk")
+TG_TEMPLATE_MAX = 1500
 # 0.47.0: the web pages' languages, the same codes as lib/common.sh (ZB_LANG_CODES) and flightinfo/static/i18n.js; the
 # command itself refuses one this Pi has no catalogue for
 LANGS = ("en", "fr", "de", "nl", "it", "es", "pt-BR", "pl", "fi", "et", "lv", "lt", "id", "sw", "hi", "ru", "uk", "ar", "ja", "ko",
@@ -113,6 +118,22 @@ ACTIONS = {
                      [("period", "enum", PERIODS), ("value", "re", r"^[1-4](,[1-4]){0,3}$")], ""),
     "summary-test": ("sharing", "Try a summary", ["social", "summary", "{period}", "test"], [("period", "enum", PERIODS)], "read long"),
     "summaries":    ("sharing", "Summaries", ["social", "summary"], [], "read"),
+    # 0.99.6: Telegram (the bot's token and the chat are set up over SSH: sudo zenithboard telegram setup)
+    "telegram":     ("sharing", "Telegram messages", ["telegram", "{value}"], [("value", "enum", ON_OFF)], ""),
+    "telegram-status": ("sharing", "Telegram status", ["telegram", "status"], [], "read"),
+    "telegram-test": ("sharing", "Try the messages", ["telegram", "test"], [], "read"),
+    "telegram-test-send": ("sharing", "Send a test to the chat", ["telegram", "test", "send"], [], "ask"),
+    "telegram-crossings": ("sharing", "Crossings of the sharing radius", ["telegram", "crossings", "{value}"], [("value", "enum", ON_OFF)], ""),
+    "telegram-squawks": ("sharing", "Emergency squawks", ["telegram", "squawks", "{value}"], [("value", "enum", ON_OFF)], ""),
+    "telegram-rules": ("sharing", "Which crossings", ["telegram", "rules", "{value}"], [("value", "re", TG_RULES_RE)], ""),
+    "telegram-lang": ("sharing", "Language of the messages", ["telegram", "lang", "{value}"], [("value", "enum", ("posts",) + LANGS)], ""),
+    "telegram-units": ("sharing", "Units of the messages", ["telegram", "units", "{value}"], [("value", "enum", ("posts", "metric", "imperial", "aviation"))], ""),
+    "telegram-template": ("sharing", "Your own message", ["telegram", "template", "{kind}", "set", "--", "{text}"],
+                     [("kind", "enum", TG_KINDS), ("text", "text", (TG_TEMPLATE_MAX, None))], ""),
+    "telegram-template-try": ("sharing", "Try your message", ["telegram", "template", "{kind}", "test", "--", "{text}"],
+                     [("kind", "enum", TG_KINDS), ("text", "text", (TG_TEMPLATE_MAX, None))], "read"),
+    "telegram-template-default": ("sharing", "The default message", ["telegram", "template", "{kind}", "default"], [("kind", "enum", TG_KINDS)], "read"),
+    "telegram-template-delete": ("sharing", "Back to the default message", ["telegram", "template", "{kind}", "set", "--", "none"], [("kind", "enum", TG_KINDS)], "ask"),
     # -- reliability
     "watchdog":     ("reliability", "Hardware watchdog", ["watchdog", "{value}"], [("value", "enum", ON_OFF)], "ask"),
     "netwatch":     ("reliability", "Network watchdog", ["netwatch", "{value}"], [("value", "enum", ON_OFF)], ""),
@@ -122,7 +143,7 @@ ACTIONS = {
     "logs-auto":    ("reliability", "Daily log clean-up", ["logs", "auto", "{value}"], [("value", "enum", ON_OFF)], ""),
     "health":       ("reliability", "Health", ["health"], [], "read"),
     "memory":       ("reliability", "Memory", ["memory"], [], "read"),
-    "logs":         ("reliability", "Logs", ["logs", "{value}"], [("value", "enum", ("flightinfo", "decoder", "social", "uat"))], "read"),
+    "logs":         ("reliability", "Logs", ["logs", "{value}"], [("value", "enum", ("flightinfo", "decoder", "social", "telegram", "radarbox", "uat"))], "read"),
     "logs-review":  ("reliability", "Log size and warnings", ["logs", "review"], [], "read"),
     # -- system
     "security":     ("system", "Security check", ["security"], [], "read"),

@@ -2,7 +2,7 @@
 
 Your ZenithBoard works on one micro-SD card and you want it on another one: a bigger card, a new Pi, or simply a fresh
 start. This page does it **step by step, with no computer knowledge needed**. You keep everything: your settings, your
-statistics, your graphs, your logs, and your stations on ADSB Exchange, FlightAware, Flightradar24 and Plane Finder.
+statistics, your graphs, your logs, and your stations on ADSB Exchange, FlightAware, Flightradar24, Plane Finder and AirNav Radar.
 
 About an hour, most of it waiting. **Your old card is never changed**: if anything goes wrong, put it back in the Pi
 and you are where you started.
@@ -84,6 +84,7 @@ Pi, connect with PuTTY, bring the system up to date. Two tips:
         own key back right after (Flightradar24 may then list a second, unused station on your account, which you can
         delete there).
       * *Plane Finder*: nothing to do on its page, your share code is back.
+      * *AirNav Radar* (0.99.6): nothing to claim, your sharing key is back.
    5. **The wall**: Yes.
    6. **The list of what is worth switching on**: leave it as it is, Enter.
    7. **The web console**: Yes, then choose its password (10 characters at least, twice).
@@ -92,7 +93,7 @@ Pi, connect with PuTTY, bring the system up to date. Two tips:
 
 ## Part 4 · What to check, and what to do again
 
-* **Your stations**: within the hour, ADSB Exchange, FlightAware, Flightradar24 and Plane Finder show your station
+* **Your stations**: within the hour, ADSB Exchange, FlightAware, Flightradar24, Plane Finder and AirNav Radar show your station
   as before (the links are on the console's overview).
 * **Your statistics** at `http://zenithboard.local:8080/stats`: the previous days are there.
 * **Bluesky**, if you post: the backup never holds its password. Make a new *app password* on bsky.app

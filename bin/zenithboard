@@ -27,6 +27,8 @@ HERE="$(dirname "$(readlink -f "$0")")"
 . "$HERE/../lib/graphs.sh"
 # shellcheck source=lib/social.sh
 . "$HERE/../lib/social.sh"
+# shellcheck source=lib/telegram.sh
+. "$HERE/../lib/telegram.sh"
 # shellcheck source=lib/gain.sh
 . "$HERE/../lib/gain.sh"
 # shellcheck source=lib/uat.sh
@@ -130,6 +132,19 @@ ZenithBoard $ZB_VERSION - ADSB Flight Info
   zenithboard social rules [all|LIST]   what is worth a post: all, or some of military,helicopter,heavy,rare,farthest
   zenithboard social check              try the account
   zenithboard social remove             forget the account, stop the service (asks you to type remove)
+  zenithboard telegram setup            the bot (its token, from @BotFather; never on the command line) and the chat
+  zenithboard telegram on|off|status    messages to your own Telegram chat: crossings of the sharing radius, emergency squawks (off by default)
+  zenithboard telegram chat             choose the chat again (your own, or a group the bot was added to)
+  zenithboard telegram check            does the bot's token answer?
+  zenithboard telegram test [crossing|squawk] [send]   each message filled now, sent nowhere; send: to the chat, marked as a test
+  zenithboard telegram hello            send the "connected" message to the chat
+  zenithboard telegram crossings on|off the aircraft crossing the sharing radius, one message per crossing (default: on)
+  zenithboard telegram squawks on|off   the emergency squawks 7500 7600 7700 anywhere in range, once per flight (default: on)
+  zenithboard telegram rules [all|LIST] which crossings: all, or some of military,helicopter,heavy
+  zenithboard telegram lang [CODE|posts]   the messages' language; posts: the posts' own (the default)
+  zenithboard telegram units [metric|imperial|aviation|posts]   the messages' units; posts: the posts' own (the default)
+  zenithboard telegram template crossing|squawk [show|default|tags|set TEXT|test [TEXT]|undo]   your own message; set none: the default again
+  zenithboard telegram remove           forget the token and the chat, stop the service (asks you to type remove)
   zenithboard photos on|off             aircraft photos on the wall (needs internet on the Pi)
   zenithboard photos test [HEX]         check that this Pi can fetch photos from Planespotters
   zenithboard routes on|off             show where each flight comes from / goes to (looked up by callsign, needs internet)
@@ -142,7 +157,7 @@ ZenithBoard $ZB_VERSION - ADSB Flight Info
   zenithboard update only NAME...       update just those (e.g. readsb flightinfo)
   zenithboard mlat-guard                re-enforce a single MLAT client
   zenithboard adsbx-stats on|off|status|url   ADSB Exchange's stats: their map of only your aircraft, Feed Details on their page (off by default)
-  zenithboard logs [flightinfo|decoder|uat|social|adsbexchange|piaware|fr24|planefinder]   show the last 100 lines of a service
+  zenithboard logs [flightinfo|decoder|uat|social|telegram|adsbexchange|piaware|fr24|planefinder|radarbox]   show the last 100 lines of a service
   zenithboard logs usage|review         size of the system logs / size + recent warnings
   zenithboard logs limit MB|default     cap the size of the system logs (10-2000 MB)
   zenithboard logs clean                delete ALL logs now
@@ -179,6 +194,8 @@ cmd_status() {
   show_state "FlightAware (piaware)" is_piaware piaware
   show_state "Flightradar24" is_fr24 fr24feed
   show_state "Plane Finder" is_planefinder pfclient
+  show_state "AirNav Radar (rbfeeder)" is_radarbox rbfeeder
+  if is_radarbox; then printf '  %-26s %s\n' "" "MLAT $( [ "$(ini_sec_get "$RB24_INI" mlat autostart_mlat)" = false ] && echo "off (ADSB Exchange keeps the only one)" || echo "NOT off: sudo zenithboard mlat-guard")$( s=$(rb24_station); [ -z "$s" ] || echo "   station $s: $RB24_STATION_URL$s")"; fi
   if is_region_us || is_uat978; then show_state "978 MHz UAT (dump978-fa)" is_uat978 dump978-fa; fi
   echo "Displays:"
   show_state "FlightInfo wall" is_flightinfo zenithboard-flightinfo
@@ -389,6 +406,25 @@ case "${1:-}" in
       remove) root_or_die; social_remove "${3:-}" ;;
       *) die "Usage: zenithboard social setup|words|hashtags [WORD...]|gap [MINUTES]|picture|look dotmap|flap|alternate|colour NAME|units metric|imperial|aviation|wall|photolink on|off|places on|off|sentence LIST|summary daily|weekly|monthly on|off|at TIME|parts LIST|test|post[2-4]|map NAME|area WORDS|radius KM|rules LIST|lang CODE|template ...|on|off|test [HEX]|post [HEX]|check|status|remove" ;;
     esac ;;
+  telegram)                                       # 0.99.6: messages to the owner's own Telegram chat
+    case "${2:-status}" in
+      setup)  root_or_die; telegram_setup ;;
+      chat)   root_or_die; telegram_choose_chat && echo "Chat: $(telegram_chat)." && { [ "$(telegram_state)" != on ] || systemctl restart "$TELEGRAM_UNIT" 2>/dev/null || true; } ;;
+      on)     root_or_die; telegram_on ;;
+      off)    root_or_die; telegram_off ;;
+      status) telegram_status ;;
+      check)  root_or_die; telegram_py check ;;
+      hello)  root_or_die; telegram_py hello ;;
+      test)   case " ${*:3} " in *" send "*) root_or_die ;; *) root_or_zb ;; esac; telegram_py test "${@:3}" ;;
+      crossings) [ -z "${3:-}" ] || root_or_die; telegram_set_switch TELEGRAM_CROSSINGS "Crossings of the sharing radius" "${3:-}" ;;
+      squawks)   [ -z "${3:-}" ] || root_or_die; telegram_set_switch TELEGRAM_SQUAWKS "Emergency squawks" "${3:-}" ;;
+      rules)  [ -z "${3:-}" ] || root_or_die; telegram_set_rules "${3:-}" ;;
+      lang)   [ -z "${3:-}" ] || root_or_die; telegram_set_lang "${3:-}" ;;
+      units)  [ -z "${3:-}" ] || root_or_die; telegram_set_units "${3:-}" ;;
+      template|templates) case "${4:-show}" in show|default|tags|test) ;; *) root_or_die ;; esac; telegram_template "${@:3}" ;;
+      remove) root_or_die; telegram_remove "${3:-}" ;;
+      *) die "Usage: zenithboard telegram setup|chat|on|off|status|check|hello|test [crossing|squawk] [send]|crossings on|off|squawks on|off|rules LIST|lang CODE|units NAME|template crossing|squawk ...|remove" ;;
+    esac ;;
   patches)
     case "${2:-status}" in
       on)  root_or_die; patches_on ;;
@@ -429,7 +465,7 @@ case "${1:-}" in
     case "${2:-}" in
       list) zb_update_list ;;
       quick) root_or_die; if is_flightinfo; then zb_update --only zenithboard flightinfo; else zb_update --only zenithboard; fi ;;
-      only) root_or_die; [ -n "${3:-}" ] || die "Usage: sudo zenithboard update only NAME...   (names: zenithboard readsb dump1090 adsbx piaware fr24 planefinder flightinfo graphs1090; see: zenithboard update list)"; shift 2; zb_update --only "$@" ;;
+      only) root_or_die; [ -n "${3:-}" ] || die "Usage: sudo zenithboard update only NAME...   (names: zenithboard readsb dump1090 adsbx piaware fr24 planefinder radarbox flightinfo graphs1090; see: zenithboard update list)"; shift 2; zb_update --only "$@" ;;
       *) root_or_die; zb_update "${2:-}" ;;
     esac ;;
   update-components) root_or_die; shift; zb_update_components "$@" ;;
@@ -543,12 +579,13 @@ case "${1:-}" in
       uat) logs_unit dump978-fa "978 MHz UAT (dump978-fa)" && journalctl -u dump978-fa -u skyaware978 -n 100 --no-pager ;;
       flightinfo) journalctl -u zenithboard-flightinfo -n 100 --no-pager ;;
       social) logs_unit zenithboard-social "Bluesky posting (zenithboard-social)" && journalctl -u zenithboard-social -n 100 --no-pager ;;
+      telegram) logs_unit zenithboard-telegram "Telegram messages (zenithboard-telegram)" && journalctl -u zenithboard-telegram -n 100 --no-pager ;;
       decoder) journalctl -u "$(cfg_get DECODER readsb)" -n 100 --no-pager ;;
       # 0.54.6: a feeder that fails had no log to read: the names are the ones `status` uses
-      adsbexchange|piaware|fr24|planefinder)
-        u=$(case "${2:-}" in adsbexchange) echo adsbexchange-feed ;; piaware) echo piaware ;; fr24) echo fr24feed ;; planefinder) echo pfclient ;; esac)
+      adsbexchange|piaware|fr24|planefinder|radarbox)
+        u=$(case "${2:-}" in adsbexchange) echo adsbexchange-feed ;; piaware) echo piaware ;; fr24) echo fr24feed ;; planefinder) echo pfclient ;; radarbox) echo rbfeeder ;; esac)
         logs_unit "$u" "$u" && journalctl -u "$u" -n 100 --no-pager ;;
-      *) die "Usage: zenithboard logs [flightinfo|decoder|uat|social|adsbexchange|piaware|fr24|planefinder]" ;;
+      *) die "Usage: zenithboard logs [flightinfo|decoder|uat|social|telegram|adsbexchange|piaware|fr24|planefinder|radarbox]" ;;
     esac ;;
   console)
     case "${2:-status}" in
