@@ -1128,8 +1128,8 @@ window.ZBI18N.start({ part: "console" }, function () {
     if (f.svc_pfclient !== undefined) list.push(page("plane", t("Plane Finder"), t("Its own page, port 30053"), "http://" + hh + ":30053/"));
     if (f.svc_fr24feed !== undefined) list.push(page("plane", t("Flightradar24"), t("Its feeder's page, port 8754"), "http://" + hh + ":8754/"));
     // 0.99.6: AirNav Radar has no page on the Pi: its station's page on their site once rbfeeder said its serial, else where to claim it
-    if (f.svc_rbfeeder !== undefined) list.push(h("a", { "class": "page", href: rbStation() ? "https://www.radarbox.com/stations/" + rbStation() : "https://www.airnavradar.com/raspberry-pi/claim", target: "_blank", rel: "noopener noreferrer" },
-      ico("link"), h("div", null, h("b", { text: t("AirNav Radar") }), h("span", { text: rbStation() ? t("Station {serial}, on their site", { serial: rbStation() }) : t("Claim this station, on their site") }))));
+    if (f.svc_rbfeeder !== undefined) list.push(h("a", { "class": "page", href: rbStation() ? "https://www.airnavradar.com/stations/" + rbStation() : "https://www.airnavradar.com/raspberry-pi/claim", target: "_blank", rel: "noopener noreferrer" },
+      ico("link"), h("div", null, h("b", { text: t("AirNav Radar, formerly RadarBox") }), h("span", { text: rbStation() ? t("Station {serial}, on their site", { serial: rbStation() }) : t("Claim this station, on their site") }))));
     if (f.svc_adsbexchange_feed !== undefined) list.push(h("a", { "class": "page", href: "https://www.adsbexchange.com/myip/", target: "_blank", rel: "noopener noreferrer" }, ico("link"), h("div", null, h("b", { text: t("ADSB Exchange") }), h("span", { text: t("Your feed, on their site") }))));
     if (adsbxMap()) list.push(h("a", { "class": "page", href: adsbxMap(), target: "_blank", rel: "noopener noreferrer" }, ico("map"), h("div", null, h("b", { text: t("Your aircraft on ADSB Exchange") }), h("span", { text: t("Their map: only what your antenna hears") }))));
     // on, but the UUID unreadable here: their myip page carries the same link at its bottom
@@ -1302,7 +1302,7 @@ window.ZBI18N.start({ part: "console" }, function () {
   // ---- the first steps (0.39.0; 0.41.0: the antenna, the feeders, sharing, the phone; open again at any time from
   // System or the overview). Only what differs from the Pi's settings is applied, in the review's order.
   var FEEDERS = [["adsbexchange_feed", t("ADSB Exchange"), "https://www.adsbexchange.com/myip/"], ["piaware", t("FlightAware"), "https://www.flightaware.com/adsb/piaware/claim"],
-    ["fr24feed", t("Flightradar24"), ":8754"], ["pfclient", t("Plane Finder"), ":30053"], ["rbfeeder", t("AirNav Radar"), "https://www.airnavradar.com/raspberry-pi/claim"]];
+    ["fr24feed", t("Flightradar24"), ":8754"], ["pfclient", t("Plane Finder"), ":30053"], ["rbfeeder", t("AirNav Radar, formerly RadarBox"), "https://www.airnavradar.com/raspberry-pi/claim"]];
   function setupGaps() {
     var c = S.cfg, f = S.facts, out = [];
     if (!(Number(c.LAT) || Number(c.LON))) out.push(t("The antenna's position is not set"));
