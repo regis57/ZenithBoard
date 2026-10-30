@@ -39,7 +39,7 @@ At the edge of range the decoder often has an aircraft's positions before its ca
 
 FlightAware's *Aircraft reported* also counts what it calls *Other*: about 40 to 110 a day here, part of them non-ICAO addresses (TIS-B, marked `~` by the decoder) that ZenithBoard never counts, since they are made up. A few percent below FlightAware is therefore expected.
 
-**The 7 and 30 days count distinct aircraft over the whole period**: an aircraft seen on four days counts once. The owner's 18–24 October week: 6 673 distinct aircraft on `/stats` (6 613 on the weekly post, made two hours earlier), against about 2 600 a day. FlightAware's table gives one figure per day; adding its seven days counts the same Ryanair 737 seven times.
+**The 7 and 30 days count distinct aircraft over the whole period**: an aircraft seen on four days counts once. Checked by hand on 24–30 October 2026: 6 855 distinct aircraft (`sort -u` of the seven day files) for 16 994 aircraft-days (the same files added up). The owner's 18–24 October week: 6 673 distinct aircraft on `/stats` (6 613 on the weekly post, made two hours earlier), against about 2 600 a day. FlightAware's table gives one figure per day; adding its seven days counts the same Ryanair 737 seven times.
 
 ## graphs1090: years of the decoder's graphs (optional)
 

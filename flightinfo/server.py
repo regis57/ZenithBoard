@@ -211,7 +211,6 @@ def read_stats(stats_dir=None, now=None, rng="30d"):
     today = now.strftime("%Y-%m-%d")
     t = days.get(today) or {"day": today, "messages": 0, "farthest_km": 0, "aircraft": 0, "samples": 0}
     busiest = max(hours, key=lambda h: h["messages"]) if rows else None
-    best = max(day_list, key=lambda d: d["farthest_km"]) if day_list else None
     # 0.31.0: the sky by hour, the last HEAT_DAYS days: the aircraft with a position, on average over the hour's samples
     heat_days = [(now - datetime.timedelta(days=i)).strftime("%Y-%m-%d") for i in range(HEAT_DAYS - 1, -1, -1)]
     cells = {}
