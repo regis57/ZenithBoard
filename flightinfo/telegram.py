@@ -442,8 +442,9 @@ def cmd_run():
     c, sec = cfg(), secrets()
     state = prune(load_state(), time.time())
     squawks, outbox, pending_since = Squawks(), Outbox(), {}
-    print("telegram: running ZenithBoard %s. Chat: %s. Crossings: %s (radius %s km, %s). Squawks: %s. Language: %s." % (
-        server.VERSION, sec.get("TELEGRAM_CHAT_TITLE") or ("set up" if ready(sec) else "NONE (run: sudo zenithboard telegram setup)"),
+    # nothing read from telegram.env is ever written to the journal, the chat's name included (CodeQL #85-87, 0.99.6)
+    print("telegram: running ZenithBoard %s. Bot and chat: %s. Crossings: %s (radius %s km, %s). Squawks: %s. Language: %s." % (
+        server.VERSION, "set up" if ready(sec) else "NONE (run: sudo zenithboard telegram setup)",
         "on" if server.cfg_bool(c, "TELEGRAM_CROSSINGS", "1") else "off", c.get("SOCIAL_RADIUS_KM"),
         "all" if "all" in rules_of(c) else ", ".join(sorted(rules_of(c))),
         "on" if server.cfg_bool(c, "TELEGRAM_SQUAWKS", "1") else "off", lang_of(c)), flush=True)
@@ -540,7 +541,7 @@ def cmd_hello():
     except TgError as exc:
         print("FAILED: Telegram says %s %s" % (exc.code or "", exc.text))
         return 1
-    print("OK: the message is in %s." % (sec.get("TELEGRAM_CHAT_TITLE") or "the chat"))
+    print("OK: the message is in the chat.")
     return 0
 
 
@@ -602,8 +603,7 @@ def cmd_status():
     c, sec, s = cfg(), secrets(), load_state()
     now = time.time()
     print("Telegram messages: %s" % ("ON" if server.cfg_bool(c, "TELEGRAM", "0") else "off"))
-    print("  Bot and chat: %s" % (("set up, chat: %s" % (sec.get("TELEGRAM_CHAT_TITLE") or sec.get("TELEGRAM_CHAT_ID"))) if ready(sec)
-                                  else "NOT set up (sudo zenithboard telegram setup)"))
+    print("  Bot and chat: %s" % ("set up" if ready(sec) else "NOT set up (sudo zenithboard telegram setup)"))
     print("  Crossings: %s, the sharing radius (%s km), %s" % ("on" if server.cfg_bool(c, "TELEGRAM_CROSSINGS", "1") else "off",
                                                               c.get("SOCIAL_RADIUS_KM"), "every crossing" if "all" in rules_of(c) else ", ".join(sorted(rules_of(c)))))
     print("  Emergency squawks: %s, anywhere the antenna hears them (7500, 7600, 7700)" % ("on" if server.cfg_bool(c, "TELEGRAM_SQUAWKS", "1") else "off"))

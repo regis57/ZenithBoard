@@ -217,6 +217,8 @@ telegram_status() {
   else
     telegram_py status
   fi
+  # the chat's name from here, never from the service: what telegram.env holds stays out of its journal
+  [ -z "$(telegram_chat)" ] || echo "  Chat: $(telegram_chat)"
   [ -f "$TELEGRAM_UNIT_DIR/$TELEGRAM_UNIT.service" ] || return 0
   echo "Service: $(systemctl is-active "$TELEGRAM_UNIT" 2>/dev/null || echo unknown)$(s=$(systemctl show -p ActiveEnterTimestamp --value "$TELEGRAM_UNIT" 2>/dev/null); [ -z "$s" ] || echo " since $s")"
 }

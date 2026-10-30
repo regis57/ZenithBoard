@@ -314,6 +314,27 @@ class ApiTest(Base):
         self.assertEqual(out.getvalue().splitlines(), ["-1009\tsupergroup\tAvions de la famille", "42\tprivate\tRégis H"])
 
 
+class NothingFromTheTokenFileTest(Base):
+    def test_status_and_hello_print_nothing_read_from_it(self):
+        """CodeQL #85-87 (0.99.6): what telegram.env holds, the chat's name and id included, never reaches the journal."""
+        sec_file = os.path.join(self.tmp, "telegram.env")
+        with open(sec_file, "w") as fh:
+            fh.write('TELEGRAM_BOT_TOKEN="%s"\nTELEGRAM_CHAT_ID="-100777"\nTELEGRAM_CHAT_TITLE="Avions secrets"\n' % TOKEN)
+        old, telegram.SECRETS_FILE = telegram.SECRETS_FILE, sec_file
+        old_send = telegram.send
+        telegram.send = lambda sec, text: None
+        out = io.StringIO()
+        try:
+            sys.stdout, keep = out, sys.stdout
+            telegram.cmd_status()
+            telegram.cmd_hello()
+        finally:
+            sys.stdout, telegram.SECRETS_FILE, telegram.send = keep, old, old_send
+        for leak in (TOKEN, "-100777", "Avions secrets"):
+            self.assertNotIn(leak, out.getvalue())
+        self.assertIn("set up", out.getvalue())
+
+
 class BlueskyNeverTest(unittest.TestCase):
     def test_squawks_go_to_telegram_only(self):
         with open(os.path.join(HERE, "..", "flightinfo", "social.py"), encoding="utf-8") as fh:
