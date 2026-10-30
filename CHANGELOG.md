@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.99.7 — release candidate, fix
+- **AirNav Radar's claim, step by step** (the owner, 30 October 2026). The terminal gave the claim page alone and said it worked *from the same public IP as this Pi*, which is FlightAware's way, not AirNav's. AirNav's page, read that day, asks for an account and the sharing key typed into its *Sharing Key* field, then *Claim!*; the key never goes into the address. The terminal now prints the three steps under the key, and how to show the key again (`sudo rbfeeder --showkey --no-start`), also when rbfeeder has not written it yet. README, Fresh install and Providers say the same.
+- A fix: the hands-off clock goes on.
+
 ## 0.99.6 — release candidate: AirNav Radar and Telegram, a new month of hands-off
 Two features during the release candidate, at the owner's word (30 October 2026: *c'est mon projet, je suis en RC maintenant mais on va faire deux choses*), so the hands-off month starts again: **30 days counted from the reference Pi's update to 0.99.6** (29 November 2026 if it is updated on 30 October).
 - **AirNav Radar (RadarBox) as a fifth network**, ticked in menu *1 ADS-B → 1 Decoder and networks* like the others. rbfeeder comes from AirNav's own apt repository, whose key is installed only with its pinned fingerprint (`78F6D790E30AE7F360B716FED4F914061D043681`, read on keyserver.ubuntu.com, 30 October 2026); a repository apt refuses is taken away again, and signature checking is never switched off. It reads the decoder's Beast port (127.0.0.1:30005) and its **MLAT is off** (`autostart_mlat=false` in `[mlat]` of `/etc/rbfeeder.ini`, AirNav's own line for it, then a restart): ADSB Exchange keeps the only MLAT client. `sudo zenithboard mlat-guard` switches it off again if it was turned on.

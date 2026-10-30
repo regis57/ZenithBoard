@@ -122,6 +122,7 @@ Saying no here saves answering the same question twice.
 
 | Not planned | Why |
 |---|---|
+| **Photos from AirTeamImages** (asked 30 October 2026) | A paid stock library (about 323 000 pictures). Its terms, read on 30 October 2026, allow low-resolution downloads for trial layouts only and forbid *all other reproduction* outside a paid usage agreement (personal prints, editorial licences); there is no public API. Showing its pictures on the wall or in the Bluesky posts would need a licence for each use. Planespotters stays the one source: a free API whose terms allow exactly what ZenithBoard does (the picture fetched from its own address, credited and linked) |
 | **Airline and aircraft-maker logos** | They are trademarks, and redrawing one in dots is still the trademark. A free project cannot hand them out, and a wall of 90 logos is a licensing problem, not a feature. Flags stand in for them: the registration country next to the registration (since 0.20.0), the maker's country next to the model |
 | **Sound on the wall** | An airport-hall ambience was tried (0.13.0) and removed an hour later (0.13.1): it did not sound good enough to keep. Nothing nobody has heard is shipped |
 | **A cloud account, a hosted dashboard, telemetry** | The Pi is yours. Nothing should need to phone home for the wall to work. |

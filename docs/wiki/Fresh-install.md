@@ -97,8 +97,10 @@ graphs lived on the card only):
     * **Flightradar24**: its sign-up asks for an e-mail, or your **sharing key** if you already feed; the screen says
       what to answer to the other questions and sets them right afterwards.
     * **Plane Finder**: finish on its page, `http://zenithboard.local:30053`: a new share code, or your old one.
-    * **AirNav Radar** (0.99.6): nothing to answer. It makes its sharing key and prints it with its claim page,
-      <https://www.airnavradar.com/raspberry-pi/claim>; its MLAT is switched off for you.
+    * **AirNav Radar** (0.99.6): nothing to answer; its MLAT is switched off for you. It makes its **sharing key**
+      and prints it. To link the station to your account: sign in to a free account on
+      [airnavradar.com](https://www.airnavradar.com), open <https://www.airnavradar.com/raspberry-pi/claim>, paste the
+      key into the *Sharing Key* field and press *Claim!*. Lost the key? `sudo rbfeeder --showkey --no-start` shows it.
 
     This is the step the console cannot do for you: see [why](#why-the-networks-are-added-in-the-terminal).
 14. **The wall** — *Yes*. At the end it prints its address, `http://192.168.1.x:8080/`. Open it on the tablet;
