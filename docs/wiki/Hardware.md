@@ -21,13 +21,15 @@ The project's reference Pi is a Raspberry Pi 3 Model B (1 GB), outdoors, on Wi-F
 
 **With ADSB Exchange's stats** (22 October 2026, 13:51, 0.52.0): `zenithboard memory` without sudo, so RSS, which counts shared pages more than once and is not comparable with the PSS figures above. **adsbexchange-stats takes 6 MB** in two processes (their loop and its `sleep`). In all: 558 MB available of 905 MB, 165 MB of swap used, 242 threads, load 0.78 on four cores. Every feed, graphs1090 (50 MB in its two services) and Tailscale (36 MB) were running too.
 
+**With five networks and Telegram** (31 October 2026, 00:03, 0.99.7, PSS): ADS-B Exchange (with its stats and the only MLAT client), FlightAware, Flightradar24, Plane Finder and **AirNav Radar**, the wall, statistics, graphs1090, Bluesky posts, **Telegram messages**, the web console and Tailscale: **332 MB for all the services, 436 MB available of 905 MB**, 90 MB of swap, 256 threads, load 0.85 on four cores. The wall 56 MB, Plane Finder 54 MB (up from 27 to 43 MB in its first days: it grows while it runs), Bluesky 36 MB (109 MB at its peak, while drawing), Tailscale 36 MB, Telegram 22 MB, collectd 22 MB, Flightradar24 17 MB, the console's helper 17 MB, FlightAware 13 MB, **rbfeeder 9 MB**, ADS-B Exchange's feed and MLAT 10 MB. Still comfortable on 1 GB.
+
 `zenithboard health` gives the same lines on any Pi; [Reliability and diagnostics](Reliability-and-diagnostics) says how to read them.
 
 ## Which board for what
 
 | Board | ADS-B + feeders + wall + social sharing |
 |---|---|
-| **Pi 3B / 3B+ (1 GB)** | **Measured: comfortable**, with ADS-B Exchange and three more feeders (FlightAware, Flightradar24, Plane Finder): 575 MB still available. Ethernet or a strong Wi-Fi signal, and the official power supply |
+| **Pi 3B / 3B+ (1 GB)** | **Measured: comfortable**, with ADS-B Exchange and four more feeders (FlightAware, Flightradar24, Plane Finder, AirNav Radar), Bluesky, Telegram, graphs1090 and Tailscale: 436 MB of 905 still available (31 October 2026). Ethernet or a strong Wi-Fi signal, and the official power supply |
 | **Pi 4, 1 GB** | Comfortable (estimate: the same software, a faster processor) |
 | **Pi 4, 2 GB or more / Pi 5** | Comfortable, and nothing more to gain over a Pi 3B (estimate) |
 | Pi Zero 2 W (512 MB) / Pi 2 | ADS-B and the wall only, no extra feeders (estimate) |
