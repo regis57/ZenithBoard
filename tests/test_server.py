@@ -1276,6 +1276,39 @@ class FarthestTest(unittest.TestCase):
         self.addCleanup(lambda: __import__("shutil").rmtree(d, ignore_errors=True))
         return d
 
+    def test_the_box_takes_the_farthest_written_down_when_it_is_farther(self):
+        # 0.99.4, the owner's /stats#7d of 30 October 2026: the box said 183 NM on 30/10 00:30 (the decoder's quarter
+        # hour), the line under it SQ308 at 262 NM on 25/10 (the wall's five-second watch, written down once a day)
+        import datetime, json as js
+        d = self._dir()
+        now = datetime.datetime(2026, 10, 30, 8, 0)
+        lines = ["when,messages,farthest_km,aircraft_pos,aircraft_seen", "2026-10-25 15:15,500,300,20,100",
+                 "2026-10-30 00:30,100,339,40,50"]
+        with open(os.path.join(d, "stats.csv"), "w") as fh:
+            fh.write("\n".join(lines) + "\n")
+        with open(os.path.join(d, "farthest-2026-10-25"), "w") as fh:
+            js.dump({"km": 485.3, "time": "15:17", "flight": "SIA308", "hex": "76cee1"}, fh)
+        w = server.read_stats(d, now, "7d")["window"]
+        self.assertEqual((w["totals"]["farthest_km"], w["totals"]["farthest_when"]), (485, "2026-10-25 15:17"))
+        self.assertEqual(w["farthest"][w["labels"].index("25/10")], 485, "the chart's day too")
+        self.assertEqual(w["farthest"][w["labels"].index("30/10")], 339)
+        self.assertIsNone(w["farthest"][w["labels"].index("26/10")], "a day with nothing stays a gap")
+        # the busiest hour is one hour of a day: 15:00 on 25/10 alone, not the week's 15:00 added up
+        self.assertEqual((w["totals"]["busiest_hour"], w["totals"]["busiest_messages"]), (15, 500))
+        with open(os.path.join(d, "stats.csv"), "a") as fh:
+            fh.write("2026-10-26 15:00,300,10,1,1\n")
+        w = server.read_stats(d, now, "7d")["window"]
+        self.assertEqual(w["totals"]["busiest_messages"], 400, "800 over two days")
+        self.assertEqual(w["totals"]["messages"], 900, "the week's total stays the sum")
+        # a written-down record shorter than the quarter hour's changes nothing
+        with open(os.path.join(d, "farthest-2026-10-30"), "w") as fh:
+            js.dump({"km": 200, "time": "06:00", "flight": "", "hex": "3c6444"}, fh)
+        w = server.read_stats(d, now, "7d")["window"]
+        self.assertEqual(w["farthest"][w["labels"].index("30/10")], 339)
+        # 24 hours: yesterday's 25/10 is outside, today's 06:00 is in the 06h slot
+        w = server.read_stats(d, now, "24h")["window"]
+        self.assertEqual((w["totals"]["farthest_km"], w["totals"]["farthest_when"][11:]), (339, "00:30"))
+
     def test_the_tracker_keeps_the_farthest_position_of_each_day(self):
         import datetime
         tr = server.FarthestTracker()
