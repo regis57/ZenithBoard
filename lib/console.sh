@@ -41,14 +41,21 @@ console_env_write() {   # console_env_write KEY=VALUE...  (the whole file)
 
 # Folders: state/ belongs to the wall (its sessions, and the spool it drops jobs in: the only place on the card the
 # wall's sandbox may write); out/ belongs to root and is only read by the wall (what the helper ran and said).
+# 0.99.11 (review B3, C2): run as root by every update and by `console on` and `pair`, this followed a link planted at
+# state/spool (install -d chmodded, chown chowned what it points to), which gave any folder of the card to the wall's
+# user. Now a link found at any of the four is removed, never followed; console/ and out/ are root's again even when
+# somebody else made them, and their links go; state/ is chmodded only once it is known to be a real folder in a
+# folder of root's; spool/, inside the wall's own state/, keeps its mode and gets its owner on the name (chown -h).
 console_prepare_dirs() {
   local own=1; [ "$(id -u)" -eq 0 ] || own=0
   [ "$own" = 0 ] || ensure_zb_user || return 1
-  install -d -m 750 "$CONSOLE_DIR" "$CONSOLE_DIR/out" || return 1
-  install -d -m 700 "$CONSOLE_DIR/state" "$CONSOLE_DIR/state/spool" || return 1
+  [ -d "$(dirname "$CONSOLE_DIR")" ] || install -d -m 755 "$(dirname "$CONSOLE_DIR")" || return 1
+  zb_root_dir "$CONSOLE_DIR" 750 && zb_root_dir "$CONSOLE_DIR/out" 750 || return 1
+  zb_service_dir "$CONSOLE_DIR/state" 700 || return 1
+  [ ! -L "$CONSOLE_DIR/state" ] && chmod 700 "$CONSOLE_DIR/state" || return 1
+  zb_service_dir "$CONSOLE_DIR/state/spool" 700 || return 1
   if [ "$own" = 1 ]; then
-    chown "root:$ZB_USER" "$CONSOLE_DIR" "$CONSOLE_DIR/out"
-    chown "$ZB_USER:$ZB_USER" "$CONSOLE_DIR/state" "$CONSOLE_DIR/state/spool"
+    chown -h "root:$ZB_USER" "$CONSOLE_DIR" "$CONSOLE_DIR/out"
   fi
 }
 

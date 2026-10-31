@@ -30,6 +30,22 @@ zb_refresh_units() {
 }
 
 zb_trust_stored() { cat "$ZB_TRUST_FPR" 2>/dev/null; }      # one fingerprint per line
+
+# 0.99.11 (review B3, SH2): the keyring decides what root runs, so it is used only from a folder that is root's alone:
+# trust/ and trust/gnupg real folders, root's, closed to everyone else. Until 0.99.10 the folder around them belonged
+# to the service user, which could have put a trust/ of its own in their place. Anything else stops the update.
+zb_trust_dir_ok() {
+  local d
+  for d in "$ZB_TRUST_DIR" "$ZB_TRUST_GPG"; do
+    [ -e "$d" ] || [ -L "$d" ] || continue
+    zb_private_dir_ok "$d" && continue
+    warn "$d is not root's own private folder (a link, another owner, or open to others):"
+    warn "the update signature cannot be trusted from it, so ZenithBoard was NOT updated."
+    warn "Look at it:  sudo ls -la $ZB_TRUST_DIR"
+    warn "If you did not make it so, start the key check afresh:  sudo rm -rf $ZB_TRUST_DIR  then  sudo zenithboard update"
+    return 1
+  done
+}
 # zb_trust_shipped "FPR\nFPR\n": every usable key in GitHub's file is one shipped in lib/versions.sh
 zb_trust_shipped() {
   local f n=0
@@ -76,7 +92,9 @@ zb_trust_setup() {
   command -v gpg >/dev/null 2>&1 || { warn "gpg is not installed: the update cannot be checked."; return 1; }
   tmp=$(zb_tmp github-signing.gpg) || return 1
   fetch "$GITHUB_SIGNING_KEY_URL" "$tmp" || return 1
+  zb_trust_dir_ok || return 1
   install -d -m 700 "$ZB_TRUST_DIR" "$ZB_TRUST_GPG"
+  zb_trust_dir_ok || return 1
   local keys usable fpr st uid
   keys=$(zb_keys_in "$tmp")
   [ -n "$keys" ] || { warn "That key file could not be read."; return 1; }
@@ -120,6 +138,7 @@ zb_trust_setup() {
 zb_verify_source() {
   local dir="$1" ref="$2" st signer stored verdict a
   [ "$(cfg_get UPDATE_VERIFY 1)" = 1 ] || return 0
+  zb_trust_dir_ok || return 1
   stored=$(zb_trust_stored)
   ZB_TRUST_DECLINED=
   [ -n "$stored" ] || zb_trust_setup || true

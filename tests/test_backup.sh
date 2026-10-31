@@ -126,6 +126,22 @@ bk_pending_apply graphs >/dev/null
 check "installer: graphs1090 gets its history"       'grep -q restored "$t/rrd.log" && [ -f "$t/g/var/lib/collectd/rrd/localhost/a.xml" ] && [ ! -e "$t/data/restore-pending" ]'
 check "installer hooks are in place"                 'grep -q "bk_pending_apply piaware" lib/adsb.sh && grep -q "bk_pending_apply fr24" lib/adsb.sh && grep -q "bk_pending_apply planefinder" lib/adsb.sh && grep -q "bk_pending_apply graphs" lib/graphs.sh'
 
+# ---- 0.99.11 (review B3, SH2): what waits is used only from a folder of root's alone
+mkdir -p "$t/data/restore-pending"; chmod 755 "$t/data/restore-pending"
+printf 'ZZZZ99999999\n' > "$t/data/restore-pending/fr24key"
+cp "$t/fr24feed.ini" "$t/fr24feed.ini.before"
+out=$(bk_pending_apply fr24 2>&1)
+check "a restore-pending/ open to others is not used (review B3)" 'cmp -s "$t/fr24feed.ini" "$t/fr24feed.ini.before" && echo "$out" | grep -q "not root.s own private folder"'
+mkdir -p "$t/data/restore-pending"; chmod 755 "$t/data/restore-pending"; printf '{"planted":1}\n' > "$t/data/restore-pending/pfclient-config.json"; cp "$t/pfclient-config.json" "$t/pf.before"
+bk_pending_apply planefinder >/dev/null 2>&1; rc=$?
+check "nor its Plane Finder settings: nothing installed, the normal setup goes on" '[ "$rc" = 1 ] && cmp -s "$t/pfclient-config.json" "$t/pf.before"'
+printf 'ZZZZ99999999\n' > "$t/data/restore-pending/fr24key"; out=$(bk_pending_put fr24key ABCDEF123456 2>&1); rc=$?
+check "and nothing new is kept in it"              '[ "$rc" = 1 ] && [ "$(cat "$t/data/restore-pending/fr24key")" = ZZZZ99999999 ]'
+rm -rf "$t/data/restore-pending"; mkdir -p "$t/pend-elsewhere"; chmod 700 "$t/pend-elsewhere"; ln -s "$t/pend-elsewhere" "$t/data/restore-pending"
+bk_pending_put fr24key ABCDEF123456 >/dev/null 2>&1
+check "a restore-pending/ that is a link is not written through" '[ -z "$(ls -A "$t/pend-elsewhere")" ]'
+rm -f "$t/data/restore-pending"
+
 # ---- the console: makes and serves it, never restores
 check "console: backup is an action, restore is not" 'python3 -c "
 import sys; sys.path.insert(0, \"flightinfo\"); import console_actions as a

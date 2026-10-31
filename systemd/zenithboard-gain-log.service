@@ -6,7 +6,8 @@ Type=oneshot
 ExecStart=/opt/zenithboard/bin/zenithboard gain log run
 TimeoutStartSec=60
 # Runs as the wall's own user: it reads the decoder's stats.json under /run and appends one line to the CSV in
-# /var/lib/zenithboard, which that user owns. Nothing here needs root, so root is not used.
+# /var/lib/zenithboard, a folder of root's its group may write in (0.99.11); the CSV is its own. Nothing here needs
+# root, so root is not used.
 User=zenithboard
 Group=zenithboard
 ReadWritePaths=/var/lib/zenithboard

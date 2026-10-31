@@ -771,6 +771,38 @@ class RunnerTest(TempDirs):
         self.assertFalse([n for n in os.listdir(os.path.join(self.dir, "out")) if n.endswith(".log") and n != "journal.log"], "nothing ran")
 
 
+    def test_a_spool_turned_into_a_link_is_never_listed_or_emptied(self):
+        # 0.99.11 (review B3, C4): the spool sits in the wall's own state/, so its user can put a link in its place; root
+        # listed and emptied it by path, and ran and deleted the .job files of the folder the link pointed to
+        elsewhere = os.path.join(self.root, "elsewhere")
+        os.makedirs(elsewhere)
+        with open(os.path.join(elsewhere, "0123456789abcdef.job"), "w") as fh:
+            json.dump({"action": "radius", "params": {"value": "10"}}, fh)
+        shutil.rmtree(console.SPOOL_DIR)
+        os.symlink(elsewhere, console.SPOOL_DIR)
+        self.run_helper()
+        self.assertTrue(os.path.exists(os.path.join(elsewhere, "0123456789abcdef.job")), "the target's job survives")
+        self.assertEqual([n for n in os.listdir(os.path.join(self.dir, "out")) if n.startswith("0123")], [], "nothing ran")
+
+    def test_a_link_at_out_or_a_folder_named_like_a_job(self):
+        # 0.99.11: out/ must be the helper's own real folder; a folder named *.job is taken away, or the path unit would
+        # start the helper for ever; a job with a second name (a hard link to somebody else's file) is never read
+        os.makedirs(os.path.join(console.SPOOL_DIR, "1111111111111111.job", "inside"))
+        j = self.job("radius", {"value": "15"})
+        os.link(os.path.join(console.SPOOL_DIR, j + ".job"), os.path.join(self.root, "second-name"))
+        self.run_helper()
+        self.assertEqual(os.listdir(console.SPOOL_DIR), [], "both taken")
+        self.assertIsNone(console.job_status(j), "a job with two names is not read")
+        out = os.path.join(self.dir, "out")
+        shutil.rmtree(out)
+        os.makedirs(os.path.join(self.root, "out-elsewhere"))
+        os.symlink(os.path.join(self.root, "out-elsewhere"), out)
+        j = self.job("radius", {"value": "15"})
+        self.run_helper()
+        self.assertEqual(os.listdir(os.path.join(self.root, "out-elsewhere")), [], "nothing written through the link")
+        self.assertTrue(os.path.exists(os.path.join(console.SPOOL_DIR, j + ".job")), "and nothing taken")
+
+
 class AppTest(unittest.TestCase):
     """0.53.0: the console as an app: a manifest a browser accepts, its icons, a service worker that keeps nothing."""
     STATIC = os.path.join(os.path.dirname(__file__), "..", "flightinfo", "static")

@@ -40,9 +40,13 @@ stats_remove_units() {
 # The folder belongs to the wall's user: the timer runs as that user, and the wall server reads it.
 stats_prepare_dir() {
   ensure_zb_user                                    # 0.43.0: the timer runs as the wall's user, which a fresh card may not have yet
-  [ -d "$STATS_DIR" ] || install -d -m 755 "$STATS_DIR" 2>/dev/null || return 1
-  [ "$(id -u)" -ne 0 ] || chown "$ZB_USER:$ZB_USER" "$STATS_DIR" 2>/dev/null || true
-  [ -f "$STATS_FILE" ] || { echo "$STATS_HEADER" > "$STATS_FILE" && { [ "$(id -u)" -ne 0 ] || chown "$ZB_USER:$ZB_USER" "$STATS_FILE" 2>/dev/null || true; }; }
+  # 0.99.11 (review B3): made and handed over without following a link planted in the folder's or the file's place
+  zb_service_dir "$STATS_DIR" 755 || return 1
+  [ -f "$STATS_FILE" ] || stats_new_file
+}
+stats_new_file() {
+  zb_put "$STATS_FILE" 644 "$STATS_HEADER" || return 1
+  [ "$(id -u)" -ne 0 ] || chown -h "$ZB_USER:$ZB_USER" -- "$STATS_FILE" 2>/dev/null || true
 }
 
 stats_on()  { stats_prepare_dir || { echo "Could not make $STATS_DIR"; return 1; }; cfg_set STATS 1; stats_install_units
@@ -51,7 +55,7 @@ stats_on()  { stats_prepare_dir || { echo "Could not make $STATS_DIR"; return 1;
               if is_flightinfo 2>/dev/null; then echo "Read them with 'zenithboard stats' or at http://$(local_ip):$(cfg_get PORT 8080)/stats"
               else echo "Read them with 'zenithboard stats'; the /stats page comes with the wall (menu 2 The wall)."; fi; }
 stats_off() { cfg_set STATS 0; stats_remove_units; echo "Statistics are OFF. The files are kept in $STATS_DIR (empty them: zenithboard stats clear)."; }
-stats_clear() { rm -f "$STATS_DIR"/seen-* "$STATS_DIR"/gaps-* "$STATS_DIR"/farthest-* "$STATS_DIR"/fleet-* 2>/dev/null; [ -d "$STATS_DIR" ] && echo "$STATS_HEADER" > "$STATS_FILE"; echo "Statistics emptied ($STATS_DIR)."; }
+stats_clear() { rm -f "$STATS_DIR"/seen-* "$STATS_DIR"/gaps-* "$STATS_DIR"/farthest-* "$STATS_DIR"/fleet-* 2>/dev/null; [ -d "$STATS_DIR" ] && stats_new_file; echo "Statistics emptied ($STATS_DIR)."; }
 
 # One sample. Reads the decoder's two files; writes one CSV line and today's aircraft. Silent when there is
 # nothing to read: a decoder that is not running is not an error worth a journal line every quarter hour.

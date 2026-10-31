@@ -251,7 +251,7 @@ sudo zenithboard console pair        # the phone again (QR code)
 | File | What |
 |---|---|
 | `/etc/zenithboard/console.env` | The password's scrypt hash and when everyone was last signed out. root:zenithboard 0640 |
-| `/var/lib/zenithboard/console/state/` | The wall's: sessions (hashes), the job spool, the sign-in record. 0700 |
+| `/var/lib/zenithboard/console/state/` | The wall's: sessions (hashes), the job spool, the sign-in record. 0700. Since 0.99.11 root never follows a link found at `state/` or its `spool/` (it removes it), and the root helper opens the spool once without following a link and reads and removes every job through it ([Security](Security#root-never-trusts-a-path-the-service-user-owns-09911)) |
 | `/var/lib/zenithboard/console/out/` | Root's: each job's output and end, the journal, the overview's facts, a terminal pairing code's hash, the last backup made here (`backup.tar.gz`, root:zenithboard 0640, one at a time) |
 | `/etc/systemd/system/zenithboard-console.path` · `.service` | The helper, installed by `console on` only |
 | `CONSOLE=1` in `config.env` | On; `CONSOLE_HOSTS=name1,name2` adds names the page may be opened by |

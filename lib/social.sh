@@ -41,8 +41,7 @@ social_remove_units() {
   rm -f "$SOCIAL_UNIT_DIR/$SOCIAL_UNIT.service"; systemctl daemon-reload 2>/dev/null || true
 }
 social_prepare_dir() {
-  [ -d "$SOCIAL_DIR" ] || install -d -m 750 "$SOCIAL_DIR" 2>/dev/null || return 1
-  [ "$(id -u)" -ne 0 ] || chown "$ZB_USER:$ZB_USER" "$SOCIAL_DIR" 2>/dev/null || true
+  zb_service_dir "$SOCIAL_DIR" 750 || return 1      # 0.99.11: never through a link planted in its place
   # the picture's folder in /run: systemd makes it for the service; `test` and `post` from the command line need it too
   [ "$(id -u)" -ne 0 ] || install -d -m 700 -o "$ZB_USER" -g "$ZB_USER" "${ZENITHBOARD_SOCIAL_RUN:-/run/zenithboard/social}" 2>/dev/null || true
 }
@@ -569,7 +568,8 @@ social_set_places() {
       social_prepare_dir || return 1
       echo "Making the region's list of places from GeoNames (the country files around this Pi; a few minutes on a Pi 3B)..."
       python3 "$ZB_HOME/tools/make_local_places.py" "$lat" "$lon" "$f" "$(cfg_get SOCIAL_PLACES_KM 400)" || return 1
-      chown "$ZB_USER:$ZB_USER" "$f" 2>/dev/null || true; chmod 600 "$f" 2>/dev/null || true
+      [ ! -L "$f" ] || { rm -f "$f"; return 1; }      # 0.99.11: root never chowns through a link in the service's folder
+      chown -h "$ZB_USER:$ZB_USER" "$f" 2>/dev/null || true; chmod 600 "$f" 2>/dev/null || true
       cfg_set SOCIAL_PLACES 1 ;;
     off)
       cfg_set SOCIAL_PLACES 0; rm -f "$f" ;;

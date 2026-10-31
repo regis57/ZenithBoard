@@ -7,12 +7,14 @@ small JSON file naming one action and its values. It is opened without following
 that user under 4 KB, and is checked against flightinfo/console_actions.py (root's own copy in /opt) before the one
 `zenithboard` command it describes is run, as an argument list, never through a shell, its input closed. What the
 command prints goes to out/ID.log and the end to out/ID.json, both root's, readable by the wall; one line per job
-goes to out/journal.log. After each job the overview's facts are read again (out/state.json).
+goes to out/journal.log. After each job the overview's facts are read again (out/state.json). Since 0.99.11 the spool
+is opened once, without following a link, and every name in it is read and removed through that descriptor.
 """
 import json
 import os
 import pwd
 import re
+import shutil
 import signal
 import stat
 import subprocess
@@ -75,16 +77,17 @@ def _group(path):
         pass                                    # tests run without root: the file stays the tester's
 
 
-def read_job(path, uid):
-    """-> the job as a dict, or None when it is not something the wall could have written."""
+def read_job(spool_fd, name, uid):
+    """-> the job as a dict, or None when it is not something the wall could have written. Opened through the spool's
+    own descriptor, never by a path that could pass through a link (0.99.11)."""
     try:
-        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | getattr(os, "O_NONBLOCK", 0))
+        fd = os.open(name, os.O_RDONLY | os.O_NOFOLLOW | getattr(os, "O_NONBLOCK", 0), dir_fd=spool_fd)
     except OSError:
         return None
     try:
         st = os.fstat(fd)
-        if not stat.S_ISREG(st.st_mode) or st.st_size > MAX_JOB_BYTES:
-            return None
+        if not stat.S_ISREG(st.st_mode) or st.st_size > MAX_JOB_BYTES or st.st_nlink != 1:
+            return None                         # a second name is a file somebody else's linked in: never read
         if uid is not None and st.st_uid not in (uid, 0):
             return None
         raw = os.read(fd, MAX_JOB_BYTES + 1)
@@ -95,6 +98,52 @@ def read_job(path, uid):
     except (ValueError, UnicodeDecodeError):
         return None
     return job if isinstance(job, dict) else None
+
+
+def _root_dir_ok(path):
+    """console/ and out/ are root's (the helper's own user), real folders: the wall's user cannot have put them there."""
+    try:
+        st = os.lstat(path)
+    except OSError:
+        return False
+    return stat.S_ISDIR(st.st_mode) and st.st_uid == os.geteuid()
+
+
+def open_spool(uid):
+    """-> a descriptor on the spool, or None. 0.99.11 (review B3, C4): the spool sits in the wall's own state/, so its
+    user can put a link there in its place; listed and emptied by path, root would have read and deleted the .job files
+    of whatever folder the link pointed to. Opened once, without following a link, and only when it is a folder of the
+    wall's user (or root's); everything after goes through that descriptor."""
+    if not (_root_dir_ok(CONSOLE_DIR) and _root_dir_ok(OUT)):
+        return None
+    try:
+        fd = os.open(SPOOL, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    except OSError:
+        return None
+    st = os.fstat(fd)
+    if st.st_uid not in {u for u in (uid, 0, os.geteuid()) if u is not None}:
+        os.close(fd)
+        return None
+    return fd
+
+
+def _take(spool_fd, name):
+    """The entry leaves the spool before anything else is done with it, so it never runs twice. A folder named like a
+    job (which unlink cannot take, and which the path unit would see for ever) is removed with what it holds."""
+    try:
+        st = os.lstat(name, dir_fd=spool_fd)
+    except OSError:
+        return                                  # taken by another start: it will not run twice
+    try:
+        if stat.S_ISDIR(st.st_mode):
+            try:
+                shutil.rmtree(name, dir_fd=spool_fd)
+            except TypeError:                   # a Python without rmtree(dir_fd=): an empty one at least
+                os.rmdir(name, dir_fd=spool_fd)
+        else:
+            os.unlink(name, dir_fd=spool_fd)
+    except OSError:
+        pass                                    # taken by another start, or not ours to take: never run
 
 
 def state_snapshot():
@@ -197,34 +246,39 @@ def prune():
                 pass                          # already gone: nothing to prune
 
 
-def _mtime(path):
+def _mtime(spool_fd, name):
     try:
-        return os.lstat(path).st_mtime
+        return os.lstat(name, dir_fd=spool_fd).st_mtime
     except OSError:
         return 0
 
 
 def main():
-    if not os.path.isdir(SPOOL) or not os.path.isdir(OUT):
+    if not os.path.isdir(OUT):
         return 0
     uid = wall_uid()
+    spool_fd = open_spool(uid)
+    if spool_fd is None:                          # no spool, or one that is not the wall's own folder: nothing runs
+        if os.path.lexists(SPOOL):
+            print("console: %s, or the folders around it, are not what `zenithboard console on` made: nothing was run. "
+                  "Put them right with: sudo zenithboard console on" % SPOOL, file=sys.stderr)
+        return 0
     ran = False
-    for _round in range(50):                      # jobs dropped while one runs are taken in the same start
-        names = sorted((n for n in os.listdir(SPOOL) if n.endswith(".job")), key=lambda n: _mtime(os.path.join(SPOOL, n)))
-        if not names:
-            break
-        for n in names:
-            path = os.path.join(SPOOL, n)
-            job = read_job(path, uid)
-            try:
-                os.unlink(path)                   # taken: never run twice
-            except OSError:
-                pass                          # taken by another start: it will not run twice
-            job_id = n[:-4]
-            if job is None or not actions.JOB_ID_RE.match(job_id):
-                continue
-            run_job(job_id, job)
-            ran = True
+    try:
+        for _round in range(50):                  # jobs dropped while one runs are taken in the same start
+            names = sorted((n for n in os.listdir(spool_fd) if n.endswith(".job")), key=lambda n: _mtime(spool_fd, n))
+            if not names:
+                break
+            for n in names:
+                job = read_job(spool_fd, n, uid)
+                _take(spool_fd, n)
+                job_id = n[:-4]
+                if job is None or not actions.JOB_ID_RE.match(job_id):
+                    continue
+                run_job(job_id, job)
+                ran = True
+    finally:
+        os.close(spool_fd)
     if ran or not os.path.exists(os.path.join(OUT, "state.json")) or "--state" in sys.argv:
         state_snapshot()
     prune()
