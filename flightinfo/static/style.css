@@ -14,6 +14,9 @@ body[data-theme="turquoise"] { --dot: #00d6d7; }
 #photobox img { width: 100%; height: auto; display: block; }          /* the whole photo, never cropped: app.js sizes the box to it */
 #photocap { padding: .15em .5em; font-size: inherit; line-height: 1.3; color: #fff;
             background: #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: .03em; pointer-events: none; }
+/* 0.99.17: a photographer's name too long for a phone's corner wraps rather than being cut (app.js, fitPhoto) */
+#photocap.wrap { white-space: normal; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
+#photobox img[style*="width"] { margin: 0 auto; }   /* a photo narrower than the box, above a wrapped credit, is centred */
 /* bottom-right: a TV browser shows its bar over the top edge, which hides a gear up there. The dot grid keeps the 12 rows under the photo free,
    so the gear never covers the photo or the aircraft drawing (tests/test_layout.js checks it for common screens). */
 #gear { position: fixed; bottom: 6px; right: 6px; width: 44px; height: 44px; font-size: 24px; color: var(--dot);

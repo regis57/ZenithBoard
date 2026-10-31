@@ -56,6 +56,7 @@ jobs:
           node tests/test_layout.js
           node tests/test_flags.js
           node tests/test_scroll.js
+          node tests/test_poll.js
           node tests/test_statsjs.js
           node tests/test_i18n.js
           # every page script and tool parses (the review of 0.99.8: a syntax error in app.js or console.js passed CI)

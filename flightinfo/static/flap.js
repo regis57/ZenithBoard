@@ -5,7 +5,7 @@
 // tested with node; app.js draws it.
 (function (root) {
   "use strict";
-  var CHARS = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,-/:+()→";
+  var CHARS = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,-/:+()→_";   // "_" last (0.99.17: CONSOLE_HOSTS), the others keep their order
   var STEP_MS = 38;        // one flap falls
   var ROW_MS = 140;        // delay between one row starting and the next
   var COL_MS = 16;         // delay between one letter starting and the next, inside a row

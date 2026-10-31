@@ -72,6 +72,6 @@ console.log("tablet colour: ok");
   assert.ok(n >= 8, "the centred texts were found (" + n + ")");
   assert.ok(/error === "offline"/.test(js) && /CHECK THE WI-FI/.test(js), "a tablet that lost the Pi does not blame the decoder");
   assert.ok(/CHECK THE DECODER/.test(js), "a receiver that does not answer still names the decoder");
-  assert.ok(/failures % 30 === 0\) fetch\("\/api\/health"/.test(js), "the self-heal reload waits for the Pi to answer");
+  assert.ok(/failures % 30 === 0\) getTimed\("\/api\/health"/.test(js), "the self-heal reload waits for the Pi to answer");
   console.log("wall texts fit, and say what is wrong: ok (" + n + " centred texts)");
 }

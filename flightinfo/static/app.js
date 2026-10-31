@@ -108,14 +108,32 @@
   }
   // The animated scene fills the whole corner; a real photo is shown COMPLETE (never cropped): it keeps its own
   // proportions, is as large as the corner allows, sits in the bottom-right and carries its credit underneath.
+  // The credit, 0.99.17 (review B9): on a phone the corner is a hundred pixels wide and "(c) name - planespotters.net"
+  // ran out of it, cut by an ellipsis in the middle of the photographer's name. When it does not fit, the site's
+  // name goes (the photo stays the link to its page there); when the name alone does not fit either, it wraps, and
+  // the photo gives up the height of the extra lines.
+  var credit = { full: "", short: "" };
   function fitPhoto(g) {
     var W = PHOTO_BOX.w * g.pitch, H = PHOTO_BOX.h * g.pitch, fs = Math.max(8, g.pitch * 1.5);
     var iw = photoImg.naturalWidth, ih = photoImg.naturalHeight, ratio = iw && ih ? iw / ih : 1.5;
-    var imgH = Math.max(10, H - fs * 1.6), w = Math.min(W, imgH * ratio);
     box.style.fontSize = fs + "px";
-    box.style.left = "auto"; box.style.top = "auto"; box.style.height = "auto"; box.style.width = w + "px";
+    box.style.left = "auto"; box.style.top = "auto"; box.style.height = "auto";
     box.style.right = (canvas.clientWidth - (g.ox + (PHOTO_BOX.x + PHOTO_BOX.w) * g.pitch)) + "px";
     box.style.bottom = (canvas.clientHeight - (g.oy + (PHOTO_BOX.y + PHOTO_BOX.h) * g.pitch)) + "px";
+    var capH = fs * 1.6, w = Math.min(W, Math.max(10, H - capH) * ratio);
+    box.style.width = w + "px";
+    photoCap.classList.remove("wrap"); photoImg.style.width = "";
+    if (photoCap.textContent !== credit.full) photoCap.textContent = credit.full;
+    if (box.hidden || !credit.full) return;                   // nothing to measure
+    function over() { return photoCap.scrollWidth > photoCap.clientWidth + 1; }
+    if (over() && credit.short !== credit.full) photoCap.textContent = credit.short;
+    if (!over()) return;
+    // the name alone is too long: the caption takes the corner's whole width and wraps (two lines at most), and the
+    // photo, centred above it, gives up the height of the extra line. A narrower box would wrap the name once more.
+    box.style.width = W + "px";
+    photoCap.classList.add("wrap");
+    capH = Math.max(capH, box.offsetHeight - photoImg.offsetHeight);     // the caption and the box's border
+    photoImg.style.width = Math.min(W, Math.max(10, H - capH) * ratio) + "px";
   }
   function placeCorner() {
     var g = geom(), el = sceneCanvas;
@@ -127,8 +145,10 @@
   function hideCorner() { cornerKey = null; photoToken++; box.hidden = true; sceneCanvas.hidden = true; scene.stop(); }
   function showScene() { box.hidden = true; sceneCanvas.hidden = false; placeCorner(); scene.start(); }   // size it only once it is visible
   function showPhoto(p) {
-    scene.stop(); sceneCanvas.hidden = true; box.hidden = false; fitPhoto(geom());
-    photoCap.textContent = p.photo_credit ? "\u00a9 " + p.photo_credit + (p.photo_link ? " \u00b7 planespotters.net" : "") : "";
+    scene.stop(); sceneCanvas.hidden = true; box.hidden = false;
+    credit.short = p.photo_credit ? "\u00a9 " + p.photo_credit : "";
+    credit.full = credit.short && p.photo_link ? credit.short + " \u00b7 planespotters.net" : credit.short;
+    fitPhoto(geom());
     if (p.photo_link) { photoLink.href = p.photo_link; photoLink.setAttribute("target", "_blank"); } else photoLink.removeAttribute("href");
   }
   function updateCorner(p) {
@@ -166,6 +186,12 @@
       // blamed on the decoder; and "RECEIVER NOT RESPONDING" (137 dots) was wider than the wall (128) and cut at both ends
       textCenter(g, "NO ANSWER", 8, 2); textCenter(g, "THE TABLET LOST", 32, 1); textCenter(g, "THE PI", 41, 1); textCenter(g, "CHECK THE WI-FI", 54, 1);
       return { g: g, sig: "offline", plane: null, lines: ["", centered("NO ANSWER"), "", centered("THE TABLET"), centered("LOST THE PI"), "", centered("CHECK THE"), centered("WI-FI")] };
+    }
+    if (error === "host") {
+      // 0.99.17 (review B9): the Pi answered, and refused the name in the address bar. Only its address, its own name
+      // (.local, .lan, .home) or a name listed in CONSOLE_HOSTS reach the wall's data (server.py, wall_host_ok)
+      textCenter(g, "WRONG NAME", 8, 2); textCenter(g, "USE THE PI ADDRESS", 32, 1); textCenter(g, "OR ADD THIS NAME", 41, 1); textCenter(g, "TO CONSOLE_HOSTS", 54, 1);
+      return { g: g, sig: "host", plane: null, lines: ["", centered("WRONG NAME"), "", centered("USE THE PI"), centered("ADDRESS"), "", centered("OR ADD THIS NAME"), centered("TO CONSOLE_HOSTS")] };
     }
     if (error) {
       textCenter(g, "NO DATA", 8, 2); textCenter(g, "RECEIVER NOT", 32, 1); textCenter(g, "RESPONDING", 41, 1); textCenter(g, "CHECK THE DECODER", 54, 1);
@@ -267,8 +293,11 @@
   var GLOW_PAD = 3;
   function drawRect(x0, y0, x1, y1) {
     var m = geomPx(), r = m.pitch * 0.42, p = GLOW_PAD;
-    var px = m.ox + (x0 - p) * m.pitch, py = m.oy + (y0 - p) * m.pitch;
-    var pw = (x1 - x0 + 2 * p) * m.pitch, ph = (y1 - y0 + 2 * p) * m.pitch;
+    // 0.99.17 (review B9): on whole device pixels. The pitch is rarely a whole number (a phone at 2.75 pixels per dot,
+    // a tablet at 1.5 device pixels per CSS pixel); a clip edge inside a pixel was cleared only in part and painted
+    // again at every step, which left a faint line along the scrolling row's edges.
+    var px = Math.floor(m.ox + (x0 - p) * m.pitch), py = Math.floor(m.oy + (y0 - p) * m.pitch);
+    var pw = Math.ceil(m.ox + (x1 + p) * m.pitch) - px, ph = Math.ceil(m.oy + (y1 + p) * m.pitch) - py;
     ctx.save();
     ctx.beginPath(); ctx.rect(px, py, pw, ph); ctx.clip();
     ctx.clearRect(px, py, pw, ph);
@@ -356,7 +385,9 @@
   function flapStop() { if (flapRaf) cancelAnimationFrame(flapRaf); flapRaf = 0; clearTimeout(flapTimer); }
   function showFlap(screen, wipe) {
     if (anim) { cancelAnimationFrame(anim); anim = null; }
-    flapSil = screen.g;
+    // the dotted aircraft, top right, and nothing else: a screen without one (NO ANSWER, WRONG NAME, the empty sky) drew
+    // the last letters of its dotted title there, beside the flaps (seen in the preview of 0.99.17)
+    flapSil = screen.plane ? screen.g : null;
     var changed = wipe || !screen.plane || !cornerKey || cornerKey.indexOf(screen.plane.hex) !== 0;
     if (changed) hideCorner();
     board.setRows(screen.lines, performance.now(), reduceMotion || firstFlap);
@@ -405,10 +436,36 @@
     } else ensureCurrent();
     show(buildScreen(), true);
   }
+  // 0.99.17 (review B9): one request at a time, and none waits more than five seconds. A Pi that stops answering
+  // without closing the connection (the server frozen, the Wi-Fi half up) left every poll waiting for ever: no
+  // failure was counted, so the wall kept its last aircraft instead of saying it lost the Pi, and a new request
+  // joined the queue every two seconds. A request that runs out of time is aborted, and counts as a failure.
+  var POLL_TIMEOUT_MS = 5000, polling = false, pollAgain = false;
+  function getTimed(url, read) {
+    var ctl = typeof AbortController === "function" ? new AbortController() : null, timer = 0;
+    var opts = { cache: "no-store" };
+    if (ctl) opts.signal = ctl.signal;
+    // the timer also covers reading the body, and gives up even in a browser that cannot abort a request
+    return new Promise(function (resolve, reject) {
+      timer = setTimeout(function () { if (ctl) ctl.abort(); reject(new Error("timeout")); }, POLL_TIMEOUT_MS);
+      fetch(url, opts).then(read).then(resolve, reject);
+    }).then(function (v) { clearTimeout(timer); return v; }, function (e) { clearTimeout(timer); throw e; });
+  }
+  function readPlanes(r) {
+    // 0.99.17: the Pi answers, and refuses the name the wall was opened by (wall_host_ok in server.py). That is not
+    // a lost Pi: counting it as one showed "NO ANSWER" and then reloaded the page every minute, for ever. The
+    // ALLOW_FROM refusal carries its own text and stays a failure, as before.
+    if (r.status === 403) return r.text().then(function (t) { if (t.indexOf("CONSOLE_HOSTS") >= 0) return { refused: true }; throw new Error("403"); });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return r.json();
+  }
   function poll() {
+    if (polling) { pollAgain = true; return; }        // a change made in the panel is asked again once this one is back
+    polling = true;
     var url = "/api/planes?radius_km=" + Fmt.radiusToKm(radius(), units()).toFixed(3);
-    fetch(url, { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (d) {
+    getTimed(url, readPlanes).then(function (d) {
       failures = 0;
+      if (d.refused) { error = "host"; planes = []; total = 0; show(buildScreen(), false); return; }
       if (serverId && d.server_id && d.server_id !== serverId) { location.reload(); return; }   // server restarted/upgraded
       serverId = d.server_id || serverId;
       error = d.error ? d.error : null; planes = d.planes || []; total = d.total || 0;
@@ -418,11 +475,16 @@
       if (++failures === 3) { error = "offline"; show(buildScreen(), false); }
       // self-heal, 0.54.4: only when the Pi answers again. A reload with the network still down meets the browser's own
       // error page, and a tablet on the wall stays there until someone touches it
-      if (failures >= 30 && failures % 30 === 0) fetch("/api/health", { cache: "no-store" }).then(function (r) { if (r.ok) location.reload(); }).catch(function () {});
+      if (failures >= 30 && failures % 30 === 0) getTimed("/api/health", function (r) { return r.ok; }).then(function (ok) { if (ok) location.reload(); }).catch(function () {});
+    }).then(function () {
+      polling = false;
+      if (pollAgain) { pollAgain = false; poll(); }
     });
   }
+  function pollTick() { if (!polling) poll(); }       // the two-second timer never queues behind a request still out
   function loadServerConfig() {
-    return fetch("/api/config", { cache: "no-store" }).then(function (r) { return r.json(); })
+    // 0.99.17: a refusal (403, a wrong name) or an error page is not the Pi's settings: the wall keeps its defaults
+    return getTimed("/api/config", function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
       .then(function (c) { server = c; serverId = c.server_id; applyPreset(); }).catch(function () {});
   }
 
@@ -487,7 +549,7 @@
   // ------------------------------------------------------------------ boot
   loadPrefs();
   loadServerConfig().then(function () {
-    applyTheme(); bindPanel(); resize(); poll(); startCycle(); setInterval(poll, 2000); keepAwake();
+    applyTheme(); bindPanel(); resize(); poll(); startCycle(); setInterval(pollTick, 2000); keepAwake();
   });
   window.addEventListener("resize", resize);
 })();
