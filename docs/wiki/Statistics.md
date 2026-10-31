@@ -15,11 +15,13 @@ Every quarter hour, as the `zenithboard` user and inside the same sandbox as the
 
 | Column | What it is |
 |---|---|
-| `when` | `YYYY-MM-DD HH:MM` |
+| `when` | `YYYY-MM-DD HH:MM`, the time of the sample: the end of the quarter hour it measures |
 | `messages` | Messages decoded in the last fifteen minutes |
 | `farthest_km` | The farthest aircraft in that window, in km |
 | `aircraft_pos` | Aircraft with a position at that moment |
 | `aircraft_seen` | Distinct aircraft seen so far that day |
+
+**Which quarter hour a line counts in (0.99.22).** A line's messages and farthest are the fifteen minutes before its time, so `/stats` and `zenithboard stats show` count them there, in that quarter hour's hour and day: the line of `2026-10-31 00:00` is 30 October's 23:45 to 24:00, in 30 October and the hour 23; the line of 14:15 is the hour 14's first quarter hour. Until 0.99.21 a line counted at its time: each day took the day before's last quarter hour and lost its own, each hour took the quarter hour before it, and the farthest's time was the end of its quarter hour. The aircraft with a position are a look at the line's moment and stay at its time; the aircraft of a day are its day files', which the sampler keeps by the day it runs in (the line after midnight adds the day before's last aircraft to the day before's file).
 
 It also notes every aircraft's address into a file for the day, `seen-YYYY-MM-DD`, one per line, so the day's count is the number of distinct aircraft. After thirty days a line, or a day file, is removed.
 
@@ -63,7 +65,7 @@ sudo zenithboard graphs off
 
 In ZenithBoard's own look since 0.37.0: the name in the wall's dots, numbers and bars in the wall's colour (amber, or the colour the wall is set to) on black, grey for what explains them. Top right, **the period: 24 h, 7 days or 30 days**. **Everything on the page follows it** (0.43.0: the sky by hour, the fourth box and the farthest aircraft did not); the choice stays in the address (`/stats#7d`) and, when the browser allows it, for the next visit. From the top, in the order of the [summary's posts](Social-sharing#the-weeks-summary-0330-optional) (the owner, 21 October 2026):
 
-* **Four boxes**: distinct aircraft (a floor), messages with the busiest hour (since 0.99.4 the messages of that hour in one day, on average over the period's days: before, 7 and 30 days added that hour up over every day and *18:00, 19 587 531* read like a single hour; from ten million on, shortened to *386.5 M* the language's way, the whole number in its tooltip, 0.54.18), the farthest distance and when, and the **busiest day** (7 and 30 days: the most distinct aircraft) or **busiest hour** (24 hours: the most aircraft with a position, on average).
+* **Four boxes**: distinct aircraft (a floor), messages with the busiest hour (since 0.99.4 the messages of that hour in one day, on average over the period's days: before, 7 and 30 days added that hour up over every day and *18:00, 19 587 531* read like a single hour; from ten million on, shortened to *386.5 M* the language's way, the whole number in its tooltip, 0.54.18), the farthest distance and when (the start of its quarter hour since 0.99.22: *at 23:45* for the line of 00:00), and the **busiest day** (7 and 30 days: the most distinct aircraft) or **busiest hour** (24 hours: the most aircraft with a position, on average).
 * **The farthest aircraft of the period**, in words, its airline's flag first. One aircraft is written down a day, the day's farthest (since 0.22.0): for 24 hours, yesterday's counts when it was seen inside them: the 24 hourly slots the box and the chart show, from the top of the hour 23 hours back (at 14:20, from 15:00 yesterday; the same start for the box, the chart and the line since 0.99.15). When the box above says more, the line says why, with the box's distance in the page's unit (since 0.99.15: before, in kilometres whatever the unit).
 * **Aircraft** (the first post): the sky by hour for the period — one row of the 24 hours, or a row a day for 7 or 30 — then the **airlines** and the **models** most seen side by side.
 * **Cargo and business jets** (the second post): each cargo airline with the model it flew most, the business jets by make and model, the countries they are most registered in.

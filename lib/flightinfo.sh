@@ -72,6 +72,20 @@ remove_flightinfo() {
   systemctl daemon-reload
 }
 
+# 0.99.22 (review of 0.99.8): `photos on|off` and `routes on|off` restarted the wall, so every tablet reloaded with
+# the new setting; the menu's two switches only wrote it, and an open tablet kept its old one until it was reloaded
+# by hand. The command and the menu now both come here.
+wall_photos_set() {   # wall_photos_set 1|0
+  cfg_set SHOW_PHOTOS "$1"; restart_flightinfo
+  if [ "$1" = 1 ]; then echo "Aircraft photos are ON. The wall reloads by itself within a few seconds."
+  else echo "Aircraft photos are OFF: the animated sky scene is shown instead."; fi
+}
+wall_routes_set() {   # wall_routes_set 1|0
+  cfg_set SHOW_ROUTES "$1"; restart_flightinfo
+  if [ "$1" = 1 ]; then echo "Flight routes are ON (origin and destination, looked up by callsign). The wall reloads by itself."
+  else echo "Flight routes are OFF: no callsign is sent to the internet."; fi
+}
+
 change_radius() {
   local r; r=$(pick_radius) || return 0
   [ -n "$r" ] && cfg_set RADIUS "$r" && restart_flightinfo
