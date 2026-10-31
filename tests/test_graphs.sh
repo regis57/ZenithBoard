@@ -120,7 +120,18 @@ check "look: the page links its stylesheet and script" 'grep -q "zenithboard.css
 check "look: the wall colour in the stylesheet"        'grep -q -- "--on: #39ff6a;" "$L/usr/share/graphs1090/html/zenithboard.css"'
 check "look: twice is the same as once"                'look graphs_look zenithboard >/dev/null; [ "$(grep -c "ZenithBoard look" "$L/etc/default/graphs1090")" = 2 ] && [ "$(grep -c "zenithboard.css" "$L/usr/share/graphs1090/html/index.html")" = 1 ]'
 check "look: the palette is bash (graphs1090 sources it)" 'bash -n "$L/etc/default/graphs1090" && ( . "$L/etc/default/graphs1090"; [ "$colorscheme" = dark ] && [ "$BLUE" = 39ff6a ] && [[ $colors == *CANVAS#0a0a0a* ]] )'
+# 0.99.20 (review B12): graphs1090's graphs.js puts ?timeframe= in the address as it starts (history.replaceState, read in
+# its html/graphs.js, 31 October 2026), so ?lang= is read by zb-lang.js, before it, and handed to i18n.js as urlLang
+H="$L/usr/share/graphs1090/html/index.html"
+check "look: zb-lang.js before graphs.js, the rest after it" '[ "$(grep -n "zb-lang.js" "$H" | cut -d: -f1)" -lt "$(grep -n "graphs.js" "$H" | cut -d: -f1)" ] && [ "$(grep -n "graphs.js" "$H" | cut -d: -f1)" -lt "$(grep -n "i18n.js" "$H" | cut -d: -f1)" ] && [ "$(grep -c "zb-lang.js" "$H")" = 1 ]'
+check "look: zb-lang.js keeps the address's ?lang= (urlLang)" 'node -e "global.location={search:\"?timeframe=7d&lang=fr\"}; global.window={}; eval(require(\"fs\").readFileSync(process.argv[1],\"utf8\")); if (window.ZB_I18N_CONF.urlLang!==\"fr\" || window.ZB_I18N_CONF.wallPort!==8080) process.exit(1); location.search=\"\"; eval(require(\"fs\").readFileSync(process.argv[1],\"utf8\")); if (window.ZB_I18N_CONF.urlLang!==\"\") process.exit(1)" "$L/usr/share/graphs1090/html/zb-lang.js"'
+check "look: zenithboard.js hands urlLang to i18n.js, which uses it" 'grep -q "urlLang: conf.urlLang" tools/graphs1090-look/zenithboard.js && grep -q "param() || (.*opts.urlLang" flightinfo/static/i18n.js'
+# a Pi patched by 0.99.19 (zb-lang.js after graphs.js): the update's look again puts it first, once
+sed -i -e '/zb-lang\.js/d' -e 's|\(<script src="font5x7.js"></script>\)|\1\n\t\t<script src="zb-lang.js"></script>|' "$H"
+look graphs_look_keep >/dev/null
+check "look: the order of 0.99.19 is mended by the update"  '[ "$(grep -n "zb-lang.js" "$H" | cut -d: -f1)" -lt "$(grep -n "graphs.js" "$H" | cut -d: -f1)" ] && [ "$(grep -c "zb-lang.js" "$H")" = 1 ]'
 look graphs_look original >/dev/null
+check "original: zb-lang.js gone from the page and the folder" '! grep -q "zb-lang" "$H" && [ ! -e "$L/usr/share/graphs1090/html/zb-lang.js" ]'
 check "original: page and settings as they were"       'cmp -s "$t/index.before" "$L/usr/share/graphs1090/html/index.html" && cmp -s "$t/default.before" "$L/etc/default/graphs1090" && [ ! -e "$L/usr/share/graphs1090/html/zenithboard.css" ]'
 rm -f "$L/usr/share/graphs1090/html/index.html"
 check "look: refused when graphs1090 is not there"     '! look graphs_look zenithboard >/dev/null 2>&1'

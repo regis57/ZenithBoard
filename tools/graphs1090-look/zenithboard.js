@@ -11,7 +11,7 @@
   if (!I) return draw(function (s) { return s; });
   // dir false: graphs1090's own page keeps its layout; only ZenithBoard's brand turns right to left (0.48.0)
   I.start({ part: "graphs", base: "zb-i18n/", config: { lang: conf.lang || "", langs: conf.langs || [] }, flagBase: wall + "/flags/",
-    staticBase: wall + "/static/", dir: false }, function () { draw(I.t); });
+    staticBase: wall + "/static/", dir: false, urlLang: conf.urlLang || "" }, function () { draw(I.t); });
   function draw(t) {
     var NS = "http://www.w3.org/2000/svg";
     function dots(text, pitch) {

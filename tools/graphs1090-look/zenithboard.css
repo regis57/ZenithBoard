@@ -10,8 +10,11 @@ body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
 h1 { font: 600 13px ui-monospace, Menlo, Consolas, monospace; letter-spacing: .14em; text-transform: uppercase; color: var(--muted);
      margin: 6px 0 18px; }
 .zb-brand { display: flex; align-items: flex-end; gap: 18px; flex-wrap: wrap; margin: 4px 0 4px; }
-.zb-brand svg { display: block; height: 46px; width: auto; }
-.zb-brand .zb-sub svg { height: 22px; }
+/* 0.99.20 (review B12): the name is 342 px wide at 46 px high; on a 320 px phone it went past the screen's edge. It now
+   shrinks to the screen's width (16 px each side); GRAPHS beside it keeps its own size */
+.zb-brand > div { min-width: 0; }
+.zb-brand svg { display: block; width: min(342px, calc(100vw - 32px)); height: auto; }
+.zb-brand .zb-sub svg { height: 22px; width: auto; }
 .zb-brand circle.on { fill: var(--on); } .zb-brand circle.off { fill: #1a1a1a; }
 .zb-links { margin-left: auto; font: 600 11px ui-monospace, Menlo, Consolas, monospace; letter-spacing: .1em; text-transform: uppercase; }
 .zb-links a { color: var(--muted); margin-left: 16px; text-decoration: none; }
