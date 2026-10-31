@@ -87,6 +87,27 @@ What is asked during the freeze, kept here so that nothing is lost, and done aft
 
 * **Emergency squawk banner on the wall** (asked by the owner, 26 October 2026). When 7500, 7600 or 7700 is heard anywhere in the antenna's range, not only inside the wall's radius, the wall shows a banner for 30 seconds, longer than its usual time for an aircraft, with the code and its meaning; a checkbox in the wall's settings (the gear), off by default, and a command. Nothing published: an emergency is not a fact to broadcast. The detection is 0.99.6's (`flightinfo/telegram.py`, heard on two reads in a row); to be previewed on the real wall before it ships.
 
+* **From the review of 0.99.8** (30–31 October 2026), found while fixing and left for after 1.0 because each is a change of design, not a fix:
+  * **A setting without a restart** (A2b). Today a wall setting restarts the wall service so that the tablets reload ([Architecture](Architecture)); a restart loses the aircraft seen since the last quarter-hour sample and sends a burst of lookups to adsbdb, hexdb and Planespotters. `/api/planes` would carry `config.env`'s modification time beside `server_id`, the wall would reload when it changes, and the wall's commands would only write the setting; a restart stays for a code update, `PORT` and `BIND_ADDRESS`. Until then, an option: the restart takes the statistics sample first when statistics are on.
+  * **One validator** (A3b). Each value is checked two or three times (the command, the console, the presets, the import), and the copies already disagree: the console's hashtag rule is not `social_hashtags_clean`'s (100 characters, a letter in each word), `summary-at`'s format is not tied to the period. Either the console asks the command (`zenithboard <cmd> --check VALUE`) or both come from one table. With it, ADSB Exchange's, FlightAware's, Flightradar24's and Plane Finder's logs in the console's list (new labels, so the 22 languages).
+  * **The towns near a point from an index** (A4). `_towns_near` reads the whole list of places at each call; it would be loaded once into one-degree squares, the loader shared by the wall's server, the Telegram service and the split-flap picture.
+  * **Dead code** (A5): `net_default_mask` and `wifi_default_route_dev` in the shell, `local_types` in the server (unless 1.1 calls it), `social_set_weekly` once its test runs `zenithboard social weekly on`, the two pictures nothing shows (`docs/images/console-devices.png`, `docs/images/stats-fr.png`). The step that keeps an older install's ACARS units goes only once the owner confirms no Pi still has them.
+  * **A page-error smoke test** (follow-up of T1): `/`, `/stats` and `/console` loaded in headless Chromium on the test server, failing on any page error. Playwright is in CI since 0.99.18.
+  * **The wall's page refused by name too** (W2's other way, not taken in 0.99.17): `/` and `/static/*` answer 403 to a name that is not the Pi's, as the wall's data does, so the browser shows the refusal and its `CONSOLE_HOSTS` command at once instead of the wall's *WRONG NAME*.
+  * **A day's figures counted in the quarter hour they measure** (S5, held for the owner's choice in 0.99.15): each day's messages and farthest aircraft include the day before's 23:45–24:00 and lose their own last quarter hour. Counting a row at its time less 15 minutes is right, but moves the figures already on screen by one quarter hour, which is the owner's call.
+  * **The console's refusal with its reason**: the Pi already sends `{error, why}` for an action refused here; the console could show *Not allowed here: {why}* (a new string, so the 22 languages).
+  * **Arabic's quick-glance chips**: *Bluesky* and its state read *:Bluesky إيقاف*, the colon on the wrong side, right to left.
+* **A leaner architecture for 1.1**, by value, from the same review:
+  1. One table of rules for every value (key, type, range, choices), read by the command, the console, the presets and the import, so that a check fixed in one place cannot be missed in another (A3b).
+  2. Reload the setting instead of restarting the service (A2b).
+  3. One unit-conversion module per language: one for Python (`social.py`, `telegram.py`, `social_card.py`, `server.py`), one for the pages (`format.js`, `stats.js`), against one table test. Five copies today, and each unit added so far missed one.
+  4. One *saved on change* state helper for the two posting services, after each send and on SIGTERM, so that *once per crossing* holds through any restart, in one place.
+  5. The boundary between root and the `zenithboard` user written in [Architecture](Architecture) as a rule (0.99.11 did most of it), with a test that walks every path root opens.
+  6. One window helper for the statistics: one function decides a row's window and bucket (day, hour, quarter hour) for `/stats`' lines and boxes and the farthest aircraft, so they cannot drift apart again (S5).
+  7. The places index of A4, loaded once and shared.
+  8. The smoke test above, beside the docs' coverage check (every test file named on [Testing](Testing), 0.99.21).
+  9. The dead code of A5 removed.
+
 ## After 1.0
 
 What was planned before the freeze and is not a fix, in the order it would come. Nothing here starts before 1.0 is out; then *Waiting for 1.1* first.

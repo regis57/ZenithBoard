@@ -9,6 +9,8 @@ cd "$(dirname "$0")/.." || exit 1
 t=$(mktemp -d); trap 'rm -rf "$t"' EXIT
 export ZENITHBOARD_ETC="$t/etc"; mkdir -p "$ZENITHBOARD_ETC" "$t/bin" "$t/sysd" "$t/state"; touch "$ZENITHBOARD_ETC/config.env"
 export ZB_SKIP_SERVICES=1 ZB_SYSTEMD_DIR="$t/sysd" ZENITHBOARD_SOCIAL_DIR="$t/state/social"
+# review B14 (T7): the picture folder in /run as well, which social_prepare_dir makes when the suite runs as root
+export ZENITHBOARD_SOCIAL_RUN="$t/run/social"
 # 0.54.13: the Python side reads its own paths; without these, on the Pi, `social.py check` below would have used the
 # real account and signed in to Bluesky from a test
 export ZENITHBOARD_CONFIG="$ZENITHBOARD_ETC/config.env" ZENITHBOARD_SOCIAL_SECRETS="$ZENITHBOARD_ETC/social.env" ZENITHBOARD_SOCIAL_TEMPLATES="$ZENITHBOARD_ETC/social-templates.txt"

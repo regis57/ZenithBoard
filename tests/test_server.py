@@ -1613,9 +1613,47 @@ class SeenTrackerTest(unittest.TestCase):
             src = fh.read()
         i = src.index("def farthest_watch")
         self.assertLess(src.index("_seen.observe(data)", i), src.index("if lat or lon", i))
-        self.assertIn('"/api/seen"', src)
-        self.assertIn('not in ("127.0.0.1", "::1"', src[src.index('"/api/seen"'):])
-        self.assertIn('X-Forwarded-For', src[src.index('"/api/seen"'):src.index('"/api/seen"') + 800], "not through a proxy")
+
+    def test_the_list_is_for_the_loopback_and_never_through_a_proxy(self):
+        # review B14 (T4): this was a check of the source's text; now the running server is asked. The timer asks on
+        # the loopback with no proxy header; behind a reverse proxy everyone comes from 127.0.0.1 with one of its
+        # headers, and a home address is not the timer either: each of those gets a 404, as if nothing were there.
+        import http.client, tempfile, threading
+        with tempfile.NamedTemporaryFile("w", suffix=".env", delete=False) as fh:
+            fh.write("ALLOW_FROM=private\nSTATS=1\n")
+            cfgpath = fh.name
+        self.addCleanup(os.unlink, cfgpath)
+        old_cfg = server.CONFIG_FILE
+        self.addCleanup(lambda: (setattr(server, "CONFIG_FILE", old_cfg), server._cfg_cache.update(mtime=None)))
+        server.CONFIG_FILE = cfgpath
+        server._cfg_cache.update(mtime=None)
+        from_home = {"addr": None}
+
+        class Handler(server.Handler):                 # what a request from another machine of the house looks like
+            def setup(self):
+                super().setup()
+                if from_home["addr"]:
+                    self.client_address = (from_home["addr"], 50000)
+        httpd = server.WallServer(("127.0.0.1", 0), Handler)
+        port = httpd.server_address[1]
+        threading.Thread(target=httpd.serve_forever, daemon=True).start()
+        self.addCleanup(httpd.server_close)
+        self.addCleanup(httpd.shutdown)
+
+        def get(headers=None):
+            c = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+            c.request("GET", "/api/seen", headers=headers or {})
+            r = c.getresponse(); body = r.read(); c.close()
+            return r.status, body
+        status, body = get()
+        self.assertEqual(status, 200, "the statistics timer, on the loopback")
+        self.assertIn("days", json.loads(body))
+        self.assertEqual(get({"X-Forwarded-For": "192.168.1.50"})[0], 404, "through a proxy that says X-Forwarded-For")
+        self.assertEqual(get({"Forwarded": "for=192.168.1.50"})[0], 404, "through a proxy that says Forwarded")
+        from_home["addr"] = "192.168.1.50"
+        self.assertEqual(get()[0], 404, "a home address, allowed to read the wall, is not the timer")
+        from_home["addr"] = "::ffff:127.0.0.1"
+        self.assertEqual(get()[0], 200, "the loopback written as IPv6")
 
 
 class PhotoUrlTest(unittest.TestCase):
