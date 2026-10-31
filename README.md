@@ -8,7 +8,7 @@
 
 **See the planes flying right above your house, on an old tablet, in glowing dot-matrix lights — and share the same antenna with the big flight-tracking networks.**
 
-ZenithBoard turns a Raspberry Pi (4 or newer recommended) and a cheap USB radio dongle into:
+ZenithBoard turns a Raspberry Pi (a 1 GB Pi 3B runs everything, measured; any newer one too) and a cheap USB radio dongle into:
 
 1. **An ADS-B receiver** that feeds **ADSB Exchange** (mandatory base layer) and, if you want, **FlightAware**, **Flightradar24**, **Plane Finder** and **AirNav Radar** — with **one single MLAT client**, because several at once overload a Raspberry Pi.
 2. **FlightInfo**, a responsive **flight wall** for any tablet or screen with a browser, in **dot matrix** or in the style of an **old airport split-flap board**. It automatically cycles through every aircraft inside the radius you choose (1, 2, 5, 10, 15, 30 or 50 km / miles) — callsign, type, altitude, speed, where the flight comes from and goes to, distance and direction — and refreshes itself.
@@ -17,7 +17,7 @@ ZenithBoard turns a Raspberry Pi (4 or newer recommended) and a cheap USB radio 
 
 Everything is installed from one menu, and you can come back at any time to add or remove parts.
 
-> **Status:** running every day on the author's Raspberry Pi (Raspberry Pi OS, Debian 13) with readsb, ADSB Exchange and Flightradar24. Parts that could not be tried on real hardware yet (978 MHz UAT for the US) are marked as such. Please open an issue with anything that breaks. The full picture of what is proven and what is not is in the wiki: **[Project status](https://github.com/regis57/ZenithBoard/wiki/Project-status)**.
+> **Status:** running every day on the author's Raspberry Pi 3B (Raspberry Pi OS, Debian 13) with readsb and all five networks (ADSB Exchange with the only MLAT client, FlightAware, Flightradar24, Plane Finder, AirNav Radar), the wall, the statistics, graphs1090, the Bluesky posts, the Telegram messages, the web console and Tailscale, 436 MB of its 905 still free (31 October 2026). Parts that could not be tried on real hardware yet (978 MHz UAT for the US) are marked as such. Please open an issue with anything that breaks. The full picture of what is proven and what is not is in the wiki: **[Project status](https://github.com/regis57/ZenithBoard/wiki/Project-status)**.
 
 Inspired by [jprochazka/adsb-receiver](https://github.com/jprochazka/adsb-receiver). ZenithBoard is an independent project with a smaller scope, not a fork.
 
