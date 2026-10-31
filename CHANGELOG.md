@@ -7,6 +7,7 @@ Something a novice could not follow (seen on the reference Pi, 31 October 2026):
 - Test: in `tests/test_stats.sh`, `stats gaps` with gaps files holding only callsign lines says *none* under the silhouettes, and with no line of either kind says *none* under both. Each fails on 0.99.22.
 - No new words: the terminal stays English.
 - A fix: the hands-off clock goes on.
+- Test only, after the release, nothing changes on the Pi: `tests/test_post_lang.py` binds `social_card` on the path where Pillow is missing (CodeQL alert 89, *potentially uninitialized local variable*: it does not know `skipTest` raises).
 
 ## 0.99.22 — release candidate, fix
 Wrong figures and something not doing what the docs say (the review of 0.99.8, the two fixes the owner chose on 31 October 2026):
