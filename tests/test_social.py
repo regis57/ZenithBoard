@@ -1733,7 +1733,9 @@ class WeeklyTest(unittest.TestCase):
         self.assertEqual(w["dates"][0], "2026-10-12")
         self.assertEqual(w["dates"][-1], "2026-10-18")
         self.assertEqual(w["aircraft"], 6 * 80 + 120, "distinct over the week, from the day files")
-        self.assertEqual(w["messages"], 6 * 24 * 1000 + 20 * 1000)
+        # 0.99.22 (S5): a row counts in the quarter hour it measures, so Monday's 00:00 row (the Sunday before's last
+        # quarter hour) is not the week's, and the week has 6 * 24 + 19 rows' messages (20 counted at their stamps)
+        self.assertEqual(w["messages"], 6 * 24 * 1000 + 19 * 1000)
         self.assertEqual(w["best_day"], ("2026-10-16", 120))
         self.assertEqual(w["busiest_hour"], 15)
         self.assertEqual([tuple(a) for a in w["airlines"]], [("Ryanair", 2), ("Lufthansa", 1)], "the week only")

@@ -27,7 +27,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.99.21"
+VERSION = "0.99.22"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -190,22 +190,27 @@ def read_stats(stats_dir=None, now=None, rng="30d"):
     except OSError:
         return None
     rows.sort()
-    # the last 24 hours, by hour of the day (the hour a sample was taken in)
+    # the last 24 hours, by hour of the day: the hour a row's messages were decoded in (its quarter hour, 0.99.22)
     since = now - datetime.timedelta(hours=24)
     hours = [{"hour": h, "messages": 0, "samples": 0} for h in range(24)]
     for when, msgs, far, pos, seen in rows:
-        if since < when <= now:
-            hours[when.hour]["messages"] += msgs
-            hours[when.hour]["samples"] += 1
-    # thirty days, by day
+        m = _measured(when)
+        if since < m and when <= now:
+            hours[m.hour]["messages"] += msgs
+            hours[m.hour]["samples"] += 1
+    # thirty days, by day: the messages and the farthest in the day they were measured in, the running count of
+    # aircraft in the day the sampler counted it for (its own day, at the moment of the sample)
     days = {}
+
+    def day_entry(d):
+        return days.setdefault(d, {"day": d, "messages": 0, "farthest_km": 0, "aircraft": 0, "samples": 0})
     for when, msgs, far, pos, seen in rows:
-        d = when.strftime("%Y-%m-%d")
-        e = days.setdefault(d, {"day": d, "messages": 0, "farthest_km": 0, "aircraft": 0, "samples": 0})
+        e = day_entry(_measured(when).strftime("%Y-%m-%d"))
         e["messages"] += msgs
         e["farthest_km"] = max(e["farthest_km"], far)
-        e["aircraft"] = max(e["aircraft"], seen)
         e["samples"] += 1
+        a = day_entry(when.strftime("%Y-%m-%d"))
+        a["aircraft"] = max(a["aircraft"], seen)
     # the day's aircraft count is the day file's length, which is exact for that day; the CSV only carries the running
     # count, which stands when the day file is missing (removed after thirty days, or the sampler was off that day)
     for d, e in days.items():
@@ -251,6 +256,18 @@ def read_stats(stats_dir=None, now=None, rng="30d"):
         "heat": heat,
         "window": _with_heat(window, heat),
     }
+
+
+QUARTER = datetime.timedelta(minutes=15)
+
+
+def _measured(when):
+    """0.99.22 (review of 0.99.8, S5, the owner's choice of 31 October 2026): where a stats row's messages and farthest
+    belong. The sampler stamps a row with the time it runs, and the decoder's last15min it reads is the quarter hour
+    before: the row stamped 00:00 measured 23:45 to 24:00 the day before. Counted at its stamp, each day took the day
+    before's last quarter hour and lost its own, and each hour the quarter hour before it. Its aircraft with a
+    position, a look at that moment, and the day's running count stay at the stamp."""
+    return when - QUARTER
 
 
 def _window_start_24h(now):
@@ -336,23 +353,31 @@ def stats_window(rows, stats_dir, now, rng):
         labels = ["%02d/%02d" % (k.day, k.month) for k in keys]
         slot = lambda when: when.date()
         index = {k: i for i, k in enumerate(keys)}
-    msgs, far, pos, cnt = [0] * len(keys), [0] * len(keys), [0] * len(keys), [0] * len(keys)
+    # mcnt: the rows whose quarter hour falls in a slot (their messages and farthest, 0.99.22); cnt: the rows stamped
+    # in it (their aircraft with a position, a look at that moment)
+    msgs, far, pos, cnt, mcnt = ([0] * len(keys) for _ in range(5))
     by_hour = [0] * 24
     hour_days = [set() for _ in range(24)]
     best_when = None
     for when, m, fk, p, seen in rows:
+        if when > now:
+            continue
         i = index.get(slot(when))
-        if i is None or when > now:
+        if i is not None:
+            cnt[i] += 1
+            pos[i] += p
+        q = _measured(when)
+        i = index.get(slot(q))
+        if i is None:
             continue
         msgs[i] += m
-        cnt[i] += 1
-        pos[i] += p
-        by_hour[when.hour] += m
-        hour_days[when.hour].add(when.date())
+        mcnt[i] += 1
+        by_hour[q.hour] += m
+        hour_days[q.hour].add(q.date())
         if fk > far[i]:
             far[i] = fk
             if fk >= max(far):
-                best_when = when
+                best_when = q
     if rng == "24h":
         aircraft = [round(pos[i] / float(cnt[i]), 1) if cnt[i] else 0 for i in range(len(keys))]
         note = "aircraft with a position, on average"
@@ -376,13 +401,13 @@ def stats_window(rows, stats_dir, now, rng):
     by_hour = [round(by_hour[h] / float(len(hour_days[h]))) if hour_days[h] else 0 for h in range(24)]
     bh = max(range(24), key=lambda h: by_hour[h]) if any(by_hour) else None
     # a slot with no sample (the hour not yet reached, the receiver off) has no farthest: a gap in the line, not a 0
-    far_series = [far[i] if cnt[i] else None for i in range(len(keys))]
+    far_series = [far[i] if mcnt[i] else None for i in range(len(keys))]
     return {"range": rng, "label": RANGES[rng][1], "labels": labels, "messages": msgs, "farthest": far_series,
             "aircraft": aircraft, "aircraft_note": note, "_counts": cnt,
             "totals": {"aircraft": total, "messages": sum(msgs), "farthest_km": max(far) if far else 0,
                        "farthest_when": best_when.strftime("%Y-%m-%d %H:%M") if best_when else None,
                        "busiest_hour": bh, "busiest_messages": by_hour[bh] if bh is not None else 0,
-                       "samples": sum(cnt)}}
+                       "samples": sum(mcnt)}}
 
 
 def _fleet_lines(stats_dir, now, rng):

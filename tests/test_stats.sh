@@ -114,9 +114,11 @@ check "prune: the header is still first"                        '[ "$(head -1 "$
 # ---- the terminal view
 out=$(stats_show)
 # five samples of the readsb file and one of dump1090's; eleven distinct aircraft (seven from the localdb samples)
+# 0.99.22 (S5): a sample taken before 00:15 measured yesterday's last quarter hour, so its messages are yesterday's
+early=0; [ "$(date '+%H%M')" -lt 0016 ] && early=1
 check "show: today's aircraft count is the day file"  'printf "%s" "$out" | grep -q "Today  *11 aircraft seen"'
-check "show: today's messages are summed"             'printf "%s" "$out" | grep -q "$((2412 * 5 + 1520)) messages"'
-check "show: farthest today"                          'printf "%s" "$out" | grep -q "farthest 312 km"'
+check "show: today's messages are summed"             '[ "$early" = 1 ] || printf "%s" "$out" | grep -q "$((2412 * 5 + 1520)) messages"'
+check "show: farthest today"                          '[ "$early" = 1 ] || printf "%s" "$out" | grep -q "farthest 312 km"'
 spark=$(printf "%s\n" "$out" | grep -A1 "Messages per hour today" | tail -1)
 check "show: a sparkline of 24 bars"                  '[ "$(python3 -c "import sys; print(len(sys.argv[1].strip()))" "$spark")" = 24 ]'
 check "show: says the count is a floor"               'printf "%s" "$out" | grep -q "floor"'
@@ -132,6 +134,13 @@ out=$(stats_show)
 check "show: Yesterday's aircraft are its day file's (9), not the CSV's last count (5)" 'printf "%s" "$out" | grep -q "Yesterday  *9 aircraft seen"'
 check "show: the average is over complete days only, and says how many" 'printf "%s" "$out" | grep -q "Average  *9 aircraft/day on average over 1 complete day "'
 check "show: today and the part-sampled day stay out of the average"   '! printf "%s" "$out" | grep -q "aircraft/day on average over [2-9]"'
+# 0.99.22 (S5): a row stamped 00:00 measured the day before's 23:45 to 24:00: its messages and farthest are
+# yesterday's, not today's, as on /stats; the yesterday row stamped 00:00 is the day before yesterday's
+printf '%s 00:00,777777,499,1,4\n' "$today" >> "$STATS_FILE"
+out=$(stats_show)
+check "show: today's 00:00 row counts in Yesterday (8 + 777777 messages, farthest 499)" '[ "$early" = 1 ] || printf "%s" "$out" | grep -q "^Yesterday  *9 aircraft seen  *777785 messages   farthest 499 km"'
+check "show: and not in Today"                                          '! printf "%s" "$out" | grep "^Today" | grep -q "777\|499"'
+sed -i "/^$today 00:00,777777,/d" "$STATS_FILE"
 sed -i "/^$yd /d" "$STATS_FILE"; rm -f "$(stats_day_file "$yd")"
 out=$(stats_show)
 check "show: no complete day yet is said, not averaged"                 'printf "%s" "$out" | grep -q "Average  *no complete day yet"'

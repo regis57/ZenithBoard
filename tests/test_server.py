@@ -1118,7 +1118,9 @@ class StatsTest(unittest.TestCase):
         now = datetime.datetime(2026, 10, 20, 22, 10)
         lines = ["when,messages,farthest_km,aircraft_pos,aircraft_seen",
                  "2026-10-20 21:00,500,300,20,100", "2026-10-20 21:15,700,310,22,110", "2026-10-20 08:00,100,250,5,40",
-                 "2026-10-19 23:00,50,280,3,500", "2026-10-19 21:30,60,330,4,490",       # yesterday: before and after 22h10
+                 # yesterday: inside and outside the window, which starts at 23:00 (0.99.22, S5: the row stamped 23:15
+                 # measured 23:00 to 23:15; one stamped 23:00 measured the quarter hour before the window)
+                 "2026-10-19 23:15,50,280,3,500", "2026-10-19 21:30,60,330,4,490",
                  "2026-10-15 12:00,1000,350,30,800", "2026-09-30 12:00,9,400,1,9"]
         with open(os.path.join(d, "stats.csv"), "w") as fh:
             fh.write("\n".join(lines) + "\n")
@@ -1135,7 +1137,7 @@ class StatsTest(unittest.TestCase):
         self.assertEqual((len(w["labels"]), w["labels"][0], w["labels"][-1]), (7, "14/10", "20/10"))
         self.assertEqual(w["totals"]["aircraft"], 4, "distinct over the days' files")
         self.assertEqual(w["totals"]["farthest_km"], 350)
-        self.assertEqual(w["totals"]["farthest_when"], "2026-10-15 12:00")
+        self.assertEqual(w["totals"]["farthest_when"], "2026-10-15 11:45", "the quarter hour the row stamped 12:00 measured")
         self.assertEqual(w["aircraft"][-1], 2)
         w = server.read_stats(d, now, "30d")["window"]
         self.assertEqual(len(w["labels"]), 30)
@@ -1244,10 +1246,12 @@ class StatsTest(unittest.TestCase):
         d = self._dir()
         now = datetime.datetime(2026, 10, 15, 14, 7)
         lines = ["when,messages,farthest_km,aircraft_pos,aircraft_seen"]
-        # yesterday: two samples; today: 13:00, 13:15, 13:30 and one at 02:00 (inside the 24 h window) and one 30 h ago (outside)
+        # yesterday: two samples; today: 13:15, 13:30, 13:45 and one at 02:15 (inside the 24 h window) and one 30 h ago
+        # (outside). 0.99.22 (S5): a row counts in the quarter hour before its stamp, so the hour 13 is the rows stamped
+        # 13:15 to 14:00 (13:00 to 13:30 before)
         lines += ["2026-10-14 09:00,1000,290,20,120", "2026-10-14 09:15,1100,301,22,130",
-                  "2026-10-15 02:00,200,150,3,40", "2026-10-15 13:00,800,312,18,200", "2026-10-15 13:15,900,300,19,230",
-                  "2026-10-15 13:30,700,280,17,260", "2026-10-14 07:30,50,100,1,10", "garbage,line", "2026-10-13 25:99,1,1,1,1"]
+                  "2026-10-15 02:15,200,150,3,40", "2026-10-15 13:15,800,312,18,200", "2026-10-15 13:30,900,300,19,230",
+                  "2026-10-15 13:45,700,280,17,260", "2026-10-14 07:30,50,100,1,10", "garbage,line", "2026-10-13 25:99,1,1,1,1"]
         with open(os.path.join(d, "stats.csv"), "w") as fh:
             fh.write("\n".join(lines) + "\n")
         with open(os.path.join(d, "seen-2026-10-15"), "w") as fh:
@@ -1274,6 +1278,46 @@ class StatsTest(unittest.TestCase):
         self.assertEqual(days["2026-10-14"]["aircraft"], 130)     # no day file: the CSV's running count
         self.assertEqual(days["2026-10-14"]["messages"], 2150)
         self.assertEqual(r["best"], {"day": "2026-10-15", "farthest_km": 312})
+
+    def test_a_row_counts_in_the_quarter_hour_it_measures(self):
+        # 0.99.22 (review of 0.99.8, S5, the owner's choice of 31 October 2026): a row stamped T holds the messages and
+        # the farthest of T - 15 min to T. Counted at its stamp, the row of D 00:00 (23:45 to 24:00 the day before)
+        # was day D's and hour 00's, and each day lost its own last quarter hour to the next.
+        import datetime
+        d = self._dir()
+        now = datetime.datetime(2026, 10, 21, 13, 50)
+        lines = ["when,messages,farthest_km,aircraft_pos,aircraft_seen",
+                 "2026-10-20 23:45,10,100,5,300", "2026-10-21 00:00,1000,400,7,2", "2026-10-21 00:15,20,50,6,3",
+                 "2026-10-20 14:00,3000,450,9,100", "2026-10-20 14:15,5,60,4,110"]
+        with open(os.path.join(d, "stats.csv"), "w") as fh:
+            fh.write("\n".join(lines) + "\n")
+        r = server.read_stats(d, now, "7d")
+        days = {x["day"]: x for x in r["days"]}
+        self.assertEqual(days["2026-10-20"]["messages"], 3000 + 5 + 10 + 1000, "D 00:00 is D-1's")
+        self.assertEqual(days["2026-10-20"]["farthest_km"], 450)
+        self.assertEqual(days["2026-10-21"]["messages"], 20)
+        self.assertEqual(days["2026-10-21"]["farthest_km"], 50, "the 400 km of 23:45-24:00 is not the 21st's")
+        self.assertEqual(r["today"]["messages"], 20)
+        self.assertEqual(days["2026-10-21"]["aircraft"], 3, "the running count of aircraft stays in the sampler's day")
+        self.assertEqual(days["2026-10-20"]["aircraft"], 300)
+        self.assertEqual(r["hours"][23]["messages"], 1000 + 10, "D 00:00 is hour 23")
+        self.assertEqual(r["hours"][0]["messages"], 20)
+        w = r["window"]
+        self.assertEqual(w["messages"][w["labels"].index("20/10")], 4015)
+        self.assertEqual(w["messages"][w["labels"].index("21/10")], 20)
+        self.assertEqual(w["farthest"][w["labels"].index("21/10")], 50)
+        self.assertEqual(w["totals"]["busiest_hour"], 13, "14:00 measured 13:45 to 14:00")
+        # 24 hours from 14:00 on the 20th: the row stamped 14:15 is the first slot's (14h), the one stamped 14:00 is not in
+        w = server.read_stats(d, now, "24h")["window"]
+        self.assertEqual(w["labels"][0], "14h")
+        self.assertEqual(w["messages"][0], 5, "14:15 is hour 14, slot 0")
+        self.assertEqual(w["totals"]["messages"], 5 + 10 + 1000 + 20, "14:00 measured 13:45 to 14:00, before the window")
+        self.assertEqual(w["farthest"][w["labels"].index("23h")], 400, "D 00:00 is slot 23h")
+        self.assertEqual(w["farthest"][w["labels"].index("00h")], 50)
+        self.assertEqual((w["totals"]["farthest_km"], w["totals"]["farthest_when"]), (400, "2026-10-20 23:45"))
+        # the aircraft with a position are a look at the stamp's moment: 00:00's 7 stays in 00h, 14:00's 9 in 14h
+        self.assertEqual(w["aircraft"][w["labels"].index("00h")], 6.5)
+        self.assertEqual(w["aircraft"][0], 6.5)
 
     def test_empty_file_is_on_but_empty(self):
         d = self._dir()
@@ -1412,6 +1456,23 @@ class FarthestTest(unittest.TestCase):
         s = server.read_stats(d, now, "24h")
         self.assertEqual((s["window"]["totals"]["farthest_km"], s["farthest"]["period"]["km"]), (400, 400))
 
+    def test_the_line_and_the_box_agree_on_a_row_at_the_windows_start(self):
+        # 0.99.22 (S5): the window starts at 15:00 yesterday. The row stamped 15:00 measured 14:45 to 15:00, before it,
+        # as the line leaves out a record at 14:45: in neither. The row stamped 15:15 is in both's first hour.
+        import datetime, json as js
+        d = self._dir()
+        now = datetime.datetime(2026, 10, 20, 14, 20)
+        with open(os.path.join(d, "stats.csv"), "w") as fh:
+            fh.write("when,messages,farthest_km,aircraft_pos,aircraft_seen\n2026-10-19 15:00,100,500,20,50\n"
+                     "2026-10-19 15:15,100,350,20,50\n2026-10-20 10:00,100,300,20,50\n")
+        with open(os.path.join(d, "farthest-2026-10-19"), "w") as fh:
+            js.dump({"km": 500, "time": "14:50", "flight": "", "hex": "3c6444"}, fh)
+        s = server.read_stats(d, now, "24h")
+        self.assertIsNone(s["farthest"]["period"], "14:50 is before the window")
+        self.assertEqual((s["window"]["totals"]["farthest_km"], s["window"]["totals"]["farthest_when"]),
+                         (350, "2026-10-19 15:00"), "the box leaves out the quarter hour before the window too")
+        self.assertEqual(s["window"]["farthest"][0], 350)
+
     def test_the_box_takes_the_farthest_written_down_when_it_is_farther(self):
         # 0.99.4, the owner's /stats#7d of 30 October 2026: the box said 183 NM on 30/10 00:30 (the decoder's quarter
         # hour), the line under it SQ308 at 262 NM on 25/10 (the wall's five-second watch, written down once a day)
@@ -1432,7 +1493,7 @@ class FarthestTest(unittest.TestCase):
         # the busiest hour is one hour of a day: 15:00 on 25/10 alone, not the week's 15:00 added up
         self.assertEqual((w["totals"]["busiest_hour"], w["totals"]["busiest_messages"]), (15, 500))
         with open(os.path.join(d, "stats.csv"), "a") as fh:
-            fh.write("2026-10-26 15:00,300,10,1,1\n")
+            fh.write("2026-10-26 15:15,300,10,1,1\n")           # 15:00 to 15:15 (0.99.22, S5)
         w = server.read_stats(d, now, "7d")["window"]
         self.assertEqual(w["totals"]["busiest_messages"], 400, "800 over two days")
         self.assertEqual(w["totals"]["messages"], 900, "the week's total stays the sum")
@@ -1443,7 +1504,7 @@ class FarthestTest(unittest.TestCase):
         self.assertEqual(w["farthest"][w["labels"].index("30/10")], 339)
         # 24 hours: yesterday's 25/10 is outside, today's 06:00 is in the 06h slot
         w = server.read_stats(d, now, "24h")["window"]
-        self.assertEqual((w["totals"]["farthest_km"], w["totals"]["farthest_when"][11:]), (339, "00:30"))
+        self.assertEqual((w["totals"]["farthest_km"], w["totals"]["farthest_when"][11:]), (339, "00:15"), "the row stamped 00:30 measured from 00:15 (0.99.22, S5)")
 
     def test_the_tracker_keeps_the_farthest_position_of_each_day(self):
         import datetime

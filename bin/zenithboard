@@ -443,8 +443,8 @@ case "${1:-}" in
     esac ;;
   photos)
     case "${2:-}" in
-      on)  root_or_die; cfg_set SHOW_PHOTOS 1; restart_flightinfo; echo "Aircraft photos are ON. The wall reloads by itself within a few seconds." ;;
-      off) root_or_die; cfg_set SHOW_PHOTOS 0; restart_flightinfo; echo "Aircraft photos are OFF: the animated sky scene is shown instead." ;;
+      on)  root_or_die; wall_photos_set 1 ;;
+      off) root_or_die; wall_photos_set 0 ;;
       test) python3 "$ZB_HOME/tools/photo_check.py" "${3:-}" ;;
       *) die "Usage: zenithboard photos on|off|test [HEX]" ;;
     esac ;;
@@ -452,8 +452,8 @@ case "${1:-}" in
     [ "${2:-}" != test ] || { python3 "$ZB_HOME/tools/route_check.py" "${3:-}"; exit $?; }
     root_or_die
     case "${2:-}" in
-      on)  cfg_set SHOW_ROUTES 1; restart_flightinfo; echo "Flight routes are ON (origin and destination, looked up by callsign). The wall reloads by itself." ;;
-      off) cfg_set SHOW_ROUTES 0; restart_flightinfo; echo "Flight routes are OFF: no callsign is sent to the internet." ;;
+      on)  wall_routes_set 1 ;;
+      off) wall_routes_set 0 ;;
       *) die "Usage: zenithboard routes on|off|test [CALLSIGN]" ;;
     esac ;;
   mlat-guard) root_or_die; zb_mlat_guard ;;

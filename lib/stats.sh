@@ -115,6 +115,10 @@ stats_sample() {
   sj="$STATS_AIRCRAFT_DIR/$d/stats.json"; aj="$STATS_AIRCRAFT_DIR/$d/aircraft.json"
   [ -r "$sj" ] || return 0
   stats_prepare_dir || return 0
+  # The row is stamped with the time of the sample; its messages and farthest (the decoder's last15min) are the
+  # quarter hour before it, and `/stats` and `stats show` count them there (0.99.22, S5): the row stamped 00:00 is
+  # the day before's 23:45 to 24:00. The aircraft with a position are a look at this moment, and the day's files
+  # are this day's (the day before's last aircraft are added to its own file below).
   now=$(date '+%Y-%m-%d %H:%M'); day=${now%% *}
   # tar1090's aircraft database, when `data localdb on`: the type of an aircraft the decoder did not give one
   ldb=""; [ "$(cfg_get LOCAL_DB 0)" = 1 ] && ldb=$(cfg_get LOCAL_DB_DIR /usr/local/share/tar1090/git-db/db)
@@ -394,12 +398,20 @@ stats_show() {
   for f in "$STATS_DIR"/seen-????-??-??; do [ -f "$f" ] && counts="$counts"$'\n'"${f##*/seen-},$(grep -c . "$f" || true)"; done
   # The average covers complete days only: before today, sampled from the first hour (00) to the last (23). Today,
   # and a first or last day the timer was on for part of, would pull it down; the label gives how many it covers.
+  # 0.99.22 (S5): the messages and the farthest in the quarter hour they measure (the stamp less 15 minutes, as on
+  # /stats), the aircraft and the complete days at the stamp, the sampler's own day.
   out=$(awk -F, -v today="$today" -v yday="$yday" '
+    function mdays(y, m) { return m == 2 ? ((y % 4 == 0 && y % 100 != 0) || y % 400 == 0 ? 29 : 28) : (m == 4 || m == 6 || m == 9 || m == 11 ? 30 : 31) }
+    function prevday(d,   y, m, n) { y=substr(d,1,4)+0; m=substr(d,6,2)+0; n=substr(d,9,2)-1
+      if (n < 1) { m--; if (m < 1) { m=12; y-- }; n=mdays(y, m) }
+      return sprintf("%04d-%02d-%02d", y, m, n) }
     FNR==NR { if ($1 != "#") cnt[$1]=$2; next }
     FNR>1 { day=substr($1,1,10); hour=substr($1,12,2)
-           msgs[day]+=$2; if ($3>far[day]) far[day]=$3; if ($5>seen[day]) seen[day]=$5; days[day]=1
+           q=substr($1,12,2)*60 + substr($1,15,2) - 15; mday=day; if (q < 0) { q+=1440; mday=prevday(day) }
+           mhour=sprintf("%02d", int(q/60))
+           msgs[mday]+=$2; if ($3>far[mday]) far[mday]=$3; if ($5>seen[day]) seen[day]=$5; days[day]=1; days[mday]=1
            if (hour=="00") first[day]=1; if (hour=="23") last[day]=1
-           if (day==today) h[hour]+=$2 }
+           if (mday==today) h[mhour]+=$2 }
     function aircraft(d) { return (d in cnt) ? cnt[d] : seen[d] }
     END {
       n=0; for (d in days) n++

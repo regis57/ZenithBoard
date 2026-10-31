@@ -146,6 +146,27 @@ cfg_set SHOW_PHOTOS 1
 check "Esc on a yes/no leaves the setting as it was" '[ '"$rc"' = 2 ] && [ "$(cfg_get SHOW_PHOTOS)" = 1 ]'
 ( wt_yesno() { return 1; }; . lib/menus.sh; menu_yesno_set SHOW_PHOTOS "q" 8 )
 check "No on a yes/no switches it off"              '[ "$(cfg_get SHOW_PHOTOS)" = 0 ]'
+# 0.99.22 (review of 0.99.8): the menu's photos and routes switches wrote the setting and did not restart the wall,
+# so an open tablet kept the old one; `photos on|off` and `routes on|off` restart it. Both now take the same path.
+mkdir -p "$t/wb"; printf '#!/bin/bash\necho "systemctl $*" >> "%s/wall.log"\n[ "$1" = list-unit-files ] && echo "$2 enabled"\nexit 0\n' "$t" > "$t/wb/systemctl"; chmod +x "$t/wb/systemctl"
+menu_switch() {   # menu_switch ENTRY yes|no|esc: the wall's Photos, routes menu, that entry, that answer, then Back
+  ( PATH="$t/wb:$PATH"; . lib/flightinfo.sh; . lib/menus.sh
+    rm -f "$t/menu.n"   # the menu is read in $(...), a subshell of its own: its count is kept in a file
+    wt_menu() { [ -e "$t/menu.n" ] && { echo back; return 0; }; : > "$t/menu.n"; echo "$ENTRY"; }
+    wt_yesno() { case "$ANSWER" in yes) return 0 ;; no) return 1 ;; *) return 255 ;; esac; }
+    wt_msg() { echo "MSG $1" >> "$t/wall.log"; }
+    ENTRY=$1 ANSWER=$2; wall_data_menu )
+}
+for e in photos:SHOW_PHOTOS routes:SHOW_ROUTES; do
+  key=${e#*:}; cfg_set "$key" 1; : > "$t/wall.log"
+  menu_switch "${e%%:*}" no
+  check "menu ${e%%:*} No: off and the wall restarted, so the tablets reload" '[ "$(cfg_get "$key")" = 0 ] && grep -q "^systemctl restart zenithboard-flightinfo$" "$t/wall.log" && grep -q "^MSG .* OFF" "$t/wall.log"'
+  : > "$t/wall.log"; menu_switch "${e%%:*}" yes
+  check "menu ${e%%:*} Yes: on and the wall restarted"                       '[ "$(cfg_get "$key")" = 1 ] && grep -q "^systemctl restart zenithboard-flightinfo$" "$t/wall.log" && grep -q "^MSG .* ON" "$t/wall.log"'
+  : > "$t/wall.log"; menu_switch "${e%%:*}" esc
+  check "menu ${e%%:*} Esc: nothing changed, nothing restarted"               '[ "$(cfg_get "$key")" = 1 ] && ! grep -q "restart" "$t/wall.log"'
+done
+check "the command and the menu share the switch's function" 'grep -q "on)  root_or_die; wall_photos_set 1 ;;" bin/zenithboard && grep -q "on)  wall_routes_set 1 ;;" bin/zenithboard && grep -q "menu_yesno_apply wall_photos_set" lib/menus.sh && grep -q "menu_yesno_apply wall_routes_set" lib/menus.sh'
 check "backup sub-menu: no Make or Restore twice, delete not last" '! sed -n "/^backup_menu() {/,/^}/p" lib/backup.sh | grep -q "make \"\|restore \"" && sed -n "/^backup_menu() {/,/^}/p" lib/backup.sh | grep -A1 "clean \"" | grep -q "show \""'
 check "uninstall: Yes goes on, the secrets and the data named" 'grep -q "Yes goes on to the typed word" install.sh && grep -q "Bluesky app password in social.env" install.sh && grep -q "sudo rm -rf \$ZB_DATA" install.sh'
 check "menu: the look is said even when the colour is left" 'grep -q "colour unchanged" lib/menus.sh'
