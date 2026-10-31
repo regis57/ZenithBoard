@@ -163,6 +163,12 @@ Click one of the last jobs to read what it printed: it opens at the top of the d
   it does. The Summaries card, and the first steps, say when no summary goes out (no Bluesky account, or posting off).
   *Try a post* offers *The picture* only when it drew one; on an empty sky it says to try again when the wall shows an
   aircraft nearby. Emptying *Your own templates* and saving asks first, like *Delete them all*.
+* **It stays fresh and keeps the keyboard's place (0.99.18).** Left open, the page reads the Pi again every two minutes
+  and when its tab is shown again (*Read on the Pi* gives the time of that reading), never while a question is open or a
+  field is being typed in. Enter in a field applies it once: its button then waits (*…*). After a change the focus stays
+  on the control that had it, drawn again; a control waiting for the Pi keeps the focus and does nothing. *Activity* and
+  every question take the focus and keep Tab inside them, the page behind out of reach; Escape or × gives it back to
+  what opened them.
 * **Forgotten password, full card, failed command, update (0.54.7).** The sign-in page says how to get a new password
   (`sudo zenithboard console password`: every browser and phone is signed out). The pairing window says the phone must be
   on the home Wi-Fi. A change that cannot be written because the card is full says so, with `zenithboard health`,
@@ -260,6 +266,7 @@ sudo zenithboard console pair        # the phone again (QR code)
 
 Built and previewed on 21 October 2026 against a stand-in for the `zenithboard` command (desktop and phone width,
 headless Chromium): the wizard, every section, Activity, the QR code. The request checks, the sessions, the pairing
-and the helper are covered by `tests/test_console.py` and `tests/test_console.sh`. In use on the reference Pi since
+and the helper are covered by `tests/test_console.py` and `tests/test_console.sh`; the keyboard, the drawer, the
+questions and the fresh reading by `tests/test_console_keys.js` (headless Chromium, 0.99.18). In use on the reference Pi since
 21 October 2026: the systemd path unit and the helper as root (graphs1090 installed from the page), an iPhone paired by
 QR code, a backup downloaded. **Not yet seen there**: a real update from the page. See [Project status](Project-status).
