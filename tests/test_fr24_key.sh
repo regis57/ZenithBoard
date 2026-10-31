@@ -75,6 +75,28 @@ check "a key with another fingerprint is refused" '[ "$rc" -ne 0 ]'
 check "...and nothing is written" '[ ! -e "$t/apt/keyrings/flightradar24.gpg" ]'
 check "...and the error names the expected fingerprint" 'grep -q "$FPR" "$t/out"'
 
+# 6b. 0.99.12 (review B4, SH5): a file that carries the pinned key AND another one: only the pinned key goes in
+all_fprs() { gpg --batch --show-keys --with-colons "$1" 2>/dev/null | awk -F: '$1=="pub"{p=1;next} $1=="fpr"&&p{print $10;p=0;next} {p=0}' | sort | tr '\n' ' '; }
+cat "$t/good.pub" "$t/other.pub" > "$t/two.pub"
+fresh; FR24_KEY_URL="file://$t/two.pub"
+fr24_repair_key >/dev/null 2>&1; rc=$?
+check "two keys in the file: only the pinned one is in the keyring" '[ "$rc" = 0 ] && [ "$(all_fprs "$t/apt/keyrings/flightradar24.gpg")" = "$FPR " ]'
+fresh
+echo "deb [signed-by=$t/apt/keys/fr24.asc] https://repo-feed.flightradar24.com flightradar24 raspberrypi-stable" > "$t/apt/sources.list.d/fr24.list"
+fr24_repair_key >/dev/null 2>&1
+check "...also in an armoured .asc keyring"   'grep -q "BEGIN PGP PUBLIC KEY BLOCK" "$t/apt/keys/fr24.asc" && [ "$(all_fprs "$t/apt/keys/fr24.asc")" = "$FPR " ]'
+# the pinned fingerprint must be a PRIMARY key's: a key that only has it as a subkey is refused
+gpg --batch --quiet --passphrase '' --quick-gen-key "With subkey <sub@example.invalid>" ed25519 sign never 2>/dev/null
+WITHSUB=$(gpg --batch --with-colons --list-keys "sub@example.invalid" 2>/dev/null | awk -F: '$1=="fpr"{print $10; exit}')
+gpg --batch --quiet --passphrase '' --quick-add-key "$WITHSUB" cv25519 encr never 2>/dev/null
+SUBFPR=$(gpg --batch --with-colons --list-keys "$WITHSUB" 2>/dev/null | awk -F: '$1=="sub"{s=1;next} $1=="fpr"&&s{print $10; exit}')
+gpg --batch --armor --export "$WITHSUB" > "$t/withsub.pub"
+fresh; FR24_KEY_FPR="$SUBFPR"; FR24_KEY_URL="file://$t/withsub.pub"
+fr24_repair_key >/dev/null 2>&1; rc=$?
+check "a fingerprint found only as a subkey is refused, nothing written" '[ -n "$SUBFPR" ] && [ "$rc" -ne 0 ] && [ ! -e "$t/apt/keyrings/flightradar24.gpg" ]'
+FR24_KEY_FPR="$FPR"
+check "the scratch keyring is used, never the caller's: no key added to it" '[ "$(gpg --batch --with-colons --list-keys 2>/dev/null | grep -c "^pub")" = 3 ]'
+
 # 7. download failure: non-zero, nothing written
 fresh
 FR24_KEY_URL="file://$t/does-not-exist.pub"

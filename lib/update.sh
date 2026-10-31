@@ -284,7 +284,13 @@ zb_update() {
   if [ "$pull" = 1 ] && [ -n "$src" ] && [ -d "$src/.git" ]; then
     log "Updating ZenithBoard from GitHub ($src), current version $old"
     zb_sync_source "$src" || { warn "The ZenithBoard code was NOT updated: staying on version $old."; export ZB_CODE_NOT_UPDATED="$old"; }
-    bash "$src/install.sh" --deploy                      # copy the new files to /opt/zenithboard
+    # copy the new files to /opt/zenithboard. 0.99.12 (review B4, SH3): until 0.99.11 a failed copy went on to run the
+    # half-copied tree and could still end "Update finished" with exit 0; now it stops here, before anything else runs
+    if ! bash "$src/install.sh" --deploy; then
+      err "Update NOT complete: ZenithBoard's files could not be copied to $ZB_HOME (see above), so nothing else was updated."
+      err "Fix what is said above (a full card?), then:  sudo bash $src/install.sh --deploy  and  sudo zenithboard update"
+      return 1
+    fi
   elif [ "$pull" = 1 ]; then
     warn "The download folder${src:+ $src} is gone, so ZenithBoard itself was not updated. Get it back, then update again:"
     warn "  git clone https://github.com/regis57/ZenithBoard.git ${src:-~/ZenithBoard} && sudo ${src:-~/ZenithBoard}/install.sh --deploy"

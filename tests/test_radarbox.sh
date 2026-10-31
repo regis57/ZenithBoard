@@ -62,6 +62,12 @@ check "apt refuses it: an error, and nothing is left"       '[ "$rc" != 0 ] && [
 fresh; RB24_KEY_URL="file://$t/other.asc"
 rb24_add_repo >"$t/out" 2>&1; rc=$?
 check "another key: refused, nothing written, says why"     '[ "$rc" != 0 ] && [ ! -e "$(rb24_keyring)" ] && [ ! -e "$(rb24_our_source)" ] && grep -q "$FPR" "$t/out"'
+# 0.99.12 (review B4, SH5): a file with the pinned key and another one: the keyring holds the pinned key alone
+all_fprs() { gpg --batch --show-keys --with-colons "$1" 2>/dev/null | awk -F: '$1=="pub"{p=1;next} $1=="fpr"&&p{print $10;p=0;next} {p=0}' | sort | tr '\n' ' '; }
+cat "$t/other.asc" "$t/good.asc" > "$t/two.asc"
+fresh; echo 'VERSION_CODENAME=bookworm' > "$ZB_OS_RELEASE"; RB24_KEY_URL="file://$t/two.asc"
+rb24_add_repo >/dev/null 2>&1; rc=$?
+check "two keys in AirNav's file: only the pinned one goes in" '[ "$rc" = 0 ] && [ "$(all_fprs "$(rb24_keyring)")" = "$FPR " ]'
 fresh; echo "deb https://apt.rb24.com/ bookworm main" > "$t/apt/sources.list.d/rb24.list"
 rb24_add_repo >/dev/null 2>&1
 check "AirNav's own source already there: used, none added" '[ ! -e "$(rb24_our_source)" ] && [ ! -e "$(rb24_keyring)" ]'

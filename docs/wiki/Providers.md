@@ -12,10 +12,10 @@ ZenithBoard does not make FlightAware, ADSB Exchange, Flightradar24 or Plane Fin
 |---|---|---|
 | publishes a new version, same address | Nothing breaks | `sudo zenithboard update` |
 | moves or renames a file | That provider's update stops with a warning | One line to fix — see [Fixing it](#fixing-it) |
-| changes its signing key | The key is refused until its fingerprint is checked | Update, once the new fingerprint is in |
+| changes its signing key | The key is refused until its fingerprint is checked. A key file that carries more keys gives apt the pinned one only (0.99.12) | Update, once the new fingerprint is in |
 | changes what its installer *does* | **Not detected.** See [What cannot be seen coming](#what-cannot-be-seen-coming) | Nothing automatic can help here |
 
-Each feeder fails on its own. A 404 from Plane Finder does not stop FlightAware from updating: `zenithboard update` warns, carries on to the next component, and still ends with `Update finished`. If it is the ZenithBoard code itself that could not be pulled, the update says **`Update NOT complete`** instead and exits 1 (0.53.7; before, it said *finished* and the console showed *done* on the old version). Afterwards, `zenithboard status` says what is really running.
+Each feeder fails on its own. A 404 from Plane Finder does not stop FlightAware from updating: `zenithboard update` warns, carries on to the next component, and still ends with `Update finished`. If it is the ZenithBoard code itself that could not be pulled, the update says **`Update NOT complete`** instead and exits 1 (0.53.7; before, it said *finished* and the console showed *done* on the old version). If the new files could not be copied to `/opt/zenithboard` (a full card), the update stops right there with **`Update NOT complete`**, exit 1, before any component is touched (0.99.12; before, it went on with the half-copied files), and says the two commands to run once the cause is fixed. Afterwards, `zenithboard status` says what is really running.
 
 ---
 
@@ -94,7 +94,7 @@ Each feeder fails on its own. A 404 from Plane Finder does not stop FlightAware 
 | | |
 |---|---|
 | **Fetched** | The package `rbfeeder` from AirNav's own apt repository (`https://apt.rb24.com/`), added by ZenithBoard as `/etc/apt/sources.list.d/zenithboard-rb24.list` with its key in `/etc/apt/keyrings/zenithboard-rb24.gpg`. A source of AirNav's own (their installer, an earlier setup) is used as it is |
-| **Pinned** | The key's full fingerprint, `78F6D790E30AE7F360B716FED4F914061D043681` (*AirNav Systems*, made 30 January 2018, read on keyserver.ubuntu.com on 30 October 2026). A key with another fingerprint is refused and nothing is added. The suite is the system's own when AirNav has it, else `bookworm`, the one the community's container (sdr-enthusiasts/docker-airnavradar) uses. A repository apt refuses is taken away again; signature checking is never switched off |
+| **Pinned** | The key's full fingerprint, `78F6D790E30AE7F360B716FED4F914061D043681` (*AirNav Systems*, made 30 January 2018, read on keyserver.ubuntu.com on 30 October 2026). A key with another fingerprint is refused and nothing is added; only the pinned key, matched as a primary key, goes into the keyring, whatever else the file carries (0.99.12). The suite is the system's own when AirNav has it, else `bookworm`, the one the community's container (sdr-enthusiasts/docker-airnavradar) uses. A repository apt refuses is taken away again; signature checking is never switched off |
 | **Settings** | `/etc/rbfeeder.ini`, written again at each install and update: `[client] network_mode=true`, the antenna's `lat`, `lon` and `alt` (whole metres); `[network] mode=beast`, `external_host=127.0.0.1`, `external_port=30005`; **`[mlat] autostart_mlat=false`**: ADSB Exchange keeps the only MLAT client. `zenithboard mlat-guard` puts it back to `false` and restarts `rbfeeder` |
 | **Its identity** | The sharing key, made by rbfeeder at its first start (`key=` in `[client]`; `sudo rbfeeder --showkey --no-start` prints it). Shown once on the terminal with the claim steps (0.99.7): sign in to a free AirNav Radar account (ZenithBoard never creates it), open `https://www.airnavradar.com/raspberry-pi/claim`, paste the key into the page's *Sharing Key* field and press *Claim!*. The key never goes into the address, and the claim does not depend on the Pi's public IP. A backup keeps it; it is kept on the Pi when AirNav Radar is removed, so putting it back is the same station |
 | **Its page** | The station's serial (`EXTRPI…`) that rbfeeder prints once the key is accepted; the console links `https://www.airnavradar.com/stations/SERIAL` (since 0.99.8; the old `radarbox.com/stations/SERIAL` answers 302 there, RadarBox being AirNav Radar's former name), as AirNav's blog does |
@@ -159,7 +159,7 @@ sudo zenithboard update
 
 ### What not to do
 
-**Do not switch off signature checking** to get past an APT error. A provider whose key changed has to be checked, not skipped: take the new fingerprint from the provider's own page, compare it, and put it in `FR24_KEY_FPR`. ZenithBoard installs a key only when its fingerprint matches that line.
+**Do not switch off signature checking** to get past an APT error. A provider whose key changed has to be checked, not skipped: take the new fingerprint from the provider's own page, compare it, and put it in `FR24_KEY_FPR`. ZenithBoard installs a key only when its fingerprint matches that line, and installs that key alone.
 
 ---
 

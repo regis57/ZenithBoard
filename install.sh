@@ -214,7 +214,8 @@ uninstall_all() {
 case "${1:-}" in
   -h|--help) usage; exit 0 ;;
   --version) echo "ZenithBoard $ZB_VERSION"; exit 0 ;;
-  --deploy) need_root "$@"; mkdir -p "$ZB_ETC"; touch "$ZB_CONFIG"; cfg_defaults; deploy_files; exit 0 ;;
+  # 0.99.12 (review B4, SH3): a failed copy is an exit 1, so the update that runs this stops instead of going on
+  --deploy) need_root "$@"; mkdir -p "$ZB_ETC"; touch "$ZB_CONFIG"; cfg_defaults; deploy_files || exit 1; exit 0 ;;
   --uninstall-all) preflight "$@"; uninstall_all; exit 0 ;;
   "") ;;
   *) usage; exit 1 ;;
