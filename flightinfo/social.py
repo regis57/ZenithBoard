@@ -691,11 +691,15 @@ def hashtag_callsign(flight):
 
 def range_words(km, lang=None, units="metric"):
     """A range record, said without placing the antenna: rounded DOWN to 50 km ("over 300 km"), never the figure.
-    0.55.0: in aviation units, down to 25 NM ("over 150 NM"): the ICAO abbreviation, the same in every language."""
+    0.55.0: in aviation units, down to 25 NM ("over 150 NM"): the ICAO abbreviation, the same in every language.
+    Imperial (0.99.16): down to 25 mi ("over 200 mi"), "mi" after the figure in every language, as NM is."""
     lang = lang or post_lang.get("en")
     if units == "aviation":
         step = int(km / 1.852 // 25) * 25
         return lang.t("over {distance} out", distance=lang.num(max(step, 25)) + NBSP + "NM")
+    if units == "imperial":                      # 0.99.16: in miles, down to 25 mi (it said kilometres)
+        step = int(km / 1.609344 // 25) * 25
+        return lang.t("over {distance} out", distance=lang.num(max(step, 25)) + NBSP + "mi")
     step = int(km // 50) * 50
     return lang.t("over {distance} out", distance=lang.unit(max(step, 50), "kilometer"))
 
@@ -1451,7 +1455,7 @@ def publish_week(c, sec, now, state=None, dry=False, keep=None, second=False, pa
     nothing to say (dry: the text instead)."""
     part = part or (2 if second else 1)
     import social_week as week
-    w = week.week_data(c, now=now, posts=(state or {}).get("post_days"), period=period)
+    w = week.week_data(c, now=now, posts=(state or {}).get("post_days"), period=period, post_times=(state or {}).get("posts"))
     span = {"daily": "the last 24 hours", "weekly": "these seven days", "monthly": "these thirty days"}[period]
     if not w:
         return {"skipped": "no statistics for %s (turn them on: sudo zenithboard stats on)" % span}
@@ -1692,6 +1696,9 @@ def cmd_run():
                     state["last_post"] = now
                     remember(state, p, now)
                     state["pictures"] = int(state.get("pictures", 0)) + 1     # the next one varies, when asked to
+                    # written down before the summaries run (0.99.16): a summary that stops the service no longer
+                    # takes the post's record with it, so the restart does not post the same aircraft again
+                    save_state(state)
                     last_ask = 0                         # another one may be waiting its turn: look again at the next read
                 else:
                     last_fail = now
