@@ -78,8 +78,10 @@ async function check(name, fn) {
   try { await fn(); pass++; console.log("ok   " + name); } catch (e) { fail++; console.log("FAIL " + name + "\n     " + (e && e.message || e)); }
 }
 function file(route, f) {
-  if (!fs.existsSync(f) || !fs.statSync(f).isFile()) return route.fulfill({ status: 404, body: "" });
-  return route.fulfill({ status: 200, contentType: TYPES[path.extname(f)] || "application/octet-stream", body: fs.readFileSync(f) });
+  // read once and answer 404 on any error (a folder too): no check-then-read race (CodeQL, 0.99.20)
+  let body;
+  try { body = fs.readFileSync(f); } catch (e) { return route.fulfill({ status: 404, body: "" }); }
+  return route.fulfill({ status: 200, contentType: TYPES[path.extname(f)] || "application/octet-stream", body });
 }
 async function statsPage(browser, width, height, lang, range) {
   const ctx = await browser.newContext({ viewport: { width, height } });
