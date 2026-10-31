@@ -13,6 +13,7 @@ shellcheck -x -S warning install.sh bin/zenithboard bin/zenithboard-demo lib/*.s
 python3 -m unittest discover -s tests -v
 for t in tests/test_*.sh; do bash "$t" || echo "FAIL $t"; done
 for t in tests/test_*.js; do node "$t" || echo "FAIL $t"; done
+for f in flightinfo/static/*.js tools/*.js tools/graphs1090-look/*.js; do node --check "$f" || echo "FAIL $f"; done
 ```
 
 Run the whole set before pushing. It takes about a minute and a half on a laptop, and the shell tests are the ones that catch the

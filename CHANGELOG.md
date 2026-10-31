@@ -1,5 +1,12 @@
 # Changelog
 
+
+## 0.99.9 — release candidate, fixes from the review of 0.99.8 (in progress)
+The review of 0.99.8 (31 October 2026) in nine dimensions, each finding checked by skeptics: 63 confirmed, fixed in batches. Tests first (no change on the Pi):
+- **A test dated 18 October 2026 would have failed every CI run from 18 November** (its gaps file pruned as older than thirty days): it now uses a date two days back.
+- **CI checks that every page script parses** (`node --check` on the wall's, the console's, `/stats`'s and the tools' JavaScript): a syntax error there passed every suite.
+- **The backup's "never the secrets" check could not fail** (its last command was `rm -f`); it now also covers the console's and Telegram's files.
+- **"CI runs every test" no longer accepts a commented-out line**, and two checks whose loop could end the script without printing FAIL run in a subshell.
 ## 0.99.8 — release candidate, fix
 - **AirNav Radar, formerly RadarBox, said everywhere** (the owner, 31 October 2026: is it said that RadarBox is already airnavradar.com?). The station's page is now linked on airnavradar.com, in `zenithboard status` and on the console's overview: the radarbox.com address of 0.99.6 answers 302 to `https://www.airnavradar.com/stations/SERIAL` (checked that night). The console names it *AirNav Radar, formerly RadarBox* on the overview and in the first steps, in the 22 languages, and the menu's list of networks says *AirNav Radar (formerly RadarBox)*. The feeder keeps its own name, rbfeeder.
 - A fix: the hands-off clock goes on.
