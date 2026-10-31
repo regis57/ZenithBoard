@@ -77,6 +77,13 @@ else
   echo "skip the root check (this run is root)"
 fi
 
+# ---- 0.99.12 (review B4, SH3): --deploy whose copy fails (a cp that cannot write, as on a full card) exits 1, so the
+#      update that runs it stops; until 0.99.11 it printed the error and exited 0
+mkdir -p "$t/cpfail"; printf '#!/bin/bash\necho "cp: write error: No space left on device" >&2; exit 1\n' > "$t/cpfail/cp"; chmod +x "$t/cpfail/cp"
+out=$(PATH="$t/cpfail:$PATH" bash install.sh --deploy 2>&1); rc=$?
+check "--deploy with a failing copy exits 1 and says the copy failed" '[ "$rc" = 1 ] && printf "%s" "$out" | grep -q "Copying ZenithBoard.s files .* failed"'
+rm -rf "$t/opt"; mkdir -p "$t/opt"
+
 # ---- a fresh Pi: the hardware notice, the welcome, the four questions, then the main menu; a typo is asked again
 run fresh ok ok world metric abc ok 49.1193 6.1757 xyz ok 180 10 0
 check "fresh: ends normally at the main menu"       '[ "$rc" = 0 ] && grep -q "^menu	ZenithBoard" "$t/fresh.screens"'

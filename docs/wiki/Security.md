@@ -16,7 +16,7 @@ ZenithBoard runs as root on a machine in your home, listens on your network, and
 | Updates of ZenithBoard | The commit is signature-checked before `install.sh` runs as root. One GitHub release per version, pointing at that signed commit | 0.12.0, fixed in 0.12.3; releases 0.15.0 |
 | Downloads run as root | Private `mktemp` folder (mode 700), https only, no downgrade on redirect | 0.12.0, fixed in 0.12.1 |
 | Third-party installers | **Trusted, not checked** — written down below | always |
-| Package signatures | Never turned off. The Flightradar24 key is installed only if its fingerprint matches | always |
+| Package signatures | Never turned off. The Flightradar24 and AirNav Radar keys are installed only if their primary key's fingerprint matches the pinned one, and only that key goes into apt's keyring, whatever else the downloaded file carries (0.99.12) | always |
 | Secrets | The dynamic-DNS token, the Bluesky app password and the Telegram bot's token never go on a command line, into `config.env` or into a log; they live in root-owned files (the social and Telegram ones readable by their service's group, checked by `zenithboard security`) | always; social 0.18.0; Telegram 0.99.6 |
 | The operating system | Debian's security fixes can install themselves daily, from the security channel only; the feeders are left alone | 0.15.0 |
 | Checking all of it | `zenithboard security` reads the running Pi and says what is open and how to close it | 0.15.0 |
@@ -130,7 +130,7 @@ Housekeeping:
 * **Downloads that are about to be run as root** land in a private folder made for the run (`mktemp -d`, mode 700), never on a fixed name in `/tmp` that somebody else could have created first.
 * **Every download is https**, TLS 1.2 or later, and a redirection cannot drop it to plain http on the way.
 * **The dynamic-DNS token** lives in a root-only file read by curl. It is never on a command line, never in `zenithboard config`, never in a log — which is why `zenithboard config` is safe to paste into an issue.
-* **The Flightradar24 signing key** is installed only when its fingerprint matches the one recorded in `lib/versions.sh`. Package signature checking is never turned off, for any reason.
+* **The Flightradar24 and AirNav Radar signing keys** are installed only when the fingerprint of a **primary** key in the downloaded file matches the one recorded in `lib/versions.sh`, and **only that key** is written to apt's keyring: the file is read in a scratch GnuPG folder and the pinned key exported from it alone. Until 0.99.12 a file that carried the pinned key and another one was installed whole, and apt would have trusted both; a file where the pinned fingerprint is only a subkey of another key is refused. Package signature checking is never turned off, for any reason.
 
 ## What is trusted, and cannot be checked
 
