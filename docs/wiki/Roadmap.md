@@ -63,6 +63,8 @@ Two items of *After 1.0* are to be built from what the reference Pi measures, no
 
 **What is being counted.** With statistics on, every quarter hour the sampler asks the wall which aircraft are inside its radius and notes, once per aircraft over thirty days: the three-letter callsign prefix of each aircraft shown with a callsign but no airline name, and the type code of each aircraft drawn with the generic silhouette. `zenithboard stats gaps` prints both lists, most frequent first.
 
+**Undercounted before 0.99.13 for imperial and aviation units.** Until 0.99.12 the sampler sent `RADIUS` to the wall as kilometres, whatever the units: a wall set to 10 miles (16.1 km) or 10 nautical miles (18.5 km) was sampled over 10 km, a smaller circle, so `stats gaps` counted fewer aircraft than the wall shows (in area, about 39% of the circle for miles and 29% for nautical miles). A Pi set to kilometres was counted right. The gaps files of before are kept as they are (nothing can say which aircraft were missed), so on such a Pi read the figures as a floor, or read them again thirty days after the update. The 17 November reading needs 0.99.13 on the Pi; the units a Pi is set to: `zenithboard config | grep UNITS` (no line means kilometres).
+
 **2. Airline names for callsigns without a route**
 
 1. Read the prefix list. A prefix seen on fewer than three aircraft in thirty days is noise. If no prefix passes that bar, the item is closed: the route lookup already names what matters.

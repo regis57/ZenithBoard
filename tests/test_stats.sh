@@ -123,6 +123,46 @@ check "show: says the count is a floor"               'printf "%s" "$out" | grep
 check "spark: heights follow the values"              '[ "$(stats_spark 0 4 8)" = "▁▅█" ]'
 check "spark: all zero is all low"                    '[ "$(stats_spark 0 0 0)" = "▁▁▁" ]'
 
+# 0.99.13 (review B5, S6): Yesterday and the average are the day files' counts, as Today is; the CSV's count is the
+# one at the day's last sample and misses what the wall added after it. The average covers complete days only.
+yd=$(date -d yesterday '+%Y-%m-%d')
+printf '%s 00:00,7,90,1,4\n%s 23:45,8,95,2,5\n' "$yd" "$yd" >> "$STATS_FILE"
+printf 'b%05d\n' 1 2 3 4 5 6 7 8 9 > "$(stats_day_file "$yd")"
+out=$(stats_show)
+check "show: Yesterday's aircraft are its day file's (9), not the CSV's last count (5)" 'printf "%s" "$out" | grep -q "Yesterday  *9 aircraft seen"'
+check "show: the average is over complete days only, and says how many" 'printf "%s" "$out" | grep -q "Average  *9 aircraft/day on average over 1 complete day "'
+check "show: today and the part-sampled day stay out of the average"   '! printf "%s" "$out" | grep -q "aircraft/day on average over [2-9]"'
+sed -i "/^$yd /d" "$STATS_FILE"; rm -f "$(stats_day_file "$yd")"
+out=$(stats_show)
+check "show: no complete day yet is said, not averaged"                 'printf "%s" "$out" | grep -q "Average  *no complete day yet"'
+
+# 0.99.13 (review B5, S2): the unit's UMask=0077 made the files 0600, and `zenithboard stats` without sudo said
+# 0 samples. A sample under umask 0077 leaves them readable, files written before are opened up, never through a link,
+# and a user who cannot read them is told to use sudo.
+check "unit: UMask=0022 (0077 made the files 0600)" 'grep -qx "UMask=0022" systemd/zenithboard-stats.service && ! grep -q "^UMask=0077" systemd/zenithboard-stats.service'
+chmod 600 "$STATS_FILE" "$(stats_day_file "$today")" "$(stats_fleet_file "$today")"
+echo secret > "$t/target"; chmod 600 "$t/target"; ln -s "$t/target" "$STATS_DIR/seen-2001-01-01"
+echo '{"last15min":{"messages":5,"max_distance":1000}}' > "$t/run/readsb/stats.json"; cfg_set PORT 1     # no wall answers
+( umask 0077; stats_run )
+check "a sample under umask 0077: stats.csv, the day and fleet files are 644" '[ "$(stat -c %a "$STATS_FILE")" = 644 ] && [ "$(stat -c %a "$(stats_day_file "$today")")" = 644 ] && [ "$(stat -c %a "$(stats_fleet_file "$today")")" = 644 ]'
+check "  a link planted in the folder: its target's mode is untouched" '[ "$(stat -c %a "$t/target")" = 600 ]'
+rm -f "$STATS_DIR/seen-2001-01-01"
+check "  what it wrote, new files included, is readable by others" '[ -z "$(find "$STATS_DIR" -type f ! -perm -004)" ]'
+chmod 600 "$STATS_FILE"; stats_install_units
+check "the update path (stats_install_units) opens up a file written before" '[ "$(stat -c %a "$STATS_FILE")" = 644 ]'
+# as another user: nobody when the suite runs as root, the runner itself otherwise (a file of mode 000)
+mkdir -p "$t/other/lib"; cp lib/common.sh lib/stats.sh "$t/other/lib/"; chmod -R a+rX "$t/other"; chmod 755 "$t"; chmod a+r "$ZENITHBOARD_ETC/config.env"; chmod 755 "$ZENITHBOARD_ETC"
+as_other() { local c=". '$t/other/lib/common.sh'; . '$t/other/lib/stats.sh'; $1"
+  if [ "$(id -u)" = 0 ]; then runuser -u nobody -- env ZENITHBOARD_ETC="$ZENITHBOARD_ETC" ZB_STATS_OUT_DIR="$STATS_DIR" PATH="$PATH" bash -c "$c"
+  else bash -c "$c"; fi; }
+chmod 000 "$STATS_FILE"
+out=$(as_other stats_show 2>&1); r=$?
+check "a stats file this user cannot read: 'run with sudo', never 0 samples" '[ $r -ne 0 ] && printf "%s" "$out" | grep -q "cannot read .*stats.csv. Run with sudo: sudo zenithboard stats show" && ! printf "%s" "$out" | grep -q "0 samples"'
+check "  the same for stats status and stats gaps" 'as_other stats_status 2>&1 | grep -q "Run with sudo: sudo zenithboard stats status" && as_other stats_gaps 2>&1 | grep -q "Run with sudo: sudo zenithboard stats gaps"'
+chmod 644 "$STATS_FILE"
+check "  readable: the figures, no sudo asked"              'o=$(as_other stats_show 2>&1); printf "%s" "$o" | grep -q "Today " && ! printf "%s" "$o" | grep -q "Run with sudo"'
+chmod 700 "$t"
+
 # ---- which aircraft was the farthest (0.22.0): asked of the wall on the loopback, written to farthest-DAY.
 #      A stub wall answers: first with the route still on its way, then with it; the timer waits for it.
 port=$((20000 + RANDOM % 20000)); cfg_set PORT "$port"

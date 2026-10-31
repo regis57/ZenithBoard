@@ -67,6 +67,10 @@ rm -f "$t/etc/social.env" "$t/etc/console.env" "$t/etc/telegram.env"
 show=$(backup_show "$t/full.tar.gz")
 check "show: names the identities, never their values" 'echo "$show" | grep -q "Flightradar24 sharing key" && echo "$show" | grep -q "Plane Finder share code" && ! echo "$show" | grep -q "ABCDEF123456\|5X2X2X2X9XaX3\|c0ffee00"'
 check "show: what is on"                             'echo "$show" | grep -q "On: Statistics, graphs1090, Hardware watchdog, Network watchdog, Logs kept after a restart"'
+# 0.99.13 (review B5, S1): the kept logs' boots under systemd 252's --list-boots header (printed unless -q)
+printf '#!/bin/bash\ncase "$*" in *list-boots*) case " $* " in *" -q "*) ;; *) echo "IDX BOOT ID FIRST ENTRY LAST ENTRY";; esac; echo "  0 0123 Thu 2026-10-08 08:43:00 CEST Thu 2026-10-08 09:00:00 CEST";; *) echo "2026-10-08T08:43:00+0200 rp3 kernel: x";; esac\n' > "$t/bin/journalctl"; chmod +x "$t/bin/journalctl"
+check "show: one kept boot is one, not two with the header" 'backup_show "$t/full.tar.gz" | grep -q "kept logs: 1 boot(s)"'
+rm -f "$t/bin/journalctl"
 
 backup_make --console >/dev/null
 check "console: in out/, readable by the wall's group" '[ -f "$t/console/out/backup.tar.gz" ] && [ "$(stat -c %a "$t/console/out/backup.tar.gz")" = 640 ]'

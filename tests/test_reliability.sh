@@ -27,7 +27,9 @@ mk ip 'echo "default via 192.168.1.1 dev eth0"'
 mk systemctl 'echo "systemctl $*" >> '"$t"'/calls; [ "$1" != is-active ] || exit 0'
 mk logger 'echo "logger $*" >> '"$t"'/calls'
 mk vcgencmd 'case "$1" in get_throttled) echo "throttled=$(cat '"$t"'/throttled)";; measure_temp) echo "temp=$(cat '"$t"'/temp)'"'"'C";; esac'
-mk journalctl 'echo "journalctl $*" >> '"$t"'/calls; case "$*" in *list-boots*) cat '"$t"'/boots;; *"-t zenithboard-netwatch"*) cat '"$t"'/nwlog;; *"-b -1 -n 40"*) cat '"$t"'/prevtail;; *"-b -1 -n 8"*) cat '"$t"'/prevtail;; *"-k -b 0"*) cat '"$t"'/kern0;; *"-k -b -1"*) cat '"$t"'/kern1;; esac'
+# 0.99.13 (review B5, S1): --list-boots as systemd 252 (Bookworm, the Pi's) prints it, a header line unless -q
+# (src/journal/journalctl.c: table_print(..., !arg_quiet)); and -b -1 fails, on stderr, when there is no earlier boot
+mk journalctl 'echo "journalctl $*" >> '"$t"'/calls; case "$*" in *list-boots*) case " $* " in *" -q "*) ;; *) echo "IDX BOOT ID                          FIRST ENTRY                 LAST ENTRY";; esac; cat '"$t"'/boots;; *"-t zenithboard-netwatch"*) cat '"$t"'/nwlog;; *"-b -1"*) grep -q "^ *-1 " '"$t"'/boots || { echo "Data from the specified boot (-1) is not available: No such boot ID in journal" >&2; exit 1; }; case "$*" in *"-k -b -1"*) cat '"$t"'/kern1;; *) cat '"$t"'/prevtail;; esac;; *"-k -b 0"*) cat '"$t"'/kern0;; esac'
 mk nmcli 'echo "nmcli $*" >> '"$t"'/calls
 case "$*" in
   "-t -f DEVICE,TYPE device status") [ -f '"$t"'/nowifi ] || printf "eth0:ethernet\nwlan0:wifi\n" ;;
@@ -163,6 +165,16 @@ check "health shows the watchdog's last lines when it is on"  'health_check 2>&1
 check "health says when the watchdog never had to act"       'health_check 2>&1 | grep -q "never needed to act"'
 cfg_set NETWATCH 0
 check "only one boot in the logs"      'health_check 2>&1 | grep -q "no earlier boot"'
+out=$(health_check 2>&1)
+check "one boot under a Bookworm header: never ABRUPTLY (0.99.13, review B5)" '! grep -q "ABRUPTLY" <<<"$out" && grep -q "Previous boot: no earlier boot in the logs" <<<"$out"'
+printf ' 0 bbb Thu 2026-10-08 08:43:00 CEST\xe2\x80\x94Thu 2026-10-08 09:00:00 CEST\n' > "$t/boots"
+check "one boot in the older, headerless format: no earlier boot" 'health_check 2>&1 | grep -q "Previous boot: no earlier boot in the logs"'
+printf '%s\n' "-1 aaa Wed 2026-10-07 10:00:00 CEST—Thu 2026-10-08 03:10:00 CEST" " 0 bbb Thu 2026-10-08 08:43:00 CEST—Thu 2026-10-08 09:00:00 CEST" > "$t/boots"
+printf 'Oct 08 03:09:58 rp3 readsb[300]: something\n' > "$t/prevtail"
+check "two boots in the older format: the earlier one is judged" 'health_check 2>&1 | grep -q "ended ABRUPTLY"'
+: > "$t/prevtail"
+check "an earlier boot listed but with no lines: not called abrupt" 'o=$(health_check 2>&1); ! grep -q ABRUPTLY <<<"$o" && grep -q "no earlier boot" <<<"$o"'
+check "boot rows: header and errors are not boots" '[ "$(printf "IDX BOOT ID FIRST ENTRY LAST ENTRY\n  0 bbb x\n" | zb_boot_rows)" = 1 ] && [ "$(printf "IDX BOOT ID FIRST ENTRY LAST ENTRY\n" | zb_boot_rows)" = 0 ] && [ "$(printf -- "-1 a x\n 0 b y\n" | zb_boot_rows)" = 2 ]'
 mk vcgencmd 'exit 1'
 check "no vcgencmd: the screen still works" 'health_check >/dev/null 2>&1'
 
