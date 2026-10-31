@@ -27,7 +27,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.99.13"
+VERSION = "0.99.14"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -141,10 +141,13 @@ def presets_of(cfg):
 
 
 def cfg_float(cfg, key, default):
+    # float() reads "nan" and "inf" as numbers (0.99.14, review B6): RADIUS=nan made every distance test false, so
+    # every aircraft was in range and the answer carried NaN, which is not JSON. A value that is not finite is no value.
     try:
-        return float(cfg.get(key, default))
+        val = float(cfg.get(key, default))
     except (TypeError, ValueError):
         return float(default)
+    return val if math.isfinite(val) else float(default)
 
 
 def cfg_bool(cfg, key, default="0"):
@@ -1178,6 +1181,17 @@ def build_planes(data, lat, lon, radius_km, airlines=None, photo_lookup=None, de
     return planes, total
 
 
+def _finite(obj):
+    """The same answer with every NaN or infinity replaced by None (null in JSON), for _send."""
+    if isinstance(obj, float):
+        return obj if math.isfinite(obj) else None
+    if isinstance(obj, dict):
+        return {k: _finite(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_finite(v) for v in obj]
+    return obj
+
+
 # --------------------------------------------------------------------------- slow lookups (photos, routes)
 class ThrottledLookup(object):
     """Non-blocking cache in front of a slow, rate-limited web service.
@@ -1220,10 +1234,14 @@ class ThrottledLookup(object):
                 self.worker.start()
         try:
             self.queue.put_nowait(key)
-        except queue.Full:                  # a very busy sky: asked for again next time
+        except queue.Full:                  # a very busy sky: asked for again once the queue has room
             with self.lock:
                 if key in self.cache:
+                    # 0.99.14 (review B6, W3): the entry above was given retry_at = now + retry, as if the service
+                    # had been asked and failed, so a key that never left the Pi waited a whole retry period (a
+                    # minute for routes) before being asked at all. One gap is when the queue may have room again.
                     self.cache[key]["queued"] = False
+                    self.cache[key]["retry_at"] = now + self.gap
                     self.cache[key]["state"] = "queue full"
         return value
 
@@ -1272,9 +1290,22 @@ class ThrottledLookup(object):
             else:
                 value, retry_at, state = None, now + self.retry, "failed"
             with self.lock:
-                if len(self.cache) > self.max_entries:
-                    self.cache.clear()
+                # Stored last, so the dict's order is the order of the answers and the oldest come first.
+                self.cache.pop(key, None)
                 self.cache[key] = {"value": value, "retry_at": retry_at, "queued": False, "state": state}
+                if len(self.cache) > self.max_entries:
+                    self._evict(key)
+
+    def _evict(self, keep):
+        """Drop the oldest settled entries down to 90% of the cap (0.99.14, review B6, W4). The cache used to be
+        wiped whole: every answer was lost at once, and a key still in the queue lost its entry, so pending() said
+        False while its answer was on its way and the next get() queued it a second time. A queued key is never
+        dropped, nor the answer just stored."""
+        target = int(self.max_entries * 0.9)
+        for k in [k for k, e in self.cache.items() if not e["queued"] and k != keep]:
+            if len(self.cache) <= target:
+                break
+            del self.cache[k]
 
 
 # --------------------------------------------------------------------------- photos (Planespotters, optional)
@@ -2085,7 +2116,13 @@ class Handler(BaseHTTPRequestHandler):
 
     def _send(self, code, body, ctype="application/json", cache="no-store", headers=None):
         if isinstance(body, (dict, list)):
-            body = json.dumps(body).encode("utf-8")
+            # NaN and Infinity are not JSON: a browser's JSON.parse refuses the whole answer (0.99.14, review B6, W7).
+            # Python writes them unless told not to; a value that still slips through becomes null, never a 500.
+            try:
+                body = json.dumps(body, allow_nan=False)
+            except ValueError:
+                body = json.dumps(_finite(body), allow_nan=False)
+            body = body.encode("utf-8")
         ctype, cache = self._header_values(ctype, cache)
         self.send_response(code)
         self.send_header("Content-Type", ctype)
@@ -2219,6 +2256,8 @@ class Handler(BaseHTTPRequestHandler):
         try:
             radius_km = float(query["radius_km"][0])
         except (KeyError, ValueError, IndexError):
+            radius_km = None
+        if radius_km is None or not math.isfinite(radius_km):     # 0.99.14 (review B6, W7): ?radius_km=nan or inf
             radius_km = radius_to_km(cfg_float(cfg, "RADIUS", 10), units)
         radius_km = min(max(radius_km, 0.1), 500.0)
         data, path = read_aircraft(cfg)

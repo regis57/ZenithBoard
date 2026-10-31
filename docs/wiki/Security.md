@@ -34,7 +34,7 @@ ZenithBoard runs as root on a machine in your home, listens on your network, and
 | Surface | Reachable from | Notes |
 |---|---|---|
 | The wall, port 8080 | Home networks (`ALLOW_FROM=private`) | No login: it is meant to be opened by a tablet with no keyboard. Anyone outside the private ranges gets a 403, forwarded port or not. Since 0.54.0 the data answers only to the Pi's own names too (DNS rebinding, see the table below) |
-| `/api/planes`, `/api/config` | Same | Aircraft in range, and display settings. **The antenna's exact position is never sent** |
+| `/api/planes`, `/api/config` | Same | Aircraft in range, and display settings. **The antenna's exact position is never sent**. A `radius_km` that is not a number, or not a finite one (`nan`, `inf`), is the configured radius, held between 0.1 and 500 km; an answer is always strict JSON, never `NaN` (0.99.14) |
 | tar1090, port 80 | Same | Installed by readsb, not by ZenithBoard |
 | Plane Finder, port 30053 | Same | Its own setup page |
 | graphs1090, port 8542 and `/graphs1090` on port 80 | Anyone who reaches the port: lighttpd has no address check | Only when `graphs on` (0.32.0). The decoder's counters, CPU and temperature; the range graph gives distances, never the antenna's position. Served by lighttpd, not by ZenithBoard. `zenithboard security` names it |
