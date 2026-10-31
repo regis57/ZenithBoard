@@ -239,13 +239,15 @@ input.day { width: 4.5em; }
 .wiz .lead { color: var(--muted); margin: 0 0 14px; font-size: 14px; }
 .wiz .row { padding: 10px 0; }
 .ticks { list-style: none; padding: 0; margin: 0 0 8px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
-.ticks li::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--on); margin: 0 10px 2px 0; }
+/* 0.99.19: the gap on the words' side, also right to left */
+.ticks li::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--on); margin: 0 0 2px; margin-inline-end: 10px; }
 .ticks.no li::before { background: var(--faint); }
 .ticks li.here { font-weight: 600; }                       /* 0.53.0: the line for this device, in the app card */
 .plan li.run::before { animation: pulse .5s infinite alternate; }
 .plan li.ok::before { background: var(--ok); } .plan li.bad::before { background: var(--bad); }
 
-.toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 20; background: #f2f2f2; color: #000; font: 13px var(--mono);
+/* 0.99.19 (review B11): a toast only tells; a tap goes through it to what is under it */
+.toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 20; pointer-events: none; background: #f2f2f2; color: #000; font: 13px var(--mono);
   padding: 10px 14px; border-radius: 6px; max-width: min(560px, calc(100% - 32px)); box-shadow: 0 6px 24px rgba(0, 0, 0, .5); }
 .toast.bad { background: var(--bad); color: #000; }
 
@@ -265,6 +267,11 @@ input.day { width: 4.5em; }
   .view { padding: 14px 16px 28px; gap: 12px; }
   .card { padding: 14px 14px; }
   .tile .v { font-size: 24px; }
+  /* 0.99.19 (review B11): the line under a figure (the Pi's model, a power warning in German) wraps instead of being cut */
+  .tile .d { white-space: normal; overflow-wrap: anywhere; text-overflow: clip; }
+  /* 0.99.19: a toast at the top, below the notch, where it covers neither the tab bar nor the wizard's buttons; the
+     phone's width for its words (centred from the middle, it had half of it and wrapped every three words) */
+  .toast { bottom: auto; top: calc(env(safe-area-inset-top) + 12px); left: 16px; right: 16px; transform: none; width: fit-content; margin: 0 auto; max-width: none; }
   .tabs { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); position: fixed; left: 0; right: 0; bottom: 0; z-index: 5;
     height: calc(var(--tabs) + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom);
     background: rgba(8, 8, 8, .96); border-top: 1px solid var(--line2); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
@@ -285,6 +292,13 @@ input.day { width: 4.5em; }
   .modal-panel { border-radius: 14px 14px 0 0; max-height: 92vh; }
 }
 @media (max-width: 380px) { .seg button { padding: 8px 8px; } }
+/* 0.99.19 (review B11): a 360 px phone: "14 дн. 7 ч." in its tile, "STABILITÄT" and "НАДЁЖНОСТЬ" in their tab without a
+   letter wrapped onto a line of its own */
+@media (max-width: 400px) {
+  .tile { padding: 12px 12px; }
+  .tile .v { font-size: 20px; }
+  .tabs a { letter-spacing: 0; }
+}
 .gate-card .fine + .fine { margin-top: -12px; }
 
 /* 0.40.2: a button's output under it, in its own card */
@@ -309,6 +323,7 @@ input.day { width: 4.5em; }
 [dir="rtl"] .busy::before { margin-right: 0; margin-left: 10px; }
 [dir="rtl"] select { padding-right: 10px; padding-left: 26px; }
 [dir="rtl"] button.page, [dir="rtl"] .list button.li { text-align: right; }
+[dir="rtl"] .nav a.on { box-shadow: inset -3px 0 0 var(--on); }          /* 0.99.19: the mark on the side bar's outer edge */
 [dir="rtl"] .list button.li.sel { box-shadow: inset -3px 0 0 var(--on); padding-left: 0; padding-right: 10px; }
 [dir="rtl"] .drawer-panel { right: auto; left: 0; border-left: 0; border-right: 1px solid var(--line2); }
 [dir="rtl"] .sw::after { left: 28px; }

@@ -38,7 +38,7 @@ async function consolePage(browser, opts) {
   await page.route(BASE + "/**", async (route) => {
     const u = new URL(route.request().url()), p = u.pathname;
     const json = (o) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(o) });
-    if (p === "/api/config") return json({ lang: "", langs: [] });
+    if (p === "/api/config") return json({ lang: "", langs: opts.lang ? [opts.lang] : [] });
     if (p === "/console" || p === "/console/") return route.fulfill({ status: 200, contentType: "text/html", body: fs.readFileSync(path.join(STATIC, "console.html")) });
     if (p.indexOf("/static/") === 0) {
       const f = path.join(STATIC, p.slice(8));
@@ -50,7 +50,7 @@ async function consolePage(browser, opts) {
     if (api === "state") {
       seen.state++;
       return json({ cfg: { THEME: "amber", CYCLE_SECONDS: "8", RADIUS: "5", UNITS: "metric", DISPLAY_MODE: "dots", CONSOLE_LANG: "en" },
-        facts: { watchdog: "off", netwatch: "off", graphs: "off", svc_readsb: "active" }, facts_at: now(),
+        facts: Object.assign({ watchdog: "off", netwatch: "off", graphs: "off", svc_readsb: "active" }, opts.facts || {}), facts_at: now(),
         catalog: CAT.catalog, sections: CAT.sections, now: now() });
     }
     if (api === "run") {
@@ -60,9 +60,10 @@ async function consolePage(browser, opts) {
     }
     if (api.indexOf("job") === 0) return json({ state: "running", log: "$ zenithboard …\n", next: 1 });
     if (api === "activity") return json({ jobs: [], journal: [], audit: [] });
+    if (api === "sessions") return json({ you: "a", sessions: [{ id: "a", label: "Chrome on Linux", kind: "password", created: now() - 3600, seen: now() }] });
     return json({});
   });
-  await page.goto(BASE + "/console#" + (opts.section || "overview"));
+  await page.goto(BASE + "/console" + (opts.lang ? "?lang=" + opts.lang : "") + "#" + (opts.section || "overview"));
   await page.waitForSelector("#view .card");
   return { page, ctx, seen };
 }
@@ -173,6 +174,67 @@ const active = (page) => page.evaluate(() => {
       });
       await page.waitForTimeout(300);
       assert.ok(seen.state > before, "a reading when the tab is shown again");
+      await ctx.close();
+    });
+
+    // 0.99.19 (review B11): on a 360 px phone the overview's tiles and the tab bar fit their words in long languages;
+    // a tile's line under its figure wraps instead of being cut, and keeps its whole text in a title
+    const PI = { uptime_s: 1234567, model: "Raspberry Pi 3 Model B Rev 1.2", temp_c: "52.1", throttled: "0x50005", load: "0.42",
+      mem_avail_mb: 512, mem_total_mb: 906, disk_free_mb: 21300, disk_total_mb: 29800 };
+    for (const lang of ["en", "fr", "ru", "de", "ar"]) {
+      await check("360 px, " + lang + ": no tile line and no tab label is cut", async () => {
+        const { page, ctx } = await consolePage(browser, { viewport: { width: 360, height: 740 }, lang, facts: PI });
+        await page.waitForSelector(".tile .d");
+        const r = await page.evaluate(() => {
+          const cut = [];
+          document.querySelectorAll(".tile .v, .tile .d, .tile .k, .tabs a span").forEach((e) => {
+            if (e.scrollWidth > e.clientWidth + 1) cut.push(e.className + "|" + e.parentNode.className + ": " + e.textContent + " (" + e.scrollWidth + ">" + e.clientWidth + ")");
+          });
+          // a tab's label breaks between words, never inside one ("STABILITÄ / T")
+          document.querySelectorAll(".tabs a span").forEach((e) => {
+            e.style.overflowWrap = "normal"; e.style.hyphens = "manual";
+            if (e.scrollWidth > e.clientWidth + 1) cut.push("tab label " + e.textContent + " broken inside a word (" + e.scrollWidth + ">" + e.clientWidth + ")");
+            e.style.overflowWrap = ""; e.style.hyphens = "";
+          });
+          const tabs = document.querySelector("#tabs").getBoundingClientRect();
+          document.querySelectorAll(".tabs a").forEach((a) => {
+            const b = a.getBoundingClientRect();
+            if (b.left < tabs.left - 1 || b.right > tabs.right + 1 || a.scrollWidth > a.clientWidth + 1) cut.push("tab " + a.textContent + " out of the bar");
+          });
+          const noTitle = Array.prototype.filter.call(document.querySelectorAll(".tile .v, .tile .d"),
+            (e) => e.textContent.trim() && e.textContent !== "\u00a0" && e.title !== e.textContent).map((e) => e.textContent);
+          return { dir: document.documentElement.dir || "ltr", cut, noTitle, wide: document.documentElement.scrollWidth };
+        });
+        assert.deepStrictEqual(r.cut, [], "cut: " + r.cut.join("; "));
+        assert.deepStrictEqual(r.noTitle, [], "no title on " + r.noTitle.join(", "));
+        assert.ok(r.wide <= 360, "the page scrolls sideways (" + r.wide + " px)");
+        assert.strictEqual(r.dir, lang === "ar" ? "rtl" : "ltr");
+        await ctx.close();
+      });
+    }
+
+    await check("a toast lets the taps through and, on a phone, never covers the tab bar", async () => {
+      const { page, ctx } = await consolePage(browser, { viewport: { width: 360, height: 740 } });
+      await page.evaluate(() => { const x = document.querySelector(".toast") || document.createElement("div");
+        x.className = "toast bad"; x.textContent = "A long message that says what went wrong, on two lines of a phone"; x.hidden = false;
+        if (!x.parentNode) document.body.appendChild(x); });
+      const r = await page.evaluate(() => {
+        const x = document.querySelector(".toast"), b = x.getBoundingClientRect(), tb = document.querySelector("#tabs").getBoundingClientRect();
+        return { pe: getComputedStyle(x).pointerEvents, bottom: b.bottom, tabsTop: tb.top, top: b.top };
+      });
+      assert.strictEqual(r.pe, "none");
+      assert.ok(r.bottom < r.tabsTop, "the toast (" + r.top + "–" + r.bottom + ") over the tab bar (" + r.tabsTop + ")");
+      assert.ok(r.top < 740 / 2, "the toast at the top of a phone");
+      await ctx.close();
+    });
+
+    await check("Arabic, 1280 px: the side bar's chosen section is marked on its right edge", async () => {
+      const { page, ctx } = await consolePage(browser, { lang: "ar", section: "system" });
+      const sh = await page.evaluate(() => getComputedStyle(document.querySelector(".nav a.on")).boxShadow);
+      assert.ok(/inset/.test(sh) && /-3px 0px 0px/.test(sh), "the mark: " + sh);
+      const m = await page.evaluate(() => { const li = document.querySelector(".ticks li");
+        return li ? getComputedStyle(li, "::before").marginLeft + " " + getComputedStyle(li, "::before").marginRight : null; });
+      if (m) assert.strictEqual(m, "10px 0px", "a tick's dot keeps its gap before the words: " + m);
       await ctx.close();
     });
   } finally {
