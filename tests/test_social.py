@@ -652,6 +652,12 @@ class PictureTest(unittest.TestCase):
         self.assertEqual(social.speed_words(453, "aviation"), "453\u00a0kt")
         self.assertEqual(social.range_words(332, units="aviation"), "over 175\u00a0NM out")     # 332 km = 179 NM, down to 25
         self.assertEqual(social.range_words(30, units="aviation"), "over 25\u00a0NM out")
+        # review B8 (0.99.16): imperial said kilometres; miles now, down to 25 mi
+        self.assertEqual(social.range_words(342, units="imperial"), "over 200\u00a0mi out")      # 342 km = 212.5 mi
+        self.assertEqual(social.range_words(30, units="imperial"), "over 25\u00a0mi out")
+        t = social.post_text(dict(EZY, distance_km=332.4), dict(CFG, SOCIAL_UNITS="imperial"), why="farthest")
+        self.assertIn("range record for 30 days: over 200\u00a0mi out", t)
+        self.assertNotIn("km", t)
 
     def test_the_picture_s_colour_setting(self):
         self.assertEqual(social.theme_of({"THEME": "red"}), "red")                          # the wall's, by default
@@ -2041,6 +2047,24 @@ class WeeklyTest(unittest.TestCase):
         social.server.STATS_DIR = self.d + "/none"
         self.assertIn("skipped", social.publish_week(self.c, {}, now, {}, dry=True))
 
+    def test_the_daily_summary_counts_the_last_24_hours(self):
+        # review B8 (0.99.16): the daily summary counted the posts of the calendar day, so at 10:00 it said 2 after a
+        # day of 32. Now the 24 hours before it, by the time of each post; one 25 hours old is not counted
+        import datetime
+        self.addCleanup(setattr, social.server, "STATS_DIR", social.server.STATS_DIR)
+        social.server.STATS_DIR = self.d
+        at = lambda *a: time.mktime(datetime.datetime(*a).timetuple())
+        now = at(2026, 10, 18, 10, 0)
+        st = warm()
+        social.remember(st, EZY, now - 25 * 3600)                      # the 17th, 09:00: too old
+        for i in range(30):
+            social.remember(st, dict(EZY, hex="4071%02x" % i), at(2026, 10, 17, 15, 0) + i)
+        for i in range(2):
+            social.remember(st, dict(EZY, hex="4072%02x" % i), at(2026, 10, 18, 8, 0) + i)
+        st["posts"] = [t for t in st["posts"] if now - t <= 86400] + [now - 25 * 3600]   # kept, as if not pruned yet
+        r = social.publish_week(self.c, {}, now, st, dry=True, period="daily")
+        self.assertIn("Posted here: 32 crossings.", r["text"])
+
     def test_publish_for_real_posts_once_and_deletes_the_picture(self):
         # 0.54.14 (the audit of 22-23 October 2026): publish_week was only ever run dry
         self.addCleanup(setattr, social.server, "STATS_DIR", social.server.STATS_DIR)
@@ -2264,9 +2288,6 @@ class WeeklyTest(unittest.TestCase):
         self.assertNotIn(3, [p for _, p in sent], "and the rest with it: Bluesky is not answering")
         self.assertNotIn("weekly2", state)
 
-if __name__ == "__main__":
-    unittest.main()
-
 
 class PostNowTest(unittest.TestCase):
     """0.54.13 (the audit of 22-23 October 2026): `social post` ("Post now") had no test; it caused a double post in 0.19.2.
@@ -2304,3 +2325,41 @@ class PostNowTest(unittest.TestCase):
         self.assertEqual(rc, 1)
         self.assertEqual(self.remembered, [])
         self.assertIn("FAILED", out)
+
+
+class SavedAtOnceTest(unittest.TestCase):
+    """Review B8 (0.99.16): a post is written down before the summaries run, so a summary that stops the service does
+    not make the restart post the same aircraft again."""
+
+    def test_a_summary_that_stops_the_service_keeps_the_post(self):
+        import contextlib
+        import io
+        d = tempfile.mkdtemp(); self.addCleanup(shutil.rmtree, d, True)
+        self.addCleanup(setattr, social, "STATE_DIR", social.STATE_DIR); social.STATE_DIR = d
+        clock = [1800000000.0]
+
+        def stop(*a, **k):
+            raise SystemExit(1)
+        for name, fake in (("read_aircraft", lambda c: []), ("account", lambda: {"BLUESKY_HANDLE": "h", "BLUESKY_APP_PASSWORD": "p"}),
+                           ("one_poll", lambda c, st, tr, ac, now: ([BELUGA], (5, "all", BELUGA))),
+                           ("cfg", lambda: dict(CFG)),
+                           ("publish", lambda *a, **k: {"bluesky": "at://x"}),
+                           ("schedule_summaries", lambda c, st, now: [{"period": "daily", "part": 1, "key": "k", "at": now}]),
+                           ("publish_week", stop)):
+            self.addCleanup(setattr, social, name, getattr(social, name))
+            setattr(social, name, fake)
+        self.addCleanup(setattr, time, "time", time.time); time.time = lambda: clock[0]
+
+        def no_sleep(sec):
+            self.fail("the summary was never tried")
+        self.addCleanup(setattr, time, "sleep", time.sleep); time.sleep = no_sleep
+        with contextlib.redirect_stdout(io.StringIO()):
+            with self.assertRaises(SystemExit):
+                social.cmd_run()
+        st = social.load_state()
+        self.assertIn(BELUGA["hex"], st.get("posted", {}), "the post was written down before the summary stopped the service")
+        self.assertEqual(st.get("last_post"), clock[0])
+
+
+if __name__ == "__main__":
+    unittest.main()

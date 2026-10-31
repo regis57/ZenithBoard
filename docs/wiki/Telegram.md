@@ -67,7 +67,8 @@ What the message knows comes from the wall (airline, model, route, as for the po
 * **Paced as Telegram asks**: one message every 3.1 seconds at most, about 20 a minute into a group (Telegram's limit; one a second into a private chat). A burst waits its turn, an emergency first.
 * A **429** (*too many requests*) waits the time Telegram gives. Telegram not reachable: tried again a minute later. A token or a chat refused (the bot removed from the group, the token revoked): tried again ten minutes later, said once in the journal.
 * A message that cannot go out is dropped after **ten minutes** for a crossing, **an hour** for a squawk; the journal says so.
-* A group that becomes a supergroup gets a new id: the service follows it until it restarts; `sudo zenithboard telegram chat` keeps it for good.
+* A group that becomes a supergroup gets a new id: the service follows it until it restarts (since 0.99.16 also after each fresh read of the bot's settings, a few seconds later, which lost it before); `sudo zenithboard telegram chat` keeps it for good. The id never goes to the journal.
+* **Sent once, written down at once** (0.99.16): what a pass sent or queued is saved before the next one, and when the service is stopped (`systemctl stop`, an update, a reboot), so a restart never sends the same crossing or squawk again.
 * Link previews are off: a link is a link, no picture is fetched.
 
 ## Commands
@@ -75,7 +76,7 @@ What the message knows comes from the wall (airline, model, route, as for the po
 | Command | |
 |---|---|
 | `sudo zenithboard telegram setup` | The bot (its token) and the chat |
-| `sudo zenithboard telegram on` · `off` · `status` | Switch the messages; what it sends, what it sent today and in seven days, the last refusal |
+| `sudo zenithboard telegram on` · `off` · `status` | Switch the messages; what it sends, what it sent today and in the last seven days (today and the six before it, by date; 0.99.16), the last refusal |
 | `sudo zenithboard telegram chat` | Choose the chat again |
 | `sudo zenithboard telegram check` · `hello` | Does the token answer; send the *connected* message |
 | `zenithboard telegram test [crossing\|squawk] [send]` | Each message filled now, sent nowhere; `send`: to the chat, marked as a test |

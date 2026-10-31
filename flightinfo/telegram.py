@@ -32,6 +32,7 @@ import datetime
 import json
 import os
 import re
+import signal
 import sys
 import time
 import urllib.error
@@ -362,6 +363,15 @@ def crossing_candidates(c, planes, state, pending_since, now):
 class Outbox(object):
     def __init__(self):
         self.items, self.next_at, self.pause_until, self.said = [], 0.0, 0.0, {}
+        self.moved = None                          # (old id, new id) once Telegram said the group became a supergroup
+
+    def follow_move(self, sec):
+        """A supergroup's new id, put back after each read of the secrets file (0.99.16: it was lost at the next read,
+        a quarter of a minute later, and every message was refused again). Only the exact old id is replaced: a chat
+        the owner set up since is his choice."""
+        if self.moved and str(sec.get("TELEGRAM_CHAT_ID", "")) == self.moved[0]:
+            sec["TELEGRAM_CHAT_ID"] = self.moved[1]
+        return sec
 
     def add(self, kind, text, what, now):
         self.items.append({"kind": kind, "text": text, "what": what, "made": now})
@@ -406,6 +416,7 @@ class Outbox(object):
         elif moved:
             # the group became a supergroup, with a new id: used from now on, kept in memory only (the service cannot
             # write its secrets file); the setup writes it for good
+            self.moved = (str(sec.get("TELEGRAM_CHAT_ID", "")), str(moved))
             sec["TELEGRAM_CHAT_ID"] = str(moved)
             self.note("moved", "telegram: the group became a supergroup; its new id is used until a restart. To keep it: sudo zenithboard telegram chat", now)
         elif exc.code == 0:
@@ -449,6 +460,14 @@ def cmd_run():
         "all" if "all" in rules_of(c) else ", ".join(sorted(rules_of(c))),
         "on" if server.cfg_bool(c, "TELEGRAM_SQUAWKS", "1") else "off", lang_of(c)), flush=True)
     last_ask = last_save = 0
+
+    def stop(signum, frame):
+        # systemd stops the service with SIGTERM: what this pass already sent is written down first, so a restart
+        # never sends it again (0.99.16)
+        state["queue"] = len(outbox.items)
+        save_state(state)
+        sys.exit(0)
+    signal.signal(signal.SIGTERM, stop)
     while True:
         now = time.time()
         c = cfg()
@@ -457,22 +476,26 @@ def cmd_run():
         if ask:
             last_ask = now
             prune(state, now)
-            sec = secrets() or sec
+            sec = outbox.follow_move(secrets() or sec)
+        before = len(outbox.items)
         try:
             one_look(c, state, aircraft, squawks, pending_since, outbox, now, ask)
         except Exception as exc:                    # a message that cannot be made must not stop the service
             print("telegram: could not make a message: %s" % exc, flush=True)
+        queued, sent = len(outbox.items) > before, 0
         if outbox.items:
             if ready(sec):
                 try:
-                    outbox.flush(sec, state, now)
+                    sent = outbox.flush(sec, state, now) or 0
                 except Exception as exc:            # whatever went wrong with one message, the service goes on
                     outbox.note("flush", "telegram: could not send: %s" % scrub(exc, sec), now, 600)
                     outbox.pause_until = now + PAUSE_OFFLINE_S
             else:
                 outbox.note("nochat", "telegram: no bot or chat set up, nothing can be sent: sudo zenithboard telegram setup", now, 3600)
                 outbox.items = [m for m in outbox.items if now - m["made"] <= KEEP_S.get(m["kind"], 600)]
-        if outbox.items or now - last_save >= 60:
+        # written at once when this pass queued or sent anything (0.99.16: a message sent with the queue then empty
+        # waited up to a minute to be written down, and a restart in that minute sent it again)
+        if queued or sent or outbox.items or now - last_save >= 60:
             state["queue"] = len(outbox.items)
             save_state(state)
             last_save = now
@@ -613,7 +636,9 @@ def cmd_status():
         print("  %s template: %s" % (kind.capitalize(), "yours" if mine and not template_problem(mine) else ("yours, NOT usable (%s): the default is used" % template_problem(mine) if mine else "the default")))
     days = s.get("days") or {}
     today = days.get(social.day_of(now), {})
-    week = {k: sum(int(d.get(k, 0)) for d in days.values()) for k in ("crossing", "squawk")}
+    # today and the six days before it, by date (0.99.16: every stored day was added, eight of them after midnight)
+    seven = {(datetime.date.fromtimestamp(now) - datetime.timedelta(days=i)).isoformat() for i in range(7)}
+    week = {k: sum(int(d.get(k, 0)) for day, d in days.items() if day in seven and isinstance(d, dict)) for k in ("crossing", "squawk")}
     print("  Sent today: %d crossing(s), %d squawk(s); last 7 days: %d and %d" % (int(today.get("crossing", 0)), int(today.get("squawk", 0)), week["crossing"], week["squawk"]))
     last = s.get("last") or {}
     if last:
