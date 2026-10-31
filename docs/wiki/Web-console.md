@@ -69,6 +69,15 @@ for setting up, not for every visit: once a browser or a phone is signed in, it 
 * **Signing out**: *Sign out* on the page; *System → Signed in* lists every browser and phone and signs any of them
   out (this browser first; since 0.54.18, more than two others fold under one line, *N other browsers and phones*,
   that unfolds); `sudo zenithboard console signout` signs everyone out, and so does choosing a new password.
+  Since 0.99.10 a sign-out also ends what that browser or phone handed out: a pairing code it made is refused, and a
+  computer it said yes to is not signed in (its page says *Refused on the phone*), whether it signed itself out, was
+  signed out from *System → Signed in*, or everyone was (`console signout`, `console password`). A code printed by
+  `sudo zenithboard console pair` before `console signout` or `console password` is refused too; print a new one.
+* **Wrong passwords** (0.99.10): five tries from one address, then a wait that doubles with each miss (30 seconds up
+  to an hour); thirty misses in a quarter of an hour from anywhere, and everyone waits five minutes. Tries sent all at
+  once count the same as tries one after the other. The Pi checks two passwords at a time (each check takes 16 MB of
+  memory, on purpose, so that a stolen hash is slow to guess); a third sign-in at that moment is answered *Busy. Try
+  again in a few seconds.*, and that try does not count as a miss.
 
 **Face ID and passkeys are not offered, on purpose.** A passkey (WebAuthn) is tied to a domain name and browsers allow
 it only in a *secure context*: HTTPS, or `localhost` on the machine itself. A plain-HTTP page at an address like
@@ -210,8 +219,9 @@ when you do not need it. `zenithboard security` says it is on and checks the pas
 |---|---|
 | **Password forgotten** | 1. `sudo zenithboard console password` (choose a new one; everyone is signed out). 2. Sign in again |
 | **"This pairing code is used or out of date"**, with a fresh code | The wall could not write its console folder: it was started before `console on` made it, and its sandbox opens only folders present at its start (0.39.0, fixed in 0.39.2: `console on` restarts it, the code no longer depends on that write). 1. `sudo systemctl restart zenithboard-flightinfo`. 2. `sudo zenithboard console pair` again (a code works once, five minutes). The page also says it when the folder cannot be written |
+| **"Busy. Try again in a few seconds."** (0.99.10) | Other sign-ins were being checked at that moment (two at a time). Sign in again a few seconds later; if it keeps coming back, something on the network is trying passwords: *Activity → Sign-ins* shows the addresses |
 | **"Too many tries. Wait N seconds."** (failed QR codes count too) | 1. Wait, or 2. `sudo systemctl restart zenithboard-flightinfo` (the count lives in the wall's memory; signed-in sessions survive the restart) |
-| **Phone lost, or a browser you do not know in *Signed in*** | From a browser still signed in: *System → Signed in*, *Sign out* beside that one: since 0.54.15 what it signed in goes with it (a computer it said yes to, a phone paired with a code it made). *Sign out the others* if in doubt. Or over SSH: 1. `sudo zenithboard console signout` (every browser and phone out at once). 2. `sudo zenithboard console password` if the password may be known. 3. Pair your phone again: `sudo zenithboard console pair` |
+| **Phone lost, or a browser you do not know in *Signed in*** | From a browser still signed in: *System → Signed in*, *Sign out* beside that one: since 0.54.15 what it signed in goes with it (a computer it said yes to, a phone paired with a code it made), and since 0.99.10 what it had not yet signed in (a code not used yet, a yes the computer has not collected). *Sign out the others* if in doubt. Or over SSH: 1. `sudo zenithboard console signout` (every browser and phone out at once). 2. `sudo zenithboard console password` if the password may be known. 3. Pair your phone again: `sudo zenithboard console pair` |
 | **The page says the console is off** | `sudo zenithboard console on` |
 | **403 "home network only" or "open it by the Pi's address"** | 1. Open it as `http://192.168.x.x:8080/console` (the Pi's address: `hostname -I`), from a device on the home network. 2. By a name of your own (not `*.local`): `sudo zenithboard config-set CONSOLE_HOSTS your.name`. 3. A VPN whose addresses are not private (Tailscale's 100.64/10) is refused until you say so: `sudo zenithboard tailscale console on` (0.46.0; off by default), or SSH through it. A narrower `ALLOW_FROM` applies too (`zenithboard config`) |
 | **A change stays *queued*** behind another (*Queued: … runs first*) | Normal: one change at a time. Wait for the one running (its output: *Activity*). To give up on it: see *A change stays running* |

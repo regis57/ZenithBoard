@@ -193,6 +193,12 @@ def check_password(pw, stored):
         return False
 
 
+# 0.99.10 (the review of 0.99.8): each check takes 16 MB for scrypt; on a 1 GB Pi a crowd of sign-ins at once could
+# take all of it. Two run at a time; a third is told to try again rather than queued.
+HASHING = threading.BoundedSemaphore(2)
+BUSY_WAIT_S = 2
+
+
 # --------------------------------------------------------------------------- failed sign-ins
 class Limiter(object):
     """Five tries from an address, then a wait that doubles with each miss (30 s up to an hour); more than thirty
@@ -206,24 +212,58 @@ class Limiter(object):
     def wait(self, ip, t=None):
         t = now() if t is None else t
         with self.lock:
-            self.recent = [x for x in self.recent if t - x < GLOBAL_WINDOW_S]
-            if len(self.recent) >= GLOBAL_FAILS and t - self.recent[-1] < GLOBAL_WAIT_S:
-                return int(GLOBAL_WAIT_S - (t - self.recent[-1])) + 1
-            misses, until = self.per.get(ip, [0, 0])
-            return int(until - t) + 1 if until > t else 0
+            return self._wait(ip, t)
+
+    def _wait(self, ip, t):
+        self.recent = [x for x in self.recent if t - x < GLOBAL_WINDOW_S]
+        if len(self.recent) >= GLOBAL_FAILS and t - self.recent[-1] < GLOBAL_WAIT_S:
+            return int(GLOBAL_WAIT_S - (t - self.recent[-1])) + 1
+        misses, until = self.per.get(ip, [0, 0])
+        return int(until - t) + 1 if until > t else 0
 
     def miss(self, ip, t=None):
         t = now() if t is None else t
         with self.lock:
-            self.recent.append(t)
-            misses, _ = self.per.get(ip, [0, 0])
-            misses += 1
-            until = t + min(FAIL_WAIT_MAX_S, FAIL_WAIT_S * 2 ** (misses - FAIL_FREE)) if misses >= FAIL_FREE else 0
-            self.per[ip] = [misses, until]
+            self._miss(ip, t)
 
-    def ok(self, ip):
+    def _miss(self, ip, t):
+        self.recent.append(t)
+        misses, _ = self.per.get(ip, [0, 0])
+        misses += 1
+        until = t + min(FAIL_WAIT_MAX_S, FAIL_WAIT_S * 2 ** (misses - FAIL_FREE)) if misses >= FAIL_FREE else 0
+        self.per[ip] = [misses, until]
+
+    def ok(self, ip, ticket=None):
+        """A sign-in that worked: the address starts again from nothing, and the miss take() counted for this try is
+        taken back from the count of everyone's."""
         with self.lock:
             self.per.pop(ip, None)
+            if ticket is not None and ticket in self.recent:
+                self.recent.remove(ticket)
+
+    def take(self, ip, t=None):
+        """-> (wait, ticket). 0.99.10 (the review of 0.99.8): wait() then miss() let every request that arrived while
+        the first ones were still hashing pass the check, so a burst from one address ran as many 16 MB scrypt hashes
+        at once as it sent. The check and a provisional miss are now one step under the lock: a burst gets
+        FAIL_FREE tries, the rest wait. The ticket names the provisional miss, for ok() or undo()."""
+        t = now() if t is None else t
+        with self.lock:
+            wait = self._wait(ip, t)
+            if wait:
+                return wait, None
+            self._miss(ip, t)
+            return 0, t
+
+    def undo(self, ip, ticket):
+        """A try that was never checked (the Pi was busy hashing others): its provisional miss does not count."""
+        with self.lock:
+            if ticket in self.recent:
+                self.recent.remove(ticket)
+            misses, until = self.per.get(ip, [0, 0])
+            if misses <= 1:
+                self.per.pop(ip, None)
+            else:
+                self.per[ip] = [misses - 1, until if misses - 1 >= FAIL_FREE else 0]
 
 
 # --------------------------------------------------------------------------- sessions
@@ -316,6 +356,17 @@ class Sessions(object):
             if self.data.pop(_sha(token), None) is not None:
                 self._save()
 
+    def alive_id(self, sid):
+        """0.99.10 (the review of 0.99.8): whether the session of that id is still signed in. A pairing code or a yes
+        given to a computer is only as good as the session that gave it: signed out, revoked or ended by
+        `console signout` / `console password`, what it handed out is refused."""
+        if not sid:
+            return False
+        t = now()
+        with self.lock:
+            self._load()
+            return any(r.get("id") == sid and self._alive(r, t) for r in self.data.values())
+
     def listing(self):
         t = now()
         with self.lock:
@@ -366,6 +417,12 @@ class Pairs(object):
                     return {"used_by": v["used_by"], "expired": v["until"] < now() and not v["used_by"]}
         return None
 
+    def drop_dead(self, alive):
+        """The codes whose maker is no longer signed in (alive: Sessions.alive_id) are forgotten (0.99.10)."""
+        with self.lock:
+            self.links = {k: v for k, v in self.links.items()
+                          if not v.get("by") or alive(str(v["by"]).rsplit(" ", 1)[-1])}
+
     def redeem(self, token, label):
         """-> truthy once for a live link (the session that made it, "label id", when the console made it), then never
         again."""
@@ -392,6 +449,12 @@ class Pairs(object):
         except (OSError, ValueError):
             return False
         if not hmac.compare_digest(want, h) or float(until) < t or h in self.used:
+            return False
+        # 0.99.10 (the review of 0.99.8): a code printed before `console signout` / `console password` still worked
+        # after it. The code was made PAIR_S before its end; one made before the last sign-out is refused. A clock
+        # behind that sign-out (a boot before the network gave the time, 0.54.17) cannot tell, and is not held to it.
+        ep = epoch()
+        if float(until) - PAIR_S < ep <= t:
             return False
         used = os.path.join(STATE_DIR, "pair-used")
         try:
@@ -457,14 +520,25 @@ class Approvals(object):
             v["state"], v["by"] = ("approved" if yes else "refused"), by
             return True
 
-    def poll(self, rid, secret):
-        """-> (state, request) for the computer that made it; "approved" is answered once, then "used"."""
+    def drop_dead(self, alive):
+        """A yes given by a session no longer signed in (alive: Sessions.alive_id) turns into a no (0.99.10)."""
+        with self.lock:
+            for v in self.reqs.values():
+                if v["state"] == "approved" and not alive(str(v.get("by") or "").rsplit(" ", 1)[-1]):
+                    v["state"] = "refused"
+
+    def poll(self, rid, secret, alive=None):
+        """-> (state, request) for the computer that made it; "approved" is answered once, then "used". alive
+        (Sessions.alive_id): 0.99.10, a yes from a phone signed out since is answered "refused"."""
         with self.lock:
             v = self.reqs.get(str(rid))
             if v is None or not isinstance(secret, str) or not hmac.compare_digest(v["secret"], _sha(secret)):
                 return "unknown", None
             if v["state"] == "waiting" and v["until"] < now():
                 return "expired", v
+            if v["state"] == "approved" and alive is not None and not alive(str(v.get("by") or "").rsplit(" ", 1)[-1]):
+                v["state"], v["approver_gone"] = "refused", True
+                return "refused", v
             if v["state"] == "approved":
                 v["state"] = "used"
                 return "approved", v
@@ -730,7 +804,9 @@ class Console(object):
                 if api == "approve/request":
                     got = self.approvals.request(device_label(req.headers.get("user-agent")), req.client)
                     return Reply(200, got) if got else Reply(429, {"error": "Too many sign-in codes from this address. Wait a few minutes."})
-                state, v = self.approvals.poll(body.get("id"), body.get("secret"))
+                state, v = self.approvals.poll(body.get("id"), body.get("secret"), alive=self.sessions.alive_id)
+                if state == "refused" and v and v.pop("approver_gone", None):
+                    audit("a computer's sign-in refused: %s, who said yes, is signed out (%s from %s)" % (v["by"], v["label"], req.client))
                 if state != "approved":
                     return Reply(200, {"state": state})
                 token, rec = self.sessions.create("approved", v["label"], by=(v.get("by") or "").rsplit(" ", 1)[-1] or None)
@@ -748,18 +824,25 @@ class Console(object):
     # -- signing in
     def _login(self, req, body):
         ip = req.client
-        wait = self.limiter.wait(ip)
-        if wait:
-            return Reply(429, {"error": "Too many tries. Wait %d seconds." % wait, "wait": wait})
         stored = secrets_env().get("CONSOLE_PASSWORD_HASH")
         if not stored:
             return Reply(400, {"error": "No console password yet: sudo zenithboard console password (or pair a phone: sudo zenithboard console pair)"})
-        if not check_password(str(body.get("password", ""))[:256], stored):
-            self.limiter.miss(ip)
+        # 0.99.10: the wait and a provisional miss in one step (Limiter.take), then at most two hashes at a time
+        wait, ticket = self.limiter.take(ip)
+        if wait:
+            return Reply(429, {"error": "Too many tries. Wait %d seconds." % wait, "wait": wait})
+        if not HASHING.acquire(blocking=False):
+            self.limiter.undo(ip, ticket)
+            return Reply(429, {"error": "Busy. Try again in a few seconds.", "wait": BUSY_WAIT_S})
+        try:
+            good = check_password(str(body.get("password", ""))[:256], stored)
+        finally:
+            HASHING.release()
+        if not good:
             audit("sign-in refused from %s" % ip)
-            time.sleep(0.4)
+            time.sleep(0.4)                     # outside the two places: a wrong password does not hold one
             return Reply(401, {"error": "Wrong password."})
-        self.limiter.ok(ip)
+        self.limiter.ok(ip, ticket)
         label = device_label(req.headers.get("user-agent"))
         token, rec = self.sessions.create("password", label)
         audit("signed in with the password: %s %s from %s" % (label, rec["id"], ip))
@@ -767,21 +850,28 @@ class Console(object):
 
     def _redeem(self, req, body):
         ip = req.client
-        wait = self.limiter.wait(ip)
+        wait, ticket = self.limiter.take(ip)    # 0.99.10: the wait and a provisional miss in one step
         if wait:
             return Reply(429, {"error": "Too many tries. Wait %d seconds." % wait, "wait": wait})
         label = device_label(req.headers.get("user-agent"))
         made_by = self.pairs.redeem(body.get("token"), label)
-        if not made_by:
-            self.limiter.miss(ip)
+        maker = made_by.rsplit(" ", 1)[-1] if isinstance(made_by, str) else None
+        if maker and not self.sessions.alive_id(maker):
+            # 0.99.10 (the review of 0.99.8): a code made by a session signed out since (by itself, by revocation, or by
+            # `console signout` / `console password`) went on signing a phone in
+            audit("pairing link refused from %s: %s, who made it, is signed out" % (ip, made_by))
+            made_by = False
+        elif not made_by:
             audit("pairing link refused from %s" % ip)
+        if not made_by:
             # the audit of 22-23 October 2026: a code made in the browser dies when the wall restarts, and the
             # message named only the terminal
             return Reply(401, {"error": "This pairing code is used or out of date (or the wall restarted since): make a new one, "
                                         "on a computer signed in (System → Signed in → Pair a phone) or over SSH "
                                         "(sudo zenithboard console pair). It is valid five minutes, once."})
+        self.limiter.ok(ip, ticket)
         # the session that made the code ("label id"); a terminal's code has none
-        token, rec = self.sessions.create("paired", label, by=made_by.rsplit(" ", 1)[-1] if isinstance(made_by, str) else None)
+        token, rec = self.sessions.create("paired", label, by=maker)
         audit("paired: %s %s from %s" % (label, rec["id"], ip))
         return Reply(200, {"ok": True}, cookie=_cookie(token, PAIRED_LIFE_S))
 
@@ -849,6 +939,9 @@ class Console(object):
         if api == "sessions/revoke":
             sid = body.get("id")
             n = self.sessions.revoke(keep=sess["id"]) if sid == "others" else self.sessions.revoke(sid=str(sid))
+            # 0.99.10 (the review of 0.99.8): what the sessions signed out had handed out goes with them
+            self.pairs.drop_dead(self.sessions.alive_id)
+            self.approvals.drop_dead(self.sessions.alive_id)
             audit("%d session(s) signed out by %s" % (n, who))
             return Reply(200, {"ok": True, "count": n})
         if api == "wizard":

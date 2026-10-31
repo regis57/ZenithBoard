@@ -195,6 +195,22 @@ class LimiterTest(unittest.TestCase):
         self.assertGreater(L.wait("192.168.1.9", t + 1), 0)
 
 
+    def test_a_busy_try_does_not_count_and_a_good_one_clears_its_own(self):
+        L, t = console.Limiter(), 1000.0
+        for _ in range(console.FAIL_FREE - 1):
+            w, ticket = L.take("a", t)
+            self.assertEqual(w, 0)
+        w, ticket = L.take("a", t)
+        self.assertGreater(L.wait("a", t), 0, "the fifth try counts as soon as it is taken")
+        L.undo("a", ticket)
+        self.assertEqual(L.wait("a", t), 0, "a try never checked is given back")
+        self.assertEqual(L.per["a"][0], console.FAIL_FREE - 1)
+        w, ticket = L.take("a", t)
+        L.ok("a", ticket)
+        self.assertNotIn("a", L.per)
+        self.assertEqual(len(L.recent), console.FAIL_FREE - 1, "the good try is not one of everyone's misses")
+
+
 class TempDirs(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.mkdtemp()
@@ -427,6 +443,28 @@ class PhoneSigninTest(TempDirs):
         self.assertEqual(self.req("POST", "/console/api/approve", {"id": d["id"], "yes": True}, cookie=self.phone, csrf=self.csrf).code, 410)
         self.assertEqual(self.req("POST", "/console/api/approve/poll", {"id": d["id"], "secret": d["secret"]}).body["state"], "expired")
 
+    def test_a_yes_from_a_phone_revoked_since_signs_nobody_in(self):
+        # 0.99.10 (the review of 0.99.8): a stolen phone said yes to its own computer; revoking the phone left the yes
+        # standing, and the computer was signed in at its next poll
+        thief, rec = self.c.sessions.create("paired", "Android")
+        d = self.req("POST", "/console/api/approve/request", {}).body
+        self.assertEqual(self.req("POST", "/console/api/approve", {"id": d["id"], "yes": True}, cookie=thief, csrf=rec["csrf"]).code, 200)
+        r = self.req("POST", "/console/api/sessions/revoke", {"id": rec["id"]}, cookie=self.phone, csrf=self.csrf)
+        self.assertEqual(r.body["count"], 1)
+        r = self.req("POST", "/console/api/approve/poll", {"id": d["id"], "secret": d["secret"]})
+        self.assertEqual(r.body["state"], "refused")
+        self.assertNotIn("Set-Cookie", r.headers)
+        self.assertEqual([s["kind"] for s in self.c.sessions.listing()], ["paired"], "only the owner's phone")
+
+    def test_a_yes_from_a_phone_signed_out_since_signs_nobody_in(self):
+        thief, rec = self.c.sessions.create("paired", "Android")
+        d = self.req("POST", "/console/api/approve/request", {}).body
+        self.req("POST", "/console/api/approve", {"id": d["id"], "yes": True}, cookie=thief, csrf=rec["csrf"])
+        self.c.sessions.drop(thief)                     # no revoke: it signed itself out (or the epoch ended it)
+        r = self.req("POST", "/console/api/approve/poll", {"id": d["id"], "secret": d["secret"]})
+        self.assertEqual(r.body["state"], "refused")
+        self.assertNotIn("Set-Cookie", r.headers)
+
     def test_a_page_cannot_ask_without_end(self):
         codes = [self.req("POST", "/console/api/approve/request", {}).code for _ in range(console.Approvals.PER_ADDRESS + 1)]
         self.assertEqual(codes[-1], 429)
@@ -533,6 +571,101 @@ class HandleTest(TempDirs):
             self.req("POST", "/console/api/login", {"password": "nope"})
         r = self.req("POST", "/console/api/login", {"password": "a long password"})
         self.assertEqual(r.code, 429, "even the right one waits")
+
+    def test_a_burst_of_sign_ins_gets_five_tries_and_two_hashes_at_a_time(self):
+        # 0.99.10 (the review of 0.99.8): wait() and miss() were two steps, with the 16 MB hash between them; a burst
+        # from one address all passed the check and hashed at once (a memory DoS on a 1 GB Pi)
+        import threading
+        lock, state = threading.Lock(), {"now": 0, "most": 0, "calls": 0}
+
+        def slow_check(pw, stored):
+            with lock:
+                state["now"] += 1; state["calls"] += 1
+                state["most"] = max(state["most"], state["now"])
+            time.sleep(0.2)
+            with lock:
+                state["now"] -= 1
+            return False
+        self.addCleanup(setattr, console, "check_password", console.check_password)
+        self.addCleanup(setattr, time, "sleep", time.sleep)
+        console.check_password = slow_check
+        real_sleep = time.sleep
+        time.sleep = lambda s: real_sleep(min(s, 0.2))
+        n, codes = 24, []
+        gate = threading.Barrier(n)
+
+        def go():
+            gate.wait()
+            r = self.req("POST", "/console/api/login", {"password": "wrong password"})
+            with lock:
+                codes.append((r.code, r.body.get("error")))
+        ts = [threading.Thread(target=go) for _ in range(n)]
+        [t.start() for t in ts]; [t.join() for t in ts]
+        wrong = [c for c in codes if c[0] == 401]
+        self.assertLessEqual(len(wrong), console.FAIL_FREE, codes)
+        self.assertEqual(len(wrong) + len([c for c in codes if c[0] == 429]), n, codes)
+        self.assertLessEqual(state["most"], 2, "two hashes at a time at most")
+        self.assertLessEqual(state["calls"], console.FAIL_FREE)
+
+    def test_busy_says_so_and_does_not_count(self):
+        console.HASHING.acquire(); console.HASHING.acquire()
+        try:
+            r = self.req("POST", "/console/api/login", {"password": "a long password"})
+        finally:
+            console.HASHING.release(); console.HASHING.release()
+        self.assertEqual((r.code, r.body["error"], r.body["wait"]), (429, "Busy. Try again in a few seconds.", 2))
+        self.assertEqual(self.c.limiter.wait("192.168.1.20"), 0)
+        self.assertNotIn("192.168.1.20", self.c.limiter.per, "a try never checked is not a miss")
+        self.login()
+
+    def _signout_everyone(self, at):
+        with open(self.env, "a") as fh:
+            fh.write('CONSOLE_EPOCH="%d"\n' % at)
+        os.utime(self.env, (time.time() + 10, time.time() + 10))
+        console._env_cache.update(mtime=None, data={})
+
+    def test_a_code_made_by_a_session_revoked_since_is_refused(self):
+        # 0.99.10 (the review of 0.99.8): a stolen session made a pairing code; revoking it left the code working
+        own, own_csrf = self.login()
+        thief, thief_csrf = self.login()
+        thief_id = self.req("GET", "/console/api/session", cookie=thief).body["id"]
+        code = self.req("POST", "/console/api/pair", {}, cookie=thief, headers={"X-ZB-CSRF": thief_csrf}).body["token"]
+        code2 = self.req("POST", "/console/api/pair", {}, cookie=thief, headers={"X-ZB-CSRF": thief_csrf}).body["token"]
+        self.assertEqual(len(self.c.pairs.links), 2)
+        r = self.req("POST", "/console/api/sessions/revoke", {"id": thief_id}, cookie=own, headers={"X-ZB-CSRF": own_csrf})
+        self.assertEqual(r.body["count"], 1)
+        self.assertEqual(self.c.pairs.links, {}, "the revoked session's codes are dropped")
+        self.assertEqual(self.req("POST", "/console/api/pair/redeem", {"token": code}).code, 401)
+        # and one kept by a code path that missed the drop: the maker is checked when it is used
+        self.c.pairs.links[console._sha(code2)] = {"pid": "x", "until": time.time() + 60, "by": "iPhone " + thief_id, "used_by": None}
+        self.assertEqual(self.req("POST", "/console/api/pair/redeem", {"token": code2}).code, 401)
+        self.assertEqual(len(self.c.sessions.listing()), 1, "nobody new signed in")
+
+    def test_a_code_made_before_signout_is_refused(self):
+        # 0.99.10: `console signout` (a new CONSOLE_EPOCH) ended the sessions, not the codes they or the terminal made
+        tok, csrf = self.login()
+        code = self.req("POST", "/console/api/pair", {}, cookie=tok, headers={"X-ZB-CSRF": csrf}).body["token"]
+        term = "terminal-made-token-1122334455"
+        base = time.time()
+        with open(os.path.join(self.dir, "out", "pair"), "w") as fh:
+            fh.write("%s %d\n" % (console._sha(term), base + console.PAIR_S))
+        self.addCleanup(setattr, console, "now", console.now)
+        console.now = lambda: base + 5
+        self._signout_everyone(int(base) + 2)
+        self.assertEqual(self.req("POST", "/console/api/pair/redeem", {"token": code}).code, 401, "the browser's code")
+        self.assertEqual(self.req("POST", "/console/api/pair/redeem", {"token": term}).code, 401, "the terminal's code")
+        # a terminal code made after the signout works
+        with open(os.path.join(self.dir, "out", "pair"), "w") as fh:
+            fh.write("%s %d\n" % (console._sha(term + "2"), base + 4 + console.PAIR_S))
+        self.assertEqual(self.req("POST", "/console/api/pair/redeem", {"token": term + "2"}).code, 200)
+
+    def test_a_terminal_code_works_with_the_clock_behind_the_last_signout(self):
+        # the 0.54.17 case: a boot before the network set the clock; the code cannot be told older than the signout
+        term = "terminal-made-token-5544332211"
+        with open(os.path.join(self.dir, "out", "pair"), "w") as fh:
+            fh.write("%s %d\n" % (console._sha(term), time.time() + console.PAIR_S))
+        self._signout_everyone(int(time.time()) + 3600)
+        self.assertEqual(self.req("POST", "/console/api/pair/redeem", {"token": term}).code, 200)
 
     def test_pair_a_phone(self):
         tok, csrf = self.login()
