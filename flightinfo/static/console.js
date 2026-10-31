@@ -882,8 +882,10 @@ window.ZBI18N.start({ part: "console" }, function () {
       default: return SECTIONS.overview();
     }
   }
+  // 0.99.19 (review B11): on a narrow phone a long figure ("14 дн. 7 ч.") can still be cut; its title gives it whole
   function tile(k, v, d) {
-    return h("div", { "class": "tile" }, h("div", { "class": "k", text: k }), h("div", { "class": "v", text: v }), h("div", { "class": "d", text: d || "\u00a0" }));
+    return h("div", { "class": "tile" }, h("div", { "class": "k", text: k }), h("div", { "class": "v", text: v, title: v }),
+      h("div", { "class": "d", text: d || "\u00a0", title: d || null }));
   }
   function chip(text, section, lit) {
     return h("button", { type: "button", "class": "chip" + (lit ? " on" : ""), text: text, onclick: go(section) });

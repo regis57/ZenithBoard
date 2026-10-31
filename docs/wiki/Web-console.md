@@ -169,6 +169,12 @@ Click one of the last jobs to read what it printed: it opens at the top of the d
   on the control that had it, drawn again; a control waiting for the Pi keeps the focus and does nothing. *Activity* and
   every question take the focus and keep Tab inside them, the page behind out of reach; Escape or × gives it back to
   what opened them.
+* **It fits a phone, and Arabic (0.99.19).** On a phone the line under a figure of the overview (the Pi's model, a
+  power warning) wraps instead of being cut, and at 400 px or less the figures are a little smaller; a figure or a line
+  still too long gives its whole text when held or hovered. The tab labels lose their letter spacing there, so
+  *STABILITÄT* or *НАДЁЖНОСТЬ* stay one word. A message (*Saved*, an error in red) shows at the top of a phone, under
+  the notch, across its width, and a tap goes through it: it never covers the tabs or the first steps' buttons. Right
+  to left, the side bar marks the chosen section on its outer edge and a list's dot keeps its gap before the words.
 * **Forgotten password, full card, failed command, update (0.54.7).** The sign-in page says how to get a new password
   (`sudo zenithboard console password`: every browser and phone is signed out). The pairing window says the phone must be
   on the home Wi-Fi. A change that cannot be written because the card is full says so, with `zenithboard health`,
@@ -267,6 +273,7 @@ sudo zenithboard console pair        # the phone again (QR code)
 Built and previewed on 21 October 2026 against a stand-in for the `zenithboard` command (desktop and phone width,
 headless Chromium): the wizard, every section, Activity, the QR code. The request checks, the sessions, the pairing
 and the helper are covered by `tests/test_console.py` and `tests/test_console.sh`; the keyboard, the drawer, the
-questions and the fresh reading by `tests/test_console_keys.js` (headless Chromium, 0.99.18). In use on the reference Pi since
+questions and the fresh reading by `tests/test_console_keys.js` (headless Chromium, 0.99.18), with a 360 px phone in
+English, French, Russian, German and Arabic since 0.99.19. In use on the reference Pi since
 21 October 2026: the systemd path unit and the helper as root (graphs1090 installed from the page), an iPhone paired by
 QR code, a backup downloaded. **Not yet seen there**: a real update from the page. See [Project status](Project-status).
