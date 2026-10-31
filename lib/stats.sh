@@ -350,10 +350,11 @@ stats_gaps() {
   echo "What the wall could not name or draw, over $days day(s) of samples (distinct aircraft; a sample every 15 minutes misses some)"
   echo
   echo "Callsign prefixes shown without an airline name:"
-  cat "$STATS_DIR"/gaps-* | awk -F'\t' '$1=="airline" {print $2 "\t" $3}' | sort -u | cut -f1 | sort | uniq -c | sort -rn | awk '{printf "  %-6s %s aircraft\n", $2, $1}' | head -40
+  # 0.99.23: an empty list says so; a title over nothing read like an output cut short (seen on the real Pi, 31 Oct 2026)
+  cat "$STATS_DIR"/gaps-* | awk -F'\t' '$1=="airline" {print $2 "\t" $3}' | sort -u | cut -f1 | sort | uniq -c | sort -rn | awk '{printf "  %-6s %s aircraft\n", $2, $1} END {if (!NR) print "  none: every callsign seen had its airline name"}' | head -40
   echo
   echo "Type codes drawn with the generic silhouette:"
-  cat "$STATS_DIR"/gaps-* | awk -F'\t' '$1=="shape" {print $2 "\t" $3}' | sort -u | cut -f1 | sort | uniq -c | sort -rn | awk '{printf "  %-6s %s aircraft\n", $2, $1}' | head -40
+  cat "$STATS_DIR"/gaps-* | awk -F'\t' '$1=="shape" {print $2 "\t" $3}' | sort -u | cut -f1 | sort | uniq -c | sort -rn | awk '{printf "  %-6s %s aircraft\n", $2, $1} END {if (!NR) print "  none: every type code seen had its own silhouette"}' | head -40
 }
 
 # Thirty days of lines, thirty day files. Timestamps are YYYY-MM-DD HH:MM, which compare correctly as text.

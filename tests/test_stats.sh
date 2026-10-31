@@ -238,6 +238,17 @@ rm -f "$(stats_day_file "$yday")" "$(stats_fleet_file "$yday")"; cfg_set PORT 1
 stats_run
 check "wall down: the quarter-hour look alone, as before" '[ "$(tail -1 "$STATS_FILE" | cut -d, -f5)" -ge 1 ]'
 
+# ---- stats gaps says "none" under an empty list (0.99.23: on the real Pi a title over nothing read like a cut output)
+mkdir -p "$STATS_DIR"; rm -f "$STATS_DIR"/gaps-*
+printf 'airline\tJFA\t44c001\nairline\tKLC\t484001\n' > "$STATS_DIR/gaps-2026-10-30"
+out=$(stats_gaps)
+check "gaps: callsigns only, the silhouettes say none" 'printf "%s" "$out" | grep -q "JFA" && printf "%s\n" "$out" | grep -A1 "generic silhouette" | grep -q "none: every type code seen had its own silhouette"'
+check "gaps: the callsign list does not say none"     '! printf "%s" "$out" | grep -q "none: every callsign"'
+: > "$STATS_DIR/gaps-2026-10-30"
+out=$(stats_gaps)
+check "gaps: an empty day says none under both"       'printf "%s" "$out" | grep -q "none: every callsign seen had its airline name" && printf "%s" "$out" | grep -q "none: every type code seen had its own silhouette"'
+rm -f "$STATS_DIR"/gaps-*
+
 # ---- off keeps the files, clear empties them
 out=$(stats_off)
 check "off: setting, timer disabled, files kept"  '[ "$(cfg_get STATS)" = 0 ] && grep -q "disable --now zenithboard-stats.timer" "$t/systemctl.log" && [ -f "$STATS_FILE" ] && [ ! -e "$t/sysd/zenithboard-stats.timer" ]'
