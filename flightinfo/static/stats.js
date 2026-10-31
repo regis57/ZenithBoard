@@ -17,8 +17,22 @@ window.ZBI18N.start({ part: "stats" }, function () {
   }
   function esc(x) { return String(x).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
   var tip = $("tip");
-  function showTip(e, text) { tip.textContent = text; tip.hidden = false; tip.style.left = e.clientX + "px"; tip.style.top = e.clientY + "px"; }
+  // 0.99.20 (review B12): centred above the pointer, the tip went past the screen's edge near a chart's ends (half of
+  // it off a phone at the first or last bar) and above the top on the first rows: it is now measured and kept inside
+  // the screen, 8 px from each edge, below the pointer when there is no room above. A scroll hides it (on a phone a
+  // tap leaves it up, and it stayed fixed while the chart moved away under it).
+  var EDGE = 8;
+  function showTip(e, text) {
+    tip.textContent = text; tip.hidden = false;
+    var vw = document.documentElement.clientWidth || window.innerWidth, vh = document.documentElement.clientHeight || window.innerHeight;
+    var w = tip.offsetWidth, h = tip.offsetHeight;
+    var x = Math.max(EDGE, Math.min(e.clientX - w / 2, vw - w - EDGE));
+    var y = e.clientY - h - 10;
+    if (y < EDGE) y = Math.min(e.clientY + 18, vh - h - EDGE);
+    tip.style.left = Math.round(x) + "px"; tip.style.top = Math.round(Math.max(EDGE, y)) + "px";
+  }
   function hideTip() { tip.hidden = true; }
+  window.addEventListener("scroll", hideTip, { passive: true });
   function fmt(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " "); }
   // 0.54.18: a week's messages (386 530 314) did not fit its box and was cut ("386 530 3…", the owner's page): from ten
   // million on, the box says "386.5 M" the language's way, as the summary cards do; the whole number is in its tooltip
