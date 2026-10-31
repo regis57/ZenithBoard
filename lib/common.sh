@@ -45,7 +45,8 @@ cfg_write() {  # cfg_write KEY [VALUE]: the file without KEY, then KEY=VALUE whe
   {
     command -v flock >/dev/null && flock -w 10 9
     tmp=$(mktemp "${ZB_CONFIG%/*}/.config.env.XXXXXX") || return 1
-    grep -v -E "^$key=" "$ZB_CONFIG" > "$tmp" || true
+    # the review of 0.99.8: the key is compared as text, never read as a pattern (config-set '.*' x emptied the file)
+    ZB_CFG_KEY="$key" awk 'index($0, ENVIRON["ZB_CFG_KEY"] "=") != 1' "$ZB_CONFIG" > "$tmp" || true
     [ $# -lt 2 ] || printf '%s=%s\n' "$key" "$2" >> "$tmp"
     chmod 644 "$tmp"; sync "$tmp" 2>/dev/null || true
     mv -f "$tmp" "$ZB_CONFIG"
@@ -102,6 +103,11 @@ is_number() { [[ "$1" =~ ^-?[0-9]+([.][0-9]+)?$ ]]; }
 # seconds each aircraft stays on the wall: whole seconds, 2 to 60, as the presets and the console have it (the audit of
 # 22-23 October 2026: the menu and the command took 0, -3 and 600)
 valid_cycle() { [[ ${1:-} =~ ^[0-9]{1,2}$ ]] && [ "$((10#$1))" -ge 2 ] && [ "$((10#$1))" -le 60 ]; }
+# the review of 0.99.8: what goes into the decoders' and feeders' own files (by sed or as an option) holds no character
+# a shell or sed gives a meaning to
+valid_alt() { [[ ${1:-} =~ ^-?[0-9]{1,4}$ ]]; }                 # metres, whole
+valid_sdr() { [[ ${1:-} =~ ^[A-Za-z0-9_-]{1,32}$ ]]; }          # a dongle's serial or index
+valid_plain_value() { case "${1:-}" in *[\"\\\|\&\;\<\>\$\`]*|*$'\n'*|*$'\r'*) return 1 ;; *) return 0 ;; esac; }
 valid_lat() { is_number "$1" && awk -v v="$1" 'BEGIN{exit !(v>=-90 && v<=90)}'; }
 valid_lon() { is_number "$1" && awk -v v="$1" 'BEGIN{exit !(v>=-180 && v<=180)}'; }
 valid_radius() { local r; for r in $RADIUS_PRESETS; do [ "$r" = "$1" ] && return 0; done; return 1; }
@@ -200,10 +206,22 @@ fetch() {  # fetch URL DEST   (fails loudly)
        -o "$2" "$1" || { err "Download failed: $1   (no internet on the Pi, or the address moved: see lib/versions.sh)"; return 1; }
 }
 
+# The review of 0.99.8: the value went into a sed expression, so a | or a quote in it was a command. Now it reaches awk
+# through the environment (awk -v would turn its backslashes into escapes) and is written as it is, into a file beside
+# the original that takes its place in one step, with its owner and mode.
 ini_set() {  # ini_set FILE KEY VALUE  -> KEY="VALUE" (replace or append)
-  local f="$1" k="$2" v="$3"
-  touch "$f"
-  if grep -qE "^$k=" "$f"; then sed -i -E "s|^$k=.*|$k=\"$v\"|" "$f"; else printf '%s="%s"\n' "$k" "$v" >> "$f"; fi
+  local f="$1" tmp
+  touch "$f" || return 1
+  tmp=$(mktemp "$f.XXXXXX") || return 1
+  if ZB_INI_K="$2" ZB_INI_V="$3" awk 'BEGIN { k = ENVIRON["ZB_INI_K"]; line = k "=\"" ENVIRON["ZB_INI_V"] "\"" }
+      index($0, k "=") == 1 { if (!done) print line; done = 1; next }
+      { print }
+      END { if (!done) print line }' "$f" > "$tmp"; then
+    chmod --reference="$f" "$tmp" 2>/dev/null || true; chown --reference="$f" "$tmp" 2>/dev/null || true
+    mv -f "$tmp" "$f"
+  else
+    rm -f "$tmp"; return 1
+  fi
 }
 
 # 0.99.6: an ini file with [sections] and plain key=value lines (AirNav Radar's rbfeeder.ini)

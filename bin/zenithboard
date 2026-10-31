@@ -278,6 +278,7 @@ case "${1:-}" in
     cfg_set RADIUS "$2"; restart_flightinfo; echo "Radius: $2 $(units_distance "$(cfg_get UNITS)")" ;;
   location)
     root_or_die; valid_lat "${2:-x}" && valid_lon "${3:-x}" || die "Usage: zenithboard location LAT LON [ALT_M]   e.g. 49.1193 6.1757 180"
+    [ -z "${4:-}" ] || [[ $4 =~ ^-?[0-9]+$ ]] || die "The altitude is whole metres above sea level: $4"
     zb_apply_location "$2" "$3" "${4:-}" ;;
   color|colour)
     root_or_die; valid_theme "${2:-}" || die "Usage: zenithboard color amber|green|red|white|turquoise   (blue was taken out in 0.23.0)"
@@ -336,7 +337,10 @@ case "${1:-}" in
       *) die "Usage: zenithboard preset list | add NAME key=value... | del NAME" ;;
     esac ;;
   config-set)
-    root_or_die; [ -n "${2:-}" ] || die "Usage: zenithboard config-set KEY VALUE"; cfg_set "$2" "${3:-}"; restart_flightinfo ;;
+    # the review of 0.99.8: a key is a name (it was read as a pattern: '.*' emptied config.env), a value one line
+    [[ ${2:-} =~ ^[A-Z][A-Z0-9_]*$ ]] || die "Usage: zenithboard config-set KEY VALUE   (KEY: capital letters, digits and _, starting with a letter)"
+    case "${3:-}" in *$'\n'*|*$'\r'*) die "A value is one line." ;; esac
+    root_or_die; cfg_set "$2" "${3:-}"; restart_flightinfo ;;
   mode|style)
     case "${2:-}" in
       dots|flap) root_or_die; cfg_set DISPLAY_MODE "$2"; restart_flightinfo

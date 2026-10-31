@@ -2,7 +2,7 @@
 
 A Raspberry Pi that listens to the aircraft overhead and shows them on a tablet or a TV as a dot-matrix wall or an airport split-flap board. It can also feed what it hears to ADSB Exchange, FlightAware, Flightradar24 and Plane Finder, and post the aircraft crossing a radius to Bluesky.
 
-Current version: **0.99.8** (release candidate for 1.0. AirNav Radar and Telegram messages came in during it, at the owner's word, so the month of validation on the Pi starts again: 30 days from the reference Pi's update to 0.99.6, 29 November 2026 at the earliest) · Licence: **GPL-3.0-or-later** · [Repository](https://github.com/regis57/ZenithBoard)
+Current version: **0.99.9** (release candidate for 1.0. AirNav Radar and Telegram messages came in during it, at the owner's word, so the month of validation on the Pi starts again: 30 days from the reference Pi's update to 0.99.6, 29 November 2026 at the earliest) · Licence: **GPL-3.0-or-later** · [Repository](https://github.com/regis57/ZenithBoard)
 
 ## Installing it
 

@@ -43,11 +43,52 @@ check "import: the file from before is kept"        'ls "$ZENITHBOARD_ETC"/confi
 check "import: a file with no setting is refused"   'echo "hello" > "$t/no.env" && ! settings_import "$t/no.env" >/dev/null 2>&1'
 check "import: a missing file is refused"           '! settings_import "$t/none.env" >/dev/null 2>&1'
 
+# ---- the review of 0.99.8 (B1): a value is checked by its key; nothing imported or typed reaches a shell or sed
+mkdir -p "$t/default"; printf 'LATITUDE=1\nLONGITUDE=2\nALTITUDE=10m\nUSER=x\n' > "$t/default/adsbexchange"
+cfg_set LAT 49.1; cfg_set LON 6.1; cfg_set ALT_M 180; cfg_set ADSB_SDR 00001090
+printf 'ALT_M=0"; touch %s/X; #|e;#\nADSB_SDR=1"; touch %s/Y; #\nSOCIAL_AREA=a|b\nLAT=91\nRADIUS=10\nUNITS=aviation\n' "$t" "$t" > "$t/evil.env"
+out=$(settings_import "$t/evil.env")
+apply_here() {   # the position applied as a restore applies it, into the stub ADSB Exchange file
+  ( # shellcheck source=lib/adsb.sh
+    . lib/adsb.sh
+    is_readsb() { return 1; }; is_dump1090() { return 1; }; is_adsbx() { return 0; }; is_piaware() { return 1; }
+    is_fr24() { return 1; }; is_radarbox() { return 1; }; is_planefinder() { return 1; }; restart_flightinfo() { :; }
+    ZB_DEFAULT_DIR="$t/default" zb_apply_location "$@" ) >/dev/null 2>&1
+}
+apply_here "$(cfg_get LAT)" "$(cfg_get LON)" "$(cfg_get ALT_M 0)"
+check "import (B1): an altitude carrying a command is skipped, nothing runs" '[ ! -e "$t/X" ] && [ "$(cfg_get ALT_M)" = 180 ] && echo "$out" | grep -q "Skipped 4 " && echo "$out" | grep -q "refused.*ALT_M"'
+check "import (B1): ADSB Exchange gets the altitude kept, never the payload" 'grep -qx "ALTITUDE=\"180m\"" "$t/default/adsbexchange" && grep -qx "USER=x" "$t/default/adsbexchange"'
+check "import (B1): a dongle serial with a quote or ; is refused" '[ "$(cfg_get ADSB_SDR)" = 00001090 ] && echo "$out" | grep -q "refused.*ADSB_SDR" && [ ! -e "$t/Y" ]'
+check "import (B1): a | in a free setting, a latitude out of range refused; the good ones taken" '[ "$(cfg_get SOCIAL_AREA)" = "near Metz" ] && [ "$(cfg_get LAT)" = 49.1 ] && [ "$(cfg_get UNITS)" = aviation ] && echo "$out" | grep -q "Imported 2 "'
+apply_here 49.1 6.1 '0"; touch '"$t"'/Z; #|e;#'
+check "position (B1): an altitude that is not whole metres counts as 0" '[ ! -e "$t/Z" ] && grep -qx "ALTITUDE=\"0m\"" "$t/default/adsbexchange"'
+check "position (B1): a position that is not one changes nothing" '! apply_here "1;id" 6 0 && grep -qx "LATITUDE=\"49.1\"" "$t/default/adsbexchange"'
+check "values (B1): what each key takes" 'settings_value_ok ALT_M -12 && ! settings_value_ok ALT_M 12345 && ! settings_value_ok CYCLE_SECONDS 2.5 && settings_value_ok STATS 1 && ! settings_value_ok STATS on && settings_value_ok SOCIAL_AREA "L'"'"'Hôpital, Moselle" && ! settings_value_ok SOCIAL_AREA "a\$b" && settings_value_ok UAT_SDR ""'
+
+# ini_set: the value written as it is, whatever it holds
+printf 'A="1"\nKEY="old"\nB="2"\n' > "$t/ini"; chmod 640 "$t/ini"
+ini_set "$t/ini" KEY 'a/b&c\d"e'"'"'f|g'
+check "ini_set (B1): / & \\ and quotes written literally, the rest kept, the mode kept" '[ "$(sed -n 2p "$t/ini")" = "KEY=\"a/b&c\\d\"e'"'"'f|g\"" ] && [ "$(sed -n 1p "$t/ini")" = "A=\"1\"" ] && [ "$(sed -n 3p "$t/ini")" = "B=\"2\"" ] && [ "$(stat -c %a "$t/ini")" = 640 ]'
+ini_set "$t/ini" NEW 'x\ny'
+check "ini_set (B1): a new key added at the end, its backslash kept" '[ "$(tail -n1 "$t/ini")" = "NEW=\"x\\ny\"" ] && [ "$(wc -l < "$t/ini")" = 4 ]'
+
+# config-set: a key is a name, never a pattern
+cp "$ZB_CONFIG" "$t/before.env"
+out=$(bash bin/zenithboard config-set '.*' x 2>&1); rc=$?
+check "config-set (B1): a key that is not a name refused, config.env unchanged" '[ "$rc" != 0 ] && echo "$out" | grep -q "capital letters" && cmp -s "$ZB_CONFIG" "$t/before.env"'
+out=$(bash bin/zenithboard config-set PORT "$(printf '1\nEVIL=1')" 2>&1); rc=$?
+check "config-set (B1): a value of two lines refused" '[ "$rc" != 0 ] && echo "$out" | grep -q "one line" && cmp -s "$ZB_CONFIG" "$t/before.env"'
+cfg_set '.*' x
+check "cfg_set (B1): the key compared as text, the other settings kept" '[ "$(grep -c . "$ZB_CONFIG")" = "$(( $(grep -c . "$t/before.env") + 1 ))" ] && grep -qx ".\*=x" "$ZB_CONFIG"'
+cfg_del '.*'
+check "cfg_del (B1): only that key gone" 'cmp -s "$ZB_CONFIG" "$t/before.env"'
+
 # ---- presets
 check "preset: name rules"                          'preset_valid_name kitchen && preset_valid_name tv2 && ! preset_valid_name Kitchen && ! preset_valid_name 2tv && ! preset_valid_name "a b" && ! preset_valid_name abcdefghijklmnopq'
 check "preset: add writes PRESET_NAME"              'preset_add kitchen theme=green mode=flap radius=5 >/dev/null && [ "$(cfg_get PRESET_KITCHEN)" = "theme=green mode=flap radius=5" ]'
 check "preset: only the tablet keys, sane values"   '! preset_add tv PORT=1 >/dev/null 2>&1 && ! preset_add tv mode=huge >/dev/null 2>&1 && ! preset_add tv radius=0 >/dev/null 2>&1 && ! preset_add tv cycle=999 >/dev/null 2>&1 && [ -z "$(cfg_get PRESET_TV "")" ]'
 check "units (0.55.0): metric, imperial and aviation; the radius in km, mi or NM" 'valid_units aviation && valid_units metric && ! valid_units nautical && preset_valid_pair units=aviation && [ "$(units_distance aviation)" = NM ] && [ "$(units_distance imperial)" = mi ] && [ "$(units_distance metric)" = km ]'
+check "preset (B1): seconds per aircraft are whole seconds" '! preset_add tv cycle=2.5 >/dev/null 2>&1 && [ -z "$(cfg_get PRESET_TV "")" ] && preset_add tv cycle=14 >/dev/null && [ "$(cfg_get PRESET_TV)" = cycle=14 ] && preset_del tv >/dev/null'
 check "preset: only the wall's colours (blue gone in 0.23.0)" '! preset_add tv theme=blue >/dev/null 2>&1 && ! preset_add tv theme=pink >/dev/null 2>&1 && preset_add tv theme=turquoise >/dev/null && preset_del tv >/dev/null'
 check "preset: list and del"                        'preset_list | grep -q "^kitchen .*theme=green" && preset_del kitchen >/dev/null && [ -z "$(cfg_get PRESET_KITCHEN "")" ] && ! preset_del kitchen >/dev/null 2>&1'
 check "preset: the wall serves them"                'cfg_set PRESET_TV2 "theme=red cycle=8 PORT=1"; ZENITHBOARD_CONFIG="$ZENITHBOARD_ETC/config.env" python3 -c "

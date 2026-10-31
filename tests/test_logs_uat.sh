@@ -70,6 +70,23 @@ uat978_set_sdr 00000978 "$f"
 check "a file without RECEIVER_OPTIONS gets one" 'grep -qx "RECEIVER_OPTIONS=\"--sdr driver=rtlsdr,serial=00000978\"" "$f"'
 uat978_set_sdr 123 "$t/missing" >/dev/null 2>&1; rc=$?
 check "missing file: warning, non-zero, nothing created" '[ "$rc" -ne 0 ] && [ ! -e "$t/missing" ]'
+# the review of 0.99.8 (B1): a serial with a quote or ; never reaches the sed
+printf 'ENABLED=yes\nRECEIVER_OPTIONS="--sdr driver=rtlsdr,serial=00000978"\n' > "$f"; cp "$f" "$t/uat.before"
+uat978_set_sdr '1"; touch '"$t"'/X; #|e;#' "$f" >/dev/null 2>&1; rc=$?
+check "978 MHz (B1): a serial that is not one refused, the file as it was" '[ "$rc" -ne 0 ] && cmp -s "$f" "$t/uat.before" && [ ! -e "$t/X" ]'
+mkdir -p "$t/default"; printf 'RECEIVER_OPTIONS="--device 1 --gain 40"\n' > "$t/default/readsb"; cp "$t/default/readsb" "$t/readsb.before"
+ZB_DEFAULT_DIR="$t/default" set_sdr_serial_readsb 'a;id' >/dev/null 2>&1; rc=$?
+check "readsb (B1): a serial that is not one refused, the file as it was" '[ "$rc" -ne 0 ] && cmp -s "$t/default/readsb" "$t/readsb.before"'
+ZB_DEFAULT_DIR="$t/default" set_sdr_serial_readsb 00001090
+check "readsb (B1): a good serial still replaces the old one" 'grep -qE "^RECEIVER_OPTIONS=\"--device 00001090 +--gain 40\"$" "$t/default/readsb" && [ "$(grep -o -e "--device" "$t/default/readsb" | wc -l)" = 1 ]'
+out=$( ZB_CONFIG="$t/dec.env"; printf 'LAT=49.1\nLON=6.1\nADSB_SDR=1;id\n' > "$ZB_CONFIG"
+  apt-get() { echo "APT $*"; }; apt_install() { echo "APT $*"; }
+  install_decoder dump1090-fa 2>&1 )
+check "install_decoder (B1): a bad ADSB_SDR refused before anything" 'grep -q "not a dongle serial" <<<"$out" && ! grep -q APT <<<"$out"'
+out=$( ZB_CONFIG="$t/dec.env"; printf 'LAT=4;9\nLON=6.1\n' > "$ZB_CONFIG"
+  apt-get() { echo "APT $*"; }; apt_install() { echo "APT $*"; }
+  install_decoder readsb 2>&1 )
+check "install_decoder (B1): a position that is not one refused before anything" 'grep -q "not a latitude and a longitude" <<<"$out" && ! grep -q APT <<<"$out"'
 
 # ---- region
 ZB_CONFIG="$t/config.env"; : > "$ZB_CONFIG"
