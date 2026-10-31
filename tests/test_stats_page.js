@@ -10,6 +10,12 @@
 //   - the tiles' figures fit their tile at 768, 900 and 1024 px, in English, Arabic and Finnish ("386,5 milj.");
 //   - in Arabic the grey words after a cargo airline keep their gap from its name;
 //   - graphs1090's page opened with ?lang=fr or ?lang=ar is in that language, and its brand fits a 320 px phone.
+// 0.99.21 (review B13), right to left and the words in dots:
+//   - in Arabic the busiest hour reads 07:00 and its count 249 195 in order, the farthest line the day before the time
+//     and "Lyon, FR (12 km)" with 12 before km; a Latin name too long for its list is cut at its end;
+//   - Finnish and Japanese write the hour their way (07.00, 07:00台);
+//   - Spanish and Portuguese show their own word in dots (ESTADISTICAS, GRAFICOS), the catalogue keeping its accent;
+//   - Arabic headings use the system's font, not a monospace one.
 // With --shots DIR it also writes the pictures of the release's preview into DIR.
 const assert = require("assert"), fs = require("fs"), os = require("os"), path = require("path"), { execFileSync } = require("child_process");
 let chromium;
@@ -71,7 +77,11 @@ const FLEET = {
   altitudes: { labels: ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13+"], counts: [40, 61, 52, 47, 58, 66, 73, 88, 120, 197, 284, 410, 236, 18] },
   alt_unit: "km"
 };
-function statsAnswer(range) { return Object.assign({}, STATS[range], { version: "0.99.20", units: "metric", theme: "amber", fleet: FLEET }); }
+function statsAnswer(range, patch) {
+  const a = Object.assign({}, JSON.parse(JSON.stringify(STATS[range])), { version: "0.99.20", units: "metric", theme: "amber", fleet: FLEET });
+  if (patch) patch(a);
+  return a;
+}
 
 let pass = 0, fail = 0;
 async function check(name, fn) {
@@ -83,14 +93,14 @@ function file(route, f) {
   try { body = fs.readFileSync(f); } catch (e) { return route.fulfill({ status: 404, body: "" }); }
   return route.fulfill({ status: 200, contentType: TYPES[path.extname(f)] || "application/octet-stream", body });
 }
-async function statsPage(browser, width, height, lang, range) {
+async function statsPage(browser, width, height, lang, range, patch) {
   const ctx = await browser.newContext({ viewport: { width, height } });
   const page = await ctx.newPage();
   await page.route(BASE + "/**", (route) => {
     const u = new URL(route.request().url()), p = u.pathname;
     const json = (o) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(o) });
     if (p === "/api/config") return json({ lang: "", langs: LANGS });
-    if (p === "/api/stats") return json(statsAnswer(u.searchParams.get("range") || "30d"));
+    if (p === "/api/stats") return json(statsAnswer(u.searchParams.get("range") || "30d", patch));
     if (p === "/stats") return file(route, path.join(STATIC, "stats.html"));
     if (p.indexOf("/static/") === 0) { const f = path.join(STATIC, p.slice(8)); return f.indexOf(STATIC) === 0 ? file(route, f) : route.fulfill({ status: 404, body: "" }); }
     if (p.indexOf("/flags/") === 0) return file(route, path.join(FLAGS, path.basename(p)));
@@ -225,6 +235,73 @@ function tr(cat, key) { const v = cat[key]; return typeof v === "string" ? v : v
       await ctx.close();
     });
 
+    // 0.99.21 (review B13): right to left, what is Latin or a number reads in its own order
+    await check("Arabic: the busiest hour reads 07:00 and its count in order", async () => {
+      const { page, ctx } = await statsPage(browser, 1280, 860, "ar", "7d", (a) => { a.window.totals.busiest_hour = 7; a.window.totals.busiest_messages = 249195; });
+      const r = await page.evaluate(() => {
+        const n = document.getElementById("t-busiest").firstChild, s = n.nodeValue;
+        const x = (sub, from) => { const i = s.indexOf(sub, from || 0), g = document.createRange(); g.setStart(n, i); g.setEnd(n, i + sub.length); return g.getBoundingClientRect().left; };
+        const c = s.indexOf("249");
+        return { text: s, h: x("07"), m: x("00", s.indexOf("07") + 2), a: x("249", c), b: x("195", c) };
+      });
+      assert.ok(r.text.includes("07:00"), r.text);
+      assert.ok(r.h < r.m, "the hour before its minutes, left to right: " + JSON.stringify(r));
+      assert.ok(r.a < r.b, "249 before 195, left to right: " + JSON.stringify(r));
+      await ctx.close();
+      // the hour the language's way, as its reviewers wrote it (0.53.4): Finnish 07.00, Japanese 07:00台
+      for (const [lang, want] of [["fi", "klo 07.00,"], ["ja", "07:00台"], ["fr", "07:00, 249"]]) {
+        const p = await statsPage(browser, 1280, 860, lang, "7d", (a) => { a.window.totals.busiest_hour = 7; a.window.totals.busiest_messages = 249195; });
+        const txt = await p.page.locator("#t-busiest").textContent();
+        assert.ok(txt.includes(want), lang + ": " + txt);
+        await p.ctx.close();
+      }
+    });
+    await check("Arabic: the farthest line keeps the day before the time and Lyon, FR (12 km) in order", async () => {
+      const { page, ctx } = await statsPage(browser, 1280, 860, "ar", "7d");
+      const r = await page.evaluate(() => {
+        const n = document.querySelector("#r-period > span").firstChild, s = n.nodeValue;
+        // the box of `len` characters of `sub` from its `skip`th (all of it by default)
+        const box = (sub, skip, len) => { const i = s.indexOf(sub) + (skip || 0), g = document.createRange(); g.setStart(n, i); g.setEnd(n, i + (len || sub.length - (skip || 0)));
+          const b = g.getBoundingClientRect(); return { l: b.left, r: b.right, t: Math.round(b.top) }; };
+        return { text: s, day: box("29/10"), time: box("15:42"), lyon: box("Lyon"), twelve: box("(\u206612 km", 2, 2), km: box("(\u206612 km", 5, 2) };
+      });
+      assert.ok(r.day.l < r.time.l, "29/10 before 15:42: " + JSON.stringify(r));
+      assert.ok(r.twelve.l < r.km.l, "12 before km: " + JSON.stringify(r));
+      assert.strictEqual(r.lyon.t, r.twelve.t, "Lyon and its distance on one line");
+      assert.ok(r.lyon.l > r.km.r, "Lyon, FR first (on the right), then (12 km): " + JSON.stringify(r));
+      await ctx.close();
+    });
+    await check("Arabic, 360 px: a Latin name too long for its list is cut at its end", async () => {
+      const { page, ctx } = await statsPage(browser, 360, 740, "ar", "7d");
+      const r = await page.evaluate(() => Array.prototype.map.call(document.querySelectorAll("#c-cargo .name, #c-types .name, #c-airlines .name"), (e) => {
+        const g = document.createRange(); g.setStart(e.firstChild, 0); g.setEnd(e.firstChild, 1);
+        const a = g.getBoundingClientRect(), b = e.getBoundingClientRect();
+        return { name: e.firstChild.nodeValue, cut: e.scrollWidth > e.clientWidth, firstIn: a.left >= b.left - 0.5 && a.right <= b.right + 0.5, dir: getComputedStyle(e).direction };
+      }));
+      assert.ok(r.some((x) => x.cut), "a name is cut at 360 px: " + JSON.stringify(r));
+      const bad = r.filter((x) => !x.firstIn);
+      assert.deepStrictEqual(bad, [], "a name's first letter is cut away");
+      assert.ok(r.every((x) => x.dir === "ltr"), "Latin names run left to right");
+      await ctx.close();
+    });
+    await check("Spanish and Portuguese: the word in dots is the language's own, its accent left out of the dots", async () => {
+      for (const [lang, word] of [["es", "ESTADISTICAS"], ["pt-BR", "ESTATISTICAS"]]) {
+        const { page, ctx } = await statsPage(browser, 1280, 860, lang, "7d");
+        const vb = await page.evaluate(() => document.querySelector("#logo-sub svg").getAttribute("viewBox"));
+        assert.strictEqual(vb, "0 0 " + (word.length * 6 + 1) * 5 + " 45", lang + ": " + vb);
+        assert.ok(/Í/.test(catalogue(lang, "stats").STATISTICS), lang + ": the catalogue keeps its accent");
+        await ctx.close();
+      }
+    });
+    await check("Arabic: the headings in capitals are in the system's font, not a monospace one", async () => {
+      for (const lang of ["ar", "en"]) {
+        const { page, ctx } = await statsPage(browser, 1280, 860, lang, "7d");
+        const f = await page.evaluate(() => [getComputedStyle(document.querySelector("h2")).fontFamily, getComputedStyle(document.querySelector(".tile .k")).fontFamily]);
+        for (const x of f) assert.ok(lang === "ar" ? /^system-ui/.test(x) : /^ui-monospace/.test(x), lang + ": " + x);
+        await ctx.close();
+      }
+    });
+
     const html = graphsPage();
     await check("graphs1090's page: zb-lang.js comes before graphs.js in the patched page", async () => {
       const s = fs.readFileSync(path.join(html, "index.html"), "utf8");
@@ -242,6 +319,14 @@ function tr(cat, key) { const v = cat[key]; return typeof v === "string" ? v : v
         await ctx.close();
       });
     }
+    await check("graphs1090's page in Spanish and Portuguese: GRÁFICOS in dots, without its accent", async () => {
+      for (const lang of ["es", "pt-BR"]) {
+        const { page, ctx } = await openGraphs(browser, html, 1280, lang);
+        const vb = await page.evaluate(() => document.querySelectorAll(".zb-brand svg")[1].getAttribute("viewBox"));
+        assert.strictEqual(vb, "0 0 " + (8 * 6 + 1) * 10 + " 90", lang + ": " + vb);
+        await ctx.close();
+      }
+    });
     for (const w of [320, 360]) {
       await check(w + " px: graphs1090's brand fits the screen, GRAPHS keeps its size (English and Arabic)", async () => {
         for (const lang of ["", "ar"]) {

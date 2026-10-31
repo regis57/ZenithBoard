@@ -82,7 +82,9 @@ window.ZBI18N.start({ part: "console" }, function () {
     "not installed": t("not installed"), posting: t("posting"), amber: t("amber"), green: t("green"), red: t("red"), white: t("white"),
     turquoise: t("turquoise"), metric: t("metric"), imperial: t("imperial"), aviation: t("aviation"), dots: t("dot matrix"), flap: t("split-flap"), world: t("world"),
     us: t("United States"), daily: t("daily"), weekly: t("weekly"), monthly: t("monthly"),
-    factual: t("factual"), story: t("story"), board: t("board"), spotter: t("spotter"), lookup: t("lookup"), custom: t("your own") };
+    factual: t("factual"), story: t("story"), board: t("board"), spotter: t("spotter"), lookup: t("lookup"), custom: t("your own"),
+    // 0.99.21 (review B13): a service's other states (systemctl is-active), shown in English before
+    failed: t("failed"), inactive: t("inactive"), activating: t("starting"), deactivating: t("stopping"), reloading: t("reloading") };
   // graphs1090 answers on another port, so another origin: the language goes with the link
   function langQ() { return I.lang() !== "en" ? "?lang=" + encodeURIComponent(I.lang()) : ""; }
   // the summary's posts by what they show (0.48.0, the owner: "Post 2" alone said nothing)
@@ -148,6 +150,14 @@ window.ZBI18N.start({ part: "console" }, function () {
       });
     });
   }
+  // a refusal of signing in, in the page's language. 0.99.21 (review B13): "Too many tries. Wait 37 seconds." carries its
+  // number, so as a key it was never found and showed in English; the wait the Pi gives with it says it in words
+  function refusal(r, fallback) {
+    var d = r.data || {};
+    if (r.status === 429 && typeof d.wait === "number" && /^Too many tries\./.test(d.error || ""))
+      return tn(d.wait, "Too many tries. Wait {n} second.", "Too many tries. Wait {n} seconds.");
+    return d.error ? t(d.error) : fallback;
+  }
   function signedOut() {
     S.session = null;
     $("app").hidden = true; closeDrawer(); closeModal();
@@ -177,7 +187,7 @@ window.ZBI18N.start({ part: "console" }, function () {
     api("login", { body: { password: $("pw").value } }).then(function (r) {
       b.disabled = false;
       if (r.ok) { $("pw").value = ""; return boot(); }
-      $("login-err").textContent = t(r.data.error || "Could not sign in."); $("login-err").hidden = false;
+      $("login-err").textContent = refusal(r, t("Could not sign in.")); $("login-err").hidden = false;
       $("pw").select();
     }).catch(function () { b.disabled = false; $("login-err").textContent = t("The Pi does not answer."); $("login-err").hidden = false; });
   });
@@ -207,7 +217,7 @@ window.ZBI18N.start({ part: "console" }, function () {
         gate("pairing");
         return api("pair/redeem", { body: { token: pairTok } }).then(function (p) {
           if (p.ok) return boot();
-          gate(s.has_password ? "login" : "nopw", t(p.data.error || "This pairing code did not work."));
+          gate(s.has_password ? "login" : "nopw", refusal(p, t("This pairing code did not work.")));
         });
       }
       S.phoneSignin = !!s.phone_signin;
@@ -663,7 +673,7 @@ window.ZBI18N.start({ part: "console" }, function () {
       var svcs = SVC_NAMES.filter(function (s) { return f["svc_" + s[0]] !== undefined; }).map(function (s) {
         var st = f["svc_" + s[0]], quiet = (s[0] === "zenithboard_social" && !on(c.SOCIAL)) || (s[0] === "zenithboard_telegram" && !on(c.TELEGRAM));
         return h("div", { "class": "svc" }, h("i", { "class": st === "active" ? "ok" : (quiet ? "" : "bad") }), h("span", { text: s[1] }),
-          h("em", { text: st === "active" ? word("running") : (quiet ? word("off") : st) }));
+          h("em", { text: st === "active" ? word("running") : (quiet ? word("off") : word(st)) }));
       });
       out.push(card(t("Services"), "antenna", S.factsAt ? t("Read on the Pi {time}.", { time: ago(S.factsAt) }) : t("Reading the Pi…"),
         [svcs.length ? svcs : h("p", { "class": "note", text: t("Nothing read yet.") }),

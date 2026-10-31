@@ -64,8 +64,9 @@ console.log("stats version line: ok");
   };
   // 0.47.0: its words go through t(); English here (the key itself), French below
   const T = "var t = function (s, v) { var c = (CAT && CAT[s]) || s; return v ? c.replace(/\\{(\\w+)\\}/g, function (m, k) { return v[k]; }) : c; };\n";
-  const H = ["fmt", "shortDay", "altText", "unitName", "dist", "place", "farthestLine"];
-  const line = new Function("CAT", T + "var UNITS = 'metric';\n" + H.map(grab).join("\n") + "return farthestLine;")(null);
+  const H = ["fmt", "shortDay", "altText", "unitName", "dist", "place", "iso", "farthestLine"];
+  const I0 = "var I = { rtl: function () { return false; } };\n";
+  const line = new Function("CAT", T + I0 + "var UNITS = 'metric';\n" + H.map(grab).join("\n") + "return farthestLine;")(null);
   const full = {day: "2026-10-18", time: "14:32", hex: "406a1b", flight: "EZY1234", flight_iata: "U21234", airline: "easyJet",
     registration: "G-EZAB", type: "A319", type_name: "Airbus A319", alt_ft: 37000, km: 318.4,
     route: {from: {city: "Edinburgh", iata: "EDI", name: "Edinburgh Airport"}, to: {city: "Saint-Louis", iata: "BSL"}},
@@ -93,10 +94,28 @@ console.log("stats version line: ok");
   assert.strictEqual(line(null, "metric"), null);
   // the same line in French, from the shipped catalogue: the words translated, the names and numbers as they were
   const fr = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "flightinfo", "static", "i18n", "fr", "stats.json"), "utf8"));
-  const lineFr = new Function("CAT", T + "var UNITS = 'metric';\n" + H.map(grab).join("\n") + "return farthestLine;")(fr);
+  const lineFr = new Function("CAT", T + I0 + "var UNITS = 'metric';\n" + H.map(grab).join("\n") + "return farthestLine;")(fr);
   assert.ok(/318 km, près de Charleroi, BE \(35 km\)$/.test(lineFr(full, "metric")), lineFr(full, "metric"));
   assert.ok(/RCH123 \(militaire\)/.test(lineFr({day: "2026-10-18", flight: "RCH123", airline: "MILITARY", hex: "ae0001", km: 250}, "metric")));
   assert.ok(/318 km, à 85 km de Brugge, BE$/.test(lineFr(Object.assign({}, full, {near: {name: "Brugge", country: "BE", km: 85}}), "metric")));
+  // 0.99.21 (review B13): in Arabic every piece is isolated left to right, the distance to the city with its unit in one
+  // isolate ("(km 35)" before), the day before the time ("14:32 18/10" before)
+  const ar = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "flightinfo", "static", "i18n", "ar", "stats.json"), "utf8"));
+  const TR = T.replace("return v[k];", "return '\\u2066' + v[k] + '\\u2069';");
+  const lineAr = new Function("CAT", TR + "var I = { rtl: function () { return true; } };\nvar UNITS = 'metric';\n" + H.map(grab).join("\n") + "return farthestLine;")(ar);
+  const la = lineAr(full, "metric");
+  assert.ok(la.startsWith("\u206618/10 14:32\u2069 \u00b7 \u2066easyJet U21234 (EZY1234)\u2069 \u00b7 "), la);
+  assert.ok(la.includes("\u2066Edinburgh (EDI) \u2192 Saint-Louis (BSL)\u2069") && la.includes("\u2066Airbus A319 G-EZAB\u2069") && la.includes("\u206611\u202f280 m\u2069"), la);
+  assert.ok(la.includes("\u2066318 km\u2069") && la.includes("(\u206635 km\u2069)") && la.includes("\u2066Charleroi, BE\u2069"), la);
+  assert.ok(/\u2066RCH123\u2069 \(عسكرية\)/.test(lineAr({day: "2026-10-18", flight: "RCH123", airline: "MILITARY", hex: "ae0001", km: 250}, "metric")));
+  // every shipped language: the city's distance in one placeholder, the busiest hour without a ":00" of its own
+  const dir0 = path.join(__dirname, "..", "flightinfo", "static", "i18n");
+  for (const lang of fs.readdirSync(dir0).filter(l => fs.existsSync(path.join(dir0, l, "stats.json")))) {
+    const cat = JSON.parse(fs.readFileSync(path.join(dir0, lang, "stats.json"), "utf8"));
+    for (const k of [", near {city} ({dist})", ", {dist} from {city}"]) assert.ok(cat[k] && cat[k].includes("{dist}") && !cat[k].includes("{unit}"), lang + ": " + k + " -> " + cat[k]);
+    const b = cat["busiest hour {hour}, {n}"];
+    assert.ok(b && b.includes("{hour}") && !/\{hour\}[:.]00/.test(b), lang + ": busiest hour -> " + b);
+  }
 }
 console.log("stats farthest line: ok");
 

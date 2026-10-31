@@ -7,6 +7,7 @@
   --line: #1b1b1b; --line2: #262626; --ink: #e2e2e2; --muted: #8c8c8c; --faint: #555; --off: #1c1c1c;
   --ok: #39d353; --bad: #ff5a4f; --warn: #ffb000;
   --mono: ui-monospace, Menlo, Consolas, monospace; --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --code: ui-monospace, Menlo, Consolas, monospace;
   --side: 224px; --tabs: 62px; color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -14,7 +15,7 @@ html, body { height: 100%; }
 body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); line-height: 1.45; -webkit-text-size-adjust: 100%; }
 [hidden] { display: none !important; }
 a { color: var(--on); }
-pre, code { font-family: var(--mono); }
+pre, code { font-family: var(--code); }
 pre { background: #000; border: 1px solid var(--line2); padding: 10px 12px; border-radius: 6px; font-size: 13px; color: var(--on);
   white-space: pre-wrap; word-break: break-word; margin: 8px 0; }
 .muted { color: var(--muted); }
@@ -67,7 +68,7 @@ textarea:focus { border-color: var(--on); outline: none; }
 .tags-help summary { cursor: pointer; color: var(--muted); font-size: 13px; }
 .tags-help .chips { margin: 10px 0; }
 .tags-list { margin: 6px 0 0; padding-inline-start: 18px; color: var(--muted); font-size: 12.5px; columns: 2 24em; }
-.tags-list code { color: var(--on); font: 12px var(--mono); }
+.tags-list code { color: var(--on); font: 12px var(--code); }
 input[type=number] { width: 7.5em; }
 select { padding-right: 26px; }
 label { font: 600 11px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
@@ -210,7 +211,7 @@ button.page { font: inherit; text-align: left; width: 100%; }
 .list button.li:hover b { color: var(--on); }
 .list button.li.sel b { color: var(--on); }
 .list button.li.sel { box-shadow: inset 3px 0 0 var(--on); padding-left: 10px; }
-.mono-list { font: 12px var(--mono); color: var(--muted); white-space: pre-wrap; margin: 0; max-height: 220px; overflow: auto; }
+.mono-list { font: 12px var(--code); color: var(--muted); white-space: pre-wrap; margin: 0; max-height: 220px; overflow: auto; }
 .sub { font: 700 11px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 14px 0 6px; }
 .drawer-body .sub { margin-top: 0; }
 input.day { width: 4.5em; }
@@ -335,3 +336,8 @@ input.day { width: 4.5em; }
   [dir="rtl"] .drawer-panel { border-right: 0; }
 }
 [dir="rtl"] .tile .v { unicode-bidi: plaintext; text-align: right; }   /* "52 °C", "21.3 GB": the number before its unit; an Arabic duration in its own order */
+/* 0.99.21 (review B13): Arabic in a monospace font is drawn letter by letter, each in a fixed cell, and its words look
+   broken apart (the headings, the labels, the buttons, a service's state; seen in the preview, where the fallback is
+   DejaVu Sans Mono; the letter spacing is already 0, i18n.css): in Arabic the page's "monospace" is the system's own
+   font; the Pi's output and the commands (--code) keep a monospace font */
+html:lang(ar) { --mono: var(--sans); }

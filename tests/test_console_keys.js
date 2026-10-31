@@ -7,6 +7,8 @@
 //   - Space on a switch, then Enter on the question, leaves the focus on the switch drawn again (before: on the page);
 //   - the Activity drawer takes the focus to its ×, Tab stays inside it, Escape gives the focus back to Activity;
 //   - the page reads the Pi again every two minutes and when its tab is shown again, never while a field is typed in.
+//   - 0.99.21 (review B13): a failed service says so in French and Arabic; too many sign-in tries says how long to wait
+//     in French (Busy keeps its own words); Arabic headings use the system's font, the Pi's output a monospace one.
 const assert = require("assert"), fs = require("fs"), path = require("path"), { execFileSync } = require("child_process");
 let chromium;
 try { ({ chromium } = require("playwright")); } catch (e) {
@@ -42,11 +44,15 @@ async function consolePage(browser, opts) {
     if (p === "/console" || p === "/console/") return route.fulfill({ status: 200, contentType: "text/html", body: fs.readFileSync(path.join(STATIC, "console.html")) });
     if (p.indexOf("/static/") === 0) {
       const f = path.join(STATIC, p.slice(8));
-      if (f.indexOf(STATIC) !== 0 || !fs.existsSync(f)) return route.fulfill({ status: 404, body: "" });
-      return route.fulfill({ status: 200, contentType: TYPES[path.extname(f)] || "application/octet-stream", body: fs.readFileSync(f) });
+      // read once and answer 404 on any error: no check-then-read race (CodeQL, 0.99.21)
+      let body;
+      if (f.indexOf(STATIC) !== 0) return route.fulfill({ status: 404, body: "" });
+      try { body = fs.readFileSync(f); } catch (e) { return route.fulfill({ status: 404, body: "" }); }
+      return route.fulfill({ status: 200, contentType: TYPES[path.extname(f)] || "application/octet-stream", body });
     }
     const api = p.replace(/^\/console\/api\//, "");
-    if (api === "session") return json({ enabled: true, signed_in: true, has_password: true, csrf: "c", wizard_done: true, version: "0.99.18", writable: true });
+    if (api === "session") return json(Object.assign({ enabled: true, signed_in: true, has_password: true, csrf: "c", wizard_done: true, version: "0.99.18", writable: true }, opts.session || {}));
+    if (api === "login" && opts.login) return route.fulfill({ status: opts.login[0], contentType: "application/json", body: JSON.stringify(opts.login[1]) });
     if (api === "state") {
       seen.state++;
       return json({ cfg: { THEME: "amber", CYCLE_SECONDS: "8", RADIUS: "5", UNITS: "metric", DISPLAY_MODE: "dots", CONSOLE_LANG: "en" },
@@ -64,7 +70,7 @@ async function consolePage(browser, opts) {
     return json({});
   });
   await page.goto(BASE + "/console" + (opts.lang ? "?lang=" + opts.lang : "") + "#" + (opts.section || "overview"));
-  await page.waitForSelector("#view .card");
+  await page.waitForSelector(opts.gate ? "#login:not([hidden])" : "#view .card");
   return { page, ctx, seen };
 }
 const active = (page) => page.evaluate(() => {
@@ -235,6 +241,44 @@ const active = (page) => page.evaluate(() => {
       const m = await page.evaluate(() => { const li = document.querySelector(".ticks li");
         return li ? getComputedStyle(li, "::before").marginLeft + " " + getComputedStyle(li, "::before").marginRight : null; });
       if (m) assert.strictEqual(m, "10px 0px", "a tick's dot keeps its gap before the words: " + m);
+      await ctx.close();
+    });
+
+    // 0.99.21 (review B13): a service's state other than active/off was shown as systemctl says it, in English
+    for (const [lang, word] of [["fr", "en échec"], ["ar", "فشل"]]) {
+      await check(lang + ": a failed service says so in the page's language", async () => {
+        const { page, ctx } = await consolePage(browser, { lang, facts: { svc_readsb: "failed" } });
+        await page.waitForSelector(".svc em");
+        const em = await page.locator(".svc em").first().textContent();
+        assert.strictEqual(em, word);
+        await ctx.close();
+      });
+    }
+    await check("fr: too many tries says how long to wait, in French; Busy keeps its own words", async () => {
+      const { page, ctx } = await consolePage(browser, { lang: "fr", gate: true, session: { signed_in: false },
+        login: [429, { error: "Too many tries. Wait 37 seconds.", wait: 37 }] });
+      await page.fill("#pw", "x");
+      await page.click("#login-go");
+      await page.waitForSelector("#login-err:not([hidden])");
+      assert.strictEqual(await page.locator("#login-err").textContent(), "Trop d'essais. Patientez 37 secondes.");
+      await ctx.close();
+      const b = await consolePage(browser, { lang: "fr", gate: true, session: { signed_in: false },
+        login: [429, { error: "Busy. Try again in a few seconds.", wait: 3 }] });
+      await b.page.fill("#pw", "x");
+      await b.page.click("#login-go");
+      await b.page.waitForSelector("#login-err:not([hidden])");
+      assert.strictEqual(await b.page.locator("#login-err").textContent(), "Occupé. Réessayez dans quelques secondes.");
+      await b.ctx.close();
+    });
+    await check("Arabic: headings and labels in the system's font, the Pi's output in a monospace one", async () => {
+      const { page, ctx } = await consolePage(browser, { lang: "ar" });
+      const f = await page.evaluate(() => {
+        const pre = document.createElement("pre"); document.body.appendChild(pre);
+        return { h2: getComputedStyle(document.querySelector(".card h2")).fontFamily, k: getComputedStyle(document.querySelector(".tile .k")).fontFamily,
+          em: getComputedStyle(document.querySelector(".svc em")).fontFamily, pre: getComputedStyle(pre).fontFamily };
+      });
+      for (const k of ["h2", "k", "em"]) assert.ok(/^system-ui/.test(f[k]), k + ": " + f[k]);
+      assert.ok(/^ui-monospace/.test(f.pre), "pre: " + f.pre);
       await ctx.close();
     });
   } finally {
