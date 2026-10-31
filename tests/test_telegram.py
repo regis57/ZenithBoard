@@ -9,6 +9,7 @@ import io
 import json
 import os
 import shutil
+import signal
 import sys
 import tempfile
 import time
@@ -341,6 +342,138 @@ class BlueskyNeverTest(unittest.TestCase):
             src = fh.read()
         self.assertNotIn("telegram", src.lower(), "the Bluesky service knows nothing of the emergency messages")
         self.assertNotIn("EMERGENCY", src)
+
+
+class Stop(Exception):
+    pass
+
+
+class Halt(BaseException):                                # not caught by the service's own `except Exception`
+    pass
+
+
+class RunTest(Base):
+    """Review B8 (0.99.16): the service itself, a few loops of it, with the clock, the decoder, the wall and Telegram
+    stood in for."""
+
+    def setUp(self):
+        Base.setUp(self)
+        self.clock = [1800000000.0]
+        self.reads = []                                   # what aircraft.json says at each loop
+        self.loops = 0
+        self.stop_after = 2
+        self.ids = []
+        self.sec = {"TELEGRAM_BOT_TOKEN": TOKEN, "TELEGRAM_CHAT_ID": "-100555"}
+        keep = {n: getattr(telegram, n) for n in ("STATE_DIR", "cfg", "secrets", "send")}
+        self.addCleanup(lambda: [setattr(telegram, n, v) for n, v in keep.items()])
+        self.addCleanup(setattr, social, "read_aircraft", social.read_aircraft)
+        self.addCleanup(setattr, telegram.time, "time", telegram.time.time)
+        self.addCleanup(signal.signal, signal.SIGTERM, signal.getsignal(signal.SIGTERM))
+        telegram.STATE_DIR = os.path.join(self.tmp, "state")
+        telegram.cfg = lambda: dict(CFG)
+        telegram.secrets = lambda: dict(self.sec)         # a fresh read of telegram.env each time, as on the Pi
+        telegram.send = lambda sec, text: self.ids.append(sec["TELEGRAM_CHAT_ID"])
+        social.read_aircraft = lambda c: self.reads[min(self.loops, len(self.reads) - 1)] if self.reads else []
+        telegram.time.time = lambda: self.clock[0]
+
+        def sleep(sec):
+            if sec == telegram.READ_EVERY_S:
+                self.loops += 1
+                if self.loops >= self.stop_after:
+                    raise Stop()
+                self.clock[0] += telegram.ASK_EVERY_S     # every loop asks the wall
+            else:
+                self.clock[0] += sec
+        telegram.time.sleep = sleep
+
+    def run_service(self):
+        import contextlib
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            with self.assertRaises((Stop, SystemExit)):
+                telegram.cmd_run()
+        return out.getvalue()
+
+    def saved(self):
+        with open(os.path.join(telegram.STATE_DIR, "state.json"), encoding="utf-8") as fh:
+            return json.load(fh)
+
+    def test_what_a_pass_sent_is_saved_at_once(self):
+        # sent with the queue then empty, it waited up to a minute to be written down: a restart in that minute sent
+        # the same crossing and the same squawk again
+        self.reads = [[], [ac(hex_code="3c0001", emergency="general")]]
+        self.planes_at = None
+        orig = social.ask_wall
+        social.ask_wall = lambda c, r: [EZY] if self.loops >= 1 else []
+        self.addCleanup(setattr, social, "ask_wall", orig)
+        self.run_service()
+        self.assertEqual(len(self.ids), 2, "the squawk and the crossing went out in the second loop")
+        st = self.saved()
+        self.assertIn(EZY["hex"], st.get("posted", {}))
+        self.assertIn("3c0001:7700", st.get("squawks", {}))
+
+    def test_stopped_it_saves_first(self):
+        # systemd stops the service with SIGTERM; what was already decided is written down before it exits
+        self.reads = [[ac(hex_code="3c0001", emergency="general")]]
+
+        def sent_then_stopped(sec, text):
+            self.ids.append(sec["TELEGRAM_CHAT_ID"])
+            handler = signal.getsignal(signal.SIGTERM)
+            if not callable(handler):
+                raise Halt("the service does not handle SIGTERM")     # what systemd's stop would do: no saving
+            handler(signal.SIGTERM, None)
+        telegram.send = sent_then_stopped
+        self.stop_after = 99
+        self.run_service()
+        self.assertIn("3c0001:7700", self.saved().get("squawks", {}))
+
+    def test_a_supergroup_stays_moved_after_each_read_of_the_secrets(self):
+        # the new id was put in the dict the next read of telegram.env replaced, fifteen seconds later
+        self.sec["TELEGRAM_CHAT_ID"] = "-4001"
+        self.reads = [[ac(hex_code="3c0001", emergency="general")], [ac(hex_code="3c0002", emergency="general")],
+                      [ac(hex_code="3c0003", emergency="general")]]
+        refusals = []
+
+        def sender(sec, text):
+            if sec["TELEGRAM_CHAT_ID"] == "-4001":
+                refusals.append(1)
+                raise telegram.TgError(400, "Bad Request: group chat was upgraded to a supergroup chat", {"migrate_to_chat_id": -1001234})
+            self.ids.append(sec["TELEGRAM_CHAT_ID"])
+        telegram.send = sender
+        self.stop_after = 4
+        out = self.run_service()
+        self.assertEqual(len(refusals), 1, "refused once, then the new id")
+        self.assertEqual(self.ids, ["-1001234"] * 3)
+        for leak in ("-4001", "1001234", TOKEN):
+            self.assertNotIn(leak, out, "never in the journal")
+        self.assertNotIn("1001234", json.dumps(self.saved()))
+
+    def test_only_the_exact_old_id_is_followed(self):
+        box = telegram.Outbox()
+        box.moved = ("-4001", "-1001234")
+        self.assertEqual(box.follow_move({"TELEGRAM_CHAT_ID": "-4001"})["TELEGRAM_CHAT_ID"], "-1001234")
+        self.assertEqual(box.follow_move({"TELEGRAM_CHAT_ID": "-777"})["TELEGRAM_CHAT_ID"], "-777", "a chat set up since is kept")
+
+
+class StatusWeekTest(Base):
+    def test_last_seven_days_are_today_and_the_six_before(self):
+        # review B8 (0.99.16): every stored day was added up, eight of them in the morning
+        import contextlib
+        import datetime
+        now = 1800000000.0
+        today = datetime.date.fromtimestamp(now)
+        st = {"days": {(today - datetime.timedelta(days=i)).isoformat(): {"crossing": 1} for i in range(10)}}
+        keep = (telegram.STATE_DIR, telegram.SECRETS_FILE, telegram.time.time)
+        telegram.STATE_DIR, telegram.SECRETS_FILE = os.path.join(self.tmp, "state"), os.path.join(self.tmp, "none.env")
+        telegram.time.time = lambda: now
+        out = io.StringIO()
+        try:
+            telegram.save_state(st)
+            with contextlib.redirect_stdout(out):
+                telegram.cmd_status()
+        finally:
+            telegram.STATE_DIR, telegram.SECRETS_FILE, telegram.time.time = keep
+        self.assertIn("Sent today: 1 crossing(s), 0 squawk(s); last 7 days: 7 and 0", out.getvalue())
 
 
 if __name__ == "__main__":

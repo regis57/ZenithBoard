@@ -134,7 +134,7 @@ netwatch_run() {
     if [ $((now - last)) -lt "$NETWATCH_REBOOT_GAP_S" ]; then
       netwatch_log "still no network, but the Pi was already restarted by this watchdog less than 3 hours ago: not restarting again"
     else
-      mkdir -p "$(dirname "$NETWATCH_REBOOTED")"; echo "$now" > "$NETWATCH_REBOOTED"
+      mkdir -p "$(dirname "$NETWATCH_REBOOTED")"; zb_put "$NETWATCH_REBOOTED" 644 "$now"   # 0.99.11: never through a link
       netwatch_log "no network for about $((n * 2)) minutes: restarting the Pi"
       systemctl reboot || true
     fi
@@ -219,9 +219,14 @@ health_check() {
     if [ -n "$lines" ]; then echo "Network watchdog, its last lines:"; sed 's/^/    /' <<<"$lines"; else echo "Network watchdog: has never needed to act (no lines in the logs)"; fi
   fi
   echo "Logs kept after a restart (keeplogs): $(keeplogs_state) $( [ "$(keeplogs_state)" = on ] || echo '(the logs are lost at every restart. To find the cause of the next freeze: sudo zenithboard keeplogs on, or menu 4 Troubleshoot, or the console'"'"'s Reliability page)')"
-  boots=$(journalctl --list-boots 2>/dev/null | grep -c . || true)
-  if [ "${boots:-0}" -ge 2 ]; then
-    prev=$(journalctl -b -1 -n 40 --no-pager 2>/dev/null)
+  # 0.99.13 (review B5, S1): count the boot rows, not the lines. systemd 252 (Bookworm) and newer print a header
+  # line "IDX BOOT ID FIRST ENTRY LAST ENTRY" unless -q, so one boot read as two, and an empty "journalctl -b -1"
+  # (no earlier boot) was then called an abrupt end on every Pi without kept logs. Older versions print the rows
+  # alone (" 0 <id> <first>—<last>"); -q and the row pattern read both. Only an earlier boot that gives lines is judged.
+  boots=$(journalctl -q --no-pager --list-boots 2>/dev/null | zb_boot_rows)
+  prev=""
+  if [ "${boots:-0}" -ge 2 ]; then prev=$(journalctl -b -1 -n 40 --no-pager 2>/dev/null | grep -v '^-- ' || true); fi
+  if [ -n "$prev" ]; then
     if grep -qiE 'Reached target.*(Shutdown|Reboot|Power-Off)|systemd-shutdown|Powering off|Rebooting|Journal stopped' <<<"$prev"; then
       echo "Previous boot: ended normally (a clean shutdown or restart)"
     else

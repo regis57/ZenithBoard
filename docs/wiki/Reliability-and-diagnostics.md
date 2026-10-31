@@ -12,7 +12,7 @@ zenithboard health
 
 One screen, no digging: power (has the Pi been under-volted or throttled?), temperature, memory (free, of the total), SD card (how full, used and free in GB, and the card's own size since 0.34.0: `Card: 6% full: 1.7 GB used of 31.2 GB, 28.1 GB free (the card: 31.9 GB)`; the partition is a little smaller than the card, which also holds the boot partition), which watchdogs are on, the network watchdog's last lines, whether the previous boot ended normally or abruptly, and any kernel problems in the logs.
 
-Run it first whenever something odd happened. **"Previous boot ended abruptly"** is the single most useful line on it: it separates a crash or a power cut from a clean restart, and that decides where to look next.
+Run it first whenever something odd happened. **"Previous boot ended abruptly"** is the single most useful line on it: it separates a crash or a power cut from a clean restart, and that decides where to look next. It is said only when the logs hold an earlier boot with lines of its own; with one boot in the logs (logs not kept after a restart, or the first start) it says *no earlier boot in the logs*. Until 0.99.12 it read the header line that `journalctl --list-boots` prints on Bookworm (systemd 252) as a boot, and said *ended ABRUPTLY* on every Pi that kept no logs.
 
 ## Memory and threads, service by service
 

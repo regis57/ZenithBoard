@@ -39,7 +39,7 @@ h2 { margin: 0 0 12px; font: 700 15px ui-monospace, Menlo, Consolas, monospace; 
 .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
 .tile { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; min-width: 0; }
 .k, figcaption, .rec .k { font: 600 11px ui-monospace, Menlo, Consolas, monospace; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
-.tile .v { font: 700 34px ui-monospace, Menlo, Consolas, monospace; color: var(--on); font-variant-numeric: tabular-nums; line-height: 1.15; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tile .v { font: 700 clamp(22px, 2.8vw, 34px) ui-monospace, Menlo, Consolas, monospace; color: var(--on); font-variant-numeric: tabular-nums; line-height: 1.15; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tile .d { font-size: 12px; color: var(--muted); }
 
 .records { display: grid; gap: 6px; }
@@ -98,7 +98,10 @@ img.flag { width: 36px; height: 24px; display: block; border: 1px solid #333; bo
 .mil .row { display: grid; grid-template-columns: 44px minmax(0, 200px) minmax(0, 1fr) minmax(60px, 2fr) 40px; gap: 12px; align-items: center; font-size: 14px; }
 .mil .row .c { color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mil .row .m { color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mil .row .b { height: 10px; border-radius: 3px; background: var(--on); }
+/* 0.99.20 (review B12): the bar's display is set here, before the phone's block below; set after it, it won over the
+   block's display: none and the bar showed on a phone, squeezed into the row */
+.mil .row .bw { display: block; min-width: 0; }
+.mil .row .b { display: block; height: 10px; border-radius: 3px; background: var(--on); }
 .mil .row .n { text-align: right; font: 13px ui-monospace, Menlo, Consolas, monospace; color: var(--muted); }
 .mil .row.next { border-top: 1px solid var(--line); padding-top: 6px; }
 @media (max-width: 620px) {
@@ -107,7 +110,9 @@ img.flag { width: 36px; height: 24px; display: block; border: 1px solid #333; bo
   .mil .row .n { grid-area: n; } .mil .row .bw { display: none; } .mil .row .c:empty { display: none; }
 }
 
-.tip { position: fixed; pointer-events: none; background: #f2f2f2; color: #000; font: 12px ui-monospace, Menlo, Consolas, monospace; padding: 5px 8px; border-radius: 4px; transform: translate(-50%, calc(-100% - 10px)); white-space: nowrap; z-index: 5; }
+/* 0.99.20 (review B12): placed by stats.js inside the screen (centred above the finger or the pointer, below it at the
+   top, never past an edge); a line longer than the screen wraps */
+.tip { position: fixed; left: 0; top: 0; pointer-events: none; background: #f2f2f2; color: #000; font: 12px ui-monospace, Menlo, Consolas, monospace; padding: 5px 8px; border-radius: 4px; width: max-content; max-width: calc(100vw - 16px); overflow-wrap: anywhere; z-index: 5; }
 .tip[hidden] { display: none; }
 details summary { cursor: pointer; font: 600 12px ui-monospace, Menlo, Consolas, monospace; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
 table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
@@ -120,13 +125,21 @@ th { font: 400 11px ui-monospace, Menlo, Consolas, monospace; letter-spacing: .1
 .note.version a:hover { text-decoration: underline; }
 #dash { display: flex; flex-direction: column; gap: 16px; }
 #dash[hidden] { display: none; }
-.mil .row .bw { display: block; min-width: 0; }
-.mil .row .b { display: block; }
 /* 0.47.0: the period and the language side by side, top right */
 .top-r { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 /* 0.48.0: right to left (Arabic): the lists and the table mirrored; the charts keep their axes left to right */
-[dir="rtl"] .ranks li .name i { margin-left: 0; margin-right: 8px; }
+/* 0.99.20 (review B12): no right-to-left rule for the grey words after a name (a cargo airline's model): the name and
+   the words are Latin, so they run left to right inside the Arabic line, the words on the right; the gap stays on
+   their left (margin-left above). Moved to their right, it fell outside and the words touched the name. */
 [dir="rtl"] .mil .row .n { text-align: left; }
 [dir="rtl"] th, [dir="rtl"] td { text-align: right; padding: 5px 0 5px 10px; }
 [dir="rtl"] svg, [dir="rtl"] pre, [dir="rtl"] code { direction: ltr; }
 [dir="rtl"] .tile .v { unicode-bidi: plaintext; text-align: right; }   /* "354 km": the number before its unit */
+/* 0.99.21 (review B13): a name in a list runs in its own direction (dir="auto", stats.js), so a Latin name is cut at its
+   end; in Arabic it stays against the flag, on the right */
+[dir="rtl"] .ranks li .name, [dir="rtl"] .mil .row .m { text-align: right; }
+/* 0.99.21 (review B13): Arabic in a monospace font is drawn letter by letter, each in a fixed cell, and its words look
+   broken apart (seen in the preview, where the fallback is DejaVu Sans Mono): the headings and labels set in capitals
+   and the tiles' figures (349.8 مليون) use the system's own font in Arabic; the charts and the code keep theirs */
+html:lang(ar) :is(.sub, .toggle button, h2, .k, figcaption, .rec .k, .tile .v, .big span, details summary, th, .tip) {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }

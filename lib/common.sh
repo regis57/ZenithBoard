@@ -6,7 +6,9 @@ ZB_ETC="${ZENITHBOARD_ETC:-/etc/zenithboard}"   # override only for testing
 ZB_CONFIG="$ZB_ETC/config.env"
 ZB_HOME="${ZENITHBOARD_HOME:-/opt/zenithboard}"; export ZB_HOME     # override only for testing (tests/test_install.sh)
 ZB_BIN_DIR="${ZENITHBOARD_BIN_DIR:-/usr/local/bin}"; export ZB_BIN_DIR   # where the zenithboard command is linked
-ZB_DATA="/var/lib/zenithboard"; export ZB_DATA
+# 0.99.11: a test points it at a folder of its own (ZB_VAR_DIR, as the trust folder and the gain log already did); run
+# as root, the tests repaired the real /var/lib/zenithboard
+ZB_DATA="${ZB_VAR_DIR:-/var/lib/zenithboard}"; export ZB_DATA
 # where the units are installed; a test points it at a folder of its own (the audit of 22-23 October 2026: run as root,
 # the tests wrote the real /etc/systemd/system)
 ZB_UNIT_DIR="${ZB_SYSTEMD_DIR:-/etc/systemd/system}"; export ZB_UNIT_DIR
@@ -45,7 +47,8 @@ cfg_write() {  # cfg_write KEY [VALUE]: the file without KEY, then KEY=VALUE whe
   {
     command -v flock >/dev/null && flock -w 10 9
     tmp=$(mktemp "${ZB_CONFIG%/*}/.config.env.XXXXXX") || return 1
-    grep -v -E "^$key=" "$ZB_CONFIG" > "$tmp" || true
+    # the review of 0.99.8: the key is compared as text, never read as a pattern (config-set '.*' x emptied the file)
+    ZB_CFG_KEY="$key" awk 'index($0, ENVIRON["ZB_CFG_KEY"] "=") != 1' "$ZB_CONFIG" > "$tmp" || true
     [ $# -lt 2 ] || printf '%s=%s\n' "$key" "$2" >> "$tmp"
     chmod 644 "$tmp"; sync "$tmp" 2>/dev/null || true
     mv -f "$tmp" "$ZB_CONFIG"
@@ -102,6 +105,11 @@ is_number() { [[ "$1" =~ ^-?[0-9]+([.][0-9]+)?$ ]]; }
 # seconds each aircraft stays on the wall: whole seconds, 2 to 60, as the presets and the console have it (the audit of
 # 22-23 October 2026: the menu and the command took 0, -3 and 600)
 valid_cycle() { [[ ${1:-} =~ ^[0-9]{1,2}$ ]] && [ "$((10#$1))" -ge 2 ] && [ "$((10#$1))" -le 60 ]; }
+# the review of 0.99.8: what goes into the decoders' and feeders' own files (by sed or as an option) holds no character
+# a shell or sed gives a meaning to
+valid_alt() { [[ ${1:-} =~ ^-?[0-9]{1,4}$ ]]; }                 # metres, whole
+valid_sdr() { [[ ${1:-} =~ ^[A-Za-z0-9_-]{1,32}$ ]]; }          # a dongle's serial or index
+valid_plain_value() { case "${1:-}" in *[\"\\\|\&\;\<\>\$\`]*|*$'\n'*|*$'\r'*) return 1 ;; *) return 0 ;; esac; }
 valid_lat() { is_number "$1" && awk -v v="$1" 'BEGIN{exit !(v>=-90 && v<=90)}'; }
 valid_lon() { is_number "$1" && awk -v v="$1" 'BEGIN{exit !(v>=-180 && v<=180)}'; }
 valid_radius() { local r; for r in $RADIUS_PRESETS; do [ "$r" = "$1" ] && return 0; done; return 1; }
@@ -134,14 +142,79 @@ is_flightinfo()  { unit_exists zenithboard-flightinfo; }
 ensure_zb_user() {
   [ "$(id -u)" -eq 0 ] && [ "${ZB_SKIP_SERVICES:-}" != 1 ] || return 0
   id "$ZB_USER" >/dev/null 2>&1 || useradd --system --home-dir "$ZB_DATA" --shell /usr/sbin/nologin "$ZB_USER"
-  # 2751: anyone may walk through to data/ (so `zenithboard status` works without sudo) but only the service
-  # may list the folder, which keeps the statistics and the social state out of sight.
-  install -d -o "$ZB_USER" -g "$ZB_USER" -m 2751 "$ZB_DATA"
-  # the downloaded aircraft-type list is read by the wall server (user zenithboard): world-readable, root-writable
-  install -d -m 755 "$ZB_DATA/data"
+  # 0.99.11 (review B3, SH2): the folder is root's. Until 0.99.10 it was the service's (2751), and it holds root's own
+  # trust/ (the update-signature keyring), console/ and restore-pending/: the service could rename them away and put its
+  # own in their place. 3771: root and the service's group may create entries (the gain log's CSV sits here, the stats
+  # timer may make stats/), others may only walk through to data/ (so `zenithboard status` works without sudo), new
+  # entries keep the group (setgid), and the sticky bit lets the service remove or rename only what it owns itself,
+  # never a folder of root's. Run by every install and update (deploy_files), so a Pi of before is put right.
+  install -d -o root -g "$ZB_USER" -m 3771 "$ZB_DATA"
+  zb_data_repair
 }
 
+# zb_private_dir_ok DIR: a real folder (not a link), owned by whoever runs this (root, on the Pi), that nobody else may
+# enter. What root keeps for itself in ZB_DATA (trust/, restore-pending/) is used only when this holds (0.99.11).
+zb_private_dir_ok() {
+  local o m
+  [ -d "$1" ] && [ ! -L "$1" ] || return 1
+  read -r o m <<<"$(stat -c '%u %a' -- "$1" 2>/dev/null)"
+  [ "${o:-x}" = "$(id -u)" ] && [ -n "${m:-}" ] && [ $(( 8#$m & 8#077 )) -eq 0 ]
+}
 
+# zb_root_dir DIR MODE: a folder of root's in a folder the service cannot rename things in (ZB_DATA since 0.99.11, or
+# console/), made or put right without following a link planted in its place. A link is removed; a folder somebody
+# else made there is taken back and the links it holds are removed, since root writes into it afterwards.
+zb_root_dir() {
+  local d="$1" m="$2"
+  [ ! -L "$d" ] || rm -f -- "$d"
+  [ -d "$d" ] || mkdir -m "$m" -- "$d" 2>/dev/null || [ -d "$d" ] || return 1
+  [ -d "$d" ] && [ ! -L "$d" ] || return 1
+  if [ "$(stat -c %u -- "$d")" != "$(id -u)" ]; then
+    chown -h "$(id -u)" -- "$d" || return 1
+    find "$d" -mindepth 1 -maxdepth 1 -type l -delete 2>/dev/null || true
+  fi
+  chmod "$m" -- "$d"
+}
+
+# zb_service_dir DIR MODE: a folder the service user writes (stats/, social/, telegram/, the console's state/ and spool/),
+# made by root and handed to that user. Root never follows a link found there (0.99.11, review B3, C2: chown and
+# chmod followed one, so a link planted at the console's spool gave any folder of the card to the service): a link is
+# removed, the folder is made with its mode when it is missing (an existing one keeps the mode its user gave it), and
+# its owner is set on the name itself (chown -h), so a link put back in the meantime changes nothing but the link.
+zb_service_dir() {
+  local d="$1" m="$2"
+  [ ! -L "$d" ] || rm -f -- "$d"
+  [ -d "$(dirname -- "$d")" ] || mkdir -p -- "$(dirname -- "$d")" || return 1
+  [ -d "$d" ] || mkdir -m "$m" -- "$d" 2>/dev/null || [ -d "$d" ] || return 1
+  [ "$(id -u)" -ne 0 ] || chown -h "$ZB_USER:$ZB_USER" -- "$d" 2>/dev/null || true
+}
+
+# zb_put FILE MODE TEXT: root writes a whole file in a folder the service user can write in, never through a link put
+# there: a new name made with O_EXCL (set -C), which a link cannot answer, then renamed over the old name (a rename
+# replaces a link, it does not follow it). 0.99.11.
+zb_put() {
+  local f="$1" m="$2" new="$1.zbnew"
+  rm -f -- "$new"
+  ( umask 077; set -C; printf '%s\n' "$3" > "$new" ) 2>/dev/null || return 1
+  chmod "$m" -- "$new" && mv -fT -- "$new" "$f"
+}
+
+# What the service writes in ZB_DATA is the service's, what root writes there is root's; put right on every install
+# and update (0.99.11, review B3). The gain log's CSV is the one file of the service's at the top: a link found there
+# is removed (root empties it with `gain log clear`), and a CSV root wrote is handed back, or the timer could no longer
+# replace it under the sticky bit.
+zb_data_repair() {
+  local d
+  for d in stats social telegram; do
+    [ -e "$ZB_DATA/$d" ] || [ -L "$ZB_DATA/$d" ] || continue
+    zb_service_dir "$ZB_DATA/$d" 750
+  done
+  for d in gain-log.csv gain-log.csv.tmp; do [ ! -L "$ZB_DATA/$d" ] || rm -f -- "${ZB_DATA:?}/$d"; done
+  [ ! -f "$ZB_DATA/gain-log.csv" ] || chown -h "$ZB_USER:$ZB_USER" -- "$ZB_DATA/gain-log.csv" 2>/dev/null || true
+  [ ! -f "$ZB_DATA/gain-log.csv.tmp" ] || [ "$(stat -c %u -- "$ZB_DATA/gain-log.csv.tmp")" != 0 ] || rm -f -- "$ZB_DATA/gain-log.csv.tmp"
+  # the downloaded aircraft-type list is read by the wall server (user zenithboard): world-readable, root-writable
+  zb_root_dir "$ZB_DATA/data" 755
+}
 
 # 0.47.0: the web pages' languages. English always; the others when this copy of ZenithBoard carries their catalogue
 # (flightinfo/static/i18n/<code>/console.json), so a language is offered only once it is translated. The same codes
@@ -184,6 +257,11 @@ zb_tmp() {
 zb_tmp_clean() { [ -z "${ZB_TMPDIR:-}" ] || rm -rf "$ZB_TMPDIR"; ZB_TMPDIR=""; }
 
 # 0.52.0: a station's identity (ADSB Exchange's UUID, FlightAware's feeder ID) hidden in output that is often pasted
+# zb_boot_rows: the number of boots in what `journalctl -q --list-boots` printed (0.99.13, review B5, S1). One row per
+# boot, its index first (" 0 <id> ...", "-1 <id> ..."); systemd 252 and newer add the header "IDX BOOT ID FIRST
+# ENTRY LAST ENTRY" without -q, and "No journal files were found." goes to stderr. A count of lines read the header
+# as a boot. Prints 0 when there is none.
+zb_boot_rows() { grep -cE '^ *-?[0-9]+ ' || true; }
 zb_mask_ids() { sed -E 's/\{?[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}\}?/(id hidden)/g'; }
 
 # 0.52.0: the installers whose added packages are noted for `off` (graphs1090, ADSB Exchange's stats) run one at a time,
@@ -200,10 +278,22 @@ fetch() {  # fetch URL DEST   (fails loudly)
        -o "$2" "$1" || { err "Download failed: $1   (no internet on the Pi, or the address moved: see lib/versions.sh)"; return 1; }
 }
 
+# The review of 0.99.8: the value went into a sed expression, so a | or a quote in it was a command. Now it reaches awk
+# through the environment (awk -v would turn its backslashes into escapes) and is written as it is, into a file beside
+# the original that takes its place in one step, with its owner and mode.
 ini_set() {  # ini_set FILE KEY VALUE  -> KEY="VALUE" (replace or append)
-  local f="$1" k="$2" v="$3"
-  touch "$f"
-  if grep -qE "^$k=" "$f"; then sed -i -E "s|^$k=.*|$k=\"$v\"|" "$f"; else printf '%s="%s"\n' "$k" "$v" >> "$f"; fi
+  local f="$1" tmp
+  touch "$f" || return 1
+  tmp=$(mktemp "$f.XXXXXX") || return 1
+  if ZB_INI_K="$2" ZB_INI_V="$3" awk 'BEGIN { k = ENVIRON["ZB_INI_K"]; line = k "=\"" ENVIRON["ZB_INI_V"] "\"" }
+      index($0, k "=") == 1 { if (!done) print line; done = 1; next }
+      { print }
+      END { if (!done) print line }' "$f" > "$tmp"; then
+    chmod --reference="$f" "$tmp" 2>/dev/null || true; chown --reference="$f" "$tmp" 2>/dev/null || true
+    mv -f "$tmp" "$f"
+  else
+    rm -f "$tmp"; return 1
+  fi
 }
 
 # 0.99.6: an ini file with [sections] and plain key=value lines (AirNav Radar's rbfeeder.ini)

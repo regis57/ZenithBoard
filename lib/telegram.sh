@@ -59,8 +59,7 @@ telegram_remove_units() {
   rm -f "$TELEGRAM_UNIT_DIR/$TELEGRAM_UNIT.service"; systemctl daemon-reload 2>/dev/null || true
 }
 telegram_prepare_dir() {
-  [ -d "$TELEGRAM_DIR" ] || install -d -m 750 "$TELEGRAM_DIR" 2>/dev/null || return 1
-  [ "$(id -u)" -ne 0 ] || chown "$ZB_USER:$ZB_USER" "$TELEGRAM_DIR" 2>/dev/null || true
+  zb_service_dir "$TELEGRAM_DIR" 750 || return 1    # 0.99.11: never through a link planted in its place
 }
 
 telegram_on() {

@@ -53,16 +53,24 @@ ln -s "$t/pw" "$t/bin/piaware-config"
 out=$(cd "$t" && backup_make "$t/full.tar.gz")
 check "make: writes the file, owner-only"            '[ -f "$t/full.tar.gz" ] && [ "$(stat -c %a "$t/full.tar.gz")" = 600 ] && echo "$out" | grep -q "keep it to yourself"'
 m=$(members "$t/full.tar.gz")
-check "make: every part is in it"                    'for x in MANIFEST settings.env features.env feeders.env pfclient-config.json graphs-xml.tar.gz stats/stats.csv stats/seen-2026-10-20 social/state.json social/templates.txt journal/0123456789abcdef0123456789abcdef/system.journal; do echo "$m" | grep -qx "$x" || exit 1; done'
+check "make: every part is in it"                    '( for x in MANIFEST settings.env features.env feeders.env pfclient-config.json graphs-xml.tar.gz stats/stats.csv stats/seen-2026-10-20 social/state.json social/templates.txt journal/0123456789abcdef0123456789abcdef/system.journal; do echo "$m" | grep -qx "$x" || exit 1; done )'
 mkdir -p "$t/x"; tar -C "$t/x" -xzf "$t/full.tar.gz"
 check "make: the settings without a secret"          'grep -q "^RADIUS=15$" "$t/x/zb/settings.env" && ! grep -q "never-exported" "$t/x/zb/settings.env"'
 check "make: ADSB Exchange stats on (0.52.0)"        'grep -qx "adsbx_stats=on" "$t/x/zb/features.env"'
 check "make: what is on, even outside config.env"    'grep -qx "stats=on" "$t/x/zb/features.env" && grep -qx "watchdog=on" "$t/x/zb/features.env" && grep -qx "keeplogs=on" "$t/x/zb/features.env" && grep -qx "netwatch=on" "$t/x/zb/features.env" && grep -qx "social=off" "$t/x/zb/features.env"'
 check "make: the three identities"                   'grep -qx "ADSBX_UUID=c0ffee00-1234-4abc-8def-0123456789ab" "$t/x/zb/feeders.env" && grep -qx "PIAWARE_FEEDER_ID=11111111-2222-3333-4444-555555555555" "$t/x/zb/feeders.env" && grep -qx "FR24_KEY=ABCDEF123456" "$t/x/zb/feeders.env"'
-check "make: never the Bluesky or console secrets"   'echo "BLUESKY_APP_PASSWORD=zzz" > "$t/etc/social.env"; backup_make "$t/f2.tar.gz" >/dev/null; ! tar -xzOf "$t/f2.tar.gz" | grep -q zzz; rm -f "$t/etc/social.env"'
+# the review of 0.99.8: the setup outside the check, the assertion last (it ended on rm -f, so it could not fail)
+echo "BLUESKY_APP_PASSWORD=zzz-social" > "$t/etc/social.env"; echo "CONSOLE_PASSWORD_HASH=zzz-console" > "$t/etc/console.env"; echo "TELEGRAM_BOT_TOKEN=zzz-telegram" > "$t/etc/telegram.env"
+backup_make "$t/f2.tar.gz" >/dev/null
+check "make: never the Bluesky, console or Telegram secrets" '! tar -xzOf "$t/f2.tar.gz" | grep -q "zzz-"'
+rm -f "$t/etc/social.env" "$t/etc/console.env" "$t/etc/telegram.env"
 show=$(backup_show "$t/full.tar.gz")
 check "show: names the identities, never their values" 'echo "$show" | grep -q "Flightradar24 sharing key" && echo "$show" | grep -q "Plane Finder share code" && ! echo "$show" | grep -q "ABCDEF123456\|5X2X2X2X9XaX3\|c0ffee00"'
 check "show: what is on"                             'echo "$show" | grep -q "On: Statistics, graphs1090, Hardware watchdog, Network watchdog, Logs kept after a restart"'
+# 0.99.13 (review B5, S1): the kept logs' boots under systemd 252's --list-boots header (printed unless -q)
+printf '#!/bin/bash\ncase "$*" in *list-boots*) case " $* " in *" -q "*) ;; *) echo "IDX BOOT ID FIRST ENTRY LAST ENTRY";; esac; echo "  0 0123 Thu 2026-10-08 08:43:00 CEST Thu 2026-10-08 09:00:00 CEST";; *) echo "2026-10-08T08:43:00+0200 rp3 kernel: x";; esac\n' > "$t/bin/journalctl"; chmod +x "$t/bin/journalctl"
+check "show: one kept boot is one, not two with the header" 'backup_show "$t/full.tar.gz" | grep -q "kept logs: 1 boot(s)"'
+rm -f "$t/bin/journalctl"
 
 backup_make --console >/dev/null
 check "console: in out/, readable by the wall's group" '[ -f "$t/console/out/backup.tar.gz" ] && [ "$(stat -c %a "$t/console/out/backup.tar.gz")" = 640 ]'
@@ -122,6 +130,22 @@ bk_pending_apply graphs >/dev/null
 check "installer: graphs1090 gets its history"       'grep -q restored "$t/rrd.log" && [ -f "$t/g/var/lib/collectd/rrd/localhost/a.xml" ] && [ ! -e "$t/data/restore-pending" ]'
 check "installer hooks are in place"                 'grep -q "bk_pending_apply piaware" lib/adsb.sh && grep -q "bk_pending_apply fr24" lib/adsb.sh && grep -q "bk_pending_apply planefinder" lib/adsb.sh && grep -q "bk_pending_apply graphs" lib/graphs.sh'
 
+# ---- 0.99.11 (review B3, SH2): what waits is used only from a folder of root's alone
+mkdir -p "$t/data/restore-pending"; chmod 755 "$t/data/restore-pending"
+printf 'ZZZZ99999999\n' > "$t/data/restore-pending/fr24key"
+cp "$t/fr24feed.ini" "$t/fr24feed.ini.before"
+out=$(bk_pending_apply fr24 2>&1)
+check "a restore-pending/ open to others is not used (review B3)" 'cmp -s "$t/fr24feed.ini" "$t/fr24feed.ini.before" && echo "$out" | grep -q "not root.s own private folder"'
+mkdir -p "$t/data/restore-pending"; chmod 755 "$t/data/restore-pending"; printf '{"planted":1}\n' > "$t/data/restore-pending/pfclient-config.json"; cp "$t/pfclient-config.json" "$t/pf.before"
+bk_pending_apply planefinder >/dev/null 2>&1; rc=$?
+check "nor its Plane Finder settings: nothing installed, the normal setup goes on" '[ "$rc" = 1 ] && cmp -s "$t/pfclient-config.json" "$t/pf.before"'
+printf 'ZZZZ99999999\n' > "$t/data/restore-pending/fr24key"; out=$(bk_pending_put fr24key ABCDEF123456 2>&1); rc=$?
+check "and nothing new is kept in it"              '[ "$rc" = 1 ] && [ "$(cat "$t/data/restore-pending/fr24key")" = ZZZZ99999999 ]'
+rm -rf "$t/data/restore-pending"; mkdir -p "$t/pend-elsewhere"; chmod 700 "$t/pend-elsewhere"; ln -s "$t/pend-elsewhere" "$t/data/restore-pending"
+bk_pending_put fr24key ABCDEF123456 >/dev/null 2>&1
+check "a restore-pending/ that is a link is not written through" '[ -z "$(ls -A "$t/pend-elsewhere")" ]'
+rm -f "$t/data/restore-pending"
+
 # ---- the console: makes and serves it, never restores
 check "console: backup is an action, restore is not" 'python3 -c "
 import sys; sys.path.insert(0, \"flightinfo\"); import console_actions as a
@@ -150,6 +174,24 @@ check "console: its delete is listed, asks first"    'python3 -c "
 import sys; sys.path.insert(0, \"flightinfo\"); import console_actions as a
 assert a.build(\"backup-delete\", {}) == [\"backup\", \"delete\", \"--console\"] and \"ask\" in a.flags(\"backup-delete\")"'
 check "console: the download says host and date"     'grep -q "zenithboard-backup-%s-%s-console.tar.gz" flightinfo/console.py'
+
+# ---- the review of 0.99.8 (B1): a backup whose settings carry a command restores without running it
+mkdir -p "$t/b1" "$t/default" && tar -C "$t/b1" -xzf "$t/full.tar.gz"
+sed -i '/^ALT_M=/d' "$t/b1/zb/settings.env"
+printf 'ALT_M=0"; touch %s/X; #|e;#\n' "$t" >> "$t/b1/zb/settings.env"
+tar -C "$t/b1" -czf "$t/b1.tar.gz" zb
+printf 'LATITUDE=1\nLONGITUDE=2\nALTITUDE=10m\n' > "$t/default/adsbexchange"
+cfg_set ALT_M 250
+out=$(
+  unset -f zb_apply_location
+  # shellcheck source=lib/adsb.sh
+  . lib/adsb.sh
+  is_readsb() { return 1; }; is_dump1090() { return 1; }; is_adsbx() { return 0; }; is_piaware() { return 1; }
+  is_fr24() { return 1; }; is_radarbox() { return 1; }; is_planefinder() { return 1; }; restart_flightinfo() { :; }
+  ZB_DEFAULT_DIR="$t/default" backup_restore "$t/b1.tar.gz" --yes 2>&1 < /dev/null
+)
+check "restore (B1): an altitude carrying a command is skipped and said, nothing runs" '[ ! -e "$t/X" ] && echo "$out" | grep -q "Skipped 1 line" && echo "$out" | grep -q "refused.*ALT_M"'
+check "restore (B1): the altitude here kept, and written as it is into ADSB Exchange" '[ "$(cfg_get ALT_M)" = 250 ] && grep -qx "ALTITUDE=\"250m\"" "$t/default/adsbexchange" && grep -qx "LATITUDE=\"49.1193\"" "$t/default/adsbexchange"'
 
 [ "$fail" = 0 ] && echo "ALL OK"
 exit "$fail"

@@ -77,7 +77,13 @@ English says is not taken, and the reviewer is told why.
    tags like `<a>…</a>` or `<b>…</b>` around the same words (they are the links and the bold). Move them in the
    sentence as your language needs. A correction that drops or renames one is refused, and said.
 4. Commands (`sudo zenithboard …`), names (ZenithBoard, Bluesky, Tailscale, graphs1090) and menu entries of the
-   terminal stay in English: the terminal and its menu are English.
+   terminal stay in English: the terminal and its menu are English. In Arabic, a menu path or a command left in English
+   sits between two invisible marks, U+2066 and U+2069 (a left-to-right isolate), so that *7 Options → 4 Web console*
+   keeps its order inside the right-to-left sentence (0.99.21): keep them around it in a correction. The values the
+   page puts in a sentence (`{city}`, `{dist}`, `{n}`) are isolated the same way by the page itself.
+   The word in dots at the top of the statistics page and graphs1090's page (`STATISTICS`, `GRAPHS`) is written with
+   its accents (*ESTADÍSTICAS*, *GRÁFICOS*): the dots, which have no accented letters, leave them out, and the page's
+   name for screen readers keeps them. A language whose letters the dots do not have keeps the English word.
 5. Send the sheet back to the owner (an issue on GitHub with the file attached, or as you usually reach him). Saved
    as CSV, with commas or semicolons: both are read.
 

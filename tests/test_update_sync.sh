@@ -124,6 +124,12 @@ G init -q -b main "$T/badsrc"; printf 'exit 0\n' > "$T/badsrc/install.sh"; echo 
 printf '#!/bin/bash\necho "flag=${ZB_CODE_NOT_UPDATED:-none}"\n' > "$T/home/bin/zenithboard"; chmod +x "$T/home/bin/zenithboard"
 res=$(ZB_HOME="$T/home" zb_update 2>&1)
 check "a failed code pull is carried to the end of the update" "$(printf '%s' "$res" | grep -c "flag=$ZB_VERSION")" "1"
+# 0.99.12 (review B4, SH3): the copy of the new files fails (a full card): the update stops there, exit 1, says so, and
+# never runs the half-copied tree nor ends "Update finished"
+printf 'echo "cp: write error: No space left on device" >&2; exit 1\n' > "$T/badsrc/install.sh"
+res=$(ZB_HOME="$T/home" zb_update 2>&1); rc=$?
+check "a failed copy: exit 1, NOT complete, no exec, no Update finished" "$rc:$(printf '%s' "$res" | grep -c 'Update NOT complete.*could not be copied'):$(printf '%s' "$res" | grep -c 'flag='):$(printf '%s' "$res" | grep -c 'Update finished')" "1:1:0:0"
+printf 'exit 0\n' > "$T/badsrc/install.sh"
 res=$(ZB_CODE_NOT_UPDATED=0.1.0 zb_update_verdict 2>&1); rc=$?
 check "verdict: code not updated says so and exits 1" "$rc:$(printf '%s' "$res" | grep -c 'Update NOT complete.*still version 0.1.0'):$(printf '%s' "$res" | grep -c 'Update finished')" "1:1:0"
 res=$(unset ZB_CODE_NOT_UPDATED; zb_update_verdict 2>&1); rc=$?

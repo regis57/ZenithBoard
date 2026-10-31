@@ -47,6 +47,9 @@ deploy_files() {
   fi
   chmod +x "$ZB_HOME/install.sh" "$ZB_HOME"/bin/*
   ln -sf "$ZB_HOME/bin/zenithboard" "$ZB_BIN_DIR/zenithboard"
+  # 0.99.11 (review B3): every install and update puts the data folder's owners right (root's, the service's own
+  # subfolders), the wall installed or not: a Pi that feeds only can have stats/ and the trust folder too
+  [ ! -d "$ZB_DATA" ] || ensure_zb_user
 }
 
 install_flightinfo() {
@@ -67,6 +70,20 @@ remove_flightinfo() {
   systemctl disable --now zenithboard-data-refresh.timer 2>/dev/null || true
   rm -f "${ZB_UNIT_DIR}"/zenithboard-flightinfo.service "${ZB_UNIT_DIR}"/zenithboard-data-refresh.service "${ZB_UNIT_DIR}"/zenithboard-data-refresh.timer
   systemctl daemon-reload
+}
+
+# 0.99.22 (review of 0.99.8): `photos on|off` and `routes on|off` restarted the wall, so every tablet reloaded with
+# the new setting; the menu's two switches only wrote it, and an open tablet kept its old one until it was reloaded
+# by hand. The command and the menu now both come here.
+wall_photos_set() {   # wall_photos_set 1|0
+  cfg_set SHOW_PHOTOS "$1"; restart_flightinfo
+  if [ "$1" = 1 ]; then echo "Aircraft photos are ON. The wall reloads by itself within a few seconds."
+  else echo "Aircraft photos are OFF: the animated sky scene is shown instead."; fi
+}
+wall_routes_set() {   # wall_routes_set 1|0
+  cfg_set SHOW_ROUTES "$1"; restart_flightinfo
+  if [ "$1" = 1 ]; then echo "Flight routes are ON (origin and destination, looked up by callsign). The wall reloads by itself."
+  else echo "Flight routes are OFF: no callsign is sent to the internet."; fi
 }
 
 change_radius() {

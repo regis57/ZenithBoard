@@ -43,14 +43,27 @@ check "Fresh-install: linked from README, sidebar and home" 'grep -q "wiki/Fresh
 
 # ---- 0.44.0: the menu page and the move for non-specialists, linked, their pictures in the repository
 check "The-menu and Moving-to-a-new-card linked from the sidebar" 'grep -q "(The-menu)" docs/wiki/_Sidebar.md && grep -q "(Moving-to-a-new-card)" docs/wiki/_Sidebar.md'
-check "every menu picture the docs show is in docs/images" 'for f in $(grep -ho "docs/images/menu-[a-z]*\.png" README.md docs/wiki/*.md | sort -u); do [ -f "$f" ] || exit 1; done'
+check "every menu picture the docs show is in docs/images" '( for f in $(grep -ho "docs/images/menu-[a-z]*\.png" README.md docs/wiki/*.md | sort -u); do [ -f "$f" ] || exit 1; done )'
 check "the move names WinSCP and the typed word" 'grep -q "WinSCP" docs/wiki/Moving-to-a-new-card.md && grep -q "RESTORE" docs/wiki/Moving-to-a-new-card.md'
 
 # ---- 0.53.6: CI runs every test file. Its list is written by hand on purpose (a new test shows in the diff), so a file
 # left off it fails here instead of going unrun: five suites, the console's and the translations' among them, were
 # never run there between 0.39.0 and 0.53.5
 for f in tests/test_*.sh tests/test_*.js; do
-  check "CI runs $f" 'grep -qF "$f" .github/workflows/ci.yml'
+  # anchored: a commented-out line does not count (the review of 0.99.8)
+  check "CI runs $f" 'grep -qE "^[[:space:]]+(bash|node) $f\$" .github/workflows/ci.yml'
 done
+# 0.99.18: and the full local CI that CLAUDE.md gives a session (its step 4) runs every JavaScript test too
+for f in tests/test_*.js; do
+  n=${f#tests/test_}; n=${n%.js}
+  check "CLAUDE.md's local CI runs $f" 'grep -qE "for j in ([a-z0-9_]+ )*$n( [a-z0-9_ ]*)?; do node tests/test_\\\$j.js" CLAUDE.md'
+done
+# 0.99.21 (review B14, T8): and say in a word what each suite covers. Ten suites, test_units.sh and test_security.sh
+# among them, had no row on the Testing page; a new file without one fails here
+for f in tests/test_*.sh tests/test_*.js tests/test_*.py; do
+  check "Testing.md has a row for $f" 'grep -qF "\`${f#tests/}\`" docs/wiki/Testing.md'
+done
+# and the local loops say which suite failed instead of scrolling past it
+check "CLAUDE.md's shell and node loops print FAIL" 'grep -qF "do bash \$t || echo \"FAIL \$t\"; done" CLAUDE.md && grep -qF "do node tests/test_\$j.js || echo \"FAIL \$j\"; done" CLAUDE.md'
 
 [ "$fail" = 0 ] && echo "ALL OK" || { echo "SOME FAILED"; exit 1; }

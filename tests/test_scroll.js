@@ -70,10 +70,35 @@ for (const name of ["ROYAL AIR MAROC", "BRUSSELS AIRLINES", "AIRBUS A319-100", "
 // A lit dot's glow is wider than the dot. Repainting only the row's own rectangle left that glow outside the
 // cleared area, where every step added more of it until a bright frame was drawn around the scrolling row.
 // The repaint is therefore clipped to a padded rectangle, and the dots around it are drawn too.
-const rect = app.slice(app.indexOf("function drawRect("), app.indexOf("function drawRect(") + 1400);
+const rect = lift("drawRect");
 assert.ok(/GLOW_PAD/.test(app), "the repaint needs a padding constant for the glow");
 assert.ok(/ctx\.clip\(\)/.test(rect), "the repaint must be clipped, or the glow lands outside the cleared area");
 assert.ok(/clearRect\(px, py, pw, ph\)/.test(rect), "the cleared area must be the padded rectangle, not the bare row");
 assert.ok(/ctx\.save\(\)/.test(rect) && /ctx\.restore\(\)/.test(rect), "the clip must be undone afterwards");
 
-console.log("scroll ok: a name that fits stays still; a longer one turns one dot at a time with no jump back, and its glow stays inside the repaint");
+// ---- 0.99.17 (review B9): the repaint sits on whole device pixels. A pitch is rarely whole (2.75 pixels a dot on a
+// phone, 1.5 device pixels per CSS pixel on a tablet); a clip edge inside a pixel was cleared only in part and painted
+// again at every step, which left faint lines along the scrolling row. The real drawRect, with a canvas that records.
+{
+  const GW = 128, GH = 80;
+  for (const pitch of [2.75, 9.7709923664, 14.6564885496, 19.541984732]) {      // a phone, a tablet at DPR 1, 1.5, 2
+    const calls = [];
+    const ctx = new Proxy({}, { get: (o, k) => (k in o ? o[k] : (...a) => { calls.push([k, a]); }), set: (o, k, v) => { o[k] = v; return true; } });
+    const geomPx = () => ({ pitch, ox: (GW + 3) * pitch / 2 - pitch * GW / 2 + 0.37, oy: 0.61 });
+    function Path2D() { this.moveTo = () => {}; this.arc = () => {}; }
+    const drawRect = new Function("geomPx", "grid", "GW", "GH", "ON", "ctx", "Path2D", "dotColor", "hex6", "GLOW_PAD",
+                                  rect + "; return drawRect;")(geomPx, new Uint32Array(GW * GH).fill(1), GW, GH, ON, ctx, Path2D, "#ffb000", String, 3);
+    drawRect(0, 16, MAXX, 23);
+    const clip = calls.find((c) => c[0] === "rect"), clear = calls.find((c) => c[0] === "clearRect");
+    for (const c of [clip, clear]) {
+      assert.ok(c, "the repaint must clip and clear");
+      c[1].forEach((v) => assert.ok(Number.isInteger(v), c[0] + "(" + c[1].join(", ") + ") at a pitch of " + pitch + ": not on whole pixels"));
+    }
+    assert.deepStrictEqual(clip[1], clear[1], "the cleared area is the clip, exactly");
+    const want = [geomPx().ox + (0 - 3) * pitch, 0.61 + (16 - 3) * pitch, geomPx().ox + (MAXX + 3) * pitch, 0.61 + (23 + 3) * pitch];
+    assert.ok(clip[1][0] <= want[0] && clip[1][1] <= want[1] && clip[1][0] + clip[1][2] >= want[2] && clip[1][1] + clip[1][3] >= want[3],
+              "snapped outwards, never inside the padded rectangle");
+  }
+}
+
+console.log("scroll ok: a name that fits stays still; a longer one turns one dot at a time with no jump back, and its glow stays inside a repaint on whole pixels");

@@ -114,14 +114,63 @@ check "prune: the header is still first"                        '[ "$(head -1 "$
 # ---- the terminal view
 out=$(stats_show)
 # five samples of the readsb file and one of dump1090's; eleven distinct aircraft (seven from the localdb samples)
+# 0.99.22 (S5): a sample taken before 00:15 measured yesterday's last quarter hour, so its messages are yesterday's
+early=0; [ "$(date '+%H%M')" -lt 0016 ] && early=1
 check "show: today's aircraft count is the day file"  'printf "%s" "$out" | grep -q "Today  *11 aircraft seen"'
-check "show: today's messages are summed"             'printf "%s" "$out" | grep -q "$((2412 * 5 + 1520)) messages"'
-check "show: farthest today"                          'printf "%s" "$out" | grep -q "farthest 312 km"'
+check "show: today's messages are summed"             '[ "$early" = 1 ] || printf "%s" "$out" | grep -q "$((2412 * 5 + 1520)) messages"'
+check "show: farthest today"                          '[ "$early" = 1 ] || printf "%s" "$out" | grep -q "farthest 312 km"'
 spark=$(printf "%s\n" "$out" | grep -A1 "Messages per hour today" | tail -1)
 check "show: a sparkline of 24 bars"                  '[ "$(python3 -c "import sys; print(len(sys.argv[1].strip()))" "$spark")" = 24 ]'
 check "show: says the count is a floor"               'printf "%s" "$out" | grep -q "floor"'
 check "spark: heights follow the values"              '[ "$(stats_spark 0 4 8)" = "▁▅█" ]'
 check "spark: all zero is all low"                    '[ "$(stats_spark 0 0 0)" = "▁▁▁" ]'
+
+# 0.99.13 (review B5, S6): Yesterday and the average are the day files' counts, as Today is; the CSV's count is the
+# one at the day's last sample and misses what the wall added after it. The average covers complete days only.
+yd=$(date -d yesterday '+%Y-%m-%d')
+printf '%s 00:00,7,90,1,4\n%s 23:45,8,95,2,5\n' "$yd" "$yd" >> "$STATS_FILE"
+printf 'b%05d\n' 1 2 3 4 5 6 7 8 9 > "$(stats_day_file "$yd")"
+out=$(stats_show)
+check "show: Yesterday's aircraft are its day file's (9), not the CSV's last count (5)" 'printf "%s" "$out" | grep -q "Yesterday  *9 aircraft seen"'
+check "show: the average is over complete days only, and says how many" 'printf "%s" "$out" | grep -q "Average  *9 aircraft/day on average over 1 complete day "'
+check "show: today and the part-sampled day stay out of the average"   '! printf "%s" "$out" | grep -q "aircraft/day on average over [2-9]"'
+# 0.99.22 (S5): a row stamped 00:00 measured the day before's 23:45 to 24:00: its messages and farthest are
+# yesterday's, not today's, as on /stats; the yesterday row stamped 00:00 is the day before yesterday's
+printf '%s 00:00,777777,499,1,4\n' "$today" >> "$STATS_FILE"
+out=$(stats_show)
+check "show: today's 00:00 row counts in Yesterday (8 + 777777 messages, farthest 499)" '[ "$early" = 1 ] || printf "%s" "$out" | grep -q "^Yesterday  *9 aircraft seen  *777785 messages   farthest 499 km"'
+check "show: and not in Today"                                          '! printf "%s" "$out" | grep "^Today" | grep -q "777\|499"'
+sed -i "/^$today 00:00,777777,/d" "$STATS_FILE"
+sed -i "/^$yd /d" "$STATS_FILE"; rm -f "$(stats_day_file "$yd")"
+out=$(stats_show)
+check "show: no complete day yet is said, not averaged"                 'printf "%s" "$out" | grep -q "Average  *no complete day yet"'
+
+# 0.99.13 (review B5, S2): the unit's UMask=0077 made the files 0600, and `zenithboard stats` without sudo said
+# 0 samples. A sample under umask 0077 leaves them readable, files written before are opened up, never through a link,
+# and a user who cannot read them is told to use sudo.
+check "unit: UMask=0022 (0077 made the files 0600)" 'grep -qx "UMask=0022" systemd/zenithboard-stats.service && ! grep -q "^UMask=0077" systemd/zenithboard-stats.service'
+chmod 600 "$STATS_FILE" "$(stats_day_file "$today")" "$(stats_fleet_file "$today")"
+echo secret > "$t/target"; chmod 600 "$t/target"; ln -s "$t/target" "$STATS_DIR/seen-2001-01-01"
+echo '{"last15min":{"messages":5,"max_distance":1000}}' > "$t/run/readsb/stats.json"; cfg_set PORT 1     # no wall answers
+( umask 0077; stats_run )
+check "a sample under umask 0077: stats.csv, the day and fleet files are 644" '[ "$(stat -c %a "$STATS_FILE")" = 644 ] && [ "$(stat -c %a "$(stats_day_file "$today")")" = 644 ] && [ "$(stat -c %a "$(stats_fleet_file "$today")")" = 644 ]'
+check "  a link planted in the folder: its target's mode is untouched" '[ "$(stat -c %a "$t/target")" = 600 ]'
+rm -f "$STATS_DIR/seen-2001-01-01"
+check "  what it wrote, new files included, is readable by others" '[ -z "$(find "$STATS_DIR" -type f ! -perm -004)" ]'
+chmod 600 "$STATS_FILE"; stats_install_units
+check "the update path (stats_install_units) opens up a file written before" '[ "$(stat -c %a "$STATS_FILE")" = 644 ]'
+# as another user: nobody when the suite runs as root, the runner itself otherwise (a file of mode 000)
+mkdir -p "$t/other/lib"; cp lib/common.sh lib/stats.sh "$t/other/lib/"; chmod -R a+rX "$t/other"; chmod 755 "$t"; chmod a+r "$ZENITHBOARD_ETC/config.env"; chmod 755 "$ZENITHBOARD_ETC"
+as_other() { local c=". '$t/other/lib/common.sh'; . '$t/other/lib/stats.sh'; $1"
+  if [ "$(id -u)" = 0 ]; then runuser -u nobody -- env ZENITHBOARD_ETC="$ZENITHBOARD_ETC" ZB_STATS_OUT_DIR="$STATS_DIR" PATH="$PATH" bash -c "$c"
+  else bash -c "$c"; fi; }
+chmod 000 "$STATS_FILE"
+out=$(as_other stats_show 2>&1); r=$?
+check "a stats file this user cannot read: 'run with sudo', never 0 samples" '[ $r -ne 0 ] && printf "%s" "$out" | grep -q "cannot read .*stats.csv. Run with sudo: sudo zenithboard stats show" && ! printf "%s" "$out" | grep -q "0 samples"'
+check "  the same for stats status and stats gaps" 'as_other stats_status 2>&1 | grep -q "Run with sudo: sudo zenithboard stats status" && as_other stats_gaps 2>&1 | grep -q "Run with sudo: sudo zenithboard stats gaps"'
+chmod 644 "$STATS_FILE"
+check "  readable: the figures, no sudo asked"              'o=$(as_other stats_show 2>&1); printf "%s" "$o" | grep -q "Today " && ! printf "%s" "$o" | grep -q "Run with sudo"'
+chmod 700 "$t"
 
 # ---- which aircraft was the farthest (0.22.0): asked of the wall on the loopback, written to farthest-DAY.
 #      A stub wall answers: first with the route still on its way, then with it; the timer waits for it.
@@ -188,6 +237,17 @@ check "  the count in the CSV includes them" '[ "$(tail -1 "$STATS_FILE" | cut -
 rm -f "$(stats_day_file "$yday")" "$(stats_fleet_file "$yday")"; cfg_set PORT 1
 stats_run
 check "wall down: the quarter-hour look alone, as before" '[ "$(tail -1 "$STATS_FILE" | cut -d, -f5)" -ge 1 ]'
+
+# ---- stats gaps says "none" under an empty list (0.99.23: on the real Pi a title over nothing read like a cut output)
+mkdir -p "$STATS_DIR"; rm -f "$STATS_DIR"/gaps-*
+printf 'airline\tJFA\t44c001\nairline\tKLC\t484001\n' > "$STATS_DIR/gaps-2026-10-30"
+out=$(stats_gaps)
+check "gaps: callsigns only, the silhouettes say none" 'printf "%s" "$out" | grep -q "JFA" && printf "%s\n" "$out" | grep -A1 "generic silhouette" | grep -q "none: every type code seen had its own silhouette"'
+check "gaps: the callsign list does not say none"     '! printf "%s" "$out" | grep -q "none: every callsign"'
+: > "$STATS_DIR/gaps-2026-10-30"
+out=$(stats_gaps)
+check "gaps: an empty day says none under both"       'printf "%s" "$out" | grep -q "none: every callsign seen had its airline name" && printf "%s" "$out" | grep -q "none: every type code seen had its own silhouette"'
+rm -f "$STATS_DIR"/gaps-*
 
 # ---- off keeps the files, clear empties them
 out=$(stats_off)

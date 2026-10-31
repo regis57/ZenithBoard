@@ -52,6 +52,9 @@ window.ZBI18N.start({ part: "console" }, function () {
       if (v === undefined || v === null || v === false) return;
       if (k === "class") n.className = v;
       else if (k === "text") n.textContent = v;
+      // 0.99.18 (review B10): a button waiting for the Pi says so with aria-disabled and keeps its keyboard focus, where
+      // `disabled` threw the focus out to the page; the click guard below keeps it from doing anything meanwhile
+      else if (k === "disabled" && tag === "button") n.setAttribute("aria-disabled", "true");
       else if (k.slice(0, 2) === "on") n.addEventListener(k.slice(2), v);
       else n.setAttribute(k, v === true ? "" : v);
     });
@@ -79,7 +82,9 @@ window.ZBI18N.start({ part: "console" }, function () {
     "not installed": t("not installed"), posting: t("posting"), amber: t("amber"), green: t("green"), red: t("red"), white: t("white"),
     turquoise: t("turquoise"), metric: t("metric"), imperial: t("imperial"), aviation: t("aviation"), dots: t("dot matrix"), flap: t("split-flap"), world: t("world"),
     us: t("United States"), daily: t("daily"), weekly: t("weekly"), monthly: t("monthly"),
-    factual: t("factual"), story: t("story"), board: t("board"), spotter: t("spotter"), lookup: t("lookup"), custom: t("your own") };
+    factual: t("factual"), story: t("story"), board: t("board"), spotter: t("spotter"), lookup: t("lookup"), custom: t("your own"),
+    // 0.99.21 (review B13): a service's other states (systemctl is-active), shown in English before
+    failed: t("failed"), inactive: t("inactive"), activating: t("starting"), deactivating: t("stopping"), reloading: t("reloading") };
   // graphs1090 answers on another port, so another origin: the language goes with the link
   function langQ() { return I.lang() !== "en" ? "?lang=" + encodeURIComponent(I.lang()) : ""; }
   // the summary's posts by what they show (0.48.0, the owner: "Post 2" alone said nothing)
@@ -145,6 +150,14 @@ window.ZBI18N.start({ part: "console" }, function () {
       });
     });
   }
+  // a refusal of signing in, in the page's language. 0.99.21 (review B13): "Too many tries. Wait 37 seconds." carries its
+  // number, so as a key it was never found and showed in English; the wait the Pi gives with it says it in words
+  function refusal(r, fallback) {
+    var d = r.data || {};
+    if (r.status === 429 && typeof d.wait === "number" && /^Too many tries\./.test(d.error || ""))
+      return tn(d.wait, "Too many tries. Wait {n} second.", "Too many tries. Wait {n} seconds.");
+    return d.error ? t(d.error) : fallback;
+  }
   function signedOut() {
     S.session = null;
     $("app").hidden = true; closeDrawer(); closeModal();
@@ -174,7 +187,7 @@ window.ZBI18N.start({ part: "console" }, function () {
     api("login", { body: { password: $("pw").value } }).then(function (r) {
       b.disabled = false;
       if (r.ok) { $("pw").value = ""; return boot(); }
-      $("login-err").textContent = t(r.data.error || "Could not sign in."); $("login-err").hidden = false;
+      $("login-err").textContent = refusal(r, t("Could not sign in.")); $("login-err").hidden = false;
       $("pw").select();
     }).catch(function () { b.disabled = false; $("login-err").textContent = t("The Pi does not answer."); $("login-err").hidden = false; });
   });
@@ -204,7 +217,7 @@ window.ZBI18N.start({ part: "console" }, function () {
         gate("pairing");
         return api("pair/redeem", { body: { token: pairTok } }).then(function (p) {
           if (p.ok) return boot();
-          gate(s.has_password ? "login" : "nopw", t(p.data.error || "This pairing code did not work."));
+          gate(s.has_password ? "login" : "nopw", refusal(p, t("This pairing code did not work.")));
         });
       }
       S.phoneSignin = !!s.phone_signin;
@@ -326,6 +339,19 @@ window.ZBI18N.start({ part: "console" }, function () {
       draw();
     }).catch(function () { /* the wall restarting: the next poll draws */ });
   }
+  // 0.99.18 (review B10): the page read the Pi once, when it opened: left open, it showed settings changed since over
+  // SSH and "Read on the Pi 3 h ago". It reads them again every two minutes and when its tab is shown again, only while
+  // someone could be looking at it and nothing would be lost: the tab in view, signed in, no question or first steps
+  // open, no field being typed in.
+  var STALE_MS = 120000;
+  function mayRead() {
+    var a = document.activeElement;
+    return document.visibilityState === "visible" && !!S.session && $("modal").hidden && !S.wizardOpen &&
+      !(a && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName));
+  }
+  function freshen() { if (mayRead()) loadState(); }
+  setInterval(freshen, STALE_MS);
+  document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") freshen(); });
   window.addEventListener("hashchange", route);
   window.addEventListener("popstate", route);      // back and forward through the sections (0.99.1: pushState)
   function route() {
@@ -344,16 +370,36 @@ window.ZBI18N.start({ part: "console" }, function () {
       var id = sec[0], busy = Object.keys(S.pending).some(function (k) { return S.catalog[k] && S.catalog[k].section === id; });
       [navEl, tabs].forEach(function (where) {
         var short = where === tabs && id === "reliability" ? t("Reliable") : t(sec[1]);
-        where.appendChild(h("a", { href: "#" + id, "class": id === S.section ? "on" : "", "aria-current": id === S.section ? "page" : null, onclick: showSection(id) },
+        where.appendChild(h("a", { href: "#" + id, "class": id === S.section ? "on" : "", "aria-current": id === S.section ? "page" : null, onclick: showSection(id), "data-fk": (where === tabs ? "tab|" : "nav|") + id },
           ico(SECTION_ICON[id]), h("span", { text: short }), busy ? h("i", { "class": "dot" }) : null));
       });
     });
   }
 
+  // 0.99.18 (review B10): drawing a section again rebuilds its controls, and the keyboard's place went with them (a
+  // switch pressed with Space left the focus on the page). Each control carries a key (data-fk): the one written by
+  // its maker (a switch, a button, a field's Apply), or its card, its kind, its words and its rank there; after a
+  // redraw the focus goes back to the control with the same key.
+  function fkOf(n) { return n && n.nodeType === 1 && n !== document.body ? n.getAttribute("data-fk") : null; }
+  function keyAll(root) {
+    var seen = {};
+    root.querySelectorAll("button, a[href], input, select, textarea, summary").forEach(function (n) {
+      if (n.hasAttribute("data-fk")) return;
+      var c = n.closest(".card[data-title]"), words = (n.getAttribute("aria-label") || n.getAttribute("title") || n.textContent || "").trim().replace(/…$/, "");
+      var k = (c ? c.getAttribute("data-title") : "") + "|" + n.tagName + "|" + words;
+      seen[k] = (seen[k] || 0) + 1;
+      n.setAttribute("data-fk", k + "#" + seen[k]);
+    });
+  }
+  function refocus(root, key, was) {
+    if (!key || (was && was.isConnected && root.contains(was))) return;
+    var list = root.querySelectorAll("[data-fk]");
+    for (var i = 0; i < list.length; i++) if (list[i].getAttribute("data-fk") === key) { list[i].focus({ preventScroll: true }); return; }
+  }
   function draw(scrollTop) {
     if (!S.session) return;
+    var view = $("view"), focused = document.activeElement, fk = $("app").contains(focused) ? fkOf(focused) : null;
     nav();
-    var view = $("view"), focused = document.activeElement;
     if (!scrollTop && focused && view.contains(focused) && /INPUT|SELECT|TEXTAREA/.test(focused.tagName)) return;   // never under the typing finger
     var title = t((S.sections.filter(function (s) { return s[0] === S.section; })[0] || [0, "Overview"])[1]);
     $("title").textContent = title;
@@ -361,7 +407,8 @@ window.ZBI18N.start({ part: "console" }, function () {
     var y = window.scrollY;
     view.innerHTML = "";
     add(view, sectionView(S.section));
-    if (scrollTop) { window.scrollTo(0, 0); view.focus({ preventScroll: true }); } else window.scrollTo(0, y);
+    keyAll(view);
+    if (scrollTop) { window.scrollTo(0, 0); view.focus({ preventScroll: true }); } else { window.scrollTo(0, y); refocus($("app"), fk, focused); }
     $("busy-badge").hidden = !Object.keys(S.jobs).some(function (k) { var j = S.jobs[k]; return j.state === "queued" || j.state === "running"; });
   }
 
@@ -505,12 +552,12 @@ window.ZBI18N.start({ part: "console" }, function () {
     key = key || action;
     var waiting = S.pending[key];
     return h("button", { type: "button", role: "switch", "aria-checked": isOn ? "true" : "false", "aria-label": label || t((S.catalog[action] || {}).label || action),
-      "class": "sw" + (isOn ? " on" : "") + (waiting ? " wait" : ""), disabled: waiting ? true : null,
+      "class": "sw" + (isOn ? " on" : "") + (waiting ? " wait" : ""), disabled: waiting ? true : null, "data-fk": "sw|" + key,
       onclick: function () { var p = Object.assign({}, extra || {}, { value: isOn ? "off" : "on" }); run(action, p, { key: key }); } });
   }
   function btn(label, action, params, cls, opts) {
     var busy = S.pending[(opts && opts.key) || action];
-    return h("button", { type: "button", "class": cls || "btn", disabled: busy ? true : null, text: busy ? label + "…" : label,
+    return h("button", { type: "button", "class": cls || "btn", disabled: busy ? true : null, text: busy ? label + "…" : label, "data-fk": "btn|" + ((opts && opts.key) || action) + "|" + label,
       onclick: function () { run(action, params || {}, Object.assign({ card: S.lastCard }, opts || {})); } });
   }
   function row(title, hint, ctl, end) {
@@ -545,6 +592,12 @@ window.ZBI18N.start({ part: "console" }, function () {
     S.lastCard = c ? c.getAttribute("data-title") : null;
   }
   document.addEventListener("click", noteCard, true);
+  // a waiting control (aria-disabled, 0.99.18) keeps its focus but does nothing: the click stops here, before its own
+  function isOff(n) { return !!n && (n.disabled || n.getAttribute("aria-disabled") === "true"); }
+  document.addEventListener("click", function (e) {
+    var b = e.target && e.target.closest ? e.target.closest("[aria-disabled=true]") : null;
+    if (b) { e.preventDefault(); e.stopPropagation(); }
+  }, true);
   document.addEventListener("change", noteCard, true);     // a list chosen with the keyboard
   function stateWord(v) { return word(on(v) ? "on" : "off"); }
 
@@ -620,7 +673,7 @@ window.ZBI18N.start({ part: "console" }, function () {
       var svcs = SVC_NAMES.filter(function (s) { return f["svc_" + s[0]] !== undefined; }).map(function (s) {
         var st = f["svc_" + s[0]], quiet = (s[0] === "zenithboard_social" && !on(c.SOCIAL)) || (s[0] === "zenithboard_telegram" && !on(c.TELEGRAM));
         return h("div", { "class": "svc" }, h("i", { "class": st === "active" ? "ok" : (quiet ? "" : "bad") }), h("span", { text: s[1] }),
-          h("em", { text: st === "active" ? word("running") : (quiet ? word("off") : st) }));
+          h("em", { text: st === "active" ? word("running") : (quiet ? word("off") : word(st)) }));
       });
       out.push(card(t("Services"), "antenna", S.factsAt ? t("Read on the Pi {time}.", { time: ago(S.factsAt) }) : t("Reading the Pi…"),
         [svcs.length ? svcs : h("p", { "class": "note", text: t("Nothing read yet.") }),
@@ -839,17 +892,25 @@ window.ZBI18N.start({ part: "console" }, function () {
       default: return SECTIONS.overview();
     }
   }
+  // 0.99.19 (review B11): on a narrow phone a long figure ("14 дн. 7 ч.") can still be cut; its title gives it whole
   function tile(k, v, d) {
-    return h("div", { "class": "tile" }, h("div", { "class": "k", text: k }), h("div", { "class": "v", text: v }), h("div", { "class": "d", text: d || "\u00a0" }));
+    return h("div", { "class": "tile" }, h("div", { "class": "k", text: k }), h("div", { "class": "v", text: v, title: v }),
+      h("div", { "class": "d", text: d || "\u00a0", title: d || null }));
   }
   function chip(text, section, lit) {
     return h("button", { type: "button", "class": "chip" + (lit ? " on" : ""), text: text, onclick: go(section) });
   }
   function field(label, input) { return h("div", { "class": "field" }, h("label", { text: label }), input); }
   // Enter in a field does what its button does (the audit: only a click applied it)
+  // 0.99.18 (review B10): the field is left first, so the card is drawn again at once with its button waiting ("…"):
+  // the page skipped drawing under the typing finger, so the button stayed live and Enter then a click ran it twice
   function onEnter(inp, button) {
+    if (!button.hasAttribute("data-fk")) button.setAttribute("data-fk", "enter|" + (inp.getAttribute("aria-label") || ""));
     inp.addEventListener("keydown", function (e) {
-      if (e.key === "Enter" && !e.isComposing && !button.disabled) { e.preventDefault(); button.click(); }
+      if (e.key !== "Enter" || e.isComposing) return;
+      e.preventDefault();
+      if (isOff(button) || !button.isConnected) return;
+      inp.blur(); button.focus(); button.click();
     });
     return button;
   }
@@ -1228,12 +1289,46 @@ window.ZBI18N.start({ part: "console" }, function () {
   }
 
   // ---- the activity drawer
+  // 0.99.18 (review B10): a panel opened over the page takes the keyboard with it and gives it back. What opened it is
+  // remembered (by its key too: the page may have been drawn again meanwhile), the page behind is inert (Tab, a screen
+  // reader and a click cannot reach it), Tab goes round inside the panel, and closing it puts the focus back where it was:
+  // in the drawer when a question closes over it.
+  var FOCUSABLE = "button, a[href], input, select, textarea, summary, [tabindex]:not([tabindex='-1'])";
+  function opener() { var a = document.activeElement; return { el: a, fk: fkOf(a) }; }
+  function giveBack(o, within, fallback) {
+    if (o && o.el && o.el.isConnected && within.contains(o.el) && !o.el.closest("[inert]")) { o.el.focus({ preventScroll: true }); return; }
+    if (o && o.fk) { refocus(within, o.fk, null); if (within.contains(document.activeElement) && document.activeElement !== document.body) return; }
+    if (fallback) fallback.focus({ preventScroll: true });
+  }
+  function shield() {
+    var modalOn = !$("modal").hidden, drawerOn = !$("drawer").hidden;
+    $("app").inert = modalOn || drawerOn; $("gate").inert = modalOn;
+    $("drawer").inert = modalOn;
+  }
+  function topPanel() { return !$("modal").hidden ? $("modal-panel") : !$("drawer").hidden ? $("drawer").querySelector(".drawer-panel") : null; }
+  document.addEventListener("keydown", function (e) {
+    if (e.key !== "Tab") return;
+    var p = topPanel(); if (!p) return;
+    var list = Array.prototype.filter.call(p.querySelectorAll(FOCUSABLE), function (n) { return !n.disabled && n.getClientRects().length; });
+    if (!list.length) { e.preventDefault(); return; }
+    var first = list[0], last = list[list.length - 1], a = document.activeElement;
+    if (!p.contains(a)) { e.preventDefault(); (e.shiftKey ? last : first).focus(); }
+    else if (e.shiftKey && a === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && a === last) { e.preventDefault(); first.focus(); }
+  });
   function openDrawer(jobId) {
     S.drawerJob = jobId || S.drawerJob; S.activityOpen = true;
-    $("drawer").hidden = false; document.body.style.overflow = "hidden";
+    if ($("drawer").hidden) S.drawerOpener = opener();
+    $("drawer").hidden = false; document.body.style.overflow = "hidden"; shield();
     drawDrawer(); loadActivity();
+    $("drawer").querySelector(".drawer-panel header [data-close=drawer]").focus();
   }
-  function closeDrawer() { $("drawer").hidden = true; S.activityOpen = false; document.body.style.overflow = ""; }
+  function closeDrawer() {
+    var was = !$("drawer").hidden;
+    $("drawer").hidden = true; S.activityOpen = false; document.body.style.overflow = ""; shield();
+    if (was && S.session) giveBack(S.drawerOpener, $("app"), $("open-activity"));
+    S.drawerOpener = null;
+  }
   function loadActivity() { api("activity").then(function (r) { if (r.ok) { S.activity = r.data; drawDrawer(); } }); }
   function termText(j) {
     if (j.log || j.state !== "queued") return j.log || "";
@@ -1256,7 +1351,11 @@ window.ZBI18N.start({ part: "console" }, function () {
     termPill.className = "pill " + st[0]; termPill.textContent = st[1];
   }
   function drawDrawer() {
-    var body = $("drawer-body"); body.innerHTML = ""; termPre = null;
+    var body = $("drawer-body"), focused = document.activeElement, fk = body.contains(focused) ? fkOf(focused) : null;
+    body.innerHTML = ""; termPre = null;
+    try { drawDrawerBody(body); } finally { keyAll(body); refocus(body, fk, focused); }
+  }
+  function drawDrawerBody(body) {
     var j = S.jobs[S.drawerJob];
     if (j) {
       termPre = h("pre"); termPill = h("span", { "class": "pill" });
@@ -1294,10 +1393,19 @@ window.ZBI18N.start({ part: "console" }, function () {
   // ---- modal
   function openModal(content, big) {
     var p = $("modal-panel"); p.innerHTML = ""; p.className = "modal-panel" + (big ? " big" : "");
-    p.appendChild(content); $("modal").hidden = false;
+    if ($("modal").hidden) S.modalOpener = opener();
+    p.appendChild(content); $("modal").hidden = false; shield();
     var f = p.querySelector("button.primary") || p.querySelector("input, button"); if (f) setTimeout(function () { f.focus(); }, 30);
   }
-  function closeModal() { $("modal").hidden = true; $("modal-panel").innerHTML = ""; S.wizardOpen = false; }
+  function closeModal() {
+    var was = !$("modal").hidden;
+    $("modal").hidden = true; $("modal-panel").innerHTML = ""; S.wizardOpen = false; shield();
+    if (!was) return;
+    var drawer = !$("drawer").hidden;
+    giveBack(S.modalOpener, drawer ? $("drawer") : (S.session ? $("app") : $("gate")),
+      drawer ? $("drawer").querySelector(".drawer-panel header [data-close=drawer]") : null);
+    S.modalOpener = null;
+  }
 
   // ---- the first steps (0.39.0; 0.41.0: the antenna, the feeders, sharing, the phone; open again at any time from
   // System or the overview). Only what differs from the Pi's settings is applied, in the review's order.

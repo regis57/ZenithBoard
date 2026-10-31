@@ -27,7 +27,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.99.8"
+VERSION = "0.99.23"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -141,10 +141,13 @@ def presets_of(cfg):
 
 
 def cfg_float(cfg, key, default):
+    # float() reads "nan" and "inf" as numbers (0.99.14, review B6): RADIUS=nan made every distance test false, so
+    # every aircraft was in range and the answer carried NaN, which is not JSON. A value that is not finite is no value.
     try:
-        return float(cfg.get(key, default))
+        val = float(cfg.get(key, default))
     except (TypeError, ValueError):
         return float(default)
+    return val if math.isfinite(val) else float(default)
 
 
 def cfg_bool(cfg, key, default="0"):
@@ -187,22 +190,27 @@ def read_stats(stats_dir=None, now=None, rng="30d"):
     except OSError:
         return None
     rows.sort()
-    # the last 24 hours, by hour of the day (the hour a sample was taken in)
+    # the last 24 hours, by hour of the day: the hour a row's messages were decoded in (its quarter hour, 0.99.22)
     since = now - datetime.timedelta(hours=24)
     hours = [{"hour": h, "messages": 0, "samples": 0} for h in range(24)]
     for when, msgs, far, pos, seen in rows:
-        if since < when <= now:
-            hours[when.hour]["messages"] += msgs
-            hours[when.hour]["samples"] += 1
-    # thirty days, by day
+        m = _measured(when)
+        if since < m and when <= now:
+            hours[m.hour]["messages"] += msgs
+            hours[m.hour]["samples"] += 1
+    # thirty days, by day: the messages and the farthest in the day they were measured in, the running count of
+    # aircraft in the day the sampler counted it for (its own day, at the moment of the sample)
     days = {}
+
+    def day_entry(d):
+        return days.setdefault(d, {"day": d, "messages": 0, "farthest_km": 0, "aircraft": 0, "samples": 0})
     for when, msgs, far, pos, seen in rows:
-        d = when.strftime("%Y-%m-%d")
-        e = days.setdefault(d, {"day": d, "messages": 0, "farthest_km": 0, "aircraft": 0, "samples": 0})
+        e = day_entry(_measured(when).strftime("%Y-%m-%d"))
         e["messages"] += msgs
         e["farthest_km"] = max(e["farthest_km"], far)
-        e["aircraft"] = max(e["aircraft"], seen)
         e["samples"] += 1
+        a = day_entry(when.strftime("%Y-%m-%d"))
+        a["aircraft"] = max(a["aircraft"], seen)
     # the day's aircraft count is the day file's length, which is exact for that day; the CSV only carries the running
     # count, which stands when the day file is missing (removed after thirty days, or the sampler was off that day)
     for d, e in days.items():
@@ -250,6 +258,26 @@ def read_stats(stats_dir=None, now=None, rng="30d"):
     }
 
 
+QUARTER = datetime.timedelta(minutes=15)
+
+
+def _measured(when):
+    """0.99.22 (review of 0.99.8, S5, the owner's choice of 31 October 2026): where a stats row's messages and farthest
+    belong. The sampler stamps a row with the time it runs, and the decoder's last15min it reads is the quarter hour
+    before: the row stamped 00:00 measured 23:45 to 24:00 the day before. Counted at its stamp, each day took the day
+    before's last quarter hour and lost its own, and each hour the quarter hour before it. Its aircraft with a
+    position, a look at that moment, and the day's running count stay at the stamp."""
+    return when - QUARTER
+
+
+def _window_start_24h(now):
+    """0.99.15 (review B7): where the page's last 24 hours begin: the first of the 24 hourly slots that end with the
+    current one. The window's totals and chart, the box (decoder samples and records written down) and the line under
+    it all start here: read_farthest started at now minus 24 hours to the minute, so a record between then and the top
+    of the next hour was in the line and not in the box, and the note under the line said the box was farther."""
+    return (now - datetime.timedelta(hours=23)).replace(minute=0, second=0, microsecond=0)
+
+
 def _with_farthest(w, recs, now):
     """0.99.4 (the owner's /stats#7d, 30 October 2026): the box said *183 NM, on 30/10 at 00:30* while the line under it
     gave the week's farthest as SQ308 at 262 NM on 25/10. The box and the chart read the decoder's farthest once a
@@ -264,7 +292,7 @@ def _with_farthest(w, recs, now):
         if when > now:
             continue
         if w.get("range") == "24h":
-            start = (now - datetime.timedelta(hours=23)).replace(minute=0, second=0, microsecond=0)
+            start = _window_start_24h(now)
             if when < start:
                 continue
             i = int((when - start).total_seconds() // 3600)
@@ -314,7 +342,7 @@ def range_of(value):
 def stats_window(rows, stats_dir, now, rng):
     rng = range_of(rng)
     if rng == "24h":
-        start = (now - datetime.timedelta(hours=23)).replace(minute=0, second=0, microsecond=0)
+        start = _window_start_24h(now)
         keys = [(start + datetime.timedelta(hours=i)) for i in range(24)]
         labels = ["%02dh" % k.hour for k in keys]
         slot = lambda when: when.replace(minute=0, second=0, microsecond=0)
@@ -325,23 +353,31 @@ def stats_window(rows, stats_dir, now, rng):
         labels = ["%02d/%02d" % (k.day, k.month) for k in keys]
         slot = lambda when: when.date()
         index = {k: i for i, k in enumerate(keys)}
-    msgs, far, pos, cnt = [0] * len(keys), [0] * len(keys), [0] * len(keys), [0] * len(keys)
+    # mcnt: the rows whose quarter hour falls in a slot (their messages and farthest, 0.99.22); cnt: the rows stamped
+    # in it (their aircraft with a position, a look at that moment)
+    msgs, far, pos, cnt, mcnt = ([0] * len(keys) for _ in range(5))
     by_hour = [0] * 24
     hour_days = [set() for _ in range(24)]
     best_when = None
     for when, m, fk, p, seen in rows:
+        if when > now:
+            continue
         i = index.get(slot(when))
-        if i is None or when > now:
+        if i is not None:
+            cnt[i] += 1
+            pos[i] += p
+        q = _measured(when)
+        i = index.get(slot(q))
+        if i is None:
             continue
         msgs[i] += m
-        cnt[i] += 1
-        pos[i] += p
-        by_hour[when.hour] += m
-        hour_days[when.hour].add(when.date())
+        mcnt[i] += 1
+        by_hour[q.hour] += m
+        hour_days[q.hour].add(q.date())
         if fk > far[i]:
             far[i] = fk
             if fk >= max(far):
-                best_when = when
+                best_when = q
     if rng == "24h":
         aircraft = [round(pos[i] / float(cnt[i]), 1) if cnt[i] else 0 for i in range(len(keys))]
         note = "aircraft with a position, on average"
@@ -365,13 +401,13 @@ def stats_window(rows, stats_dir, now, rng):
     by_hour = [round(by_hour[h] / float(len(hour_days[h]))) if hour_days[h] else 0 for h in range(24)]
     bh = max(range(24), key=lambda h: by_hour[h]) if any(by_hour) else None
     # a slot with no sample (the hour not yet reached, the receiver off) has no farthest: a gap in the line, not a 0
-    far_series = [far[i] if cnt[i] else None for i in range(len(keys))]
+    far_series = [far[i] if mcnt[i] else None for i in range(len(keys))]
     return {"range": rng, "label": RANGES[rng][1], "labels": labels, "messages": msgs, "farthest": far_series,
             "aircraft": aircraft, "aircraft_note": note, "_counts": cnt,
             "totals": {"aircraft": total, "messages": sum(msgs), "farthest_km": max(far) if far else 0,
                        "farthest_when": best_when.strftime("%Y-%m-%d %H:%M") if best_when else None,
                        "busiest_hour": bh, "busiest_messages": by_hour[bh] if bh is not None else 0,
-                       "samples": sum(cnt)}}
+                       "samples": sum(mcnt)}}
 
 
 def _fleet_lines(stats_dir, now, rng):
@@ -751,8 +787,9 @@ def read_farthest(stats_dir, now, rng=None):
     today = now.strftime("%Y-%m-%d")
     rng = range_of(rng)
     if rng == "24h":
-        start = (now - datetime.timedelta(hours=24)).strftime("%Y-%m-%d %H:%M")
-        inside = [r for r in recs if r["day"] == today or "%s %s" % (r["day"], r.get("time") or "00:00") >= start]
+        # the same 24 hours as the box and the chart (0.99.15), and nothing later than now, as the box skips it too
+        start, end = _window_start_24h(now).strftime("%Y-%m-%d %H:%M"), now.strftime("%Y-%m-%d %H:%M")
+        inside = [r for r in recs if start <= "%s %s" % (r["day"], r.get("time") or "00:00") <= end]
     else:
         first = (now - datetime.timedelta(days=RANGES[rng][0] - 1)).strftime("%Y-%m-%d")
         inside = [r for r in recs if r["day"] >= first]
@@ -1178,6 +1215,17 @@ def build_planes(data, lat, lon, radius_km, airlines=None, photo_lookup=None, de
     return planes, total
 
 
+def _finite(obj):
+    """The same answer with every NaN or infinity replaced by None (null in JSON), for _send."""
+    if isinstance(obj, float):
+        return obj if math.isfinite(obj) else None
+    if isinstance(obj, dict):
+        return {k: _finite(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_finite(v) for v in obj]
+    return obj
+
+
 # --------------------------------------------------------------------------- slow lookups (photos, routes)
 class ThrottledLookup(object):
     """Non-blocking cache in front of a slow, rate-limited web service.
@@ -1220,10 +1268,14 @@ class ThrottledLookup(object):
                 self.worker.start()
         try:
             self.queue.put_nowait(key)
-        except queue.Full:                  # a very busy sky: asked for again next time
+        except queue.Full:                  # a very busy sky: asked for again once the queue has room
             with self.lock:
                 if key in self.cache:
+                    # 0.99.14 (review B6, W3): the entry above was given retry_at = now + retry, as if the service
+                    # had been asked and failed, so a key that never left the Pi waited a whole retry period (a
+                    # minute for routes) before being asked at all. One gap is when the queue may have room again.
                     self.cache[key]["queued"] = False
+                    self.cache[key]["retry_at"] = now + self.gap
                     self.cache[key]["state"] = "queue full"
         return value
 
@@ -1272,9 +1324,22 @@ class ThrottledLookup(object):
             else:
                 value, retry_at, state = None, now + self.retry, "failed"
             with self.lock:
-                if len(self.cache) > self.max_entries:
-                    self.cache.clear()
+                # Stored last, so the dict's order is the order of the answers and the oldest come first.
+                self.cache.pop(key, None)
                 self.cache[key] = {"value": value, "retry_at": retry_at, "queued": False, "state": state}
+                if len(self.cache) > self.max_entries:
+                    self._evict(key)
+
+    def _evict(self, keep):
+        """Drop the oldest settled entries down to 90% of the cap (0.99.14, review B6, W4). The cache used to be
+        wiped whole: every answer was lost at once, and a key still in the queue lost its entry, so pending() said
+        False while its answer was on its way and the next get() queued it a second time. A queued key is never
+        dropped, nor the answer just stored."""
+        target = int(self.max_entries * 0.9)
+        for k in [k for k, e in self.cache.items() if not e["queued"] and k != keep]:
+            if len(self.cache) <= target:
+                break
+            del self.cache[k]
 
 
 # --------------------------------------------------------------------------- photos (Planespotters, optional)
@@ -2085,7 +2150,13 @@ class Handler(BaseHTTPRequestHandler):
 
     def _send(self, code, body, ctype="application/json", cache="no-store", headers=None):
         if isinstance(body, (dict, list)):
-            body = json.dumps(body).encode("utf-8")
+            # NaN and Infinity are not JSON: a browser's JSON.parse refuses the whole answer (0.99.14, review B6, W7).
+            # Python writes them unless told not to; a value that still slips through becomes null, never a 500.
+            try:
+                body = json.dumps(body, allow_nan=False)
+            except ValueError:
+                body = json.dumps(_finite(body), allow_nan=False)
+            body = body.encode("utf-8")
         ctype, cache = self._header_values(ctype, cache)
         self.send_response(code)
         self.send_header("Content-Type", ctype)
@@ -2219,6 +2290,8 @@ class Handler(BaseHTTPRequestHandler):
         try:
             radius_km = float(query["radius_km"][0])
         except (KeyError, ValueError, IndexError):
+            radius_km = None
+        if radius_km is None or not math.isfinite(radius_km):     # 0.99.14 (review B6, W7): ?radius_km=nan or inf
             radius_km = radius_to_km(cfg_float(cfg, "RADIUS", 10), units)
         radius_km = min(max(radius_km, 0.1), 500.0)
         data, path = read_aircraft(cfg)

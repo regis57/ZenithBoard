@@ -180,7 +180,12 @@ class EveryLanguageTest(unittest.TestCase):
 
     def test_every_map_described_in_every_language(self):
         # found in review: "a plain dark background" was not in any catalogue
-        import social_card
+        try:
+            import social_card
+        except ImportError:                          # review B14 (T6): Pillow is not needed for the words themselves
+            social_card = None                       # bound on every path (CodeQL #89: skipTest raising is not seen)
+        if social_card is None:
+            self.skipTest("Pillow not installed here")
         words = [st["words"] for st in social_card.MAP_STYLES.values() if st["words"]] + ["a plain dark background"]
         for code in self.langs():
             if code == "en":

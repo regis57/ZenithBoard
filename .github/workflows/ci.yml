@@ -47,6 +47,13 @@ jobs:
           bash tests/test_tailscale.sh
           bash tests/test_adsbx_stats.sh
           bash tests/test_i18n.sh
+      # 0.99.18: the console's keyboard test drives the page in headless Chromium (Playwright, an exact version); 0.99.20:
+      # test_stats_page.js does the same with /stats and graphs1090's page
+      - name: Playwright and its Chromium, for the console and the statistics pages in a browser
+        run: |
+          npm install --no-save --no-package-lock --prefix "$RUNNER_TEMP/pw" playwright@1.56.1
+          "$RUNNER_TEMP/pw/node_modules/.bin/playwright" install --with-deps chromium
+          echo "NODE_PATH=$RUNNER_TEMP/pw/node_modules" >> "$GITHUB_ENV"
       - name: JavaScript tests
         run: |
           node tests/test_format.js
@@ -56,5 +63,10 @@ jobs:
           node tests/test_layout.js
           node tests/test_flags.js
           node tests/test_scroll.js
+          node tests/test_poll.js
           node tests/test_statsjs.js
           node tests/test_i18n.js
+          node tests/test_console_keys.js
+          node tests/test_stats_page.js
+          # every page script and tool parses (the review of 0.99.8: a syntax error in app.js or console.js passed CI)
+          for f in flightinfo/static/*.js tools/*.js tools/graphs1090-look/*.js; do node --check "$f" || exit 1; done

@@ -154,7 +154,7 @@ gain_log_install_units() {
   install -d -m 755 "$GAIN_LOG_UNIT_DIR"
   install -m 644 "$ZB_HOME/systemd/$GAIN_LOG_UNIT.service" "$ZB_HOME/systemd/$GAIN_LOG_UNIT.timer" "$GAIN_LOG_UNIT_DIR/"
   # since 0.15.0 the timer runs as the wall's user: a CSV that root wrote before must be handed over to it
-  [ ! -f "$GAIN_LOG_FILE" ] || chown "$ZB_USER:$ZB_USER" "$GAIN_LOG_FILE" 2>/dev/null || true
+  [ ! -f "$GAIN_LOG_FILE" ] || chown -h "$ZB_USER:$ZB_USER" -- "$GAIN_LOG_FILE" 2>/dev/null || true
   systemctl daemon-reload; systemctl enable --now "$GAIN_LOG_UNIT.timer" >/dev/null 2>&1 || true
 }
 gain_log_remove_units() {
@@ -162,17 +162,27 @@ gain_log_remove_units() {
   rm -f "$GAIN_LOG_UNIT_DIR/$GAIN_LOG_UNIT.service" "$GAIN_LOG_UNIT_DIR/$GAIN_LOG_UNIT.timer"; systemctl daemon-reload 2>/dev/null || true
 }
 
+# An empty log, its header only. 0.99.11 (review B3): the CSV sits in the data folder, where the service may make names
+# too, so root never writes it through a link (zb_put) and hands it to the timer's user; and the folder is no longer
+# made here with `install -d -m 755`, which took the service's right to write in it (ensure_zb_user makes it).
+gain_log_new() {
+  [ -d "$(dirname "$GAIN_LOG_FILE")" ] || mkdir -p "$(dirname "$GAIN_LOG_FILE")" 2>/dev/null || true
+  zb_put "$GAIN_LOG_FILE" 644 "$GAIN_LOG_HEADER" || return 1
+  [ "$(id -u)" -ne 0 ] || chown -h "$ZB_USER:$ZB_USER" -- "$GAIN_LOG_FILE" 2>/dev/null || true
+}
+
 gain_log_start() {
-  install -d -m 755 "$(dirname "$GAIN_LOG_FILE")" 2>/dev/null || true
-  [ -f "$GAIN_LOG_FILE" ] || echo "$GAIN_LOG_HEADER" > "$GAIN_LOG_FILE"
+  ensure_zb_user
+  [ -f "$GAIN_LOG_FILE" ] || gain_log_new
   cfg_set GAINLOG 1; gain_log_install_units
   echo "Gain log is ON: one line every 15 minutes in $GAIN_LOG_FILE, keeping the last $GAIN_LOG_HOURS hours."
   echo "Read it with 'zenithboard gain log show', empty it with 'zenithboard gain log clear'."
 }
 gain_log_stop() { cfg_set GAINLOG 0; gain_log_remove_units; echo "Gain log is OFF. The file is kept: $GAIN_LOG_FILE"; }
 gain_log_clear() {
-  install -d -m 755 "$(dirname "$GAIN_LOG_FILE")" 2>/dev/null || true
-  echo "$GAIN_LOG_HEADER" > "$GAIN_LOG_FILE"; echo "Gain log emptied ($GAIN_LOG_FILE)."
+  ensure_zb_user
+  gain_log_new || { echo "Could not write $GAIN_LOG_FILE"; return 1; }
+  echo "Gain log emptied ($GAIN_LOG_FILE)."
 }
 
 # Drop anything older than 24 hours. Timestamps are written YYYY-MM-DD HH:MM, which compares correctly as text.
@@ -180,16 +190,19 @@ gain_log_prune() {
   local cut tmp
   [ -f "$GAIN_LOG_FILE" ] || return 0
   cut=$(date -d "$GAIN_LOG_HOURS hours ago" '+%Y-%m-%d %H:%M' 2>/dev/null) || return 0
-  tmp="$GAIN_LOG_FILE.tmp"
+  # 0.99.11: a new name of its own (mktemp), never a fixed one a link could stand in for; readable as before
+  tmp=$(mktemp "$GAIN_LOG_FILE.XXXXXX") || return 0
   { echo "$GAIN_LOG_HEADER"
     awk -F, -v c="$cut" 'NR>1 && $1 >= c' "$GAIN_LOG_FILE" | tail -n "$GAIN_LOG_MAX_ROWS"
-  } > "$tmp" && mv "$tmp" "$GAIN_LOG_FILE"
+  } > "$tmp" && chmod 644 "$tmp" && mv -fT "$tmp" "$GAIN_LOG_FILE" || rm -f "$tmp"
+  [ "$(id -u)" -ne 0 ] || chown -h "$ZB_USER:$ZB_USER" -- "$GAIN_LOG_FILE" 2>/dev/null || true   # run by hand as root
 }
 
 # One measurement appended. Called by the timer; safe to run by hand.
 gain_log_run() {
   local d cur n acc strong km sig peak pct
-  [ -f "$GAIN_LOG_FILE" ] || { install -d -m 755 "$(dirname "$GAIN_LOG_FILE")" 2>/dev/null || true; echo "$GAIN_LOG_HEADER" > "$GAIN_LOG_FILE"; }
+  [ "$(id -u)" -ne 0 ] || [ ! -L "$GAIN_LOG_FILE" ] || rm -f -- "$GAIN_LOG_FILE"   # 0.99.11: by hand as root, never through a link
+  [ -f "$GAIN_LOG_FILE" ] || gain_log_new
   d=$(gain_decoder); [ -n "$d" ] || return 0
   n=$(gain_numbers "$d") || return 0
   [ -n "$n" ] || return 0

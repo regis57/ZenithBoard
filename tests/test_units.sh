@@ -56,6 +56,6 @@ check "no unit uses StateDirectory (it would chown /var/lib/zenithboard away fro
 # ---- the run-time files now live where the units put them
 check "ddns status under /run/zenithboard"            'grep -q "ZB_RUN_DIR:-/run/zenithboard}/zenithboard-ddns.status" lib/ddns.sh'
 check "netwatch counter under /run/zenithboard"       'grep -q "ZB_RUN_DIR:-/run/zenithboard}/zenithboard-netwatch.fails" lib/reliability.sh'
-check "the gain log timer hands an old root CSV to the wall user" 'grep -q "chown \"\$ZB_USER:\$ZB_USER\" \"\$GAIN_LOG_FILE\"" lib/gain.sh'
+check "the gain log timer hands an old root CSV to the wall user (on the name itself since 0.99.11)" 'grep -q "chown -h \"\$ZB_USER:\$ZB_USER\" -- \"\$GAIN_LOG_FILE\"" lib/gain.sh'
 
 [ "$fail" = 0 ] && echo "ALL OK" || { echo "SOME FAILED"; exit 1; }

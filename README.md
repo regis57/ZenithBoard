@@ -8,7 +8,7 @@
 
 **See the planes flying right above your house, on an old tablet, in glowing dot-matrix lights — and share the same antenna with the big flight-tracking networks.**
 
-ZenithBoard turns a Raspberry Pi (4 or newer recommended) and a cheap USB radio dongle into:
+ZenithBoard turns a Raspberry Pi (a 1 GB Pi 3B runs everything, measured; any newer one too) and a cheap USB radio dongle into:
 
 1. **An ADS-B receiver** that feeds **ADSB Exchange** (mandatory base layer) and, if you want, **FlightAware**, **Flightradar24**, **Plane Finder** and **AirNav Radar** — with **one single MLAT client**, because several at once overload a Raspberry Pi.
 2. **FlightInfo**, a responsive **flight wall** for any tablet or screen with a browser, in **dot matrix** or in the style of an **old airport split-flap board**. It automatically cycles through every aircraft inside the radius you choose (1, 2, 5, 10, 15, 30 or 50 km / miles) — callsign, type, altitude, speed, where the flight comes from and goes to, distance and direction — and refreshes itself.
@@ -17,7 +17,7 @@ ZenithBoard turns a Raspberry Pi (4 or newer recommended) and a cheap USB radio 
 
 Everything is installed from one menu, and you can come back at any time to add or remove parts.
 
-> **Status:** running every day on the author's Raspberry Pi (Raspberry Pi OS, Debian 13) with readsb, ADSB Exchange and Flightradar24. Parts that could not be tried on real hardware yet (978 MHz UAT for the US) are marked as such. Please open an issue with anything that breaks. The full picture of what is proven and what is not is in the wiki: **[Project status](https://github.com/regis57/ZenithBoard/wiki/Project-status)**.
+> **Status:** running every day on the author's Raspberry Pi 3B (Raspberry Pi OS, Debian 13) with readsb and all five networks (ADSB Exchange with the only MLAT client, FlightAware, Flightradar24, Plane Finder, AirNav Radar), the wall, the statistics, graphs1090, the Bluesky posts, the Telegram messages, the web console and Tailscale, 436 MB of its 905 still free (31 October 2026). Parts that could not be tried on real hardware yet (978 MHz UAT for the US) are marked as such. Please open an issue with anything that breaks. The full picture of what is proven and what is not is in the wiki: **[Project status](https://github.com/regis57/ZenithBoard/wiki/Project-status)**.
 
 Inspired by [jprochazka/adsb-receiver](https://github.com/jprochazka/adsb-receiver). ZenithBoard is an independent project with a smaller scope, not a fork.
 
@@ -410,7 +410,7 @@ ADS-B only carries the aircraft's identity, position, altitude and speed: **it n
 
 ## Photos
 
-Photos come from the [Planespotters.net photo API](https://www.planespotters.net/photo/api), looked up by the aircraft's hex address. They belong to their photographers: the wall shows each photo unmodified, with the photographer's name and a link to the page on Planespotters. As Planespotters' [photo API terms](https://www.planespotters.net/photo/api) require, **the tablet loads each picture straight from Planespotters** (so it needs internet for photos; without it, the animated sky is shown), and the Pi keeps no picture: it only asks the API which photo there is, and remembers the answer a day at most (0.24.5; until then the Pi fetched the pictures for the tablet). The photos are never posted to Bluesky.
+Photos come from the [Planespotters.net photo API](https://www.planespotters.net/photo/api), looked up by the aircraft's hex address. They belong to their photographers: the wall shows each photo unmodified, with the photographer's name and a link to the page on Planespotters (on a phone, where *· planespotters.net* does not fit beside the name, it is left out and the photo itself stays the link; a name too long for the corner wraps rather than being cut, 0.99.17). As Planespotters' [photo API terms](https://www.planespotters.net/photo/api) require, **the tablet loads each picture straight from Planespotters** (so it needs internet for photos; without it, the animated sky is shown), and the Pi keeps no picture: it only asks the API which photo there is, and remembers the answer a day at most (0.24.5; until then the Pi fetched the pictures for the tablet). The photos are never posted to Bluesky.
 
 * Turn photos off or on: `sudo zenithboard photos off` / `on` (or menu *2 The wall → 4 → 1 Photos*). With photos off, the animated sky scene is shown for every aircraft.
 * Not every aircraft has a photo; those show the animated scene.
@@ -697,6 +697,7 @@ The processes, the files each one reads and writes, and the timers are set out i
 |---|---|
 | Wall says **NO DATA – RECEIVER NOT RESPONDING** | `zenithboard status` — is the decoder running? `zenithboard logs decoder`. Dongle plugged in? |
 | Wall says **NO ANSWER – THE TABLET LOST THE PI** | The decoder is not the problem: the tablet cannot reach the Pi. Is the tablet on the home Wi-Fi? Is the Pi on? It comes back by itself when the Pi answers. |
+| Wall says **WRONG NAME – USE THE PI ADDRESS – OR ADD THIS NAME TO CONSOLE_HOSTS** | The Pi answered, and refused the name in the tablet's address bar: the wall's data answers only to the Pi's address (`hostname -I`), its own name (`.local`, `.lan`, `.home`) or a name you list. Open the wall by the address, or add your name: `sudo zenithboard config-set CONSOLE_HOSTS your.name`. The wall comes back by itself (0.99.17; it used to say NO ANSWER). |
 | Wall says NO FLIGHTS for a long time | Raise the radius (`sudo zenithboard radius 30`). Check `zenithboard status` for the aircraft count. |
 | Wall opens but looks cropped | Use the gear → **Full screen**, or *Add to Home Screen*. |
 | Two MLAT clients in `status` | `sudo zenithboard mlat-guard` |

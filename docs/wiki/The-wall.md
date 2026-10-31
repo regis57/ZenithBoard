@@ -23,6 +23,8 @@ The `+ 3` leaves a margin, and the grid is then centred with an `ox` / `oy` offs
 
 The photo box ends at row 68 of 80, which leaves the bottom-right corner clear. That is what makes the gear's new position safe.
 
+Under a real photo sits its credit, *© photographer · planespotters.net*, and the photo is the link to its page on Planespotters. On a phone the corner is about a hundred pixels wide: when the line does not fit, *· planespotters.net* goes (the photo stays the link), and a photographer's name still too long wraps onto a second line, the photo giving up that line's height, rather than being cut by an ellipsis (0.99.17).
+
 ## The settings gear
 
 A faint circle in the **bottom-right corner** (it was top-right until 0.10.3). Tap it for units, radius, seconds per plane, colour, full screen and reset.
@@ -83,7 +85,7 @@ At the foot of the gear panel sits one grey line: the version the wall is runnin
 
 ## Staying up
 
-The page refreshes itself. It polls `/api/planes` for the aircraft inside the radius, cycles through them at `CYCLE_SECONDS` each, keeps the screen awake, and reloads itself if the Pi restarts — so a power cut ends with the wall back on screen and nobody touching the tablet. If the decoder stops answering it says **NO DATA – RECEIVER NOT RESPONDING – CHECK THE DECODER** instead of showing stale aircraft. If it is the tablet that no longer reaches the Pi (three polls in a row fail: the Wi-Fi, the Pi restarting) it says **NO ANSWER – THE TABLET LOST THE PI – CHECK THE WI-FI** (0.54.4; before, it blamed the decoder). After a minute of that it tries to reload itself, but only once the Pi answers again: a reload with the network still down would leave the browser's own error page on the wall.
+The page refreshes itself. It polls `/api/planes` for the aircraft inside the radius, cycles through them at `CYCLE_SECONDS` each, keeps the screen awake, and reloads itself if the Pi restarts — so a power cut ends with the wall back on screen and nobody touching the tablet. If the decoder stops answering it says **NO DATA – RECEIVER NOT RESPONDING – CHECK THE DECODER** instead of showing stale aircraft. If it is the tablet that no longer reaches the Pi (three polls in a row fail: the Wi-Fi, the Pi restarting) it says **NO ANSWER – THE TABLET LOST THE PI – CHECK THE WI-FI** (0.54.4; before, it blamed the decoder). After a minute of that it tries to reload itself, but only once the Pi answers again: a reload with the network still down would leave the browser's own error page on the wall. A poll that gets no answer at all — the Pi frozen, or the Wi-Fi up but nothing coming back — is given up after five seconds and counts as a failed one, and the wall never has more than one poll out at a time (0.99.17: before, such polls waited for ever and piled up, and the wall kept its last aircraft). Opened by a name the Pi does not answer to (a name of your own that is not in `CONSOLE_HOSTS`), the wall says **WRONG NAME – USE THE PI ADDRESS – OR ADD THIS NAME TO CONSOLE_HOSTS** rather than NO ANSWER, and does not reload itself: the Pi is there, it is the name that is refused. `sudo zenithboard config-set CONSOLE_HOSTS your.name`, or the Pi's address, and the wall comes back by itself.
 
 It also respects `prefers-reduced-motion`: with that set in the browser, the flap animation and the scene stop moving.
 

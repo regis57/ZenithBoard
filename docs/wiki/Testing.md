@@ -2,29 +2,42 @@
 
 The suite answers one question: *does this behave the same after the change?* It cannot answer *does this work on a Raspberry Pi* — nothing here touches real hardware — so a green run and [Project status](Project-status) are two different promises.
 
-No test framework is installed. Python uses `unittest` from the standard library; the shell and Node tests are plain scripts that exit non-zero on failure.
+No test framework is installed. Python uses `unittest` from the standard library; the shell and Node tests are plain scripts that exit non-zero on failure. Two Node tests, `test_console_keys.js` (0.99.18) and `test_stats_page.js` (0.99.20), drive the pages in headless Chromium and need Playwright: `npm install playwright@1.56.1`, then `npx playwright install chromium` (CI installs both).
 
 ## Run everything
 
-Exactly what CI runs:
+The same suites CI runs (CI names each file in `.github/workflows/ci.yml`; these globs pick up the same files, and
+`tests/test_docs.sh` fails when the list leaves one out). A suite that fails says `FAIL` and its name, and the loop goes on
+to the next one, so one run shows every failure:
 
 ```bash
 shellcheck -x -S warning install.sh bin/zenithboard bin/zenithboard-demo lib/*.sh tests/*.sh tools/*.sh
 python3 -m unittest discover -s tests -v
 for t in tests/test_*.sh; do bash "$t" || echo "FAIL $t"; done
 for t in tests/test_*.js; do node "$t" || echo "FAIL $t"; done
+for f in flightinfo/static/*.js tools/*.js tools/graphs1090-look/*.js; do node --check "$f" || echo "FAIL $f"; done
 ```
 
-Run the whole set before pushing. It takes about a minute and a half on a laptop, and the shell tests are the ones that catch the
-expensive mistakes. The split-flap pictures' tests need Pillow and its font, or they are skipped: `sudo apt install python3-pil
-fonts-dejavu-core` (CI installs them).
+Run the whole set before pushing. It takes about two and a half minutes on a four-core laptop (measured 31 October 2026:
+the shell tests 1 min 20 s, Python 30 s, Node 25 s with its two Chromium suites, shellcheck a few seconds), and the shell
+tests are the ones that catch the expensive mistakes. The tests that draw with Pillow (the split-flap and map pictures, the summaries' cards) need it and its font, or they
+are skipped (`needs_pil` in `test_social.py`, 0.99.21 review B14): `sudo apt install python3-pil fonts-dejavu-core` (CI
+installs them). The social tests draw in a temporary folder of their own, never in `/run/zenithboard/social`.
 
 ## What covers what
 
 | Test | Covers |
 |---|---|
-| `test_server.py` | Route plausibility, the hexdb second opinion and its cache, what `build_planes` shows |
+| `test_server.py` | Route plausibility, the hexdb second opinion and its cache, the lookup queue and cache when full, what `build_planes` shows, `/api/planes` with a radius or a setting that is not a finite number, `/api/seen` answered on the loopback only and never through a proxy's `X-Forwarded-For` or `Forwarded` (asked of the running server) |
 | `test_aircraft.py` | Reading `aircraft.json`, merging 1090 MHz with UAT |
+| `test_memory.py` | `zenithboard memory` (0.34.0), against a `/proc` and a cgroup tree made in a temporary folder: a service's processes added up (the social service's Python and Node together), PSS when readable and RSS otherwise, the small services counted together, what runs outside the services, the largest processes |
+| `test_places.py` | The region's own list of places (0.27.0), made from real lines of GeoNames' country files (`tools/make_local_places.py`), and the maps naming from it |
+| `test_units.sh` | Every systemd unit is sandboxed and keeps exactly what its job needs: the exposure score from `systemd-analyze` itself, each unit under its ceiling |
+| `test_patches.sh` | Debian security patches: the rule written, exactly what it allows, and that `off` puts the Pi back as it was (apt-get and dpkg stubs) |
+| `test_security.sh` | `zenithboard security` against a Pi of stubs (ss, sshd, systemd-analyze, curl, dpkg), first with every hole open, then every hole closed: each line's verdict, its fix, the exit status |
+| `test_backup.sh` | Backup and restore (0.42.0): what a backup holds and never holds, what the console's backup leaves out, the archives refused, the typed word, a restore on a new card (settings, what was on switched on again, statistics merged, posting history, the networks' identities, graphs1090's history, what was there before kept) |
+| `test_graphs.sh` | graphs1090 (0.32.0, off by default): `on` refuses without lighttpd or room in `/run`, runs the author's installer and notes the packages it added; `off` runs its uninstaller and removes those packages only (never a purge, which deletes the history), keeps the history, leaves a package something else needs |
+| `test_tailscale.sh` | Tailscale (0.45.0, off by default): the repository for this system's version, a list refused unless it is Tailscale's own and signed, the wall told to answer Tailscale's range and told to stop exactly, `remove` after the typed word taking only what ZenithBoard installed, the console over Tailscale only when chosen |
 | `test_legacy.sh` | 0.30.0: what an older ZenithBoard left of ACARS and Grafana is found, said by status and update (never removed by an update), removed by `acars remove` after the typed word; no menu or command offers ACARS any more |
 | `test_update_types.py` | The monthly aircraft-type refresh |
 | `test_gain.sh` | The real gain steps, editing `RECEIVER_OPTIONS`, reading `stats.json`, the advice, the 24-hour log and its pruning |
@@ -42,6 +55,8 @@ fonts-dejavu-core` (CI installs them).
 | `test_install.sh` | `install.sh` run as a newcomer runs it, against a whiptail that answers from a script and records every screen: the flags, the first-run wizard from a blank settings file to the main menu, a bad latitude or altitude asked again, the hardware notice once, a clear stop when whiptail cannot be installed, no error on a machine that is not a Pi, the five colours and the six settings groups the README names |
 | `test_format.js` | Formatting and unit conversion on the wall |
 | `test_shapes.js`, `test_scene.js`, `test_flap.js` | Silhouettes, the animated scene, the split-flap board |
+| `test_flags.js` | The two flags on the wall: the country read from the registration, the country the aircraft was built in, and the drawing, which fits its box, stays distinguishable from its neighbours and is never a black band lost on a black wall |
+| `test_scroll.js` | A name too long for its row turns continuously: the real `textRow` and `row()` taken from `app.js`, every offset of a full turn one dot left of the one before (0.14.2) |
 | `test_settings.sh` | Settings export never carries a secret, import takes only `KEY=VALUE` and keeps a way back; preset names, keys and what the wall serves; Wi-Fi hardening sets two things and `off` puts them back (against an `nmcli` stub); the `stats gaps` counters against a wall stub on the loopback; the typed word before each destructive menu step |
 | `test_social.py`, `test_social.sh` | The posts' words for every case (the altitude never read as a distance), the choice under the rules, the track memory, both real renderers — Node's PNG with its labelled rows and the wall's colours, Pillow's split-flap JPEG with fake map tiles, the tile address, cache and fallbacks — the exact requests sent to Bluesky (against fakes shaped like the real answers), the secrets file's mode and contents, the 0.19.0 clean-up of a Mastodon token, the picture settings, on/off/remove, and the audit's line |
 | `test_statsjs.js` | The statistics charts' axis: a handful of round lines whatever the size, from ten to billions of messages; the farthest aircraft's line, with each part left out when it is not known, in English and in French |
@@ -49,11 +64,14 @@ fonts-dejavu-core` (CI installs them).
 | `test_i18n.js` | The pages' translation (0.47.0): English as key and fallback, placeholders, French and Russian plurals, decimals, the browser's language at the first visit, every word the console asks for in the French catalogue |
 | `test_server.py` → `FarthestTest`, `test_stats.sh` | The farthest aircraft (0.22.0): what the watch keeps and ignores, the nearest city against GeoNames' real positions (Luxembourg-City's nearest of 100 000 is Trier), no district and no position in what is written, the route check, the timer waiting for a route on its way, never replacing a farther record, pruning |
 | `test_layout.js` | The settings gear clears the photo and the silhouette on 15 screen sizes |
+| `test_poll.js` | How the wall talks to the Pi (0.99.17): the whole of `app.js` run against a stand-in page, clock and `fetch`. A Pi that hangs: one request out at a time, each given up after five seconds, NO ANSWER after the third; a name the Pi refuses (403): WRONG NAME on the dots and the flaps, no reload, no failure counted; the ALLOW_FROM refusal still a failure; an error from `/api/config` leaves the defaults; every screen's words fit 128 dots and 16 flaps, in letters the font and the flaps have |
+| `test_console_keys.js` | The console with the keyboard, in headless Chromium through Playwright (0.99.18): the page's own scripts against stand-in answers of the Pi and its real list of actions. Enter in a field runs its action once and leaves its button waiting; the focus stays on a switch drawn again after its question; a question and the Activity drawer take the focus, keep Tab inside and give it back; the page reads the Pi again after two minutes (not while a field has the focus) and when its tab is shown again. On a 360 px phone in en, fr, ru, de and ar (0.99.19): no tile's figure or line and no tab label cut, no label broken inside a word, a title on every figure and line, a toast that lets taps through and stays clear of the tab bar; in Arabic at 1280 px the side bar's mark on its right edge. Needs `playwright` (CI installs 1.56.1 and its Chromium) |
+| `test_stats_page.js` | `/stats` and graphs1090's page in ZenithBoard's look, in headless Chromium through Playwright (0.99.20): `/stats` from the real `read_stats()` over eight days of made-up samples and a made-up fleet; graphs1090's page a stand-in of its `index.html` patched by the real `graphs_look_apply`, and of its `graphs.js` rewriting the address to `?timeframe=` as the real one does. On a 360 px phone the military rows have no bar and the page does not scroll sideways; at 360 and 1280 px a chart's tooltip stays inside the screen at both ends and at the top, and a scroll hides it; at 768, 900 and 1024 px every box's figure fits, in en, ar and fi; in Arabic a cargo airline's model keeps its gap from the name; graphs1090's page opened with `?lang=fr` or `?lang=ar` is in that language; at 320 and 360 px its name in dots fits the screen. `--shots DIR` also writes the preview's pictures. Needs `playwright` |
 | `test_update_verify.sh` | The update's signature check: the whole decision table, real expired and current gpg keys, the one-time question for older installs, and that the private download folder outlives the sub-shell that asked for it |
-| `test_console.py`, `test_console.sh` | The web console (0.39.0): the fixed list refuses anything else (shell characters, ranges, unknown actions); scrypt; home networks only and the Host check against DNS rebinding; the sign-in limits; sessions kept as hashes, their lifetimes, a sign-out for everyone; a pairing code working once; every request path (cookie flags, the CSRF header, the origin, JSON only); the root helper against a stand-in command, with forged, oversized and linked job files ignored; `console password`, `on`, `off`, `pair`, `forget` |
+| `test_console.py`, `test_console.sh` | The web console (0.39.0): the fixed list refuses anything else (shell characters, ranges, unknown actions); scrypt; home networks only and the Host check against DNS rebinding; the sign-in limits, also for a burst sent at once (0.99.10: five tries, two hashes at a time, *Busy* not counted); sessions kept as hashes, their lifetimes, a sign-out for everyone; a pairing code working once, and refused once its maker is signed out, revoked or older than a sign-out for everyone, like a yes to a computer (0.99.10); every request path (cookie flags, the CSRF header, the origin, JSON only); the root helper against a stand-in command, with forged, oversized and linked job files ignored; `console password`, `on`, `off`, `pair`, `forget` |
 | `test_adsbx_stats.sh` | ADSB Exchange's stats (0.52.0): refused without the feed; their script from the pinned address; exactly the packages it added noted (one removed earlier with its settings left is not counted as there) and removed by `off`, unless something now needs one; the video group put back; the UUID kept; a copy installed by hand removed without touching a package; a link in `/tmp` never followed; only a real UUID makes a link; removing ADSB Exchange takes the stats first; `on`, `status` and the update never print the UUID (theirs hidden), health hides it; what `off` could not put back (apt busy, the group refused) kept for the next `off`; graphs1090's shared packages left; one package installer at a time |
 | `test_console.py` → `AppTest` | The console as an app (0.53.0): the manifest meets Chrome's install criteria (name, standalone, start inside its scope, 192, 512 and maskable PNG icons of the sizes they say), the page links it, the service worker caches nothing and registers only over https, the files served with their types and the console's headers. Checked in Chromium too: no installability error on a secure address |
-| `test_docs.sh` | Every command the program accepts, and every line of its help, appears on the [Command reference](Command-reference) page |
+| `test_docs.sh` | Every command the program accepts, and every line of its help, appears on the [Command reference](Command-reference) page; CI and CLAUDE.md's local run name every shell and Node suite; every `tests/test_*` file has a row on this page (0.99.21 review B14) |
 
 ## The two patterns
 
@@ -76,7 +94,7 @@ PATH="$STUB_DIR:$PATH"
 
 Copy the nearest existing file; they all share a shape. A shell test sets up a temporary directory and its stubs, sources the module, runs a case, compares against an expected string, and counts failures. Keep each case's name on the same line as its command — a missing space there produces an unbound-variable error that looks like a bug in the module rather than in the test.
 
-Then add the file to `.github/workflows/ci.yml`. It is a list, not a glob, on purpose: a new test is visible in the diff. `tests/test_docs.sh` fails for any `tests/test_*.sh` or `tests/test_*.js` that the list leaves out, so forgetting this step is caught (0.53.6; five suites had gone unrun in CI since 0.39.0).
+Then add the file to `.github/workflows/ci.yml`. It is a list, not a glob, on purpose: a new test is visible in the diff. `tests/test_docs.sh` fails for any `tests/test_*.sh` or `tests/test_*.js` that the list leaves out, so forgetting this step is caught (0.53.6; five suites had gone unrun in CI since 0.39.0). Give it a row under *What covers what* too: the same test fails for a `tests/test_*` file this page does not name (0.99.21).
 
 ## What else runs in CI
 

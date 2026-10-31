@@ -5,6 +5,7 @@ import shutil
 import tempfile
 import os
 import sys
+import threading
 import time
 import unittest
 
@@ -229,6 +230,92 @@ class ThrottledLookupTests(unittest.TestCase):
         time.sleep(0.4)
         self.assertEqual(seen, ["boom", "fine"])
         self.assertEqual(lk.peek("fine"), "ok")
+
+
+    def test_a_key_turned_away_by_a_full_queue_is_asked_once_the_queue_has_room(self):
+        # 0.99.14 (review B6, W3): a key refused by a full queue was given the failure's retry period, as if asked
+        gate, seen = threading.Event(), []
+
+        def fetch(key):
+            seen.append(key)
+            gate.wait(5)
+            return "v-" + key, True
+
+        lk = server.ThrottledLookup(fetch, gap=0.05, retry=60, miss_retry=60, max_queue=1)
+        lk.get("k1")
+        deadline = time.monotonic() + 2
+        while not seen and time.monotonic() < deadline:
+            time.sleep(0.01)                            # k1 is with the worker, blocked
+        lk.get("k2")                                    # fills the queue
+        lk.get("k3")                                    # turned away
+        self.assertEqual(lk.state("k3"), "queue full")
+        gate.set()
+        deadline = time.monotonic() + 3
+        while lk.peek("k3") is None and time.monotonic() < deadline:
+            lk.get("k3")                                # the wall asks again on every pass
+            time.sleep(0.05)
+        self.assertEqual(lk.peek("k3"), "v-k3", "asked as soon as the queue had room, not a retry period later")
+        self.assertEqual(seen.count("k3"), 1)
+
+    def test_a_full_cache_drops_old_answers_never_a_queued_key(self):
+        # 0.99.14 (review B6, W4): the cache was wiped whole when full, queued keys with it, so they were asked twice
+        gate, seen = threading.Event(), []
+
+        def fetch(key):
+            seen.append(key)
+            gate.wait(5)
+            return "v-" + key, True
+
+        lk = server.ThrottledLookup(fetch, gap=0.05, retry=60, miss_retry=60, max_entries=5)
+        keys = ["k%d" % i for i in range(10)]
+        for k in keys:
+            lk.get(k)
+        deadline = time.monotonic() + 2
+        while not seen and time.monotonic() < deadline:
+            time.sleep(0.01)
+        gate.set()
+        deadline = time.monotonic() + 5
+        while len(seen) < 10 and time.monotonic() < deadline:
+            for k in keys:                              # the wall asks again for what it has no answer for
+                if k not in seen:
+                    self.assertTrue(lk.pending(k), "%s is queued: its answer is on its way" % k)
+                    lk.get(k)
+            time.sleep(0.005)
+        time.sleep(0.1)
+        self.assertEqual(sorted(seen), keys, "every key asked exactly once")
+        self.assertLessEqual(len(lk.cache), 5)
+        self.assertEqual(lk.peek("k9"), "v-k9", "the latest answer is kept")
+        self.assertIsNone(lk.peek("k0"), "the oldest answers go first")
+
+    def test_a_setting_that_is_not_a_finite_number_is_no_setting(self):
+        # 0.99.14 (review B6, W7): float() reads "nan" and "inf"
+        for bad in ("nan", "NaN", "inf", "-inf", "x", ""):
+            self.assertEqual(server.cfg_float({"RADIUS": bad}, "RADIUS", 10), 10.0, repr(bad))
+        self.assertEqual(server.cfg_float({"RADIUS": "25"}, "RADIUS", 10), 25.0)
+
+    def test_an_answer_is_never_written_with_nan(self):
+        def no_constant(name):
+            raise ValueError("not JSON: " + name)
+        sent = {}
+
+        class Fake(object):
+            def _header_values(self, ctype, cache):
+                return ctype, cache
+
+            def send_response(self, code):
+                sent["code"] = code
+
+            def send_header(self, k, v):
+                pass
+
+            def end_headers(self):
+                pass
+
+        f = Fake()
+        f.wfile = type("W", (), {"write": lambda self, b: sent.update(body=b)})()
+        server.Handler._send(f, 200, {"a": float("nan"), "b": [1.5, float("inf")], "c": "x"})
+        self.assertEqual(sent["code"], 200)
+        self.assertEqual(json.loads(sent["body"], parse_constant=no_constant), {"a": None, "b": [1.5, None], "c": "x"})
 
 
 ADSBDB_SAMPLE = {"response": {"flightroute": {
@@ -883,7 +970,10 @@ class WhoMayReadTest(unittest.TestCase):
 
         def planes(q=""):
             c = http.client.HTTPConnection("127.0.0.1", port, timeout=5); c.request("GET", "/api/planes" + q)
-            r = c.getresponse(); body = json.loads(r.read()); c.close(); return body
+            r = c.getresponse(); body = json.loads(r.read(), parse_constant=no_constant); c.close(); return body
+
+        def no_constant(name):                          # NaN or Infinity is not JSON: a browser refuses the answer
+            raise AssertionError("not JSON: " + name)
         config("SHOW_PHOTOS=0\nSHOW_ROUTES=0\n")
         got = planes()
         self.assertEqual(sorted(p["hex"] for p in got["planes"]), ["3c6444", "4ca7b5"])
@@ -899,6 +989,21 @@ class WhoMayReadTest(unittest.TestCase):
         config("SHOW_PHOTOS=0\nSHOW_ROUTES=0\n")
         self.assertEqual([p["hex"] for p in planes("?hex=4CA7B5")["planes"]], ["4ca7b5"], "one aircraft asked by its address")
         self.assertEqual(len(planes("?hex=../../x")["planes"]), 2, "anything but an address is ignored")
+        # 0.99.13 (review B5, W6): the statistics timer asks without radius_km and relies on this: RADIUS in the
+        # owner's units, here 20 miles, is turned into km by the wall (it once sent RADIUS itself as radius_km)
+        config("SHOW_PHOTOS=0\nSHOW_ROUTES=0\nUNITS=imperial\n")
+        self.assertAlmostEqual(planes()["radius_km"], 20 * 1.609344, places=2)
+        config("SHOW_PHOTOS=0\nSHOW_ROUTES=0\nUNITS=aviation\n")
+        self.assertAlmostEqual(planes()["radius_km"], 20 * 1.852, places=2)
+        # 0.99.14 (review B6, W7): a radius or a setting that is not a finite number falls back, and the answer is JSON
+        config("SHOW_PHOTOS=0\nSHOW_ROUTES=0\n")
+        for q in ("?radius_km=nan", "?radius_km=inf", "?radius_km=-inf", "?radius_km=NaN"):
+            self.assertEqual(planes(q)["radius_km"], 20.0, q)
+        config("SHOW_PHOTOS=0\nSHOW_ROUTES=0\nRADIUS=nan\n")
+        got = planes()
+        self.assertEqual(got["radius_km"], 10.0, "RADIUS=nan in config.env: the default radius")
+        config("SHOW_PHOTOS=0\nSHOW_ROUTES=0\nLAT=nan\n")
+        planes()
         answer["data"] = None
         got = planes()
         self.assertEqual((got["error"], got["planes"], got["total"]), ("no_data", [], 0))
@@ -1013,7 +1118,9 @@ class StatsTest(unittest.TestCase):
         now = datetime.datetime(2026, 10, 20, 22, 10)
         lines = ["when,messages,farthest_km,aircraft_pos,aircraft_seen",
                  "2026-10-20 21:00,500,300,20,100", "2026-10-20 21:15,700,310,22,110", "2026-10-20 08:00,100,250,5,40",
-                 "2026-10-19 23:00,50,280,3,500", "2026-10-19 21:30,60,330,4,490",       # yesterday: before and after 22h10
+                 # yesterday: inside and outside the window, which starts at 23:00 (0.99.22, S5: the row stamped 23:15
+                 # measured 23:00 to 23:15; one stamped 23:00 measured the quarter hour before the window)
+                 "2026-10-19 23:15,50,280,3,500", "2026-10-19 21:30,60,330,4,490",
                  "2026-10-15 12:00,1000,350,30,800", "2026-09-30 12:00,9,400,1,9"]
         with open(os.path.join(d, "stats.csv"), "w") as fh:
             fh.write("\n".join(lines) + "\n")
@@ -1030,7 +1137,7 @@ class StatsTest(unittest.TestCase):
         self.assertEqual((len(w["labels"]), w["labels"][0], w["labels"][-1]), (7, "14/10", "20/10"))
         self.assertEqual(w["totals"]["aircraft"], 4, "distinct over the days' files")
         self.assertEqual(w["totals"]["farthest_km"], 350)
-        self.assertEqual(w["totals"]["farthest_when"], "2026-10-15 12:00")
+        self.assertEqual(w["totals"]["farthest_when"], "2026-10-15 11:45", "the quarter hour the row stamped 12:00 measured")
         self.assertEqual(w["aircraft"][-1], 2)
         w = server.read_stats(d, now, "30d")["window"]
         self.assertEqual(len(w["labels"]), 30)
@@ -1139,10 +1246,12 @@ class StatsTest(unittest.TestCase):
         d = self._dir()
         now = datetime.datetime(2026, 10, 15, 14, 7)
         lines = ["when,messages,farthest_km,aircraft_pos,aircraft_seen"]
-        # yesterday: two samples; today: 13:00, 13:15, 13:30 and one at 02:00 (inside the 24 h window) and one 30 h ago (outside)
+        # yesterday: two samples; today: 13:15, 13:30, 13:45 and one at 02:15 (inside the 24 h window) and one 30 h ago
+        # (outside). 0.99.22 (S5): a row counts in the quarter hour before its stamp, so the hour 13 is the rows stamped
+        # 13:15 to 14:00 (13:00 to 13:30 before)
         lines += ["2026-10-14 09:00,1000,290,20,120", "2026-10-14 09:15,1100,301,22,130",
-                  "2026-10-15 02:00,200,150,3,40", "2026-10-15 13:00,800,312,18,200", "2026-10-15 13:15,900,300,19,230",
-                  "2026-10-15 13:30,700,280,17,260", "2026-10-14 07:30,50,100,1,10", "garbage,line", "2026-10-13 25:99,1,1,1,1"]
+                  "2026-10-15 02:15,200,150,3,40", "2026-10-15 13:15,800,312,18,200", "2026-10-15 13:30,900,300,19,230",
+                  "2026-10-15 13:45,700,280,17,260", "2026-10-14 07:30,50,100,1,10", "garbage,line", "2026-10-13 25:99,1,1,1,1"]
         with open(os.path.join(d, "stats.csv"), "w") as fh:
             fh.write("\n".join(lines) + "\n")
         with open(os.path.join(d, "seen-2026-10-15"), "w") as fh:
@@ -1169,6 +1278,46 @@ class StatsTest(unittest.TestCase):
         self.assertEqual(days["2026-10-14"]["aircraft"], 130)     # no day file: the CSV's running count
         self.assertEqual(days["2026-10-14"]["messages"], 2150)
         self.assertEqual(r["best"], {"day": "2026-10-15", "farthest_km": 312})
+
+    def test_a_row_counts_in_the_quarter_hour_it_measures(self):
+        # 0.99.22 (review of 0.99.8, S5, the owner's choice of 31 October 2026): a row stamped T holds the messages and
+        # the farthest of T - 15 min to T. Counted at its stamp, the row of D 00:00 (23:45 to 24:00 the day before)
+        # was day D's and hour 00's, and each day lost its own last quarter hour to the next.
+        import datetime
+        d = self._dir()
+        now = datetime.datetime(2026, 10, 21, 13, 50)
+        lines = ["when,messages,farthest_km,aircraft_pos,aircraft_seen",
+                 "2026-10-20 23:45,10,100,5,300", "2026-10-21 00:00,1000,400,7,2", "2026-10-21 00:15,20,50,6,3",
+                 "2026-10-20 14:00,3000,450,9,100", "2026-10-20 14:15,5,60,4,110"]
+        with open(os.path.join(d, "stats.csv"), "w") as fh:
+            fh.write("\n".join(lines) + "\n")
+        r = server.read_stats(d, now, "7d")
+        days = {x["day"]: x for x in r["days"]}
+        self.assertEqual(days["2026-10-20"]["messages"], 3000 + 5 + 10 + 1000, "D 00:00 is D-1's")
+        self.assertEqual(days["2026-10-20"]["farthest_km"], 450)
+        self.assertEqual(days["2026-10-21"]["messages"], 20)
+        self.assertEqual(days["2026-10-21"]["farthest_km"], 50, "the 400 km of 23:45-24:00 is not the 21st's")
+        self.assertEqual(r["today"]["messages"], 20)
+        self.assertEqual(days["2026-10-21"]["aircraft"], 3, "the running count of aircraft stays in the sampler's day")
+        self.assertEqual(days["2026-10-20"]["aircraft"], 300)
+        self.assertEqual(r["hours"][23]["messages"], 1000 + 10, "D 00:00 is hour 23")
+        self.assertEqual(r["hours"][0]["messages"], 20)
+        w = r["window"]
+        self.assertEqual(w["messages"][w["labels"].index("20/10")], 4015)
+        self.assertEqual(w["messages"][w["labels"].index("21/10")], 20)
+        self.assertEqual(w["farthest"][w["labels"].index("21/10")], 50)
+        self.assertEqual(w["totals"]["busiest_hour"], 13, "14:00 measured 13:45 to 14:00")
+        # 24 hours from 14:00 on the 20th: the row stamped 14:15 is the first slot's (14h), the one stamped 14:00 is not in
+        w = server.read_stats(d, now, "24h")["window"]
+        self.assertEqual(w["labels"][0], "14h")
+        self.assertEqual(w["messages"][0], 5, "14:15 is hour 14, slot 0")
+        self.assertEqual(w["totals"]["messages"], 5 + 10 + 1000 + 20, "14:00 measured 13:45 to 14:00, before the window")
+        self.assertEqual(w["farthest"][w["labels"].index("23h")], 400, "D 00:00 is slot 23h")
+        self.assertEqual(w["farthest"][w["labels"].index("00h")], 50)
+        self.assertEqual((w["totals"]["farthest_km"], w["totals"]["farthest_when"]), (400, "2026-10-20 23:45"))
+        # the aircraft with a position are a look at the stamp's moment: 00:00's 7 stays in 00h, 14:00's 9 in 14h
+        self.assertEqual(w["aircraft"][w["labels"].index("00h")], 6.5)
+        self.assertEqual(w["aircraft"][0], 6.5)
 
     def test_empty_file_is_on_but_empty(self):
         d = self._dir()
@@ -1276,6 +1425,54 @@ class FarthestTest(unittest.TestCase):
         self.addCleanup(lambda: __import__("shutil").rmtree(d, ignore_errors=True))
         return d
 
+    def test_the_24_hours_begin_at_the_same_time_for_the_line_and_the_box(self):
+        # 0.99.15 (review B7): the line under the box counted records from now minus 24 hours to the minute, the box and
+        # the chart from the top of the hour 23 hours back. At 14:20, yesterday's 14:45 was in the line, not in the box:
+        # the line said 400 km under a box saying 300. Now both start at 15:00 yesterday.
+        import datetime, json as js
+        d = self._dir()
+        now = datetime.datetime(2026, 10, 20, 14, 20)
+        self.assertEqual(server._window_start_24h(now), datetime.datetime(2026, 10, 19, 15, 0))
+        with open(os.path.join(d, "stats.csv"), "w") as fh:
+            fh.write("when,messages,farthest_km,aircraft_pos,aircraft_seen\n2026-10-20 10:00,100,300,20,50\n")
+        rec = {"km": 400, "time": "14:45", "flight": "", "hex": "3c6444"}
+        with open(os.path.join(d, "farthest-2026-10-19"), "w") as fh:
+            js.dump(rec, fh)
+        s = server.read_stats(d, now, "24h")
+        box, line = s["window"]["totals"]["farthest_km"], s["farthest"]["period"]
+        self.assertEqual(box, 300)
+        self.assertIsNone(line, "yesterday's 14:45 is before the window's first hour: in neither")
+        # a minute inside the first hour: in both, the box and the line saying the same
+        rec["time"] = "15:00"
+        with open(os.path.join(d, "farthest-2026-10-19"), "w") as fh:
+            js.dump(rec, fh)
+        s = server.read_stats(d, now, "24h")
+        self.assertEqual((s["window"]["totals"]["farthest_km"], s["window"]["totals"]["farthest_when"]), (400, "2026-10-19 15:00"))
+        self.assertEqual(s["farthest"]["period"]["km"], 400)
+        self.assertEqual(s["window"]["farthest"][0], 400, "the chart's first hour, 15h")
+        # a record later than now (a clock set back) is in neither either
+        with open(os.path.join(d, "farthest-2026-10-20"), "w") as fh:
+            js.dump({"km": 500, "time": "14:21", "flight": "", "hex": "3c6445"}, fh)
+        s = server.read_stats(d, now, "24h")
+        self.assertEqual((s["window"]["totals"]["farthest_km"], s["farthest"]["period"]["km"]), (400, 400))
+
+    def test_the_line_and_the_box_agree_on_a_row_at_the_windows_start(self):
+        # 0.99.22 (S5): the window starts at 15:00 yesterday. The row stamped 15:00 measured 14:45 to 15:00, before it,
+        # as the line leaves out a record at 14:45: in neither. The row stamped 15:15 is in both's first hour.
+        import datetime, json as js
+        d = self._dir()
+        now = datetime.datetime(2026, 10, 20, 14, 20)
+        with open(os.path.join(d, "stats.csv"), "w") as fh:
+            fh.write("when,messages,farthest_km,aircraft_pos,aircraft_seen\n2026-10-19 15:00,100,500,20,50\n"
+                     "2026-10-19 15:15,100,350,20,50\n2026-10-20 10:00,100,300,20,50\n")
+        with open(os.path.join(d, "farthest-2026-10-19"), "w") as fh:
+            js.dump({"km": 500, "time": "14:50", "flight": "", "hex": "3c6444"}, fh)
+        s = server.read_stats(d, now, "24h")
+        self.assertIsNone(s["farthest"]["period"], "14:50 is before the window")
+        self.assertEqual((s["window"]["totals"]["farthest_km"], s["window"]["totals"]["farthest_when"]),
+                         (350, "2026-10-19 15:00"), "the box leaves out the quarter hour before the window too")
+        self.assertEqual(s["window"]["farthest"][0], 350)
+
     def test_the_box_takes_the_farthest_written_down_when_it_is_farther(self):
         # 0.99.4, the owner's /stats#7d of 30 October 2026: the box said 183 NM on 30/10 00:30 (the decoder's quarter
         # hour), the line under it SQ308 at 262 NM on 25/10 (the wall's five-second watch, written down once a day)
@@ -1296,7 +1493,7 @@ class FarthestTest(unittest.TestCase):
         # the busiest hour is one hour of a day: 15:00 on 25/10 alone, not the week's 15:00 added up
         self.assertEqual((w["totals"]["busiest_hour"], w["totals"]["busiest_messages"]), (15, 500))
         with open(os.path.join(d, "stats.csv"), "a") as fh:
-            fh.write("2026-10-26 15:00,300,10,1,1\n")
+            fh.write("2026-10-26 15:15,300,10,1,1\n")           # 15:00 to 15:15 (0.99.22, S5)
         w = server.read_stats(d, now, "7d")["window"]
         self.assertEqual(w["totals"]["busiest_messages"], 400, "800 over two days")
         self.assertEqual(w["totals"]["messages"], 900, "the week's total stays the sum")
@@ -1307,7 +1504,7 @@ class FarthestTest(unittest.TestCase):
         self.assertEqual(w["farthest"][w["labels"].index("30/10")], 339)
         # 24 hours: yesterday's 25/10 is outside, today's 06:00 is in the 06h slot
         w = server.read_stats(d, now, "24h")["window"]
-        self.assertEqual((w["totals"]["farthest_km"], w["totals"]["farthest_when"][11:]), (339, "00:30"))
+        self.assertEqual((w["totals"]["farthest_km"], w["totals"]["farthest_when"][11:]), (339, "00:15"), "the row stamped 00:30 measured from 00:15 (0.99.22, S5)")
 
     def test_the_tracker_keeps_the_farthest_position_of_each_day(self):
         import datetime
@@ -1477,9 +1674,47 @@ class SeenTrackerTest(unittest.TestCase):
             src = fh.read()
         i = src.index("def farthest_watch")
         self.assertLess(src.index("_seen.observe(data)", i), src.index("if lat or lon", i))
-        self.assertIn('"/api/seen"', src)
-        self.assertIn('not in ("127.0.0.1", "::1"', src[src.index('"/api/seen"'):])
-        self.assertIn('X-Forwarded-For', src[src.index('"/api/seen"'):src.index('"/api/seen"') + 800], "not through a proxy")
+
+    def test_the_list_is_for_the_loopback_and_never_through_a_proxy(self):
+        # review B14 (T4): this was a check of the source's text; now the running server is asked. The timer asks on
+        # the loopback with no proxy header; behind a reverse proxy everyone comes from 127.0.0.1 with one of its
+        # headers, and a home address is not the timer either: each of those gets a 404, as if nothing were there.
+        import http.client, tempfile, threading
+        with tempfile.NamedTemporaryFile("w", suffix=".env", delete=False) as fh:
+            fh.write("ALLOW_FROM=private\nSTATS=1\n")
+            cfgpath = fh.name
+        self.addCleanup(os.unlink, cfgpath)
+        old_cfg = server.CONFIG_FILE
+        self.addCleanup(lambda: (setattr(server, "CONFIG_FILE", old_cfg), server._cfg_cache.update(mtime=None)))
+        server.CONFIG_FILE = cfgpath
+        server._cfg_cache.update(mtime=None)
+        from_home = {"addr": None}
+
+        class Handler(server.Handler):                 # what a request from another machine of the house looks like
+            def setup(self):
+                super().setup()
+                if from_home["addr"]:
+                    self.client_address = (from_home["addr"], 50000)
+        httpd = server.WallServer(("127.0.0.1", 0), Handler)
+        port = httpd.server_address[1]
+        threading.Thread(target=httpd.serve_forever, daemon=True).start()
+        self.addCleanup(httpd.server_close)
+        self.addCleanup(httpd.shutdown)
+
+        def get(headers=None):
+            c = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+            c.request("GET", "/api/seen", headers=headers or {})
+            r = c.getresponse(); body = r.read(); c.close()
+            return r.status, body
+        status, body = get()
+        self.assertEqual(status, 200, "the statistics timer, on the loopback")
+        self.assertIn("days", json.loads(body))
+        self.assertEqual(get({"X-Forwarded-For": "192.168.1.50"})[0], 404, "through a proxy that says X-Forwarded-For")
+        self.assertEqual(get({"Forwarded": "for=192.168.1.50"})[0], 404, "through a proxy that says Forwarded")
+        from_home["addr"] = "192.168.1.50"
+        self.assertEqual(get()[0], 404, "a home address, allowed to read the wall, is not the timer")
+        from_home["addr"] = "::ffff:127.0.0.1"
+        self.assertEqual(get()[0], 200, "the loopback written as IPv6")
 
 
 class PhotoUrlTest(unittest.TestCase):

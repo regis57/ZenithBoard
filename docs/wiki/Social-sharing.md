@@ -59,7 +59,7 @@ And then for the picture:
 | Question | Choices | Default |
 |---|---|---|
 | The look | `dotmap` (the dot-matrix wall beside a map), `flap` (the split-flap board beside a map) or `alternate` (the two in turn) | `dotmap` |
-| The units, picture and text (0.24.3) | the wall's own, `metric` (m, km/h, km), `imperial` (ft, knots, mi) or `aviation` (ft, kt, NM; 0.55.0: a range record then says *over 175 NM*, rounded down to 25 NM, never the figure) | the wall's |
+| The units, picture and text (0.24.3) | the wall's own, `metric` (m, km/h, km), `imperial` (ft, knots, mi; 0.99.16: a range record then says *over 200 mi*, rounded down to 25 mi — before, it still said kilometres) or `aviation` (ft, kt, NM; 0.55.0: a range record then says *over 175 NM*, rounded down to 25 NM, never the figure) | the wall's |
 | The colour of the letters and the track | the wall's own colour, or amber, green, red, white, turquoise — the wall's colours, read from its own style sheet | the wall's |
 | The map | `normal`, `night`, `satellite`, `terrain`, `none` (the track on black, nothing fetched), `rotate` | `normal` |
 
@@ -306,6 +306,8 @@ to the evening before; `summary why` reads two days.
 > Posted here: 41 crossings.
 > #ADSB #avgeek #ZenithBoard
 
+The crossings posted are counted over the summary's own period: the seven or thirty days by date, and for the daily summary the 24 hours before it by the time of each post (0.99.16: it counted only the calendar day, so a summary at 10:00 said *2* after a day of 32).
+
 When the hashtags would not fit in Bluesky's 300 characters, the lists go down from three names to two, then one, and only then are lines dropped from the end; the first line always stays, and the hashtags stay whole. The picture is drawn by the Pi (Pillow, 1200 × 675) in the posts' colour: the counts, the week by hour (a dot per hour, brighter where more aircraft had a position, as on the statistics page), and under it, side by side since 0.35.0, the airlines and the models most seen as bars, their names in plain text — no logos.
 
 ![The weekly summary card (a preview, made-up figures)](https://raw.githubusercontent.com/regis57/ZenithBoard/main/docs/images/social-weekly.png)
@@ -407,7 +409,7 @@ Measured with the real code, GeoNames' real files and EOX's real tiles, on 20 Oc
 
 Several rules can match; the best candidate is the one matching the most, and knowing the most (route, airline, model each count); between equals, the one that came inside the radius first. One post at a time, and the next as soon as the last is out.
 
-**One post per crossing, every crossing (0.20.0).** A crossing starts when an aircraft comes inside the sharing radius and ends when it has been outside it for an hour. Whatever it does in between — circling, or leaving and coming back in five minutes later — it is posted once. The same airframe back after that is another crossing and is posted again: the return flight in the evening, the same rotation the next day. A new callsign is another flight even sooner (an aircraft turned round at a nearby airport, leaving under another number); a callsign that only appears or disappears on the way is not. An aircraft that left the radius before its turn — its route still being looked up, another one posted first — is still posted, up to ten minutes after it left, with what the wall shows of it then: every crossing counts, not only those caught at the right moment.
+**One post per crossing, every crossing (0.20.0).** A crossing starts when an aircraft comes inside the sharing radius and ends when it has been outside it for an hour. Whatever it does in between — circling, or leaving and coming back in five minutes later — it is posted once. The same airframe back after that is another crossing and is posted again: the return flight in the evening, the same rotation the next day. A new callsign is another flight even sooner (an aircraft turned round at a nearby airport, leaving under another number); a callsign that only appears or disappears on the way is not. An aircraft that left the radius before its turn — its route still being looked up, another one posted first — is still posted, up to ten minutes after it left, with what the wall shows of it then: every crossing counts, not only those caught at the right moment. A post is written down the moment Bluesky takes it, before the summaries are looked at (0.99.16): a summary that stops the service cannot make its restart post the same aircraft again.
 
 **Nothing caps the posts.** By default there is no gap between two posts: the feed is the sky over your radius, each aircraft once per crossing, as many as there are. The radius is the control: five times the radius is twenty-five times the area, and roughly that many more crossings. Bluesky's own ceiling is far above what one receiver's sky can give: 1,666 posts an hour. A gap can still be set (`sudo zenithboard social gap 30`, or in `social words`; `social gap 0` for none); from 0.19.3 to 0.19.10 it could not go under ten minutes, which is gone.
 

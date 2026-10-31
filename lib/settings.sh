@@ -21,10 +21,35 @@ settings_export() {   # settings_export [FILE]  -> the file written (stdout when
   install -m 644 "$tmp" "$out" && rm -f "$tmp" && echo "$out"
 }
 
+# The review of 0.99.8: an imported value went on, unescaped, into the sed of the decoder's and ADSB Exchange's files
+# (ALT_M='0"; touch X; #|e;#' ran a command as root through a restore). Each value is now checked by what its key
+# holds; a key with no rule of its own takes no character a shell or sed gives a meaning to. Empty is always taken.
+SETTINGS_NUMERIC_KEYS=" PORT RADIUS SOCIAL_RADIUS_KM SOCIAL_GAP_MIN FLAGS SHOW_PHOTOS SHOW_ROUTES AUTO_DATA_REFRESH GAINLOG \
+PATCHES STATS CONSOLE CONSOLE_PHONE_SIGNIN UPDATE_VERIFY UAT978 SOCIAL TELEGRAM WIFI_HARDEN NETWATCH LOG_AUTOCLEAN \
+SOCIAL_PHOTOLINK SOCIAL_PLACES "
+settings_value_ok() {   # settings_value_ok KEY VALUE -> 0 when VALUE is one KEY can take
+  local k="$1" v="$2"
+  case "$v" in *$'\n'*|*$'\r'*) return 1 ;; esac
+  [ -n "$v" ] || return 0
+  case "$k" in
+    LAT) valid_lat "$v" ;;
+    LON) valid_lon "$v" ;;
+    ALT_M) valid_alt "$v" ;;
+    ADSB_SDR|UAT_SDR) valid_sdr "$v" ;;
+    CYCLE_SECONDS) valid_cycle "$v" ;;
+    UNITS|SOCIAL_UNITS|TELEGRAM_UNITS) valid_units "$v" ;;
+    THEME) valid_theme "$v" ;;
+    DISPLAY_MODE) [ "$v" = dots ] || [ "$v" = flap ] ;;
+    DECODER) [ "$v" = readsb ] || [ "$v" = dump1090-fa ] ;;
+    WIFI_COUNTRY) ! declare -F valid_country >/dev/null || valid_country "$v" ;;
+    *) if [[ $SETTINGS_NUMERIC_KEYS == *" $k "* ]]; then is_number "$v"; else valid_plain_value "$v"; fi ;;
+  esac
+}
+
 # Import: only well-formed KEY=VALUE lines, only keys that are not secrets, no shell at all (the file is read,
 # never sourced). The current file is kept as config.env.bak-DATE first, so an import is one copy away from undone.
 settings_import() {   # settings_import FILE
-  local f="$1" n=0 bad=0 line k v bak
+  local f="$1" n=0 bad=0 refused="" line k v bak
   [ -f "$f" ] || { echo "No such file: $f" >&2; return 1; }
   grep -q -E '^[A-Z][A-Z0-9_]*=' "$f" || { echo "$f holds no KEY=VALUE line: not a settings file." >&2; return 1; }
   bak="$ZB_CONFIG.bak-$(date +%Y%m%d-%H%M%S)"
@@ -36,10 +61,11 @@ settings_import() {   # settings_import FILE
     v=${v#\"}; v=${v%\"}
     case "$k=" in HW_NOTICE_SEEN=) continue ;; esac
     if printf '%s=' "$k" | grep -q -E "$SETTINGS_SECRET_KEYS"; then bad=$((bad + 1)); continue; fi
-    case "$v" in *$'\n'*|*'`'*|*'$('*) bad=$((bad + 1)); continue ;; esac
+    if ! settings_value_ok "$k" "$v"; then bad=$((bad + 1)); refused="$refused $k"; continue; fi
     cfg_set "$k" "$v"; n=$((n + 1))
   done < "$f"
-  echo "Imported $n setting(s) from $f.$( [ "$bad" -gt 0 ] && printf ' Skipped %s line(s): not a setting, or a secret.' "$bad" )"
+  echo "Imported $n setting(s) from $f.$( [ "$bad" -gt 0 ] && printf ' Skipped %s line(s): not a setting, a secret, or a value refused.' "$bad" )"
+  [ -z "$refused" ] || echo "Values refused (not one this setting can take, or a character a setting never holds):$refused"
   [ -z "$bak" ] || [ ! -f "$bak" ] || echo "The settings from before are in $bak  (put them back: sudo zenithboard settings import $bak)"
   return 0
 }
@@ -64,7 +90,7 @@ preset_valid_pair() {   # preset_valid_pair key=value -> 0 when it is one of the
   case "$k" in
     units) valid_units "$v" ;;
     radius) is_number "$v" && awk -v r="$v" 'BEGIN { exit !(r > 0 && r <= 500) }' ;;
-    cycle) is_number "$v" && awk -v c="$v" 'BEGIN { exit !(c >= 2 && c <= 60) }' ;;
+    cycle) valid_cycle "$v" ;;   # the review of 0.99.8: whole seconds, as the command and the console take it (2.5 went in)
     theme) valid_theme "$v" ;;
     mode) [ "$v" = dots ] || [ "$v" = flap ] ;;
     flags) [ "$v" = 0 ] || [ "$v" = 1 ] ;;

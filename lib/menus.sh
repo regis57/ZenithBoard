@@ -235,6 +235,14 @@ menu_yesno_set() {
   wt_yesno "$2" "$3"
   case $? in 0) cfg_set "$1" 1 ;; 1) cfg_set "$1" 0 ;; *) return 2 ;; esac
 }
+# menu_yesno_apply FUNC QUESTION HEIGHT: Yes runs FUNC 1, No FUNC 0 (the command's own function, so the menu does
+# what the command does: 0.99.22), and says what it printed; Esc changes nothing (and returns 2)
+menu_yesno_apply() {
+  local v
+  wt_yesno "$2" "$3"
+  case $? in 0) v=1 ;; 1) v=0 ;; *) return 2 ;; esac
+  wt_msg "$("$1" "$v" 2>&1)" 9
+}
 wall_data_menu() {
   local c
   while true; do
@@ -246,9 +254,10 @@ wall_data_menu() {
       back "Return to the previous menu") || return 0
     case "$c" in
       # the audit of 22-23 October 2026: Esc (whiptail's 255) was taken for No and switched the feature off; now
-      # only Yes and No change anything (menu_yesno_set)
-      photos) menu_yesno_set SHOW_PHOTOS "Show aircraft photos (Planespotters) on the wall? Needs internet on the Pi." 8 ;;
-      routes) menu_yesno_set SHOW_ROUTES "Show where each flight comes from and goes to?\n\nThe callsign (for example DLH4YK) is looked up on the free adsbdb.com database. When your decoder does not know an aircraft, its address is also used to find the model name. Needs internet on the Pi." 13 ;;
+      # only Yes and No change anything (menu_yesno_set). 0.99.22: photos and routes go through the commands'
+      # functions, which restart the wall so that the tablets reload, as `photos on|off` and `routes on|off` do
+      photos) menu_yesno_apply wall_photos_set "Show aircraft photos (Planespotters) on the wall? Needs internet on the Pi." 8 ;;
+      routes) menu_yesno_apply wall_routes_set "Show where each flight comes from and goes to?\n\nThe callsign (for example DLH4YK) is looked up on the free adsbdb.com database. When your decoder does not know an aircraft, its address is also used to find the model name. Needs internet on the Pi." 13 ;;
       data)
         menu_yesno_set AUTO_DATA_REFRESH "Refresh the aircraft model list automatically once a month?\n\n(Downloads a free list of aircraft names from GitHub. Needs internet on the Pi; the wall works without it.)" 12 && data_refresh_apply ;;
       localdb)

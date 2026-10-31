@@ -45,8 +45,10 @@ ensure_fa_repo() {
 }
 
 set_sdr_serial_readsb() {  # set_sdr_serial_readsb SERIAL_OR_INDEX
-  local dev="$1" f=/etc/default/readsb
+  local dev="$1" f="${ZB_DEFAULT_DIR:-/etc/default}/readsb"
   [ -n "$dev" ] && [ -f "$f" ] || return 0
+  # the review of 0.99.8: the serial goes into a sed expression, so only letters, digits, - and _ get there
+  valid_sdr "$dev" || { err "Not a dongle serial or index: $dev (letters, digits, - and _ only, up to 32): readsb's dongle left as it was."; return 1; }
   sed -i -E 's/ ?--device [^" ]+//' "$f"
   sed -i -E "s|^(RECEIVER_OPTIONS=\")|\1--device $dev |" "$f"
 }
@@ -54,6 +56,10 @@ set_sdr_serial_readsb() {  # set_sdr_serial_readsb SERIAL_OR_INDEX
 install_decoder() {  # install_decoder readsb|dump1090-fa
   local d="$1" lat lon dev
   lat=$(cfg_get LAT); lon=$(cfg_get LON); dev=$(cfg_get ADSB_SDR)
+  # the review of 0.99.8: the position and the dongle go into the decoder's options by sed; checked before anything
+  case "$d" in readsb|dump1090-fa) ;; *) err "Unknown decoder $d"; return 1 ;; esac
+  valid_lat "$lat" && valid_lon "$lon" || { err "The position in $ZB_CONFIG is not a latitude and a longitude ($lat, $lon): set it again (menu 1, or sudo zenithboard location LAT LON)."; return 1; }
+  [ -z "$dev" ] || valid_sdr "$dev" || { err "ADSB_SDR in $ZB_CONFIG is not a dongle serial or index: $dev (letters, digits, - and _ only)."; return 1; }
   apt-get update
   apt_install curl ca-certificates wget
   case "$d" in
@@ -164,8 +170,41 @@ remove_piaware() { systemctl disable --now piaware 2>/dev/null || true; apt_remo
 # fingerprint is the pinned one: signature checking is never switched off.
 fr24_source_file() { grep -rl "repo-feed.flightradar24.com" "${ZB_APT_DIR:-/etc/apt}/sources.list" "${ZB_APT_DIR:-/etc/apt}/sources.list.d" 2>/dev/null | head -1; }
 
+# apt_key_primaries GNUPGHOME FILE: the primary fingerprints in FILE, upper case, one per line. The fingerprint on the
+# line right after "pub" is the primary key's; those after "sub" are its subkeys'.
+apt_key_primaries() {
+  GNUPGHOME="$1" gpg --batch --show-keys --with-colons "$2" 2>/dev/null \
+    | awk -F: '$1=="pub"{p=1;next} $1=="fpr"&&p{print toupper($10);p=0;next} {p=0}'
+}
+# 0.99.12 (review B4, SH5): a key file is never installed as it was downloaded. Until 0.99.11 the pin only asked that
+# the pinned fingerprint be somewhere in the file, so a file carrying a second key (or the pinned one as a mere subkey
+# of another key) went into apt's keyring whole, and apt then trusted every key in it.
+# apt_key_pinned FILE FPR OUT FORM: the key whose PRIMARY fingerprint is FPR, alone, written to OUT, armoured when FORM
+# is asc (apt reads a .asc keyring as text), binary when it is gpg. It goes through a scratch GNUPGHOME, so neither
+# root's keyring nor any other is touched. Returns 2 when FILE has no primary key with that fingerprint, 1 on any
+# other failure; OUT is then not written.
+apt_key_pinned() {
+  local in="$1" want="$2" out="$3" form="$4" home prim got armor=() rc=0
+  [ "$form" = asc ] && armor=(--armor)
+  home=$(mktemp -d) || return 1
+  prim=$(apt_key_primaries "$home" "$in")
+  if ! grep -qixF -- "$want" <<<"$prim"; then rc=2
+  elif ! GNUPGHOME="$home" gpg --batch --quiet --import "$in" >/dev/null 2>&1 \
+       || ! GNUPGHOME="$home" gpg --batch --yes "${armor[@]}" --export -o "$home/out" "$want" 2>/dev/null; then rc=1
+  else
+    # what was exported must be that one key and nothing else, whatever gpg made of the selector
+    got=$(apt_key_primaries "$home" "$home/out")
+    if [ "$(printf '%s' "$got" | tr '[:lower:]' '[:upper:]')" = "$(printf '%s' "$want" | tr '[:lower:]' '[:upper:]')" ]; then
+      cp "$home/out" "$out" || rc=1
+    else rc=1; fi
+  fi
+  gpgconf --homedir "$home" --kill all >/dev/null 2>&1 || true
+  rm -rf "$home"
+  return "$rc"
+}
+
 fr24_repair_key() {
-  local apt_dir="${ZB_APT_DIR:-/etc/apt}" src keyring="" tmp fprs
+  local apt_dir="${ZB_APT_DIR:-/etc/apt}" src keyring="" tmp form=gpg rc
   src=$(fr24_source_file)
   # the keyring file the FR24 source points to (deb822 "Signed-By:" or one-line "[signed-by=...]")
   [ -z "$src" ] || keyring=$(grep -o -i -E 'signed-by(=|: *)[^] ]+' "$src" | head -1 | sed -E 's/^[^=:]*(=|: *)//')
@@ -173,18 +212,18 @@ fr24_repair_key() {
   command -v gpg >/dev/null 2>&1 || apt_install gpg || return 1
   tmp=$(mktemp -d) || return 1
   if ! fetch "$FR24_KEY_URL" "$tmp/key.pub"; then rm -rf "$tmp"; return 1; fi
-  fprs=$(gpg --batch --show-keys --with-colons "$tmp/key.pub" 2>/dev/null | awk -F: '$1=="fpr"{print $10}')
-  if ! printf '%s\n' "$fprs" | grep -qx "$FR24_KEY_FPR"; then
+  case "$keyring" in *.asc) form=asc ;; esac                                     # apt wants a .asc armoured
+  apt_key_pinned "$tmp/key.pub" "$FR24_KEY_FPR" "$tmp/key.out" "$form"; rc=$?
+  if [ "$rc" = 2 ]; then
     err "The Flightradar24 key does not have the expected fingerprint ($FR24_KEY_FPR): NOT installed."
     err "Flightradar24 may have changed its key again: check lib/versions.sh against https://forum.flightradar24.com/"
     rm -rf "$tmp"; return 1
+  elif [ "$rc" != 0 ]; then
+    err "The Flightradar24 key could not be read with gpg: NOT installed."
+    rm -rf "$tmp"; return 1
   fi
   install -d -m 755 "$(dirname "$keyring")"
-  case "$keyring" in
-    *.asc) install -m 644 "$tmp/key.pub" "$keyring" ;;                           # apt wants it armoured
-    *)     gpg --batch --yes --dearmor -o "$tmp/key.gpg" "$tmp/key.pub" && install -m 644 "$tmp/key.gpg" "$keyring" ;;
-  esac
-  local rc=$?
+  install -m 644 "$tmp/key.out" "$keyring"; rc=$?
   rm -rf "$tmp"
   [ "$rc" -eq 0 ] && log "Flightradar24 signing key (2026) installed in $keyring"
   return "$rc"
@@ -282,20 +321,20 @@ rb24_repo_broken() { apt-get update 2>&1 | grep -i "rb24" | grep -qi -E "not sig
 # The repository, once: a source that already points at it (AirNav's own installer, an earlier run) is used as it is.
 # The suite is this system's own when AirNav has it, else bookworm, the one the community's container uses.
 rb24_add_repo() {
-  local apt_dir="${ZB_APT_DIR:-/etc/apt}" tmp fprs suite keyring src
+  local apt_dir="${ZB_APT_DIR:-/etc/apt}" tmp suite keyring src rc
   if [ -n "$(rb24_source_file)" ]; then apt-get update -qq >/dev/null 2>&1 || true; return 0; fi   # its lists, fresh
   keyring=$(rb24_keyring); src=$(rb24_our_source)
   command -v gpg >/dev/null 2>&1 || apt_install gpg || return 1
   tmp=$(mktemp -d) || return 1
   if ! fetch "$RB24_KEY_URL" "$tmp/key.asc"; then rm -rf "$tmp"; return 1; fi
-  fprs=$(gpg --batch --show-keys --with-colons "$tmp/key.asc" 2>/dev/null | awk -F: '$1=="fpr"{print toupper($10)}')
-  if ! printf '%s\n' "$fprs" | grep -qx "$RB24_KEY_FPR"; then
+  apt_key_pinned "$tmp/key.asc" "$RB24_KEY_FPR" "$tmp/key.gpg" gpg; rc=$?
+  if [ "$rc" = 2 ]; then
     err "AirNav's key does not have the expected fingerprint ($RB24_KEY_FPR): NOT installed, nothing added."
     err "AirNav may have changed its key: check lib/versions.sh against https://www.airnavradar.com/sharing-data"
     rm -rf "$tmp"; return 1
   fi
   install -d -m 755 "$(dirname "$keyring")" "$(dirname "$src")"
-  if ! { gpg --batch --yes --dearmor -o "$tmp/key.gpg" "$tmp/key.asc" && install -m 644 "$tmp/key.gpg" "$keyring"; }; then
+  if [ "$rc" != 0 ] || ! install -m 644 "$tmp/key.gpg" "$keyring"; then
     rm -rf "$tmp"; err "AirNav's key could not be written to $keyring"; return 1
   fi
   rm -rf "$tmp"
@@ -378,7 +417,7 @@ rb24_claim_steps() {
 rb24_kept() { echo "${BK_DATA:-$ZB_DATA}/radarbox-key-kept"; }
 remove_radarbox() {
   local k; k=$(rb24_key)
-  if [ -n "$k" ]; then mkdir -p "$(dirname "$(rb24_kept)")"; ( umask 077; printf '%s\n' "$k" > "$(rb24_kept)" ); fi
+  if [ -n "$k" ]; then mkdir -p "$(dirname "$(rb24_kept)")"; zb_put "$(rb24_kept)" 600 "$k"; fi   # 0.99.11: never through a link
   systemctl disable --now rbfeeder 2>/dev/null || true
   apt_remove rbfeeder
   # what ZenithBoard added for it, and only that; a source of AirNav's own installer stays
@@ -481,6 +520,10 @@ _loc_line() { printf '  %-26s %s\n' "$1" "$2"; }
 # the sed of dump1090, ADSB Exchange's ALTITUDE and Plane Finder's JSON were never run by a test)
 zb_apply_location() {  # zb_apply_location LAT LON [ALT_M]
   local lat="$1" lon="$2" alt="${3:-$(cfg_get ALT_M 0)}" dd="${ZB_DEFAULT_DIR:-/etc/default}"
+  # the review of 0.99.8: these go into the decoder's and ADSB Exchange's files by sed and ini_set; an altitude that is
+  # not whole metres counts as 0, a position that is not one changes nothing
+  valid_lat "$lat" && valid_lon "$lon" || { err "Not a position: $lat, $lon (decimal degrees, latitude -90 to 90, longitude -180 to 180)."; return 1; }
+  [[ $alt =~ ^-?[0-9]+$ ]] || alt=0
   log "Applying position $lat, $lon, ${alt} m everywhere"
   cfg_set LAT "$lat"; cfg_set LON "$lon"; cfg_set ALT_M "$alt"
   _loc_line "ZenithBoard wall" "updated"; restart_flightinfo

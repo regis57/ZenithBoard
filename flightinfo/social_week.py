@@ -236,10 +236,10 @@ def _lines(path):
         return set()
 
 
-def week_data(c, stats_dir=None, now=None, posts=None, period="weekly"):
+def week_data(c, stats_dir=None, now=None, posts=None, period="weekly", post_times=None):
     """The period ending now, from the statistics files; None when there are none. weekly and monthly: the 7 or 30
     days ending on now's day; daily (0.38.0): the last 24 hours, to the quarter hour. posts: {YYYY-MM-DD: number of
-    posts} from the service's state."""
+    posts} from the service's state; post_times: the times of its posts (state["posts"]), which the daily one counts."""
     stats_dir = stats_dir or server.STATS_DIR
     now_dt = datetime.datetime.fromtimestamp(now) if isinstance(now, (int, float)) else (now or datetime.datetime.now())
     n = PERIODS[period]["days"]
@@ -264,8 +264,15 @@ def week_data(c, stats_dir=None, now=None, posts=None, period="weekly"):
         whole = (now_dt - start).total_seconds()
         shown = whole > 0 and (now_dt - max(began, start)).total_seconds() >= whole / 2
         since = since if shown else None
-    posted = sum(int((posts or {}).get(d, 0)) for d in dates[-n:] if n > 1) if n > 1 else \
-        int((posts or {}).get(dates[-1], 0))
+    if n > 1:
+        posted = sum(int((posts or {}).get(d, 0)) for d in dates[-n:])
+    elif post_times is not None:
+        # 0.99.16: the posts of the last 24 hours, by their times; the calendar day counted only today's, so a summary
+        # at 10:00 said 2 posts after a day of 32
+        end = now_dt.timestamp()
+        posted = sum(1 for t in post_times if isinstance(t, (int, float)) and end - 86400 < t <= end)
+    else:
+        posted = int((posts or {}).get(dates[-1], 0))
     w = st["window"]
     if n == 1:
         if not w["totals"]["messages"] and not w["totals"]["aircraft"]:

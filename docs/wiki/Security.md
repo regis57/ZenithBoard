@@ -16,7 +16,7 @@ ZenithBoard runs as root on a machine in your home, listens on your network, and
 | Updates of ZenithBoard | The commit is signature-checked before `install.sh` runs as root. One GitHub release per version, pointing at that signed commit | 0.12.0, fixed in 0.12.3; releases 0.15.0 |
 | Downloads run as root | Private `mktemp` folder (mode 700), https only, no downgrade on redirect | 0.12.0, fixed in 0.12.1 |
 | Third-party installers | **Trusted, not checked** — written down below | always |
-| Package signatures | Never turned off. The Flightradar24 key is installed only if its fingerprint matches | always |
+| Package signatures | Never turned off. The Flightradar24 and AirNav Radar keys are installed only if their primary key's fingerprint matches the pinned one, and only that key goes into apt's keyring, whatever else the downloaded file carries (0.99.12) | always |
 | Secrets | The dynamic-DNS token, the Bluesky app password and the Telegram bot's token never go on a command line, into `config.env` or into a log; they live in root-owned files (the social and Telegram ones readable by their service's group, checked by `zenithboard security`) | always; social 0.18.0; Telegram 0.99.6 |
 | The operating system | Debian's security fixes can install themselves daily, from the security channel only; the feeders are left alone | 0.15.0 |
 | Checking all of it | `zenithboard security` reads the running Pi and says what is open and how to close it | 0.15.0 |
@@ -34,7 +34,7 @@ ZenithBoard runs as root on a machine in your home, listens on your network, and
 | Surface | Reachable from | Notes |
 |---|---|---|
 | The wall, port 8080 | Home networks (`ALLOW_FROM=private`) | No login: it is meant to be opened by a tablet with no keyboard. Anyone outside the private ranges gets a 403, forwarded port or not. Since 0.54.0 the data answers only to the Pi's own names too (DNS rebinding, see the table below) |
-| `/api/planes`, `/api/config` | Same | Aircraft in range, and display settings. **The antenna's exact position is never sent** |
+| `/api/planes`, `/api/config` | Same | Aircraft in range, and display settings. **The antenna's exact position is never sent**. A `radius_km` that is not a number, or not a finite one (`nan`, `inf`), is the configured radius, held between 0.1 and 500 km; an answer is always strict JSON, never `NaN` (0.99.14) |
 | tar1090, port 80 | Same | Installed by readsb, not by ZenithBoard |
 | Plane Finder, port 30053 | Same | Its own setup page |
 | graphs1090, port 8542 and `/graphs1090` on port 80 | Anyone who reaches the port: lighttpd has no address check | Only when `graphs on` (0.32.0). The decoder's counters, CPU and temperature; the range graph gives distances, never the antenna's position. Served by lighttpd, not by ZenithBoard. `zenithboard security` names it |
@@ -53,6 +53,20 @@ Since 0.15.0 the wall enforces that itself: it answers only the private ranges (
 The wall server and the social sharing service run as the `zenithboard` system user, which cannot log in, inside a full systemd sandbox: no devices, no kernel tuning, modules or logs, no namespaces, no new privileges, an empty capability set, a restricted list of network families and a system-call filter. The wall server can write **nowhere** — it only reads — except, since 0.39.0, `/var/lib/zenithboard/console/state` (the web console's sessions and job spool; nothing there runs unless the root helper finds it on its fixed list).
 
 What that buys: a hole in the wall server stays a hole in a read-only program that can see `aircraft.json`, its own files and the internet. It cannot become a foothold on the Pi.
+
+### Root never trusts a path the service user owns (0.99.11)
+
+The services and root share `/var/lib/zenithboard`. Until 0.99.10 the folder belonged to the `zenithboard` user, so a hole in one of its services could have renamed root's update keyring (`trust/`) away and put its own in its place, or left a link where root was about to write. Since 0.99.11 (the review of 0.99.8, batch B3), on every install and update:
+
+| Path | Owner, mode | Who writes in it |
+|---|---|---|
+| `/var/lib/zenithboard` | `root:zenithboard` 3771 (`drwxrws--t`) | root, and the service's group for its own entries; the sticky bit keeps it from removing or renaming anything of root's |
+| `trust/`, `trust/gnupg/`, `restore-pending/` | root, closed to everyone else | root only. The update stops, and a restore's waiting identities are not used, when they are anything else |
+| `data/` | root, 755 | root (the monthly aircraft-type list) |
+| `console/`, `console/out/` | `root:zenithboard` 750 | root (the helper's results); the wall reads them |
+| `console/state/`, its `spool/`, `stats/`, `social/`, `telegram/`, `gain-log.csv` | `zenithboard` | the services |
+
+Root makes those folders without following a link found in their place (a link is removed, owners are set on the name with `chown -h`), writes its files in a folder the service may write in to a new name renamed into place, and the console's root helper opens the spool once without following a link and reads and removes every job through that one descriptor.
 
 Measure it yourself:
 
@@ -116,7 +130,7 @@ Housekeeping:
 * **Downloads that are about to be run as root** land in a private folder made for the run (`mktemp -d`, mode 700), never on a fixed name in `/tmp` that somebody else could have created first.
 * **Every download is https**, TLS 1.2 or later, and a redirection cannot drop it to plain http on the way.
 * **The dynamic-DNS token** lives in a root-only file read by curl. It is never on a command line, never in `zenithboard config`, never in a log — which is why `zenithboard config` is safe to paste into an issue.
-* **The Flightradar24 signing key** is installed only when its fingerprint matches the one recorded in `lib/versions.sh`. Package signature checking is never turned off, for any reason.
+* **The Flightradar24 and AirNav Radar signing keys** are installed only when the fingerprint of a **primary** key in the downloaded file matches the one recorded in `lib/versions.sh`, and **only that key** is written to apt's keyring: the file is read in a scratch GnuPG folder and the pinned key exported from it alone. Until 0.99.12 a file that carried the pinned key and another one was installed whole, and apt would have trusted both; a file where the pinned fingerprint is only a subkey of another key is refused. Package signature checking is never turned off, for any reason.
 
 ## What is trusted, and cannot be checked
 

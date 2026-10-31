@@ -221,7 +221,7 @@
 
   // ---- start a page: its language, its catalogue, then the page itself
   // opts: part (console, stats, graphs), base (where the catalogues are), config (an object, or the address of
-  // /api/config), flagBase
+  // /api/config), flagBase, urlLang (a ?lang= read before the page's address changed)
   function start(opts, run) {
     opts = opts || {};
     conf = opts;
@@ -239,7 +239,8 @@
       c = c || {};
       conf.server = c.lang || "";
       avail = ["en"].concat((c.langs || []).filter(function (x) { return known(x) && x !== "en"; }));
-      var p = param();
+      // 0.99.20: or the one the page's own first script kept (graphs1090's page: its script rewrites the address first)
+      var p = param() || (/^[A-Za-z-]{2,8}$/.test(opts.urlLang || "") ? opts.urlLang : "");
       if (p && avail.indexOf(p) >= 0) save(p);
       var want = [p, saved(), c.lang].filter(function (x) { return x && avail.indexOf(x) >= 0; })[0] || "en";
       cur = want;

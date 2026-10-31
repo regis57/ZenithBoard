@@ -229,7 +229,7 @@ bk_check() {
   fi
   if [ -d "$b/journal" ]; then
     for x in "$b/journal"/*; do
-      if command -v journalctl >/dev/null 2>&1 && n=$(journalctl -D "$x" --list-boots --no-pager 2>/dev/null | grep -c .) && [ "$n" -gt 0 ]; then
+      if command -v journalctl >/dev/null 2>&1 && n=$(journalctl -D "$x" -q --no-pager --list-boots 2>/dev/null | zb_boot_rows) && [ "$n" -gt 0 ]; then
         first=$(journalctl -D "$x" --no-pager -o short-iso 2>/dev/null | head -1 | cut -c1-16)
         last=$(journalctl -D "$x" --no-pager -o short-iso -n 1 2>/dev/null | tail -1 | cut -c1-16)
         echo "  kept logs: $n boot(s), $first to $last"
@@ -249,7 +249,18 @@ backup_show() {   # backup_show FILE
 }
 
 # ---- identities: now when the network is installed, else kept for its installation
-bk_pending_put() { install -d -m 700 "$BK_PENDING"; ( umask 077; printf '%s\n' "$2" > "$BK_PENDING/$1" ); }
+# 0.99.11 (review B3, SH2): what waits here is installed by root later (Plane Finder's settings into /etc, the keys into
+# the networks' settings), so it is kept and read only from a folder that is root's alone. Until 0.99.10 the folder
+# around it belonged to the service user, which could have made a restore-pending/ of its own.
+bk_pending_ok() {
+  [ -e "$BK_PENDING" ] || [ -L "$BK_PENDING" ] || return 0
+  zb_private_dir_ok "$BK_PENDING" && return 0
+  warn "$BK_PENDING is not root's own private folder (a link, another owner, or open to others): nothing in it is used."
+  warn "Look at it:  sudo ls -la $BK_PENDING   (if you did not make it so: sudo rm -rf $BK_PENDING, then restore the backup again)"
+  return 1
+}
+bk_pending_dir() { bk_pending_ok && install -d -m 700 "$BK_PENDING" && bk_pending_ok; }
+bk_pending_put() { bk_pending_dir || return 1; ( umask 077; printf '%s\n' "$2" > "$BK_PENDING/$1" ); }
 
 bk_apply_ids() {   # bk_apply_ids DIR(zb) BEFORE_DIR
   local b="$1" before="$2" v cur
@@ -289,7 +300,7 @@ bk_apply_ids() {   # bk_apply_ids DIR(zb) BEFORE_DIR
       [ ! -f "$BK_PF_CONFIG" ] || cp -p "$BK_PF_CONFIG" "$before/pfclient-config.json"
       install -m 644 "$b/pfclient-config.json" "$BK_PF_CONFIG"; bk_svc restart pfclient
       echo "  Plane Finder: your share code is back."
-    else install -d -m 700 "$BK_PENDING"; install -m 600 "$b/pfclient-config.json" "$BK_PENDING/pfclient-config.json"
+    else bk_pending_dir && install -m 600 "$b/pfclient-config.json" "$BK_PENDING/pfclient-config.json"
       echo "  Plane Finder: your share code waits for menu 1 (Plane Finder ticked)."; fi
   fi
   return 0
@@ -298,6 +309,7 @@ bk_apply_ids() {   # bk_apply_ids DIR(zb) BEFORE_DIR
 # Called by the installers (lib/adsb.sh, lib/graphs.sh) once their part is in place.
 bk_pending_apply() {   # bk_pending_apply piaware|fr24|planefinder|radarbox|graphs
   local v
+  if ! bk_pending_ok; then [ "$1" = planefinder ] && return 1; return 0; fi
   case "$1" in
     piaware)
       v=$(cat "$BK_PENDING/piaware-feeder-id" 2>/dev/null); bk_id_ok "$v" || return 0
@@ -431,8 +443,8 @@ backup_restore() {
         if [ ! -s "${TELEGRAM_SECRETS:-$ZB_ETC/telegram.env}" ]; then cfg_set TELEGRAM 0; later="$later\n  sudo zenithboard telegram setup      (the bot's token again: @BotFather, /token)"; continue; fi ;;
       wifi_harden) [ -n "$(wifi_iface 2>/dev/null)" ] || continue ;;
       # 0.52.0: they need ADSB Exchange's feed, which a fresh card gets from menu 1; the UUID came back with step 4
-      adsbx_stats) is_adsbx || { install -d -m 755 "$BK_DATA"; : > "$BK_DATA/adsbx-stats-wanted"; later="$later\n  sudo zenithboard adsbx-stats on      (after ADSB Exchange: menu 1 ADS-B → 1 Decoder and networks)"; continue; } ;;
-      graphs) [ ! -f "$b/graphs-xml.tar.gz" ] || { install -d -m 700 "$BK_PENDING"; install -m 600 "$b/graphs-xml.tar.gz" "$BK_PENDING/graphs-xml.tar.gz"; } ;;
+      adsbx_stats) is_adsbx || { mkdir -p "$BK_DATA"; zb_put "$BK_DATA/adsbx-stats-wanted" 644 ""; later="$later\n  sudo zenithboard adsbx-stats on      (after ADSB Exchange: menu 1 ADS-B → 1 Decoder and networks)"; continue; } ;;
+      graphs) [ ! -f "$b/graphs-xml.tar.gz" ] || { bk_pending_dir && install -m 600 "$b/graphs-xml.tar.gz" "$BK_PENDING/graphs-xml.tar.gz"; } ;;
     esac
     # shellcheck disable=SC2046
     if "$BK_CMD" $(bk_feature_cmd "$feat") > "$st/out" 2>&1; then echo "  $(bk_feature_label "$feat"): on"

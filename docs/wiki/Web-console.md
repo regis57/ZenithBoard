@@ -69,6 +69,15 @@ for setting up, not for every visit: once a browser or a phone is signed in, it 
 * **Signing out**: *Sign out* on the page; *System → Signed in* lists every browser and phone and signs any of them
   out (this browser first; since 0.54.18, more than two others fold under one line, *N other browsers and phones*,
   that unfolds); `sudo zenithboard console signout` signs everyone out, and so does choosing a new password.
+  Since 0.99.10 a sign-out also ends what that browser or phone handed out: a pairing code it made is refused, and a
+  computer it said yes to is not signed in (its page says *Refused on the phone*), whether it signed itself out, was
+  signed out from *System → Signed in*, or everyone was (`console signout`, `console password`). A code printed by
+  `sudo zenithboard console pair` before `console signout` or `console password` is refused too; print a new one.
+* **Wrong passwords** (0.99.10): five tries from one address, then a wait that doubles with each miss (30 seconds up
+  to an hour); thirty misses in a quarter of an hour from anywhere, and everyone waits five minutes. Tries sent all at
+  once count the same as tries one after the other. The Pi checks two passwords at a time (each check takes 16 MB of
+  memory, on purpose, so that a stolen hash is slow to guess); a third sign-in at that moment is answered *Busy. Try
+  again in a few seconds.*, and that try does not count as a miss.
 
 **Face ID and passkeys are not offered, on purpose.** A passkey (WebAuthn) is tied to a domain name and browsers allow
 it only in a *secure context*: HTTPS, or `localhost` on the machine itself. A plain-HTTP page at an address like
@@ -154,6 +163,18 @@ Click one of the last jobs to read what it printed: it opens at the top of the d
   it does. The Summaries card, and the first steps, say when no summary goes out (no Bluesky account, or posting off).
   *Try a post* offers *The picture* only when it drew one; on an empty sky it says to try again when the wall shows an
   aircraft nearby. Emptying *Your own templates* and saving asks first, like *Delete them all*.
+* **It stays fresh and keeps the keyboard's place (0.99.18).** Left open, the page reads the Pi again every two minutes
+  and when its tab is shown again (*Read on the Pi* gives the time of that reading), never while a question is open or a
+  field is being typed in. Enter in a field applies it once: its button then waits (*…*). After a change the focus stays
+  on the control that had it, drawn again; a control waiting for the Pi keeps the focus and does nothing. *Activity* and
+  every question take the focus and keep Tab inside them, the page behind out of reach; Escape or × gives it back to
+  what opened them.
+* **It fits a phone, and Arabic (0.99.19).** On a phone the line under a figure of the overview (the Pi's model, a
+  power warning) wraps instead of being cut, and at 400 px or less the figures are a little smaller; a figure or a line
+  still too long gives its whole text when held or hovered. The tab labels lose their letter spacing there, so
+  *STABILITÄT* or *НАДЁЖНОСТЬ* stay one word. A message (*Saved*, an error in red) shows at the top of a phone, under
+  the notch, across its width, and a tap goes through it: it never covers the tabs or the first steps' buttons. Right
+  to left, the side bar marks the chosen section on its outer edge and a list's dot keeps its gap before the words.
 * **Forgotten password, full card, failed command, update (0.54.7).** The sign-in page says how to get a new password
   (`sudo zenithboard console password`: every browser and phone is signed out). The pairing window says the phone must be
   on the home Wi-Fi. A change that cannot be written because the card is full says so, with `zenithboard health`,
@@ -210,8 +231,9 @@ when you do not need it. `zenithboard security` says it is on and checks the pas
 |---|---|
 | **Password forgotten** | 1. `sudo zenithboard console password` (choose a new one; everyone is signed out). 2. Sign in again |
 | **"This pairing code is used or out of date"**, with a fresh code | The wall could not write its console folder: it was started before `console on` made it, and its sandbox opens only folders present at its start (0.39.0, fixed in 0.39.2: `console on` restarts it, the code no longer depends on that write). 1. `sudo systemctl restart zenithboard-flightinfo`. 2. `sudo zenithboard console pair` again (a code works once, five minutes). The page also says it when the folder cannot be written |
+| **"Busy. Try again in a few seconds."** (0.99.10) | Other sign-ins were being checked at that moment (two at a time). Sign in again a few seconds later; if it keeps coming back, something on the network is trying passwords: *Activity → Sign-ins* shows the addresses |
 | **"Too many tries. Wait N seconds."** (failed QR codes count too) | 1. Wait, or 2. `sudo systemctl restart zenithboard-flightinfo` (the count lives in the wall's memory; signed-in sessions survive the restart) |
-| **Phone lost, or a browser you do not know in *Signed in*** | From a browser still signed in: *System → Signed in*, *Sign out* beside that one: since 0.54.15 what it signed in goes with it (a computer it said yes to, a phone paired with a code it made). *Sign out the others* if in doubt. Or over SSH: 1. `sudo zenithboard console signout` (every browser and phone out at once). 2. `sudo zenithboard console password` if the password may be known. 3. Pair your phone again: `sudo zenithboard console pair` |
+| **Phone lost, or a browser you do not know in *Signed in*** | From a browser still signed in: *System → Signed in*, *Sign out* beside that one: since 0.54.15 what it signed in goes with it (a computer it said yes to, a phone paired with a code it made), and since 0.99.10 what it had not yet signed in (a code not used yet, a yes the computer has not collected). *Sign out the others* if in doubt. Or over SSH: 1. `sudo zenithboard console signout` (every browser and phone out at once). 2. `sudo zenithboard console password` if the password may be known. 3. Pair your phone again: `sudo zenithboard console pair` |
 | **The page says the console is off** | `sudo zenithboard console on` |
 | **403 "home network only" or "open it by the Pi's address"** | 1. Open it as `http://192.168.x.x:8080/console` (the Pi's address: `hostname -I`), from a device on the home network. 2. By a name of your own (not `*.local`): `sudo zenithboard config-set CONSOLE_HOSTS your.name`. 3. A VPN whose addresses are not private (Tailscale's 100.64/10) is refused until you say so: `sudo zenithboard tailscale console on` (0.46.0; off by default), or SSH through it. A narrower `ALLOW_FROM` applies too (`zenithboard config`) |
 | **A change stays *queued*** behind another (*Queued: … runs first*) | Normal: one change at a time. Wait for the one running (its output: *Activity*). To give up on it: see *A change stays running* |
@@ -241,7 +263,7 @@ sudo zenithboard console pair        # the phone again (QR code)
 | File | What |
 |---|---|
 | `/etc/zenithboard/console.env` | The password's scrypt hash and when everyone was last signed out. root:zenithboard 0640 |
-| `/var/lib/zenithboard/console/state/` | The wall's: sessions (hashes), the job spool, the sign-in record. 0700 |
+| `/var/lib/zenithboard/console/state/` | The wall's: sessions (hashes), the job spool, the sign-in record. 0700. Since 0.99.11 root never follows a link found at `state/` or its `spool/` (it removes it), and the root helper opens the spool once without following a link and reads and removes every job through it ([Security](Security#root-never-trusts-a-path-the-service-user-owns-09911)) |
 | `/var/lib/zenithboard/console/out/` | Root's: each job's output and end, the journal, the overview's facts, a terminal pairing code's hash, the last backup made here (`backup.tar.gz`, root:zenithboard 0640, one at a time) |
 | `/etc/systemd/system/zenithboard-console.path` · `.service` | The helper, installed by `console on` only |
 | `CONSOLE=1` in `config.env` | On; `CONSOLE_HOSTS=name1,name2` adds names the page may be opened by |
@@ -250,6 +272,8 @@ sudo zenithboard console pair        # the phone again (QR code)
 
 Built and previewed on 21 October 2026 against a stand-in for the `zenithboard` command (desktop and phone width,
 headless Chromium): the wizard, every section, Activity, the QR code. The request checks, the sessions, the pairing
-and the helper are covered by `tests/test_console.py` and `tests/test_console.sh`. In use on the reference Pi since
+and the helper are covered by `tests/test_console.py` and `tests/test_console.sh`; the keyboard, the drawer, the
+questions and the fresh reading by `tests/test_console_keys.js` (headless Chromium, 0.99.18), with a 360 px phone in
+English, French, Russian, German and Arabic since 0.99.19. In use on the reference Pi since
 21 October 2026: the systemd path unit and the helper as root (graphs1090 installed from the page), an iPhone paired by
 QR code, a backup downloaded. **Not yet seen there**: a real update from the page. See [Project status](Project-status).

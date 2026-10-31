@@ -30,6 +30,7 @@ stats_install_units() {
   [ -f "$ZB_HOME/systemd/$STATS_UNIT.service" ] || return 0
   install -d -m 755 "$STATS_UNIT_DIR"
   install -m 644 "$ZB_HOME/systemd/$STATS_UNIT.service" "$ZB_HOME/systemd/$STATS_UNIT.timer" "$STATS_UNIT_DIR/"
+  stats_open_files                                  # 0.99.13: on the update, the files the old UMask=0077 wrote
   systemctl daemon-reload; systemctl enable --now "$STATS_UNIT.timer" >/dev/null 2>&1 || true
 }
 stats_remove_units() {
@@ -40,9 +41,59 @@ stats_remove_units() {
 # The folder belongs to the wall's user: the timer runs as that user, and the wall server reads it.
 stats_prepare_dir() {
   ensure_zb_user                                    # 0.43.0: the timer runs as the wall's user, which a fresh card may not have yet
-  [ -d "$STATS_DIR" ] || install -d -m 755 "$STATS_DIR" 2>/dev/null || return 1
-  [ "$(id -u)" -ne 0 ] || chown "$ZB_USER:$ZB_USER" "$STATS_DIR" 2>/dev/null || true
-  [ -f "$STATS_FILE" ] || { echo "$STATS_HEADER" > "$STATS_FILE" && { [ "$(id -u)" -ne 0 ] || chown "$ZB_USER:$ZB_USER" "$STATS_FILE" 2>/dev/null || true; }; }
+  # 0.99.11 (review B3): made and handed over without following a link planted in the folder's or the file's place
+  zb_service_dir "$STATS_DIR" 755 || return 1
+  [ -f "$STATS_FILE" ] || stats_new_file
+  stats_open_files
+}
+# 0.99.13 (review B5, S2): the unit's UMask=0077 made every file the timer wrote 0600, so `zenithboard stats` without
+# sudo read nothing and said 0 samples. The unit now says 0022; the files written before are opened up here, once,
+# on the next sample or update. They hold no position (counts, aircraft addresses, callsigns, the farthest aircraft's
+# nearest city), the same the /stats page shows. Each file is opened without following a link and changed through
+# its descriptor, so a link planted in the folder never lets root change another file's mode (review B3).
+stats_open_files() {
+  [ -d "$STATS_DIR" ] || return 0
+  python3 - "$STATS_DIR" <<'PY' 2>/dev/null || true
+import os, re, stat, sys
+try:
+    dfd = os.open(sys.argv[1], os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+except OSError:
+    sys.exit(0)
+for name in os.listdir(dfd):
+    if name != "stats.csv" and not re.match(r"^(seen|fleet|gaps|farthest)-\d{4}-\d{2}-\d{2}$", name):
+        continue
+    try:
+        fd = os.open(name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=dfd)
+    except OSError:
+        continue
+    try:
+        st = os.fstat(fd)
+        if stat.S_ISREG(st.st_mode) and stat.S_IMODE(st.st_mode) & 0o044 != 0o044:
+            os.fchmod(fd, 0o644)
+    except OSError:
+        pass
+    finally:
+        os.close(fd)
+PY
+}
+# What `stats`, `stats gaps` and `stats status` print when this user cannot read the files (0.99.13, review B5, S2):
+# the truth, instead of "no sample yet" or 0. Returns 0, having said so, when something there cannot be read.
+stats_unreadable() {   # stats_unreadable SUBCOMMAND
+  local f
+  if [ -e "$STATS_DIR" ] && { [ ! -r "$STATS_DIR" ] || [ ! -x "$STATS_DIR" ]; }; then f=$STATS_DIR
+  else
+    for f in "$STATS_FILE" "$STATS_DIR"/seen-* "$STATS_DIR"/gaps-* "$STATS_DIR"/fleet-* "$STATS_DIR"/farthest-* ""; do
+      [ -n "$f" ] || return 1
+      [ ! -e "$f" ] || [ -r "$f" ] || break
+    done
+  fi
+  echo "The statistics are there, but this user cannot read $f. Run with sudo: sudo zenithboard stats $1"
+  echo "(0.99.13 and later make them readable at the next sample or update: cd ~/ZenithBoard && sudo zenithboard update)"
+  return 0
+}
+stats_new_file() {
+  zb_put "$STATS_FILE" 644 "$STATS_HEADER" || return 1
+  [ "$(id -u)" -ne 0 ] || chown -h "$ZB_USER:$ZB_USER" -- "$STATS_FILE" 2>/dev/null || true
 }
 
 stats_on()  { stats_prepare_dir || { echo "Could not make $STATS_DIR"; return 1; }; cfg_set STATS 1; stats_install_units
@@ -51,16 +102,23 @@ stats_on()  { stats_prepare_dir || { echo "Could not make $STATS_DIR"; return 1;
               if is_flightinfo 2>/dev/null; then echo "Read them with 'zenithboard stats' or at http://$(local_ip):$(cfg_get PORT 8080)/stats"
               else echo "Read them with 'zenithboard stats'; the /stats page comes with the wall (menu 2 The wall)."; fi; }
 stats_off() { cfg_set STATS 0; stats_remove_units; echo "Statistics are OFF. The files are kept in $STATS_DIR (empty them: zenithboard stats clear)."; }
-stats_clear() { rm -f "$STATS_DIR"/seen-* "$STATS_DIR"/gaps-* "$STATS_DIR"/farthest-* "$STATS_DIR"/fleet-* 2>/dev/null; [ -d "$STATS_DIR" ] && echo "$STATS_HEADER" > "$STATS_FILE"; echo "Statistics emptied ($STATS_DIR)."; }
+stats_clear() { rm -f "$STATS_DIR"/seen-* "$STATS_DIR"/gaps-* "$STATS_DIR"/farthest-* "$STATS_DIR"/fleet-* 2>/dev/null; [ -d "$STATS_DIR" ] && stats_new_file; echo "Statistics emptied ($STATS_DIR)."; }
 
 # One sample. Reads the decoder's two files; writes one CSV line and today's aircraft. Silent when there is
 # nothing to read: a decoder that is not running is not an error worth a journal line every quarter hour.
-stats_run() {
+# 0.99.13 (review B5, S2): whatever the caller's umask (the unit had 0077), what a sample writes is readable by the
+# Pi's other users, as the unit's own UMask=0022 now says too.
+stats_run() ( umask 022; stats_sample )
+stats_sample() {
   local d sj aj now day n msgs far pos seen ldb
   d=$(cfg_get DECODER ""); [ -n "$d" ] || d=$(installed_decoder); [ -n "$d" ] || return 0
   sj="$STATS_AIRCRAFT_DIR/$d/stats.json"; aj="$STATS_AIRCRAFT_DIR/$d/aircraft.json"
   [ -r "$sj" ] || return 0
   stats_prepare_dir || return 0
+  # The row is stamped with the time of the sample; its messages and farthest (the decoder's last15min) are the
+  # quarter hour before it, and `/stats` and `stats show` count them there (0.99.22, S5): the row stamped 00:00 is
+  # the day before's 23:45 to 24:00. The aircraft with a position are a look at this moment, and the day's files
+  # are this day's (the day before's last aircraft are added to its own file below).
   now=$(date '+%Y-%m-%d %H:%M'); day=${now%% *}
   # tar1090's aircraft database, when `data localdb on`: the type of an aircraft the decoder did not give one
   ldb=""; [ "$(cfg_get LOCAL_DB 0)" = 1 ] && ldb=$(cfg_get LOCAL_DB_DIR /usr/local/share/tar1090/git-db/db)
@@ -210,11 +268,14 @@ PY
 stats_gaps_sample() {   # stats_gaps_sample YYYY-MM-DD
   local port f
   port=$(cfg_get PORT 8080); f="$STATS_DIR/gaps-$1"
-  python3 - "$port" "$(cfg_get RADIUS 10)" "$f" <<'PY' 2>/dev/null || true
+  # 0.99.13 (review B5, W6): no radius in the question. RADIUS is in the owner's units (km, miles or nautical miles)
+  # and was sent as radius_km, so a 10-mile radius sampled 10 km: imperial and aviation users were undercounted.
+  # Asked without it, the wall applies RADIUS in its own units, the radius it shows.
+  python3 - "$port" "$f" <<'PY' 2>/dev/null || true
 import json, os, sys, urllib.request
-port, radius, out = sys.argv[1], sys.argv[2], sys.argv[3]
+port, out = sys.argv[1], sys.argv[2]
 try:
-    with urllib.request.urlopen("http://127.0.0.1:%s/api/planes?radius_km=%s" % (port, radius), timeout=5) as r:
+    with urllib.request.urlopen("http://127.0.0.1:%s/api/planes" % port, timeout=5) as r:
         planes = json.load(r).get("planes") or []
 except Exception:
     sys.exit(0)
@@ -283,15 +344,17 @@ PY
 # The counters over the thirty days, most frequent first: "zenithboard stats gaps" is what to paste in an issue
 stats_gaps() {
   local days
+  ! stats_unreadable gaps || return 1
   days=$(ls "$STATS_DIR"/gaps-* 2>/dev/null | wc -l)
   [ "$days" -gt 0 ] || { echo "Nothing noted yet. Statistics are $(stats_state); the wall must be running, and the first sample comes on the next quarter hour."; return 1; }
   echo "What the wall could not name or draw, over $days day(s) of samples (distinct aircraft; a sample every 15 minutes misses some)"
   echo
   echo "Callsign prefixes shown without an airline name:"
-  cat "$STATS_DIR"/gaps-* | awk -F'\t' '$1=="airline" {print $2 "\t" $3}' | sort -u | cut -f1 | sort | uniq -c | sort -rn | awk '{printf "  %-6s %s aircraft\n", $2, $1}' | head -40
+  # 0.99.23: an empty list says so; a title over nothing read like an output cut short (seen on the real Pi, 31 Oct 2026)
+  cat "$STATS_DIR"/gaps-* | awk -F'\t' '$1=="airline" {print $2 "\t" $3}' | sort -u | cut -f1 | sort | uniq -c | sort -rn | awk '{printf "  %-6s %s aircraft\n", $2, $1} END {if (!NR) print "  none: every callsign seen had its airline name"}' | head -40
   echo
   echo "Type codes drawn with the generic silhouette:"
-  cat "$STATS_DIR"/gaps-* | awk -F'\t' '$1=="shape" {print $2 "\t" $3}' | sort -u | cut -f1 | sort | uniq -c | sort -rn | awk '{printf "  %-6s %s aircraft\n", $2, $1}' | head -40
+  cat "$STATS_DIR"/gaps-* | awk -F'\t' '$1=="shape" {print $2 "\t" $3}' | sort -u | cut -f1 | sort | uniq -c | sort -rn | awk '{printf "  %-6s %s aircraft\n", $2, $1} END {if (!NR) print "  none: every type code seen had its own silhouette"}' | head -40
 }
 
 # Thirty days of lines, thirty day files. Timestamps are YYYY-MM-DD HH:MM, which compare correctly as text.
@@ -322,26 +385,45 @@ stats_spark() {   # stats_spark v1 v2 ... -> one bar per value, eight heights
 }
 
 stats_show() {
+  ! stats_unreadable show || return 1
   [ -f "$STATS_FILE" ] || { echo "No statistics yet. Turn them on with: sudo zenithboard stats on"; return 1; }
-  local today yday rows out hours seen_today
+  local today yday rows out hours f counts
   today=$(date '+%Y-%m-%d'); yday=$(date -d yesterday '+%Y-%m-%d' 2>/dev/null)
   rows=$(awk 'NR>1' "$STATS_FILE" | grep -c . || true)
   echo "Statistics: $(stats_state), $rows samples of 15 minutes, $STATS_DAYS days kept    File: $STATS_FILE"
   [ "$rows" -gt 0 ] || { echo "No sample yet: the first one comes on the next quarter hour."; return 0; }
-  seen_today=$(grep -c . "$(stats_day_file "$today")" 2>/dev/null || echo 0)
-  out=$(awk -F, -v today="$today" -v yday="$yday" -v seen_today="$seen_today" '
-    NR>1 { day=substr($1,1,10); hour=substr($1,12,2)
-           msgs[day]+=$2; if ($3>far[day]) far[day]=$3; if ($5>seen[day]) seen[day]=$5; days[day]=1
-           if (day==today) h[hour]+=$2 }
+  # 0.99.13 (review B5, S6): each day's aircraft are its day file's, as for Today and on the /stats page. The CSV's
+  # count is the one at the day's last sample, so the aircraft the wall added after it (its five-second look, and a
+  # sample after midnight that writes the day before's last ones) were left out of Yesterday and of the average.
+  counts="#"
+  for f in "$STATS_DIR"/seen-????-??-??; do [ -f "$f" ] && counts="$counts"$'\n'"${f##*/seen-},$(grep -c . "$f" || true)"; done
+  # The average covers complete days only: before today, sampled from the first hour (00) to the last (23). Today,
+  # and a first or last day the timer was on for part of, would pull it down; the label gives how many it covers.
+  # 0.99.22 (S5): the messages and the farthest in the quarter hour they measure (the stamp less 15 minutes, as on
+  # /stats), the aircraft and the complete days at the stamp, the sampler's own day.
+  out=$(awk -F, -v today="$today" -v yday="$yday" '
+    function mdays(y, m) { return m == 2 ? ((y % 4 == 0 && y % 100 != 0) || y % 400 == 0 ? 29 : 28) : (m == 4 || m == 6 || m == 9 || m == 11 ? 30 : 31) }
+    function prevday(d,   y, m, n) { y=substr(d,1,4)+0; m=substr(d,6,2)+0; n=substr(d,9,2)-1
+      if (n < 1) { m--; if (m < 1) { m=12; y-- }; n=mdays(y, m) }
+      return sprintf("%04d-%02d-%02d", y, m, n) }
+    FNR==NR { if ($1 != "#") cnt[$1]=$2; next }
+    FNR>1 { day=substr($1,1,10); hour=substr($1,12,2)
+           q=substr($1,12,2)*60 + substr($1,15,2) - 15; mday=day; if (q < 0) { q+=1440; mday=prevday(day) }
+           mhour=sprintf("%02d", int(q/60))
+           msgs[mday]+=$2; if ($3>far[mday]) far[mday]=$3; if ($5>seen[day]) seen[day]=$5; days[day]=1; days[mday]=1
+           if (hour=="00") first[day]=1; if (hour=="23") last[day]=1
+           if (mday==today) h[mhour]+=$2 }
+    function aircraft(d) { return (d in cnt) ? cnt[d] : seen[d] }
     END {
       n=0; for (d in days) n++
-      printf "%-10s %5d aircraft seen   %7d messages   farthest %3d km\n", "Today", seen_today, msgs[today], far[today]
-      if (yday in days) printf "%-10s %5d aircraft seen   %7d messages   farthest %3d km\n", "Yesterday", seen[yday], msgs[yday], far[yday]
+      printf "%-10s %5d aircraft seen   %7d messages   farthest %3d km\n", "Today", aircraft(today), msgs[today], far[today]
+      if (yday in days) printf "%-10s %5d aircraft seen   %7d messages   farthest %3d km\n", "Yesterday", aircraft(yday), msgs[yday], far[yday]
       best=0; for (d in days) if (far[d]>best) { best=far[d]; bestd=d }
-      tot=0; for (d in days) tot+=seen[d]
-      if (n>1) printf "%-10s %5d aircraft/day on average   best %d km on %s\n", n " days", tot/n, best, bestd
+      nc=0; tot=0; for (d in days) if (d < today && (d in first) && (d in last)) { nc++; tot+=aircraft(d) }
+      if (nc>0) printf "%-10s %5d aircraft/day on average over %d complete day%s   best %d km on %s\n", "Average", tot/nc, nc, (nc>1 ? "s" : ""), best, bestd
+      else if (n>1) printf "%-10s no complete day yet (sampled from 00:00 to 23:45)   best %d km on %s\n", "Average", best, bestd
       printf "HOURS"; for (i=0;i<24;i++) printf " %d", h[sprintf("%02d",i)]; printf "\n"
-    }' "$STATS_FILE")
+    }' <(printf '%s\n' "$counts") "$STATS_FILE")
   echo
   printf '%s\n' "$out" | grep -v '^HOURS'
   hours=$(printf '%s\n' "$out" | sed -n 's/^HOURS //p')
@@ -354,11 +436,12 @@ stats_show() {
   if is_flightinfo 2>/dev/null; then echo "Aircraft seen: with the wall answering on this Pi, every address it saw, looking every 5 seconds (a floor, but within a few percent). CSV: zenithboard stats csv"
   else echo "Aircraft seen is a floor: a sample every 15 minutes misses an aircraft that crossed in less (the wall, when installed, looks every 5 seconds). CSV: zenithboard stats csv"; fi
 }
-stats_csv() { [ -f "$STATS_FILE" ] && cat "$STATS_FILE" || { echo "No statistics yet."; return 1; }; }
+stats_csv() { ! stats_unreadable csv || return 1; [ -f "$STATS_FILE" ] && cat "$STATS_FILE" || { echo "No statistics yet."; return 1; }; }
 
 stats_status() {
   echo "Statistics: $(stats_state)     Folder: $STATS_DIR"
-  if [ -f "$STATS_FILE" ]; then
+  if stats_unreadable status; then :
+  elif [ -f "$STATS_FILE" ]; then
     echo "Samples: $(awk 'NR>1' "$STATS_FILE" | grep -c . || true)   Days with aircraft files: $(ls "$STATS_DIR"/seen-* 2>/dev/null | wc -l)"
     [ "$(stats_state)" = on ] && systemctl list-timers "$STATS_UNIT.timer" --no-pager 2>/dev/null | sed -n '2p'
   fi

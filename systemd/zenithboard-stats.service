@@ -40,4 +40,7 @@ SystemCallFilter=@system-service
 SystemCallFilter=~@privileged @resources
 CapabilityBoundingSet=
 AmbientCapabilities=
-UMask=0077
+# 0022 since 0.99.13 (review B5, S2): 0077 made the files 0600, and `zenithboard stats` without sudo said 0 samples.
+# They hold no position (counts, aircraft addresses and callsigns, the farthest aircraft's nearest city), what the
+# /stats page shows anyway.
+UMask=0022

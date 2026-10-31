@@ -215,11 +215,14 @@ graphs_look_apply() {
   chmod 644 "$GRAPHS_HOME/html/zenithboard.css"
   sed -i -e 's|\(<link rel="stylesheet" href="portal.css">\)|\1\n\t\t<link rel="stylesheet" href="zenithboard.css">|' \
          -e 's|\(<link rel="stylesheet" href="zenithboard.css">\)|\1\n\t\t<link rel="stylesheet" href="i18n.css">|' \
-         -e 's|\(<script src="graphs.js"></script>\)|\1\n\t\t<script src="font5x7.js"></script>\n\t\t<script src="zb-lang.js"></script>\n\t\t<script src="i18n.js"></script>\n\t\t<script src="zenithboard.js"></script>|' "$html"
+         -e 's|\(<script src="graphs.js"></script>\)|<script src="zb-lang.js"></script>\n\t\t\1\n\t\t<script src="font5x7.js"></script>\n\t\t<script src="i18n.js"></script>\n\t\t<script src="zenithboard.js"></script>|' "$html"
   grep -q 'zenithboard.css' "$html" && grep -q 'zenithboard.js' "$html"
 }
 # 0.47.0: graphs1090's page in the web pages' language: its catalogues beside it, and the Pi's default and the wall's
 # port in zb-lang.js (graphs1090 answers on its own port: the wall's /api/config is another origin, not read from there)
+# 0.99.20 (review B12): zb-lang.js comes before graphs.js and keeps the address's ?lang= (urlLang): graphs.js puts
+# ?timeframe= in the address as it starts (history.replaceState in its switchView), and ?lang= was gone before i18n.js
+# could read it, so a link from the wall or the statistics page in French opened graphs1090's page in English
 graphs_look_langs() {
   local d="$GRAPHS_HOME/html" c list="" port
   rm -rf "${d:?}/zb-i18n"
@@ -232,7 +235,7 @@ graphs_look_langs() {
   done
   c=$(cfg_get CONSOLE_LANG); case " $(zb_langs) " in *" $c "*) ;; *) c="" ;; esac
   port=$(cfg_get PORT 8080); case "$port" in ''|*[!0-9]*) port=8080 ;; esac
-  printf '// written by ZenithBoard (graphs_look_langs): the web pages'"'"' language and the wall'"'"'s port\nwindow.ZB_I18N_CONF = { lang: "%s", langs: [%s], wallPort: %s };\n' "$c" "$list" "$port" > "$d/zb-lang.js"
+  printf '// written by ZenithBoard (graphs_look_langs): the web pages'"'"' language and the wall'"'"'s port\nwindow.ZB_I18N_CONF = { lang: "%s", langs: [%s], wallPort: %s,\n  urlLang: (/[?&]lang=([A-Za-z-]{2,8})/.exec(location.search) || [])[1] || "" };\n' "$c" "$list" "$port" > "$d/zb-lang.js"
   chmod 644 "$d/zb-lang.js"
 }
 graphs_look() {   # graphs_look zenithboard|original|status

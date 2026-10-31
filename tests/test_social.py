@@ -20,6 +20,30 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "flightinfo"))
 import social  # noqa: E402
 
+try:
+    import social_card  # noqa: E402
+    from PIL import Image  # noqa: E402
+except ImportError:                                  # Pillow is only needed for the pictures with a map and the summaries'
+    social_card = None
+# review B14 (T6): every test that draws with Pillow says so, and is skipped on a machine without it (docs/wiki/Testing.md)
+needs_pil = unittest.skipIf(social_card is None, "Pillow not installed here")
+
+
+def setUpModule():
+    # review B14 (T7): the pictures are drawn in social.RUN_DIR, /run/zenithboard/social under the service. The suite
+    # made that folder on the machine running it whenever it could; a temporary folder of its own instead.
+    global _RUN_DIR
+    _RUN_DIR = social.RUN_DIR
+    social.RUN_DIR = tempfile.mkdtemp(prefix="zb-social-run-")
+
+
+def tearDownModule():
+    shutil.rmtree(social.RUN_DIR, ignore_errors=True)
+    social.RUN_DIR = _RUN_DIR
+
+
+_RUN_DIR = None
+
 EZY = {"hex": "4071f1", "flight": "EZY1234 ", "registration": "G-UZHA", "type": "A20N", "type_name": "AIRBUS A-320neo",
        "shape": "narrow", "military": False, "airline_icao": "EZY", "airline": "easyJet", "alt_ft": 37000, "on_ground": False,
        "gs_kt": 320, "track": 110, "distance_km": 12.3, "bearing": 45,
@@ -204,11 +228,10 @@ class WordsTest(unittest.TestCase):
         t = social.post_text(HELI, dict(CFG, SOCIAL_HASHTAGS="#ADSB #Moselle"))
         self.assertTrue(t.endswith("#ADSB #Moselle #helicopter"), t)
 
+    @needs_pil
     def test_the_map_credit_is_one_short_line_at_the_end(self):
         # 0.19.6, from the owner after the first satellite post: the three lines of small print spoiled the post.
         # The whole text stays on the picture and in the alt text; the post has the names, as links
-        if social_card is None:
-            self.skipTest("Pillow not installed here")
         for mode, st in social_card.MAP_STYLES.items():
             if st["credit"]:
                 self.assertLessEqual(len(st["credit"]), 45, mode)
@@ -580,9 +603,10 @@ class PictureTest(unittest.TestCase):
         self.assertGreater(out["far"][0], 88); self.assertLess(out["far"][1], 127)
         self.assertGreater(out["none"][0], 88); self.assertLess(out["none"][1], 127)
 
+    @needs_pil
     def test_with_a_map_the_column_is_left_dark_and_its_place_is_given(self):
-        if shutil.which(social.NODE) is None or social_card is None:
-            self.skipTest("node or Pillow not installed here")
+        if shutil.which(social.NODE) is None:
+            self.skipTest("node not installed here")
         d = tempfile.mkdtemp(); self.addCleanup(shutil.rmtree, d, True)
         got = social._node({"plane": EZY, "trace": trace(60), "units": "metric", "theme": "turquoise", "clock": "12:16 GMT+2",
                             "flags": True, "pitch": 10, "map": True}, os.path.join(d, "dots.png"))
@@ -652,6 +676,12 @@ class PictureTest(unittest.TestCase):
         self.assertEqual(social.speed_words(453, "aviation"), "453\u00a0kt")
         self.assertEqual(social.range_words(332, units="aviation"), "over 175\u00a0NM out")     # 332 km = 179 NM, down to 25
         self.assertEqual(social.range_words(30, units="aviation"), "over 25\u00a0NM out")
+        # review B8 (0.99.16): imperial said kilometres; miles now, down to 25 mi
+        self.assertEqual(social.range_words(342, units="imperial"), "over 200\u00a0mi out")      # 342 km = 212.5 mi
+        self.assertEqual(social.range_words(30, units="imperial"), "over 25\u00a0mi out")
+        t = social.post_text(dict(EZY, distance_km=332.4), dict(CFG, SOCIAL_UNITS="imperial"), why="farthest")
+        self.assertIn("range record for 30 days: over 200\u00a0mi out", t)
+        self.assertNotIn("km", t)
 
     def test_the_picture_s_colour_setting(self):
         self.assertEqual(social.theme_of({"THEME": "red"}), "red")                          # the wall's, by default
@@ -667,13 +697,6 @@ class PictureTest(unittest.TestCase):
         self.assertEqual(social.map_of({"SOCIAL_MAP": "google"}), "normal")
 
 
-try:
-    import social_card
-    from PIL import Image
-except ImportError:                                  # Pillow is only needed for the split-flap look
-    social_card = None
-
-
 def fake_tile(layer, ext, z, x, y):
     import io
     im = Image.new("RGBA" if ext == "png" else "RGB", (256, 256), (0, 0, 0, 0) if ext == "png" else (220, 215, 200))
@@ -682,7 +705,7 @@ def fake_tile(layer, ext, z, x, y):
     return buf.getvalue()
 
 
-@unittest.skipIf(social_card is None, "Pillow not installed here")
+@needs_pil
 class FlapPictureTest(unittest.TestCase):
     LINES = ["FLT  EZY1234", "REG  G-UZHA", "EASYJET", "AIRBUS A320NEO", "ALT  11280 M", "SPD  593 KMH", "EDINBURGH", "\u2192SAINT-LOUIS", "11:39 GMT+2"]
 
@@ -1641,9 +1664,10 @@ class PublishTest(unittest.TestCase):
         self.assertIn("text", r)
         self.assertFalse([d for d in os.listdir(tempfile.gettempdir()) if d.startswith("zenithboard-social-")], "the stand-in folder must be removed")
 
+    @needs_pil
     def test_the_picture_is_deleted_after_a_post_even_when_the_network_fails(self):
-        if shutil.which(social.NODE) is None or social_card is None:
-            self.skipTest("node or Pillow not installed here")
+        if shutil.which(social.NODE) is None:
+            self.skipTest("node not installed here")
         d = tempfile.mkdtemp(); self.addCleanup(shutil.rmtree, d, True)
         old_run = social.RUN_DIR; social.RUN_DIR = d; self.addCleanup(setattr, social, "RUN_DIR", old_run)
         old = urllib.request.urlopen
@@ -1709,7 +1733,9 @@ class WeeklyTest(unittest.TestCase):
         self.assertEqual(w["dates"][0], "2026-10-12")
         self.assertEqual(w["dates"][-1], "2026-10-18")
         self.assertEqual(w["aircraft"], 6 * 80 + 120, "distinct over the week, from the day files")
-        self.assertEqual(w["messages"], 6 * 24 * 1000 + 20 * 1000)
+        # 0.99.22 (S5): a row counts in the quarter hour it measures, so Monday's 00:00 row (the Sunday before's last
+        # quarter hour) is not the week's, and the week has 6 * 24 + 19 rows' messages (20 counted at their stamps)
+        self.assertEqual(w["messages"], 6 * 24 * 1000 + 19 * 1000)
         self.assertEqual(w["best_day"], ("2026-10-16", 120))
         self.assertEqual(w["busiest_hour"], 15)
         self.assertEqual([tuple(a) for a in w["airlines"]], [("Ryanair", 2), ("Lufthansa", 1)], "the week only")
@@ -1717,6 +1743,7 @@ class WeeklyTest(unittest.TestCase):
         self.assertEqual(len(w["heat"]), 7)
         self.assertIsNone(__import__("social_week").week_data(self.c, self.d + "/none", self.now))
 
+    @needs_pil
     def test_airlines_only_when_their_lists_cover_the_week(self):
         # 0.34.1, seen on the reference Pi: "6 435 aircraft heard" beside "Ryanair (14)", the lists being two hours old
         import social_week
@@ -1742,6 +1769,7 @@ class WeeklyTest(unittest.TestCase):
             fh.write("c00001\t\t41000\tC56X\nc00002\tHBJFA\t43000\tC56X\nc00003\t\t39000\tFA7X\n")
             fh.write("c00004\t\t1500\tC172\n")                                            # a Cessna 172: no jet
 
+    @needs_pil
     def test_cargo_and_business_jets(self):
         # 0.35.0: the second post. Cargo by the airline's own prefix (FedEx, DHL's EAT Leipzig), never by a
         # passenger airline's (Turkish flies cargo as THY too); business jets by the wall's own classes
@@ -1795,6 +1823,7 @@ class WeeklyTest(unittest.TestCase):
             fh.write("3c1a03\t\t2000\tC172\tA1\t\n3c1a04\t\t3000\tGLID\tB1\t\n3c1a05\t\t400\t\tB6\t\n")
             fh.write("4b1a01\t\t41000\tFA7X\tA2\t\n")                # a Swiss business jet
 
+    @needs_pil
     def test_general_aviation_rows_carry_the_country_and_unknown_military_is_asked(self):
         # 0.40.5, the owner: the flags of the helicopters and light aircraft; and "Germany: Unknown type (2)"
         import social_week
@@ -1826,6 +1855,7 @@ class WeeklyTest(unittest.TestCase):
                          "20 October, 09:20 – 21 October, 09:20")
         self.assertEqual(social_week.span_footer({"period": "weekly", "dates": ["2026-10-12", "2026-10-18"]}), "12–18 October")
 
+    @needs_pil
     def test_military_and_general_aviation(self):
         import social_week
         import server
@@ -1866,6 +1896,7 @@ class WeeklyTest(unittest.TestCase):
         self.assertEqual([server.misc_group(*a) for a in (("heli", ""), (None, "A7"), (None, "B6"), ("light", ""), ("narrow", "A3"))],
                          ["heli", "heli", "drone", "light", None])
 
+    @needs_pil
     def test_publish_parts_three_and_four(self):
         self.addCleanup(setattr, social.server, "STATS_DIR", social.server.STATS_DIR)
         social.server.STATS_DIR = self.d
@@ -1912,6 +1943,7 @@ class WeeklyTest(unittest.TestCase):
         self.assertEqual((sw.cycle_key("daily", wed), sw.cycle_key("weekly", wed), sw.cycle_key("monthly", wed)),
                          ("2026-10-21", "2026-W43", "2026-10"))
 
+    @needs_pil
     def test_lists_begun_inside_the_period_are_shown_from_half_of_it(self):
         # the reference Pi, 21 October 2026: the first daily summary had no airline, no model and none of posts 2 to
         # 4, the lists having begun the day before; the statistics page showed them. 0.40.4: shown, saying since when
@@ -1939,6 +1971,7 @@ class WeeklyTest(unittest.TestCase):
             fh.write("4ca001\tRYR5ZK\t35000\tB738\n")
         self.assertEqual(sw.fleet_since(self.d, "2026-10-18")[1], "18 October")
 
+    @needs_pil
     def test_the_day_and_the_thirty_days(self):
         import datetime
         import social_week as sw
@@ -1989,6 +2022,7 @@ class WeeklyTest(unittest.TestCase):
         self.assertTrue(t.endswith(tags), "the hashtags whole")
         self.assertIn("Models: ", t, "the models stay, with fewer names, before any line is dropped")
 
+    @needs_pil
     def test_publish_the_second_dry_and_skipped(self):
         self.addCleanup(setattr, social.server, "STATS_DIR", social.server.STATS_DIR)
         social.server.STATS_DIR = self.d
@@ -2019,6 +2053,7 @@ class WeeklyTest(unittest.TestCase):
         self.assertEqual(social_week.messages_words(812_000), "812\u00a0000")
         self.assertEqual(social_week.span_words(["2026-09-28", "2026-10-04"]), "28 September – 4 October")
 
+    @needs_pil
     def test_the_picture(self):
         import social_week
         from PIL import Image
@@ -2029,6 +2064,7 @@ class WeeklyTest(unittest.TestCase):
         with Image.open(out) as im:
             self.assertEqual(im.size, (1200, 675))
 
+    @needs_pil
     def test_publish_dry_and_skipped(self):
         self.addCleanup(setattr, social.server, "STATS_DIR", social.server.STATS_DIR)
         social.server.STATS_DIR = self.d
@@ -2041,6 +2077,26 @@ class WeeklyTest(unittest.TestCase):
         social.server.STATS_DIR = self.d + "/none"
         self.assertIn("skipped", social.publish_week(self.c, {}, now, {}, dry=True))
 
+    @needs_pil
+    def test_the_daily_summary_counts_the_last_24_hours(self):
+        # review B8 (0.99.16): the daily summary counted the posts of the calendar day, so at 10:00 it said 2 after a
+        # day of 32. Now the 24 hours before it, by the time of each post; one 25 hours old is not counted
+        import datetime
+        self.addCleanup(setattr, social.server, "STATS_DIR", social.server.STATS_DIR)
+        social.server.STATS_DIR = self.d
+        at = lambda *a: time.mktime(datetime.datetime(*a).timetuple())
+        now = at(2026, 10, 18, 10, 0)
+        st = warm()
+        social.remember(st, EZY, now - 25 * 3600)                      # the 17th, 09:00: too old
+        for i in range(30):
+            social.remember(st, dict(EZY, hex="4071%02x" % i), at(2026, 10, 17, 15, 0) + i)
+        for i in range(2):
+            social.remember(st, dict(EZY, hex="4072%02x" % i), at(2026, 10, 18, 8, 0) + i)
+        st["posts"] = [t for t in st["posts"] if now - t <= 86400] + [now - 25 * 3600]   # kept, as if not pruned yet
+        r = social.publish_week(self.c, {}, now, st, dry=True, period="daily")
+        self.assertIn("Posted here: 32 crossings.", r["text"])
+
+    @needs_pil
     def test_publish_for_real_posts_once_and_deletes_the_picture(self):
         # 0.54.14 (the audit of 22-23 October 2026): publish_week was only ever run dry
         self.addCleanup(setattr, social.server, "STATS_DIR", social.server.STATS_DIR)
@@ -2264,9 +2320,6 @@ class WeeklyTest(unittest.TestCase):
         self.assertNotIn(3, [p for _, p in sent], "and the rest with it: Bluesky is not answering")
         self.assertNotIn("weekly2", state)
 
-if __name__ == "__main__":
-    unittest.main()
-
 
 class PostNowTest(unittest.TestCase):
     """0.54.13 (the audit of 22-23 October 2026): `social post` ("Post now") had no test; it caused a double post in 0.19.2.
@@ -2304,3 +2357,41 @@ class PostNowTest(unittest.TestCase):
         self.assertEqual(rc, 1)
         self.assertEqual(self.remembered, [])
         self.assertIn("FAILED", out)
+
+
+class SavedAtOnceTest(unittest.TestCase):
+    """Review B8 (0.99.16): a post is written down before the summaries run, so a summary that stops the service does
+    not make the restart post the same aircraft again."""
+
+    def test_a_summary_that_stops_the_service_keeps_the_post(self):
+        import contextlib
+        import io
+        d = tempfile.mkdtemp(); self.addCleanup(shutil.rmtree, d, True)
+        self.addCleanup(setattr, social, "STATE_DIR", social.STATE_DIR); social.STATE_DIR = d
+        clock = [1800000000.0]
+
+        def stop(*a, **k):
+            raise SystemExit(1)
+        for name, fake in (("read_aircraft", lambda c: []), ("account", lambda: {"BLUESKY_HANDLE": "h", "BLUESKY_APP_PASSWORD": "p"}),
+                           ("one_poll", lambda c, st, tr, ac, now: ([BELUGA], (5, "all", BELUGA))),
+                           ("cfg", lambda: dict(CFG)),
+                           ("publish", lambda *a, **k: {"bluesky": "at://x"}),
+                           ("schedule_summaries", lambda c, st, now: [{"period": "daily", "part": 1, "key": "k", "at": now}]),
+                           ("publish_week", stop)):
+            self.addCleanup(setattr, social, name, getattr(social, name))
+            setattr(social, name, fake)
+        self.addCleanup(setattr, time, "time", time.time); time.time = lambda: clock[0]
+
+        def no_sleep(sec):
+            self.fail("the summary was never tried")
+        self.addCleanup(setattr, time, "sleep", time.sleep); time.sleep = no_sleep
+        with contextlib.redirect_stdout(io.StringIO()):
+            with self.assertRaises(SystemExit):
+                social.cmd_run()
+        st = social.load_state()
+        self.assertIn(BELUGA["hex"], st.get("posted", {}), "the post was written down before the summary stopped the service")
+        self.assertEqual(st.get("last_post"), clock[0])
+
+
+if __name__ == "__main__":
+    unittest.main()

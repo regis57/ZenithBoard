@@ -56,9 +56,10 @@ update to it (29 November 2026 if it is updated on 30 October).
    row at the top of its table when something was learnt on the Pi). Patch for a fix, minor for a feature.
 4. Full local CI, all four, before pushing:
    ```
-   for t in tests/*.sh; do bash $t; done
+   for t in tests/*.sh; do bash $t || echo "FAIL $t"; done
    python3 -m unittest discover -s tests
-   for j in format shapes scene flap layout flags scroll statsjs i18n; do node tests/test_$j.js; done
+   for j in format shapes scene flap layout flags scroll statsjs i18n poll console_keys stats_page; do node tests/test_$j.js || echo "FAIL $j"; done
+   for f in flightinfo/static/*.js tools/*.js tools/graphs1090-look/*.js; do node --check "$f"; done
    shellcheck -x -S warning install.sh bin/zenithboard bin/zenithboard-demo lib/*.sh tests/*.sh tools/*.sh
    ```
 5. Commit as the owner: `git -c user.name=regis57 -c user.email=regis.hennequin@gmail.com commit`.

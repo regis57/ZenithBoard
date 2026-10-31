@@ -13,6 +13,8 @@ UAT_DEFAULT_DIR="${ZB_DEFAULT_DIR:-/etc/default}"
 uat978_set_sdr() {  # uat978_set_sdr SERIAL [FILE]
   local dev="$1" f="${2:-$UAT_DEFAULT_DIR/dump978-fa}"
   [ -n "$dev" ] || return 1
+  # the review of 0.99.8: the serial goes into a sed expression, so only letters, digits, - and _ get there
+  valid_sdr "$dev" || { err "Not a dongle serial: $dev (letters, digits, - and _ only, up to 32): $f left as it was."; return 1; }
   [ -f "$f" ] || { warn "$f not found: set the dongle yourself with  --sdr driver=rtlsdr,serial=$dev  in RECEIVER_OPTIONS."; return 1; }
   sed -i -E 's/ ?--sdr [^" ]+//g' "$f"
   if grep -qE '^RECEIVER_OPTIONS="' "$f"; then
