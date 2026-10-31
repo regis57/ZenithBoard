@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.99.10 — release candidate, fix
+Security (the review of 0.99.8, its batch B2: the console's sign-in under load and after a sign-out):
+- **Sign-ins sent all at once skipped the wait after five wrong passwords**, and each ran a 16 MB scrypt hash at the same time: the check (*wait?*) and the count (*one more miss*) were two steps with the hash between them, so a burst from one address passed the check together, and on a 1 GB Pi the memory went with it. The check and a provisional miss are now one step, for the password and for a pairing code: a burst from one address gets its five tries, the rest are told to wait. A right password takes its miss back, as before.
+- **Two passwords are checked at a time.** A third sign-in at that moment is answered *Busy. Try again in a few seconds.* (in the 22 languages) and that try does not count; the 0.4 s pause after a wrong password is outside the two places. Not done: a `MemoryMax=` for the wall's service, which waits for the wall's real memory use measured on the reference Pi (the plan's own condition).
+- **A pairing code and a yes to a computer outlived the sign-out of the session that gave them.** Revoked in *System → Signed in*, signed out on its page or by `sudo zenithboard console signout` / `console password`, a stolen session's pairing code still signed a phone in for its five minutes, and its yes still signed in the computer at its next poll. Both are now refused when their maker is no longer signed in (an *Activity → Sign-ins* line says so); revoking a session also forgets its codes and turns its pending yes into a no. A code printed by `sudo zenithboard console pair` before the last `console signout` or `console password` is refused (unless the Pi's clock is behind that sign-out, the 0.54.17 case, when the two cannot be told apart).
+- New tests in `tests/test_console.py`: a burst of 24 wrong passwords from one address at a barrier (at most five 401s, the rest 429, never more than two hashes at once, with a slow stand-in hash); *Busy* does not count; the limiter's provisional miss given back and cleared; revoke then redeem, signout then redeem (a browser's code and the terminal's), the terminal's code with the clock behind; revoke, or a phone signed out, then poll signs nobody in. Each fails on 0.99.9.
+- A fix: the hands-off clock goes on.
+
 
 ## 0.99.9 — release candidate, fixes from the review of 0.99.8 (in progress)
 The review of 0.99.8 (31 October 2026) in nine dimensions, each finding checked by skeptics: 63 confirmed, fixed in batches. Tests first (no change on the Pi):
