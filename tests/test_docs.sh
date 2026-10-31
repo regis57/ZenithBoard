@@ -53,5 +53,10 @@ for f in tests/test_*.sh tests/test_*.js; do
   # anchored: a commented-out line does not count (the review of 0.99.8)
   check "CI runs $f" 'grep -qE "^[[:space:]]+(bash|node) $f\$" .github/workflows/ci.yml'
 done
+# 0.99.18: and the full local CI that CLAUDE.md gives a session (its step 4) runs every JavaScript test too
+for f in tests/test_*.js; do
+  n=${f#tests/test_}; n=${n%.js}
+  check "CLAUDE.md's local CI runs $f" 'grep -qE "for j in ([a-z0-9_]+ )*$n( [a-z0-9_ ]*)?; do node tests/test_\\\$j.js" CLAUDE.md'
+done
 
 [ "$fail" = 0 ] && echo "ALL OK" || { echo "SOME FAILED"; exit 1; }
