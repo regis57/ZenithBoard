@@ -135,3 +135,11 @@ th { font: 400 11px ui-monospace, Menlo, Consolas, monospace; letter-spacing: .1
 [dir="rtl"] th, [dir="rtl"] td { text-align: right; padding: 5px 0 5px 10px; }
 [dir="rtl"] svg, [dir="rtl"] pre, [dir="rtl"] code { direction: ltr; }
 [dir="rtl"] .tile .v { unicode-bidi: plaintext; text-align: right; }   /* "354 km": the number before its unit */
+/* 0.99.21 (review B13): a name in a list runs in its own direction (dir="auto", stats.js), so a Latin name is cut at its
+   end; in Arabic it stays against the flag, on the right */
+[dir="rtl"] .ranks li .name, [dir="rtl"] .mil .row .m { text-align: right; }
+/* 0.99.21 (review B13): Arabic in a monospace font is drawn letter by letter, each in a fixed cell, and its words look
+   broken apart (seen in the preview, where the fallback is DejaVu Sans Mono): the headings and labels set in capitals
+   and the tiles' figures (349.8 مليون) use the system's own font in Arabic; the charts and the code keep theirs */
+html:lang(ar) :is(.sub, .toggle button, h2, .k, figcaption, .rec .k, .tile .v, .big span, details summary, th, .tip) {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }

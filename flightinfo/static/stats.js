@@ -186,6 +186,9 @@ window.ZBI18N.start({ part: "stats" }, function () {
     var max = pairs[0][1], ol = node("ol");
     pairs.slice(0, opts.top || 10).forEach(function (kv) {
       var li = node("li", opts.flags || opts.cc ? "flag" : ""), name = node("span", "name", opts.label ? opts.label(kv[0]) : kv[0]);
+      // 0.99.21 (review B13): a name runs in its own script's direction, so a Latin name cut in Arabic loses its end
+      // ("ASL Airlines Bel…"), not its beginning ("…rlines Belgium")
+      name.dir = "auto";
       li.appendChild(opts.cc ? flag(opts.cc(kv[0])) : opts.flags ? flag(kv[0]) : node("span"));
       if (opts.extra && opts.extra(kv[0])) name.appendChild(node("i", "", opts.extra(kv[0])));
       li.appendChild(name); li.appendChild(node("span", "n", fmt(kv[1])));
@@ -204,7 +207,7 @@ window.ZBI18N.start({ part: "stats" }, function () {
       var e = r[0], m = r[1], first = r[2] === 0, row = node("div", "row" + (first && rows[0] !== r ? " next" : ""));
       var fl = first ? flag(e.cc) : node("span"); fl.classList.add("f"); row.appendChild(fl);
       row.appendChild(node("span", "c", first ? country(e.cc, e.country) + " · " + fmt(e.total) : ""));
-      row.appendChild(node("span", "m", m[0]));
+      var mm = node("span", "m", m[0]); mm.dir = "auto"; row.appendChild(mm);      // 0.99.21: cut at its own end
       var b = node("span", "b"); b.style.width = (100 * m[1] / max).toFixed(1) + "%"; var bw = node("span", "bw"); bw.appendChild(b); row.appendChild(bw);
       row.appendChild(node("span", "n", fmt(m[1])));
       mount.appendChild(row);
@@ -256,6 +259,14 @@ window.ZBI18N.start({ part: "stats" }, function () {
   // gave the box's kilometres with "km" written after them whatever the page's unit, so under aviation units the box
   // said 262 NM and the note 485 km; now the distance is the box's own, in the page's unit, and the unit is inside the
   // placeholder, so in Arabic the number and its unit stay together in one isolate.
+  // an hour of the day, its minutes with it, the language's way (07:00; 07.00 in Finnish and Indonesian, as their
+  // reviewers wrote it in 0.53.4)
+  function hourText(h) {
+    var s = (h < 10 ? "0" : "") + h + ":00";
+    try { s = new Intl.DateTimeFormat(I.locale(), { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "UTC" }).format(Date.UTC(2026, 0, 1, h)); }
+    catch (e) { /* an old browser: 07:00 */ }
+    return s;
+  }
   function farthestNote(rec, tot, days) {
     if (!rec || !tot || !tot.farthest_km || Math.round(rec.km) >= tot.farthest_km) return "";
     var far = fmt(dist(tot.farthest_km)) + " " + unitName();
@@ -263,23 +274,29 @@ window.ZBI18N.start({ part: "stats" }, function () {
       t("The box above says {dist}: its details were not written down", { dist: far })) +
       (days ? t(" (they are since ZenithBoard 0.22.0, one aircraft a day: the day's farthest).") : t(" (one aircraft is written down a day, the day's farthest: yesterday's was outside these 24 hours)."));
   }
+  // 0.99.21 (review B13): in Arabic each piece of the line (the day and the time, the flight, the route, the model, the
+  // altitude, the distance) is isolated left to right, so the pieces follow one another from the right, each read in
+  // its own order: before, the Arabic line turned "29/10 15:42" into "15:42 29/10" and "(12 km)" into "(km 12)".
+  function iso(s) { return s && I.rtl() ? "\u2066" + s + "\u2069" : s; }
   function farthestLine(r, units) {
     if (!r) return null;
-    var parts = [shortDay(r.day) + (r.time ? " " + r.time : "")];
+    var parts = [iso(shortDay(r.day) + (r.time ? " " + r.time : ""))];
     var num = r.flight_iata || r.flight, who = r.airline && r.airline !== "MILITARY" ? r.airline + (num ? " " + num : "") : num || "";
     if (r.flight_iata && r.flight && r.flight_iata !== r.flight) who += " (" + r.flight + ")";
+    who = iso(who);
     if (r.airline === "MILITARY") who = (who ? who + " " : "") + t("(military)");
-    parts.push(who || r.registration || String(r.hex || "").toUpperCase());
-    if (r.route && (r.route.from || r.route.to)) parts.push((place(r.route.from) || "?") + " \u2192 " + (place(r.route.to) || "?"));
+    parts.push(who || iso(r.registration || String(r.hex || "").toUpperCase()));
+    if (r.route && (r.route.from || r.route.to)) parts.push(iso((place(r.route.from) || "?") + " \u2192 " + (place(r.route.to) || "?")));
     var model = [r.type_name || r.type, who ? r.registration : null].filter(Boolean).join(" ");
-    if (model) parts.push(model);
+    if (model) parts.push(iso(model));
     var alt = altText(r.alt_ft, units);
-    if (alt) parts.push(alt);
-    // "near" up to 50 km; beyond, over the sea or open country, the distance says how near it really was
+    if (alt) parts.push(iso(alt));
+    // "near" up to 50 km; beyond, over the sea or open country, the distance says how near it really was; the number
+    // and its unit in one placeholder (0.99.21), so Arabic keeps them together in one isolate, as the note below does
     var city = r.near && r.near.name ? r.near.name + (r.near.country ? ", " + r.near.country : "") : "";
-    var near = !city ? "" : r.near.km <= 50 ? t(", near {city} ({n} {unit})", { city: city, n: fmt(dist(r.near.km, units)), unit: unitName(units) }) :
-      t(", {n} {unit} from {city}", { city: city, n: fmt(dist(r.near.km, units)), unit: unitName(units) });
-    parts.push(fmt(dist(r.km, units)) + " " + unitName(units) + near);
+    var near = !city ? "" : r.near.km <= 50 ? t(", near {city} ({dist})", { city: city, dist: fmt(dist(r.near.km, units)) + " " + unitName(units) }) :
+      t(", {dist} from {city}", { city: city, dist: fmt(dist(r.near.km, units)) + " " + unitName(units) });
+    parts.push(iso(fmt(dist(r.km, units)) + " " + unitName(units)) + near);
     return parts.join(" \u00b7 ");
   }
 
@@ -304,7 +321,8 @@ window.ZBI18N.start({ part: "stats" }, function () {
     $("t-messages").textContent = big(tot.messages || 0);
     $("t-messages").title = fmt(tot.messages || 0);
     $("t-busiest").textContent = tot.busiest_hour === null || tot.busiest_hour === undefined ? t("nothing yet") :
-      t("busiest hour {hour}:00, {n}", { hour: (tot.busiest_hour < 10 ? "0" : "") + tot.busiest_hour, n: fmt(tot.busiest_messages) });
+      // 0.99.21 (review B13): the whole time in the placeholder; ":00" after it was outside Arabic's isolate ("00:13")
+      t("busiest hour {hour}, {n}", { hour: hourText(tot.busiest_hour), n: fmt(tot.busiest_messages) });
     $("t-far").textContent = dist(tot.farthest_km || 0) + " " + unitName();
     $("t-far-d").textContent = tot.farthest_when ? t("on {day} at {time}", { day: shortDay(tot.farthest_when.slice(0, 10)), time: tot.farthest_when.slice(11) }) : per;
     var b = w.busiest;
@@ -390,8 +408,11 @@ window.ZBI18N.start({ part: "stats" }, function () {
     });
   });
   dots($("logo"), "ZENITHBOARD", 10);
-  // the word in the dots in the page's language when the 5 x 7 font has its letters (capitals, no accent yet)
-  var sw = t("STATISTICS"); dots($("logo-sub"), /^[A-Z0-9 ]+$/.test(sw) ? sw : "STATISTICS", 5);
+  // the word in the dots in the page's language when the 5 x 7 font has its letters (capitals, no accent): 0.99.21
+  // (review B13) its accents are left out of the dots only ("ESTATÍSTICAS" in dots ESTATISTICAS), the page's own name
+  // for screen readers keeps them
+  var sw = t("STATISTICS"), swd = sw.normalize ? sw.normalize("NFD").replace(/[\u0300-\u036f]/g, "") : sw;
+  dots($("logo-sub"), /^[A-Z0-9 ]+$/.test(swd) ? swd : "STATISTICS", 5);
   var lp = $("lang"); if (lp) lp.appendChild(I.picker());
   load(chosen());
 });

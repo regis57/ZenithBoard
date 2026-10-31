@@ -102,5 +102,15 @@ try:
 except ValueError: pass
 assert \"CONSOLE_LANG\" in c.SHOWN_KEYS"'
 
+# 0.99.21 (review B13): in Arabic a menu path left in English ("7 Options → 4 Web console") is isolated left to right;
+# its number, after an Arabic word, was put on the far side of the path
+check "Arabic: every menu path in English kept in one left-to-right isolate" 'python3 -c "
+import json, re
+for p in (\"console\", \"stats\"):
+    for k, v in json.load(open(\"flightinfo/static/i18n/ar/%s.json\" % p)).items():
+        for m in re.finditer(r\"(sudo zenithboard menu → |\d [A-Z][A-Za-z-]* → )\", v if isinstance(v, str) else \"\"):
+            assert \"\u2066\" in v[:m.start() + 1] and v.rfind(\"\u2066\", 0, m.start() + 1) > v.rfind(\"\u2069\", 0, m.start() + 1), (k, v)
+"'
+
 [ "$fail" = 0 ] && echo "ALL OK"
 exit "$fail"
