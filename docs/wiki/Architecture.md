@@ -43,7 +43,7 @@ Everything ZenithBoard installs lives in `/opt/zenithboard`. Nothing else is tou
 
 Since 0.99.11 `/var/lib/zenithboard` itself is root's (`root:zenithboard`, mode 3771: the services' group may add its own entries, the sticky bit keeps them from touching root's); `stats/`, `social/`, `telegram/`, the console's `state/` and `gain-log.csv` belong to the `zenithboard` user, `trust/`, `restore-pending/`, `data/`, `console/` and `console/out/` to root. Every install and update puts the owners right. The detail, and why: [Security](Security#root-never-trusts-a-path-the-service-user-owns-09911).
 
-The server never writes to the config. It reads it at each request, so a setting change shows on the wall without restarting anything.
+The server never writes to the config. It reads it again whenever the file changes (at the next request), so what the server decides by itself (who may read it, the radius `/api/planes` uses, whether a photo or a route is asked of the internet) follows a change without a restart. What a tablet reads once, when it opens the page (`/api/config`: units, colour, look, seconds per aircraft…), would not: so the commands that change it restart the wall service, and every tablet reloads itself when it sees the new `server_id` in its next answer. Those are `units`, `radius`, `color`, `mode` (the look), `cycle`, `photos on|off`, `routes on|off`, `data localdb on|off` and `config-set`, and in the menu the units, the radius, the look and colour, the seconds per aircraft and the offline database (`restart_flightinfo` in `lib/common.sh`; the menu's photos and routes switches do not restart it, the server takes them at its next request).
 
 ## Ports
 
