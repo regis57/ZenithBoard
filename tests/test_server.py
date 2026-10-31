@@ -5,6 +5,7 @@ import shutil
 import tempfile
 import os
 import sys
+import threading
 import time
 import unittest
 
@@ -229,6 +230,92 @@ class ThrottledLookupTests(unittest.TestCase):
         time.sleep(0.4)
         self.assertEqual(seen, ["boom", "fine"])
         self.assertEqual(lk.peek("fine"), "ok")
+
+
+    def test_a_key_turned_away_by_a_full_queue_is_asked_once_the_queue_has_room(self):
+        # 0.99.14 (review B6, W3): a key refused by a full queue was given the failure's retry period, as if asked
+        gate, seen = threading.Event(), []
+
+        def fetch(key):
+            seen.append(key)
+            gate.wait(5)
+            return "v-" + key, True
+
+        lk = server.ThrottledLookup(fetch, gap=0.05, retry=60, miss_retry=60, max_queue=1)
+        lk.get("k1")
+        deadline = time.monotonic() + 2
+        while not seen and time.monotonic() < deadline:
+            time.sleep(0.01)                            # k1 is with the worker, blocked
+        lk.get("k2")                                    # fills the queue
+        lk.get("k3")                                    # turned away
+        self.assertEqual(lk.state("k3"), "queue full")
+        gate.set()
+        deadline = time.monotonic() + 3
+        while lk.peek("k3") is None and time.monotonic() < deadline:
+            lk.get("k3")                                # the wall asks again on every pass
+            time.sleep(0.05)
+        self.assertEqual(lk.peek("k3"), "v-k3", "asked as soon as the queue had room, not a retry period later")
+        self.assertEqual(seen.count("k3"), 1)
+
+    def test_a_full_cache_drops_old_answers_never_a_queued_key(self):
+        # 0.99.14 (review B6, W4): the cache was wiped whole when full, queued keys with it, so they were asked twice
+        gate, seen = threading.Event(), []
+
+        def fetch(key):
+            seen.append(key)
+            gate.wait(5)
+            return "v-" + key, True
+
+        lk = server.ThrottledLookup(fetch, gap=0.05, retry=60, miss_retry=60, max_entries=5)
+        keys = ["k%d" % i for i in range(10)]
+        for k in keys:
+            lk.get(k)
+        deadline = time.monotonic() + 2
+        while not seen and time.monotonic() < deadline:
+            time.sleep(0.01)
+        gate.set()
+        deadline = time.monotonic() + 5
+        while len(seen) < 10 and time.monotonic() < deadline:
+            for k in keys:                              # the wall asks again for what it has no answer for
+                if k not in seen:
+                    self.assertTrue(lk.pending(k), "%s is queued: its answer is on its way" % k)
+                    lk.get(k)
+            time.sleep(0.005)
+        time.sleep(0.1)
+        self.assertEqual(sorted(seen), keys, "every key asked exactly once")
+        self.assertLessEqual(len(lk.cache), 5)
+        self.assertEqual(lk.peek("k9"), "v-k9", "the latest answer is kept")
+        self.assertIsNone(lk.peek("k0"), "the oldest answers go first")
+
+    def test_a_setting_that_is_not_a_finite_number_is_no_setting(self):
+        # 0.99.14 (review B6, W7): float() reads "nan" and "inf"
+        for bad in ("nan", "NaN", "inf", "-inf", "x", ""):
+            self.assertEqual(server.cfg_float({"RADIUS": bad}, "RADIUS", 10), 10.0, repr(bad))
+        self.assertEqual(server.cfg_float({"RADIUS": "25"}, "RADIUS", 10), 25.0)
+
+    def test_an_answer_is_never_written_with_nan(self):
+        def no_constant(name):
+            raise ValueError("not JSON: " + name)
+        sent = {}
+
+        class Fake(object):
+            def _header_values(self, ctype, cache):
+                return ctype, cache
+
+            def send_response(self, code):
+                sent["code"] = code
+
+            def send_header(self, k, v):
+                pass
+
+            def end_headers(self):
+                pass
+
+        f = Fake()
+        f.wfile = type("W", (), {"write": lambda self, b: sent.update(body=b)})()
+        server.Handler._send(f, 200, {"a": float("nan"), "b": [1.5, float("inf")], "c": "x"})
+        self.assertEqual(sent["code"], 200)
+        self.assertEqual(json.loads(sent["body"], parse_constant=no_constant), {"a": None, "b": [1.5, None], "c": "x"})
 
 
 ADSBDB_SAMPLE = {"response": {"flightroute": {
@@ -883,7 +970,10 @@ class WhoMayReadTest(unittest.TestCase):
 
         def planes(q=""):
             c = http.client.HTTPConnection("127.0.0.1", port, timeout=5); c.request("GET", "/api/planes" + q)
-            r = c.getresponse(); body = json.loads(r.read()); c.close(); return body
+            r = c.getresponse(); body = json.loads(r.read(), parse_constant=no_constant); c.close(); return body
+
+        def no_constant(name):                          # NaN or Infinity is not JSON: a browser refuses the answer
+            raise AssertionError("not JSON: " + name)
         config("SHOW_PHOTOS=0\nSHOW_ROUTES=0\n")
         got = planes()
         self.assertEqual(sorted(p["hex"] for p in got["planes"]), ["3c6444", "4ca7b5"])
@@ -905,6 +995,15 @@ class WhoMayReadTest(unittest.TestCase):
         self.assertAlmostEqual(planes()["radius_km"], 20 * 1.609344, places=2)
         config("SHOW_PHOTOS=0\nSHOW_ROUTES=0\nUNITS=aviation\n")
         self.assertAlmostEqual(planes()["radius_km"], 20 * 1.852, places=2)
+        # 0.99.14 (review B6, W7): a radius or a setting that is not a finite number falls back, and the answer is JSON
+        config("SHOW_PHOTOS=0\nSHOW_ROUTES=0\n")
+        for q in ("?radius_km=nan", "?radius_km=inf", "?radius_km=-inf", "?radius_km=NaN"):
+            self.assertEqual(planes(q)["radius_km"], 20.0, q)
+        config("SHOW_PHOTOS=0\nSHOW_ROUTES=0\nRADIUS=nan\n")
+        got = planes()
+        self.assertEqual(got["radius_km"], 10.0, "RADIUS=nan in config.env: the default radius")
+        config("SHOW_PHOTOS=0\nSHOW_ROUTES=0\nLAT=nan\n")
+        planes()
         answer["data"] = None
         got = planes()
         self.assertEqual((got["error"], got["planes"], got["total"]), ("no_data", [], 0))

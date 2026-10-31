@@ -31,6 +31,8 @@ Answers are cached, and so are the failures — a missing answer that was not ca
 
 Twelve hours is not about load. A callsign is reused: today's AF1234 and tomorrow's AF1234 need not be the same route.
 
+**A very busy sky (0.99.14).** At most 60 lookups wait their turn (20 for hexdb's second opinion). One more is not asked yet and not counted as a failure: it is asked on the wall's first pass after the next request leaves, once the queue has room, rather than a minute later as if the service had not answered. The answers kept are capped at 1000 per service; when the cap is passed, the oldest answers are forgotten down to 900 (asked again if that aircraft comes back), never a lookup still waiting for its answer. Until 0.99.14 the whole cache was emptied at once, lookups still waiting included, which were then asked a second time.
+
 ## Why routes are the weakest part
 
 The route databases know **callsigns, not flights**. A callsign is reused for the return leg, and reassigned over time. Ask about one and you may get yesterday's route, or the same route backwards.

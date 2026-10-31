@@ -24,7 +24,7 @@ fonts-dejavu-core` (CI installs them).
 
 | Test | Covers |
 |---|---|
-| `test_server.py` | Route plausibility, the hexdb second opinion and its cache, what `build_planes` shows |
+| `test_server.py` | Route plausibility, the hexdb second opinion and its cache, the lookup queue and cache when full, what `build_planes` shows, `/api/planes` with a radius or a setting that is not a finite number |
 | `test_aircraft.py` | Reading `aircraft.json`, merging 1090 MHz with UAT |
 | `test_legacy.sh` | 0.30.0: what an older ZenithBoard left of ACARS and Grafana is found, said by status and update (never removed by an update), removed by `acars remove` after the typed word; no menu or command offers ACARS any more |
 | `test_update_types.py` | The monthly aircraft-type refresh |
