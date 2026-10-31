@@ -229,7 +229,7 @@ bk_check() {
   fi
   if [ -d "$b/journal" ]; then
     for x in "$b/journal"/*; do
-      if command -v journalctl >/dev/null 2>&1 && n=$(journalctl -D "$x" --list-boots --no-pager 2>/dev/null | grep -c .) && [ "$n" -gt 0 ]; then
+      if command -v journalctl >/dev/null 2>&1 && n=$(journalctl -D "$x" -q --no-pager --list-boots 2>/dev/null | zb_boot_rows) && [ "$n" -gt 0 ]; then
         first=$(journalctl -D "$x" --no-pager -o short-iso 2>/dev/null | head -1 | cut -c1-16)
         last=$(journalctl -D "$x" --no-pager -o short-iso -n 1 2>/dev/null | tail -1 | cut -c1-16)
         echo "  kept logs: $n boot(s), $first to $last"

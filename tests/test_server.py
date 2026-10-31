@@ -899,6 +899,12 @@ class WhoMayReadTest(unittest.TestCase):
         config("SHOW_PHOTOS=0\nSHOW_ROUTES=0\n")
         self.assertEqual([p["hex"] for p in planes("?hex=4CA7B5")["planes"]], ["4ca7b5"], "one aircraft asked by its address")
         self.assertEqual(len(planes("?hex=../../x")["planes"]), 2, "anything but an address is ignored")
+        # 0.99.13 (review B5, W6): the statistics timer asks without radius_km and relies on this: RADIUS in the
+        # owner's units, here 20 miles, is turned into km by the wall (it once sent RADIUS itself as radius_km)
+        config("SHOW_PHOTOS=0\nSHOW_ROUTES=0\nUNITS=imperial\n")
+        self.assertAlmostEqual(planes()["radius_km"], 20 * 1.609344, places=2)
+        config("SHOW_PHOTOS=0\nSHOW_ROUTES=0\nUNITS=aviation\n")
+        self.assertAlmostEqual(planes()["radius_km"], 20 * 1.852, places=2)
         answer["data"] = None
         got = planes()
         self.assertEqual((got["error"], got["planes"], got["total"]), ("no_data", [], 0))

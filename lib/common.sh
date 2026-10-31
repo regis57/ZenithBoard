@@ -257,6 +257,11 @@ zb_tmp() {
 zb_tmp_clean() { [ -z "${ZB_TMPDIR:-}" ] || rm -rf "$ZB_TMPDIR"; ZB_TMPDIR=""; }
 
 # 0.52.0: a station's identity (ADSB Exchange's UUID, FlightAware's feeder ID) hidden in output that is often pasted
+# zb_boot_rows: the number of boots in what `journalctl -q --list-boots` printed (0.99.13, review B5, S1). One row per
+# boot, its index first (" 0 <id> ...", "-1 <id> ..."); systemd 252 and newer add the header "IDX BOOT ID FIRST
+# ENTRY LAST ENTRY" without -q, and "No journal files were found." goes to stderr. A count of lines read the header
+# as a boot. Prints 0 when there is none.
+zb_boot_rows() { grep -cE '^ *-?[0-9]+ ' || true; }
 zb_mask_ids() { sed -E 's/\{?[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}\}?/(id hidden)/g'; }
 
 # 0.52.0: the installers whose added packages are noted for `off` (graphs1090, ADSB Exchange's stats) run one at a time,

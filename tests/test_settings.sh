@@ -109,7 +109,7 @@ check "harden: off puts them back"                  'grep -q "modify uuid u-wifi
 . lib/stats.sh
 STATS_DIR="$t/stats"; STATS_FILE="$STATS_DIR/stats.csv"; mkdir -p "$STATS_DIR"
 port=$((20000 + RANDOM % 20000)); cfg_set PORT "$port"
-python3 - "$port" <<'PY' &
+python3 - "$port" "$t/gaps-asked" <<'PY' &
 import http.server, json, sys
 planes = [{"hex": "aaa001", "flight": "BGA113J", "airline": None, "shape": "wide", "type": "A337"},
           {"hex": "aaa002", "flight": "EZY12", "airline": "easyJet", "shape": "generic", "type": "A21N"},
@@ -117,6 +117,7 @@ planes = [{"hex": "aaa001", "flight": "BGA113J", "airline": None, "shape": "wide
           {"hex": "aaa004", "flight": "", "airline": None, "shape": "generic", "type": ""}]
 class H(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
+        open(sys.argv[2], "a").write(self.path + "\n")
         b = json.dumps({"planes": planes}).encode(); self.send_response(200); self.send_header("Content-Length", str(len(b))); self.end_headers(); self.wfile.write(b)
     def log_message(self, *a): pass
 http.server.HTTPServer(("127.0.0.1", int(sys.argv[1])), H).serve_forever()
@@ -124,8 +125,10 @@ PY
 srv=$!; for _ in $(seq 50); do (exec 3<>"/dev/tcp/127.0.0.1/$port") 2>/dev/null && break; sleep 0.1; done   # 0.54.13: until it listens, 5 s at most, not a fixed sleep
 # the review of 0.99.8: a fixed date was pruned as older than 30 days from 18 November 2026, failing every CI run
 gd=$(date -d "2 days ago" +%F)
+cfg_set UNITS imperial; cfg_set RADIUS 10       # 10 miles: sent as radius_km=10 before 0.99.13, 10 km sampled
 stats_gaps_sample "$gd"; stats_gaps_sample "$gd"
 kill $srv 2>/dev/null
+check "gaps: the wall is asked without radius_km, so it applies RADIUS in its own units (0.99.13, review B5)" '[ "$(sort -u "$t/gaps-asked")" = "/api/planes" ]'
 check "gaps: each aircraft once, by prefix and by type" '[ "$(sort "$STATS_DIR/gaps-$gd" | tr "\t" " ")" = "$(printf "airline BGA aaa001\nairline BGA aaa003\nshape A21N aaa002\nshape A21N aaa003")" ]'
 check "gaps: the report counts aircraft"           'stats_gaps | grep -q "BGA    2 aircraft" && stats_gaps | grep -q "A21N   2 aircraft"'
 check "gaps: pruned with the rest"                  'touch "$STATS_DIR/gaps-2020-01-01" "$STATS_DIR/seen-2020-01-01"; echo "$STATS_HEADER" > "$STATS_FILE"; stats_prune >/dev/null 2>&1; [ ! -f "$STATS_DIR/gaps-2020-01-01" ] && [ -f "$STATS_DIR/gaps-$gd" ]'
