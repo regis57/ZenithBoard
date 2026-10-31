@@ -27,7 +27,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.99.14"
+VERSION = "0.99.15"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -253,6 +253,14 @@ def read_stats(stats_dir=None, now=None, rng="30d"):
     }
 
 
+def _window_start_24h(now):
+    """0.99.15 (review B7): where the page's last 24 hours begin: the first of the 24 hourly slots that end with the
+    current one. The window's totals and chart, the box (decoder samples and records written down) and the line under
+    it all start here: read_farthest started at now minus 24 hours to the minute, so a record between then and the top
+    of the next hour was in the line and not in the box, and the note under the line said the box was farther."""
+    return (now - datetime.timedelta(hours=23)).replace(minute=0, second=0, microsecond=0)
+
+
 def _with_farthest(w, recs, now):
     """0.99.4 (the owner's /stats#7d, 30 October 2026): the box said *183 NM, on 30/10 at 00:30* while the line under it
     gave the week's farthest as SQ308 at 262 NM on 25/10. The box and the chart read the decoder's farthest once a
@@ -267,7 +275,7 @@ def _with_farthest(w, recs, now):
         if when > now:
             continue
         if w.get("range") == "24h":
-            start = (now - datetime.timedelta(hours=23)).replace(minute=0, second=0, microsecond=0)
+            start = _window_start_24h(now)
             if when < start:
                 continue
             i = int((when - start).total_seconds() // 3600)
@@ -317,7 +325,7 @@ def range_of(value):
 def stats_window(rows, stats_dir, now, rng):
     rng = range_of(rng)
     if rng == "24h":
-        start = (now - datetime.timedelta(hours=23)).replace(minute=0, second=0, microsecond=0)
+        start = _window_start_24h(now)
         keys = [(start + datetime.timedelta(hours=i)) for i in range(24)]
         labels = ["%02dh" % k.hour for k in keys]
         slot = lambda when: when.replace(minute=0, second=0, microsecond=0)
@@ -754,8 +762,9 @@ def read_farthest(stats_dir, now, rng=None):
     today = now.strftime("%Y-%m-%d")
     rng = range_of(rng)
     if rng == "24h":
-        start = (now - datetime.timedelta(hours=24)).strftime("%Y-%m-%d %H:%M")
-        inside = [r for r in recs if r["day"] == today or "%s %s" % (r["day"], r.get("time") or "00:00") >= start]
+        # the same 24 hours as the box and the chart (0.99.15), and nothing later than now, as the box skips it too
+        start, end = _window_start_24h(now).strftime("%Y-%m-%d %H:%M"), now.strftime("%Y-%m-%d %H:%M")
+        inside = [r for r in recs if start <= "%s %s" % (r["day"], r.get("time") or "00:00") <= end]
     else:
         first = (now - datetime.timedelta(days=RANGES[rng][0] - 1)).strftime("%Y-%m-%d")
         inside = [r for r in recs if r["day"] >= first]

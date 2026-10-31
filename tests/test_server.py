@@ -1381,6 +1381,37 @@ class FarthestTest(unittest.TestCase):
         self.addCleanup(lambda: __import__("shutil").rmtree(d, ignore_errors=True))
         return d
 
+    def test_the_24_hours_begin_at_the_same_time_for_the_line_and_the_box(self):
+        # 0.99.15 (review B7): the line under the box counted records from now minus 24 hours to the minute, the box and
+        # the chart from the top of the hour 23 hours back. At 14:20, yesterday's 14:45 was in the line, not in the box:
+        # the line said 400 km under a box saying 300. Now both start at 15:00 yesterday.
+        import datetime, json as js
+        d = self._dir()
+        now = datetime.datetime(2026, 10, 20, 14, 20)
+        self.assertEqual(server._window_start_24h(now), datetime.datetime(2026, 10, 19, 15, 0))
+        with open(os.path.join(d, "stats.csv"), "w") as fh:
+            fh.write("when,messages,farthest_km,aircraft_pos,aircraft_seen\n2026-10-20 10:00,100,300,20,50\n")
+        rec = {"km": 400, "time": "14:45", "flight": "", "hex": "3c6444"}
+        with open(os.path.join(d, "farthest-2026-10-19"), "w") as fh:
+            js.dump(rec, fh)
+        s = server.read_stats(d, now, "24h")
+        box, line = s["window"]["totals"]["farthest_km"], s["farthest"]["period"]
+        self.assertEqual(box, 300)
+        self.assertIsNone(line, "yesterday's 14:45 is before the window's first hour: in neither")
+        # a minute inside the first hour: in both, the box and the line saying the same
+        rec["time"] = "15:00"
+        with open(os.path.join(d, "farthest-2026-10-19"), "w") as fh:
+            js.dump(rec, fh)
+        s = server.read_stats(d, now, "24h")
+        self.assertEqual((s["window"]["totals"]["farthest_km"], s["window"]["totals"]["farthest_when"]), (400, "2026-10-19 15:00"))
+        self.assertEqual(s["farthest"]["period"]["km"], 400)
+        self.assertEqual(s["window"]["farthest"][0], 400, "the chart's first hour, 15h")
+        # a record later than now (a clock set back) is in neither either
+        with open(os.path.join(d, "farthest-2026-10-20"), "w") as fh:
+            js.dump({"km": 500, "time": "14:21", "flight": "", "hex": "3c6445"}, fh)
+        s = server.read_stats(d, now, "24h")
+        self.assertEqual((s["window"]["totals"]["farthest_km"], s["farthest"]["period"]["km"]), (400, 400))
+
     def test_the_box_takes_the_farthest_written_down_when_it_is_farther(self):
         # 0.99.4, the owner's /stats#7d of 30 October 2026: the box said 183 NM on 30/10 00:30 (the decoder's quarter
         # hour), the line under it SQ308 at 262 NM on 25/10 (the wall's five-second watch, written down once a day)

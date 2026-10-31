@@ -100,6 +100,42 @@ console.log("stats version line: ok");
 }
 console.log("stats farthest line: ok");
 
+// ---- 0.99.15 (review B7): the note under the farthest line gave the box's distance in kilometres whatever the page's
+// unit ("The box above says 485 km" under a box saying 262 NM). It is the box's distance in the page's unit now, and the
+// unit is inside the placeholder, so Arabic isolates the number and its unit together.
+{
+  const grab = (name) => {
+    const a = src.indexOf("function " + name + "(");
+    assert.ok(a > 0, name + "() not found in stats.js");
+    let d = 0;
+    for (let j = src.indexOf("{", a); j < src.length; j++) {
+      if (src[j] === "{") d++;
+      else if (src[j] === "}" && --d === 0) return src.slice(a, j + 1);
+    }
+  };
+  const T = "var t = function (s, v) { var c = (CAT && CAT[s]) || s; return v ? c.replace(/\\{(\\w+)\\}/g, function (m, k) { return (RTL ? '\\u2066' : '') + v[k] + (RTL ? '\\u2069' : ''); }) : c; };\n";
+  const make = (units, cat, rtl) => new Function("CAT", "RTL", T + "var UNITS = '" + units + "';\n" +
+    ["fmt", "shortDay", "unitName", "dist", "farthestNote"].map(grab).join("\n") + "return farthestNote;")(cat || null, !!rtl);
+  const rec = { km: 300 }, tot = { farthest_km: 485, farthest_when: "2026-10-25 15:17" };
+  const en = make("aviation")(rec, tot, true);
+  assert.ok(/^The box above says 262 NM, on 25\/10: its details were not written down \(they are since/.test(en), en);
+  assert.ok(!/km/.test(en), "no km under aviation units: " + en);
+  assert.ok(/^The box above says 485 km, on 25\/10:/.test(make("metric")(rec, tot, true)));
+  assert.ok(/^The box above says 301 mi: its details/.test(make("imperial")(rec, { farthest_km: 485 }, false)));
+  assert.strictEqual(make("metric")({ km: 485.2 }, tot, true), "", "the line already says as much: no note");
+  assert.strictEqual(make("metric")(null, tot, true), "", "no line: no note");
+  // every shipped language has the note with its {dist}, and Arabic keeps "262 NM" in one isolate
+  const dir = path.join(__dirname, "..", "flightinfo", "static", "i18n");
+  for (const lang of fs.readdirSync(dir).filter(l => fs.existsSync(path.join(dir, l, "stats.json")))) {
+    const cat = JSON.parse(fs.readFileSync(path.join(dir, lang, "stats.json"), "utf8"));
+    for (const k of ["The box above says {dist}, on {day}: its details were not written down", "The box above says {dist}: its details were not written down"])
+      assert.ok(cat[k] && cat[k].includes("{dist}") && !/\bkm\b/.test(cat[k]), lang + ": " + k + " -> " + cat[k]);
+  }
+  const ar = JSON.parse(fs.readFileSync(path.join(dir, "ar", "stats.json"), "utf8"));
+  assert.ok(make("aviation", ar, true)(rec, tot, true).includes("\u2066262 NM\u2069"), "Arabic: the number and its unit isolated together");
+}
+console.log("stats farthest note: ok");
+
 
 // ---- 0.54.18: a week's messages did not fit its box ("386 530 3…" on the owner's page): from ten million on, short
 {
