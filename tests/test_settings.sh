@@ -81,11 +81,13 @@ class H(http.server.BaseHTTPRequestHandler):
 http.server.HTTPServer(("127.0.0.1", int(sys.argv[1])), H).serve_forever()
 PY
 srv=$!; for _ in $(seq 50); do (exec 3<>"/dev/tcp/127.0.0.1/$port") 2>/dev/null && break; sleep 0.1; done   # 0.54.13: until it listens, 5 s at most, not a fixed sleep
-stats_gaps_sample 2026-10-18; stats_gaps_sample 2026-10-18
+# the review of 0.99.8: a fixed date was pruned as older than 30 days from 18 November 2026, failing every CI run
+gd=$(date -d "2 days ago" +%F)
+stats_gaps_sample "$gd"; stats_gaps_sample "$gd"
 kill $srv 2>/dev/null
-check "gaps: each aircraft once, by prefix and by type" '[ "$(sort "$STATS_DIR/gaps-2026-10-18" | tr "\t" " ")" = "$(printf "airline BGA aaa001\nairline BGA aaa003\nshape A21N aaa002\nshape A21N aaa003")" ]'
+check "gaps: each aircraft once, by prefix and by type" '[ "$(sort "$STATS_DIR/gaps-$gd" | tr "\t" " ")" = "$(printf "airline BGA aaa001\nairline BGA aaa003\nshape A21N aaa002\nshape A21N aaa003")" ]'
 check "gaps: the report counts aircraft"           'stats_gaps | grep -q "BGA    2 aircraft" && stats_gaps | grep -q "A21N   2 aircraft"'
-check "gaps: pruned with the rest"                  'touch "$STATS_DIR/gaps-2020-01-01" "$STATS_DIR/seen-2020-01-01"; echo "$STATS_HEADER" > "$STATS_FILE"; stats_prune >/dev/null 2>&1; [ ! -f "$STATS_DIR/gaps-2020-01-01" ] && [ -f "$STATS_DIR/gaps-2026-10-18" ]'
+check "gaps: pruned with the rest"                  'touch "$STATS_DIR/gaps-2020-01-01" "$STATS_DIR/seen-2020-01-01"; echo "$STATS_HEADER" > "$STATS_FILE"; stats_prune >/dev/null 2>&1; [ ! -f "$STATS_DIR/gaps-2020-01-01" ] && [ -f "$STATS_DIR/gaps-$gd" ]'
 check "gaps: the stats unit may reach the loopback only" 'grep -q "^RestrictAddressFamilies=AF_UNIX AF_INET$" systemd/zenithboard-stats.service && grep -q "^IPAddressAllow=localhost$" systemd/zenithboard-stats.service && grep -q "^IPAddressDeny=any$" systemd/zenithboard-stats.service'
 
 # ---- the destructive steps ask for a typed word, and the main menu keeps them out of the numbered flow
@@ -105,7 +107,7 @@ check "uninstall: Yes goes on, the secrets and the data named" 'grep -q "Yes goe
 check "menu: the look is said even when the colour is left" 'grep -q "colour unchanged" lib/menus.sh'
 # 0.54.12 (the audit of 22-23 October 2026): config.env renamed over in one step, one writer at a time
 for i in 1 2 3 4 5 6 7 8; do cfg_set "PAR_$i" "v $i" & done; wait
-check "config: eight writers at once lose nothing"  'for i in 1 2 3 4 5 6 7 8; do [ "$(cfg_get "PAR_$i")" = "v $i" ] || exit 1; done'
+check "config: eight writers at once lose nothing"  '( for i in 1 2 3 4 5 6 7 8; do [ "$(cfg_get "PAR_$i")" = "v $i" ] || exit 1; done )'
 for i in 1 2 3 4 5 6 7 8; do cfg_del "PAR_$i"; done
 check "config: no copy left beside it, 644"         '! ls -A "$ZENITHBOARD_ETC" | grep -q "^\.config\.env\." && [ "$(stat -c %a "$ZENITHBOARD_ETC/config.env")" = 644 ] && [ -z "$(cfg_get PAR_1 "")" ]'
 check "deploy: a failed copy says so and how to repair" 'grep -q "install.sh --deploy" lib/flightinfo.sh && grep -q "is incomplete there" lib/flightinfo.sh'

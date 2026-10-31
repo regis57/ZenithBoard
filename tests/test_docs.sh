@@ -43,14 +43,15 @@ check "Fresh-install: linked from README, sidebar and home" 'grep -q "wiki/Fresh
 
 # ---- 0.44.0: the menu page and the move for non-specialists, linked, their pictures in the repository
 check "The-menu and Moving-to-a-new-card linked from the sidebar" 'grep -q "(The-menu)" docs/wiki/_Sidebar.md && grep -q "(Moving-to-a-new-card)" docs/wiki/_Sidebar.md'
-check "every menu picture the docs show is in docs/images" 'for f in $(grep -ho "docs/images/menu-[a-z]*\.png" README.md docs/wiki/*.md | sort -u); do [ -f "$f" ] || exit 1; done'
+check "every menu picture the docs show is in docs/images" '( for f in $(grep -ho "docs/images/menu-[a-z]*\.png" README.md docs/wiki/*.md | sort -u); do [ -f "$f" ] || exit 1; done )'
 check "the move names WinSCP and the typed word" 'grep -q "WinSCP" docs/wiki/Moving-to-a-new-card.md && grep -q "RESTORE" docs/wiki/Moving-to-a-new-card.md'
 
 # ---- 0.53.6: CI runs every test file. Its list is written by hand on purpose (a new test shows in the diff), so a file
 # left off it fails here instead of going unrun: five suites, the console's and the translations' among them, were
 # never run there between 0.39.0 and 0.53.5
 for f in tests/test_*.sh tests/test_*.js; do
-  check "CI runs $f" 'grep -qF "$f" .github/workflows/ci.yml'
+  # anchored: a commented-out line does not count (the review of 0.99.8)
+  check "CI runs $f" 'grep -qE "^[[:space:]]+(bash|node) $f\$" .github/workflows/ci.yml'
 done
 
 [ "$fail" = 0 ] && echo "ALL OK" || { echo "SOME FAILED"; exit 1; }

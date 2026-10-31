@@ -53,13 +53,17 @@ ln -s "$t/pw" "$t/bin/piaware-config"
 out=$(cd "$t" && backup_make "$t/full.tar.gz")
 check "make: writes the file, owner-only"            '[ -f "$t/full.tar.gz" ] && [ "$(stat -c %a "$t/full.tar.gz")" = 600 ] && echo "$out" | grep -q "keep it to yourself"'
 m=$(members "$t/full.tar.gz")
-check "make: every part is in it"                    'for x in MANIFEST settings.env features.env feeders.env pfclient-config.json graphs-xml.tar.gz stats/stats.csv stats/seen-2026-10-20 social/state.json social/templates.txt journal/0123456789abcdef0123456789abcdef/system.journal; do echo "$m" | grep -qx "$x" || exit 1; done'
+check "make: every part is in it"                    '( for x in MANIFEST settings.env features.env feeders.env pfclient-config.json graphs-xml.tar.gz stats/stats.csv stats/seen-2026-10-20 social/state.json social/templates.txt journal/0123456789abcdef0123456789abcdef/system.journal; do echo "$m" | grep -qx "$x" || exit 1; done )'
 mkdir -p "$t/x"; tar -C "$t/x" -xzf "$t/full.tar.gz"
 check "make: the settings without a secret"          'grep -q "^RADIUS=15$" "$t/x/zb/settings.env" && ! grep -q "never-exported" "$t/x/zb/settings.env"'
 check "make: ADSB Exchange stats on (0.52.0)"        'grep -qx "adsbx_stats=on" "$t/x/zb/features.env"'
 check "make: what is on, even outside config.env"    'grep -qx "stats=on" "$t/x/zb/features.env" && grep -qx "watchdog=on" "$t/x/zb/features.env" && grep -qx "keeplogs=on" "$t/x/zb/features.env" && grep -qx "netwatch=on" "$t/x/zb/features.env" && grep -qx "social=off" "$t/x/zb/features.env"'
 check "make: the three identities"                   'grep -qx "ADSBX_UUID=c0ffee00-1234-4abc-8def-0123456789ab" "$t/x/zb/feeders.env" && grep -qx "PIAWARE_FEEDER_ID=11111111-2222-3333-4444-555555555555" "$t/x/zb/feeders.env" && grep -qx "FR24_KEY=ABCDEF123456" "$t/x/zb/feeders.env"'
-check "make: never the Bluesky or console secrets"   'echo "BLUESKY_APP_PASSWORD=zzz" > "$t/etc/social.env"; backup_make "$t/f2.tar.gz" >/dev/null; ! tar -xzOf "$t/f2.tar.gz" | grep -q zzz; rm -f "$t/etc/social.env"'
+# the review of 0.99.8: the setup outside the check, the assertion last (it ended on rm -f, so it could not fail)
+echo "BLUESKY_APP_PASSWORD=zzz-social" > "$t/etc/social.env"; echo "CONSOLE_PASSWORD_HASH=zzz-console" > "$t/etc/console.env"; echo "TELEGRAM_BOT_TOKEN=zzz-telegram" > "$t/etc/telegram.env"
+backup_make "$t/f2.tar.gz" >/dev/null
+check "make: never the Bluesky, console or Telegram secrets" '! tar -xzOf "$t/f2.tar.gz" | grep -q "zzz-"'
+rm -f "$t/etc/social.env" "$t/etc/console.env" "$t/etc/telegram.env"
 show=$(backup_show "$t/full.tar.gz")
 check "show: names the identities, never their values" 'echo "$show" | grep -q "Flightradar24 sharing key" && echo "$show" | grep -q "Plane Finder share code" && ! echo "$show" | grep -q "ABCDEF123456\|5X2X2X2X9XaX3\|c0ffee00"'
 check "show: what is on"                             'echo "$show" | grep -q "On: Statistics, graphs1090, Hardware watchdog, Network watchdog, Logs kept after a restart"'
