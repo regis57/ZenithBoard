@@ -41,6 +41,8 @@ Everything ZenithBoard installs lives in `/opt/zenithboard`. Nothing else is tou
 | `/run/zenithboard/zenithboard-netwatch.fails` | The network watchdog | Itself. In memory on purpose: nothing writes to the SD card every two minutes |
 | `/etc/default/readsb` → `RECEIVER_OPTIONS` | `zenithboard gain set` | The decoder at start |
 
+Since 0.99.11 `/var/lib/zenithboard` itself is root's (`root:zenithboard`, mode 3771: the services' group may add its own entries, the sticky bit keeps them from touching root's); `stats/`, `social/`, `telegram/`, the console's `state/` and `gain-log.csv` belong to the `zenithboard` user, `trust/`, `restore-pending/`, `data/`, `console/` and `console/out/` to root. Every install and update puts the owners right. The detail, and why: [Security](Security#root-never-trusts-a-path-the-service-user-owns-09911).
+
 The server never writes to the config. It reads it at each request, so a setting change shows on the wall without restarting anything.
 
 ## Ports

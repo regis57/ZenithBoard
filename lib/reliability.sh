@@ -134,7 +134,7 @@ netwatch_run() {
     if [ $((now - last)) -lt "$NETWATCH_REBOOT_GAP_S" ]; then
       netwatch_log "still no network, but the Pi was already restarted by this watchdog less than 3 hours ago: not restarting again"
     else
-      mkdir -p "$(dirname "$NETWATCH_REBOOTED")"; echo "$now" > "$NETWATCH_REBOOTED"
+      mkdir -p "$(dirname "$NETWATCH_REBOOTED")"; zb_put "$NETWATCH_REBOOTED" 644 "$now"   # 0.99.11: never through a link
       netwatch_log "no network for about $((n * 2)) minutes: restarting the Pi"
       systemctl reboot || true
     fi

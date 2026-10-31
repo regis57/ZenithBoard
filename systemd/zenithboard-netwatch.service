@@ -6,8 +6,8 @@ Type=oneshot
 ExecStart=/opt/zenithboard/bin/zenithboard netwatch run
 TimeoutStartSec=60
 # The failure counter lives in /run/zenithboard (memory), the last-reboot time under /var/lib/zenithboard,
-# a folder the wall's user owns: hence CAP_DAC_OVERRIDE. ping needs raw sockets; restarting the network and
-# rebooting go through systemd over D-Bus.
+# root's since 0.99.11 (the wall's user owned it before, and a Pi not yet updated still has it so): hence
+# CAP_DAC_OVERRIDE. ping needs raw sockets; restarting the network and rebooting go through systemd over D-Bus.
 RuntimeDirectory=zenithboard
 RuntimeDirectoryPreserve=yes
 ReadWritePaths=/var/lib/zenithboard

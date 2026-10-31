@@ -384,7 +384,7 @@ rb24_claim_steps() {
 rb24_kept() { echo "${BK_DATA:-$ZB_DATA}/radarbox-key-kept"; }
 remove_radarbox() {
   local k; k=$(rb24_key)
-  if [ -n "$k" ]; then mkdir -p "$(dirname "$(rb24_kept)")"; ( umask 077; printf '%s\n' "$k" > "$(rb24_kept)" ); fi
+  if [ -n "$k" ]; then mkdir -p "$(dirname "$(rb24_kept)")"; zb_put "$(rb24_kept)" 600 "$k"; fi   # 0.99.11: never through a link
   systemctl disable --now rbfeeder 2>/dev/null || true
   apt_remove rbfeeder
   # what ZenithBoard added for it, and only that; a source of AirNav's own installer stays

@@ -47,6 +47,9 @@ deploy_files() {
   fi
   chmod +x "$ZB_HOME/install.sh" "$ZB_HOME"/bin/*
   ln -sf "$ZB_HOME/bin/zenithboard" "$ZB_BIN_DIR/zenithboard"
+  # 0.99.11 (review B3): every install and update puts the data folder's owners right (root's, the service's own
+  # subfolders), the wall installed or not: a Pi that feeds only can have stats/ and the trust folder too
+  [ ! -d "$ZB_DATA" ] || ensure_zb_user
 }
 
 install_flightinfo() {

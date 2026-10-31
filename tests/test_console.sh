@@ -9,7 +9,7 @@ set -u
 cd "$(dirname "$0")/.." || exit 1
 t=$(mktemp -d); trap 'rm -rf "$t"' EXIT
 export ZENITHBOARD_ETC="$t/etc"; mkdir -p "$ZENITHBOARD_ETC" "$t/bin" "$t/sysd"; touch "$ZENITHBOARD_ETC/config.env"
-export ZB_SYSTEMD_DIR="$t/sysd" ZB_CONSOLE_DIR="$t/console"
+export ZB_SYSTEMD_DIR="$t/sysd" ZB_CONSOLE_DIR="$t/console" ZB_VAR_DIR="$t/var"   # 0.99.11: never the real /var/lib/zenithboard
 printf '#!/bin/bash\necho "systemctl $*" >> "%s/systemctl.log"\n[ "$1" = is-active ] && echo active\n[ "$1" = list-unit-files ] && [ ! -e "%s/nowall" ] && echo "$2 enabled"\nexit 0\n' "$t" "$t" > "$t/bin/systemctl"
 printf '#!/bin/bash\necho 192.168.1.50\n' > "$t/bin/hostname"
 printf '#!/bin/bash\necho "apt-get $*" >> "%s/apt.log"\n' "$t" > "$t/bin/apt-get"   # 0.54.17: never the real apt from a test
@@ -68,6 +68,16 @@ check "on: the folders, the spool private"            '[ -d "$t/console/out" ] &
 check "on: the helper's two units, the path enabled"  '[ -f "$t/sysd/zenithboard-console.path" ] && [ -f "$t/sysd/zenithboard-console.service" ] && grep -q "enable --now zenithboard-console.path" "$t/systemctl.log"'
 check "the path unit watches the spool"               'grep -q "^PathExistsGlob=/var/lib/zenithboard/console/state/spool/\*.job" systemd/zenithboard-console.path'
 check "the wall may write its state folder only"      '[ "$(grep -c "^ReadWritePaths=" systemd/zenithboard-flightinfo.service)" = 1 ] && grep -q "^ReadWritePaths=-/var/lib/zenithboard/console/state$" systemd/zenithboard-flightinfo.service'
+
+# 0.99.11 (review B3, C2): root (every update, `console on`, `pair`) never follows a link planted where a folder should be
+mkdir -p "$t/elsewhere" "$t/elsewhere2"; chmod 755 "$t/elsewhere" "$t/elsewhere2"; before=$(stat -c '%u:%g %a' "$t/elsewhere")
+rm -rf "$t/console/state/spool"; ln -s "$t/elsewhere" "$t/console/state/spool"
+console_prepare_dirs
+check "a link planted at the spool: what it points to keeps its mode and owner (review B3)" '[ "$(stat -c "%u:%g %a" "$t/elsewhere")" = "$before" ]'
+check "... and the spool is a real folder again, private"  '[ -d "$t/console/state/spool" ] && [ ! -L "$t/console/state/spool" ] && [ "$(stat -c %a "$t/console/state/spool")" = 700 ]'
+rm -rf "$t/console/state"; ln -s "$t/elsewhere2" "$t/console/state"; rm -rf "$t/console/out"; ln -s "$t/elsewhere2" "$t/console/out"
+console_prepare_dirs
+check "a link at state/ or out/ is removed, never followed (review B3)" '[ "$(stat -c %a "$t/elsewhere2")" = 755 ] && [ ! -L "$t/console/state" ] && [ ! -L "$t/console/out" ] && [ "$(stat -c %a "$t/console/state")" = 700 ] && [ "$(stat -c %a "$t/console/out")" = 750 ] && [ -d "$t/console/state/spool" ] && [ -z "$(ls -A "$t/elsewhere2")" ]'
 
 out=$(console_pair)
 check "pair: a code's hash and its end for the wall"  'read -r hh until < "$t/console/out/pair" && [ ${#hh} = 64 ] && [ "$until" -gt "$(date +%s)" ]'

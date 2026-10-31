@@ -45,7 +45,7 @@ GNUPGHOME="$kg" gpg --batch --quiet --passphrase '' --quick-gen-key "New key <ne
 GNUPGHOME="$kg" gpg --batch --armor --export > "$t/github.gpg" 2>/dev/null
 OLDK=$(GNUPGHOME="$kg" gpg --batch --with-colons --list-keys old@example.invalid 2>/dev/null | awk -F: '$1=="fpr"{print $10; exit}')
 NEWK=$(GNUPGHOME="$kg" gpg --batch --with-colons --list-keys new@example.invalid 2>/dev/null | awk -F: '$1=="fpr"{print $10; exit}')
-mkdir -p "$ZB_TRUST_GPG"; chmod 700 "$ZB_TRUST_GPG"
+mkdir -p "$ZB_TRUST_GPG"; chmod 700 "$ZB_TRUST_DIR" "$ZB_TRUST_GPG"   # as zb_trust_setup makes them (0.99.11 checks it)
 keys=$(zb_keys_in "$t/github.gpg")
 check "both keys of the file are listed"     'grep -q "^$OLDK " <<<"$keys" && grep -q "^$NEWK " <<<"$keys"'
 check "the old one is seen as expired"       'grep -q "^$OLDK e " <<<"$keys"'
@@ -126,6 +126,43 @@ out=$(zb_verify_source "$t" origin/main 2>&1)
 check "a key that could not be fetched is not called a refusal" '! grep -q "Not trusted, so" <<<"$out"'
 unset -f zb_trust_setup; . lib/update.sh
 mv "$t/var/trust/signer.fpr.keep" "$t/var/trust/signer.fpr"
+
+# ---- 0.99.11 (review B3, SH2): the keyring is used only from root's own private folders
+mk_git "G $KEY"
+chmod 755 "$t/var/trust"
+out=$(zb_verify_source "$t" origin/main 2>&1); rc=$?
+check "a trust folder open to others stops the update, even with a good signature (review B3)" '[ "$rc" = 1 ] && grep -q "ZenithBoard was NOT updated" <<<"$out" && grep -q "sudo rm -rf $t/var/trust" <<<"$out"'
+chmod 700 "$t/var/trust"
+mv "$t/var/trust/gnupg" "$t/gnupg.real"; ln -s "$t/gnupg.real" "$t/var/trust/gnupg"
+check "a keyring that is a link stops it"      '! zb_verify_source "$t" origin/main >/dev/null 2>&1'
+rm "$t/var/trust/gnupg"; mv "$t/gnupg.real" "$t/var/trust/gnupg"
+mv "$t/var" "$t/var.real"; mkdir -p "$t/var"; chmod 700 "$t/var.real/trust"; ln -s "$t/var.real/trust" "$t/var/trust"
+check "a trust folder that is a link stops it" '! zb_verify_source "$t" origin/main >/dev/null 2>&1'
+rm -rf "${t:?}/var"; mv "$t/var.real" "$t/var"
+# another user's: an id that says the update runs as uid 4242, so the folders (the tester's) are somebody else's
+printf '#!/bin/bash\nif [ "$*" = -u ]; then echo 4242; else exec %s "$@"; fi\n' "$(command -v id)" > "$t/bin/id"; chmod +x "$t/bin/id"; hash -r
+out=$(zb_verify_source "$t" origin/main 2>&1); rc=$?
+rm -f "$t/bin/id"; hash -r
+check "a trust folder of another user stops it (the service could have made it)" '[ "$rc" = 1 ] && grep -q "not root.s own private folder" <<<"$out"'
+check "and with all of it right, the usual case passes again" 'out=$(zb_verify_source "$t" origin/main 2>&1); [ -z "$out" ]'
+
+# ---- 0.99.11 (review B3, SH2): every install and update makes the data folder root's, its subfolders right
+zd="$t/zbdata"; mkdir -p "$zd/stats" "$t/elsewhere-data"; chmod 2751 "$zd"; chmod 700 "$t/elsewhere-data"
+echo "when,gain_db" > "$zd/gain-log.csv"; ln -s "$t/elsewhere-data" "$zd/data"
+real_install=$(command -v install)
+mkdir -p "$t/rootbin"
+printf '#!/bin/bash\nif [ "$*" = -u ]; then echo 0; else exec %s "$@"; fi\n' "$(command -v id)" > "$t/rootbin/id"
+printf '#!/bin/bash\necho "install $*" >> "%s/root.log"\na=(); while [ $# -gt 0 ]; do case "$1" in -o|-g) shift 2 ;; *) a+=("$1"); shift ;; esac; done\nexec %s "${a[@]}"\n' "$t" "$real_install" > "$t/rootbin/install"
+printf '#!/bin/bash\necho "chown $*" >> "%s/root.log"\n' "$t" > "$t/rootbin/chown"
+printf '#!/bin/bash\necho "useradd $*" >> "%s/root.log"\n' "$t" > "$t/rootbin/useradd"
+chmod +x "$t"/rootbin/*
+( PATH="$t/rootbin:$PATH"; ZB_SKIP_SERVICES=; ZB_DATA="$zd"; ZB_USER=$(id -un); ensure_zb_user )
+check "the data folder: root's, the service's group, 3771 (review B3)" '[ "$(stat -c %a "$zd")" = 3771 ] && grep -qx "install -d -o root -g $(id -un) -m 3771 $zd" "$t/root.log"'
+check "the folders the service writes stay its own (stats/), set on the name" 'grep -qx "chown -h $(id -un):$(id -un) -- $zd/stats" "$t/root.log"'
+check "the gain log is handed back to the timer user, set on the name" 'grep -qx "chown -h $(id -un):$(id -un) -- $zd/gain-log.csv" "$t/root.log"'
+check "a link at data/ is removed, never followed: a real folder of root" '[ -d "$zd/data" ] && [ ! -L "$zd/data" ] && [ "$(stat -c %a "$t/elsewhere-data")" = 700 ] && case "$(stat -c %a "$zd/data")" in 755|2755) true ;; *) false ;; esac'
+check "nothing in the folders it walked was chowned through a link" '! grep -q "elsewhere" "$t/root.log"'
+check "every install and update runs it (deploy_files)" 'grep -q "\[ ! -d \"\$ZB_DATA\" \] || ensure_zb_user" lib/flightinfo.sh'
 
 # ---- the way out, for a fork or your own branch
 cfg_set UPDATE_VERIFY 0

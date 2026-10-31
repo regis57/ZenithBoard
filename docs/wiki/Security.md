@@ -54,6 +54,20 @@ The wall server and the social sharing service run as the `zenithboard` system u
 
 What that buys: a hole in the wall server stays a hole in a read-only program that can see `aircraft.json`, its own files and the internet. It cannot become a foothold on the Pi.
 
+### Root never trusts a path the service user owns (0.99.11)
+
+The services and root share `/var/lib/zenithboard`. Until 0.99.10 the folder belonged to the `zenithboard` user, so a hole in one of its services could have renamed root's update keyring (`trust/`) away and put its own in its place, or left a link where root was about to write. Since 0.99.11 (the review of 0.99.8, batch B3), on every install and update:
+
+| Path | Owner, mode | Who writes in it |
+|---|---|---|
+| `/var/lib/zenithboard` | `root:zenithboard` 3771 (`drwxrws--t`) | root, and the service's group for its own entries; the sticky bit keeps it from removing or renaming anything of root's |
+| `trust/`, `trust/gnupg/`, `restore-pending/` | root, closed to everyone else | root only. The update stops, and a restore's waiting identities are not used, when they are anything else |
+| `data/` | root, 755 | root (the monthly aircraft-type list) |
+| `console/`, `console/out/` | `root:zenithboard` 750 | root (the helper's results); the wall reads them |
+| `console/state/`, its `spool/`, `stats/`, `social/`, `telegram/`, `gain-log.csv` | `zenithboard` | the services |
+
+Root makes those folders without following a link found in their place (a link is removed, owners are set on the name with `chown -h`), writes its files in a folder the service may write in to a new name renamed into place, and the console's root helper opens the spool once without following a link and reads and removes every job through that one descriptor.
+
 Measure it yourself:
 
 ```bash
