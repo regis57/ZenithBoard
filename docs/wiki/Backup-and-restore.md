@@ -145,6 +145,12 @@ each download is written in the console's audit log.
 A restore replaces settings and data, runs the installers of
 what was on, and asks for a typed word, like every step that cannot be taken back in one click.
 
+**A value a setting cannot take is skipped** (0.99.9), in a restore as in `settings import`: the position must be a
+latitude and a longitude, the altitude whole metres, a dongle serial letters, digits, `-` and `_`, a switch or a number
+a number, the units, colour and look one of their names; any other setting takes no `"`, `\`, `|`, `&`, `;`, `<`, `>`,
+`$`, backquote or line break. The import counts what it skipped and names the settings it refused; the value already
+on this Pi stays. A file made by `settings export` or `backup make` holds nothing it would refuse.
+
 ## Taking a restore back
 
 What the restore replaced is kept first in `/var/lib/zenithboard/before-restore-DATE/`: `config.env`, the statistics,

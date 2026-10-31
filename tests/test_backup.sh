@@ -155,5 +155,23 @@ import sys; sys.path.insert(0, \"flightinfo\"); import console_actions as a
 assert a.build(\"backup-delete\", {}) == [\"backup\", \"delete\", \"--console\"] and \"ask\" in a.flags(\"backup-delete\")"'
 check "console: the download says host and date"     'grep -q "zenithboard-backup-%s-%s-console.tar.gz" flightinfo/console.py'
 
+# ---- the review of 0.99.8 (B1): a backup whose settings carry a command restores without running it
+mkdir -p "$t/b1" "$t/default" && tar -C "$t/b1" -xzf "$t/full.tar.gz"
+sed -i '/^ALT_M=/d' "$t/b1/zb/settings.env"
+printf 'ALT_M=0"; touch %s/X; #|e;#\n' "$t" >> "$t/b1/zb/settings.env"
+tar -C "$t/b1" -czf "$t/b1.tar.gz" zb
+printf 'LATITUDE=1\nLONGITUDE=2\nALTITUDE=10m\n' > "$t/default/adsbexchange"
+cfg_set ALT_M 250
+out=$(
+  unset -f zb_apply_location
+  # shellcheck source=lib/adsb.sh
+  . lib/adsb.sh
+  is_readsb() { return 1; }; is_dump1090() { return 1; }; is_adsbx() { return 0; }; is_piaware() { return 1; }
+  is_fr24() { return 1; }; is_radarbox() { return 1; }; is_planefinder() { return 1; }; restart_flightinfo() { :; }
+  ZB_DEFAULT_DIR="$t/default" backup_restore "$t/b1.tar.gz" --yes 2>&1 < /dev/null
+)
+check "restore (B1): an altitude carrying a command is skipped and said, nothing runs" '[ ! -e "$t/X" ] && echo "$out" | grep -q "Skipped 1 line" && echo "$out" | grep -q "refused.*ALT_M"'
+check "restore (B1): the altitude here kept, and written as it is into ADSB Exchange" '[ "$(cfg_get ALT_M)" = 250 ] && grep -qx "ALTITUDE=\"250m\"" "$t/default/adsbexchange" && grep -qx "LATITUDE=\"49.1193\"" "$t/default/adsbexchange"'
+
 [ "$fail" = 0 ] && echo "ALL OK"
 exit "$fail"

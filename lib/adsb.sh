@@ -45,8 +45,10 @@ ensure_fa_repo() {
 }
 
 set_sdr_serial_readsb() {  # set_sdr_serial_readsb SERIAL_OR_INDEX
-  local dev="$1" f=/etc/default/readsb
+  local dev="$1" f="${ZB_DEFAULT_DIR:-/etc/default}/readsb"
   [ -n "$dev" ] && [ -f "$f" ] || return 0
+  # the review of 0.99.8: the serial goes into a sed expression, so only letters, digits, - and _ get there
+  valid_sdr "$dev" || { err "Not a dongle serial or index: $dev (letters, digits, - and _ only, up to 32): readsb's dongle left as it was."; return 1; }
   sed -i -E 's/ ?--device [^" ]+//' "$f"
   sed -i -E "s|^(RECEIVER_OPTIONS=\")|\1--device $dev |" "$f"
 }
@@ -54,6 +56,10 @@ set_sdr_serial_readsb() {  # set_sdr_serial_readsb SERIAL_OR_INDEX
 install_decoder() {  # install_decoder readsb|dump1090-fa
   local d="$1" lat lon dev
   lat=$(cfg_get LAT); lon=$(cfg_get LON); dev=$(cfg_get ADSB_SDR)
+  # the review of 0.99.8: the position and the dongle go into the decoder's options by sed; checked before anything
+  case "$d" in readsb|dump1090-fa) ;; *) err "Unknown decoder $d"; return 1 ;; esac
+  valid_lat "$lat" && valid_lon "$lon" || { err "The position in $ZB_CONFIG is not a latitude and a longitude ($lat, $lon): set it again (menu 1, or sudo zenithboard location LAT LON)."; return 1; }
+  [ -z "$dev" ] || valid_sdr "$dev" || { err "ADSB_SDR in $ZB_CONFIG is not a dongle serial or index: $dev (letters, digits, - and _ only)."; return 1; }
   apt-get update
   apt_install curl ca-certificates wget
   case "$d" in
@@ -481,6 +487,10 @@ _loc_line() { printf '  %-26s %s\n' "$1" "$2"; }
 # the sed of dump1090, ADSB Exchange's ALTITUDE and Plane Finder's JSON were never run by a test)
 zb_apply_location() {  # zb_apply_location LAT LON [ALT_M]
   local lat="$1" lon="$2" alt="${3:-$(cfg_get ALT_M 0)}" dd="${ZB_DEFAULT_DIR:-/etc/default}"
+  # the review of 0.99.8: these go into the decoder's and ADSB Exchange's files by sed and ini_set; an altitude that is
+  # not whole metres counts as 0, a position that is not one changes nothing
+  valid_lat "$lat" && valid_lon "$lon" || { err "Not a position: $lat, $lon (decimal degrees, latitude -90 to 90, longitude -180 to 180)."; return 1; }
+  [[ $alt =~ ^-?[0-9]+$ ]] || alt=0
   log "Applying position $lat, $lon, ${alt} m everywhere"
   cfg_set LAT "$lat"; cfg_set LON "$lon"; cfg_set ALT_M "$alt"
   _loc_line "ZenithBoard wall" "updated"; restart_flightinfo
