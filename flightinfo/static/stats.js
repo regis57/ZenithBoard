@@ -238,6 +238,17 @@ window.ZBI18N.start({ part: "stats" }, function () {
     var where = a.city || a.name, code = a.iata || a.icao;
     return where ? where + (code ? " (" + code + ")" : "") : code || null;
   }
+  // The note under the line when the box above says farther than the aircraft written down. 0.99.15 (review B7): it
+  // gave the box's kilometres with "km" written after them whatever the page's unit, so under aviation units the box
+  // said 262 NM and the note 485 km; now the distance is the box's own, in the page's unit, and the unit is inside the
+  // placeholder, so in Arabic the number and its unit stay together in one isolate.
+  function farthestNote(rec, tot, days) {
+    if (!rec || !tot || !tot.farthest_km || Math.round(rec.km) >= tot.farthest_km) return "";
+    var far = fmt(dist(tot.farthest_km)) + " " + unitName();
+    return (tot.farthest_when ? t("The box above says {dist}, on {day}: its details were not written down", { dist: far, day: shortDay(tot.farthest_when.slice(0, 10)) }) :
+      t("The box above says {dist}: its details were not written down", { dist: far })) +
+      (days ? t(" (they are since ZenithBoard 0.22.0, one aircraft a day: the day's farthest).") : t(" (one aircraft is written down a day, the day's farthest: yesterday's was outside these 24 hours)."));
+  }
   function farthestLine(r, units) {
     if (!r) return null;
     var parts = [shortDay(r.day) + (r.time ? " " + r.time : "")];
@@ -292,10 +303,8 @@ window.ZBI18N.start({ part: "stats" }, function () {
     rp.innerHTML = "";
     if (fline) { rp.appendChild(flag(rec.cc)); rp.appendChild(node("span", "", fline)); }
     else rp.appendChild(node("span", "", t("No details written down in this period yet: the next sample, on the quarter hour, does it.")));
-    if (rec && tot.farthest_km && Math.round(rec.km) < tot.farthest_km)
-      rp.appendChild(node("span", "rnote", (tot.farthest_when ? t("The box above says {km} km, on {day}: its details were not written down", { km: tot.farthest_km, day: shortDay(tot.farthest_when.slice(0, 10)) }) :
-        t("The box above says {km} km: its details were not written down", { km: tot.farthest_km })) +
-        (days ? t(" (they are since ZenithBoard 0.22.0, one aircraft a day: the day's farthest).") : t(" (one aircraft is written down a day, the day's farthest: yesterday's was outside these 24 hours)."))));
+    var note = farthestNote(rec, tot, days);
+    if (note) rp.appendChild(node("span", "rnote", note));
     var labels = w.labels || [], n = labels.length, every = n > 24 ? 5 : n > 12 ? 3 : 1;
     // drawings sized to the screen, so their text stays the same size on a phone as on a desk (0.37.0)
     var phone = window.innerWidth < 760, wide = phone ? 440 : 980, half = phone ? 440 : 480;
