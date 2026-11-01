@@ -62,7 +62,7 @@ update to it (29 November 2026 if it is updated on 30 October).
    for f in flightinfo/static/*.js tools/*.js tools/graphs1090-look/*.js; do node --check "$f"; done
    shellcheck -x -S warning install.sh bin/zenithboard bin/zenithboard-demo lib/*.sh tests/*.sh tools/*.sh
    ```
-5. Commit as the owner: `git -c user.name=regis57 -c user.email=regis.hennequin@gmail.com commit`.
+5. Commit as the owner: `git -c user.name=regis57 -c user.email=8229295+regis57@users.noreply.github.com commit`. GitHub refuses pushes that expose the private e-mail (the owner's setting since 1 November 2026): always this noreply address.
    **No `Co-authored-by`, no "Generated with" lines** — the owner's standing rule.
 6. Push, open the PR with `gh api repos/regis57/ZenithBoard/pulls` (body from a file), wait for the five checks
    (CodeQL, analyze python, analyze javascript, test ×2) **and check each one's conclusion is `success`** — 0.27.0
