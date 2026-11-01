@@ -87,6 +87,11 @@ What is asked during the freeze, kept here so that nothing is lost, and done aft
 
 * **Emergency squawk banner on the wall** (asked by the owner, 26 October 2026). When 7500, 7600 or 7700 is heard anywhere in the antenna's range, not only inside the wall's radius, the wall shows a banner for 30 seconds, longer than its usual time for an aircraft, with the code and its meaning; a checkbox in the wall's settings (the gear), off by default, and a command. Nothing published: an emergency is not a fact to broadcast. The detection is 0.99.6's (`flightinfo/telegram.py`, heard on two reads in a row); to be previewed on the real wall before it ships.
 
+* **Two more networks to feed: adsb.lol and OpenSky** (asked by the owner, 1 November 2026). Each its own switch in the menu and by command, off by default, switched on one at a time, and removable as the five networks are; the antenna's position stays what the feeders already get. Both take what readsb already decodes (its Beast output, port 30005), so nothing changes in the decoder. **MLAT stays the owner's choice for each network**: off by default, since ADSB Exchange keeps the only MLAT client today, and the MLAT guard would leave a client the owner switched on rather than stop it. What each would bring, read on 1 November 2026:
+  * **[adsb.lol](https://www.adsb.lol/docs/get-started/bare-metal)**: its script (`adsb.lol/feed.sh`) installs two services, `adsblol-feed` and `adsblol-mlat`, and needs no account; the data is open ([ODbL 1.0](https://www.adsb.lol/docs/open-data/api/)). Its page documents no MLAT switch of its own: ZenithBoard would leave `adsblol-mlat` disabled unless asked, and say it.
+  * **[OpenSky Network](https://opensky-network.org/feed/raspberry)**: the `opensky-feeder` package from OpenSky's own signed APT repository, beside readsb; no MLAT client in it. It needs an OpenSky account and a receiver serial, which the owner types in the terminal (a session never creates the account). [Its terms](https://opensky-network.org/about/terms-of-use) give OpenSky a perpetual licence to the data fed and allow its use for non-profit research and education: written beside the switch, so that whoever turns it on knows.
+  * Before it ships: `zenithboard memory` on the reference Pi with each one on (436 MB of 905 MB free today with the five networks, the wall, the posts and Telegram), `zenithboard status` listing them, the menu and the console in the 22 languages, and the pages [Providers](Providers) and [Fresh install](Fresh-install).
+
 * **The aircraft's photo in the Telegram messages: dropped** (asked by the owner on 31 October 2026, dropped by him the same day). He wanted the photo of the very airframe passing overhead, found by its registration, in each crossing's and squawk's message, with its credit, instead of a link. The only source of that photo is Planespotters, and [its photo API terms](https://www.planespotters.net/photo/api) (read 19 October 2026, [Routes, photos and data](Routes-photos-and-data)) allow a picture only loaded straight from the API's address by the screen that shows it, never stored, proxied or passed on; Telegram's `sendPhoto` stores the picture on Telegram's servers. A photo of the type instead of the airframe (Wikimedia Commons) is not what was asked, so nothing replaces it. The terms could not be read again on 31 October 2026: the page answers 403 to an automated reader. It would come back only with Planespotters' written permission.
 
 * **From the review of 0.99.8** (30–31 October 2026), found while fixing and left for after 1.0 because each is a change of design, not a fix:
@@ -156,6 +161,22 @@ Saying no here saves answering the same question twice.
 | **A photo in the Bluesky posts** | Planespotters' photo API terms forbid storing, re-hosting or passing on a picture, and a link card would upload its thumbnail. A link to the photo page with the photographer named is what is allowed (`social photolink on`, 0.25.0). JetPhotos has no API and grants personal, non-commercial use of the site only |
 | **ACARS and Grafana** | Removed in 0.30.0: never run on the reference Pi, about 900 MB more than a 1 GB board has, and what Grafana would have shown is on the wall's own statistics page, with graphs1090 as the long-term option (0.32.0). A Pi that had them keeps them until `sudo zenithboard acars remove` |
 | **A paid tier** | It is GPL and it stays free. There is a beer link in the README and that is the whole business model. |
+| **Other feeding networks** (the list of the ADS-B Feeder Image's homepage, looked at on 1 November 2026) | Seven networks at most: the five fed today and the two of *Waiting for 1.1*. Each network is one more service on a 1 GB Pi, one more installer to follow when it changes, one more set of terms. Each of the others, and why it is left out, is just below |
+
+**The other networks, one by one** (read on their own pages on 1 November 2026):
+
+* **Flightradar24, FlightAware, RadarBox (AirNav Radar), Plane Finder, ADSB Exchange**: already fed ([Providers](Providers)).
+* **adsb.fi, airplanes.live**: the same kind of open community network as adsb.lol, each with its own feed and MLAT services; one is enough, and adsb.lol is the one asked for.
+* **Fly Italy ADSB**: Docker only (an ultrafeeder container); ZenithBoard installs no Docker on a 1 GB Pi.
+* **AVDelphi**: a feed must be claimed with a membership on the site, and an unclaimed one is refused; a session never creates accounts, and the site offers services built on the data.
+* **Planespotters' feed** (not its photos, which the wall uses): its installer could not be read before running it, and its page says nothing of what is done with the data. Nothing is run blind.
+* **TheAirTraffic**: [its terms](https://theairtraffic.com/terms) let it pass the data fed on through a paid API.
+* **RadarPlane**: its address sent the browser to an unrelated site on 1 November 2026, and the Feeder Image's current list no longer has it.
+* **HPRadar**: its site did not answer on 1 November 2026; nothing could be read.
+* **Plane.watch**: a key from its own sign-up site first, and its pages say nothing of what is done with the data.
+* **ADSBHub**: an account and a station key, and no sign of recent activity on its pages.
+* **RadarVirtuel**: an e-mail address as the station's identity and a script of its own; not one of the two asked for.
+* **1090MHz UK**: a network for the United Kingdom; the reference Pi is in France.
 
 ## Suggesting something
 
