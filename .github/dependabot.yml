@@ -8,3 +8,9 @@ updates:
       interval: monthly
     commit-message:
       prefix: "CI"
+    # CodeQL's init and analyze must run the same release: bumped one by one (#248, #249, 1 November 2026),
+    # each pull request ran a mismatched pair and failed. One pull request for both.
+    groups:
+      codeql-action:
+        patterns:
+          - "github/codeql-action*"
