@@ -64,6 +64,14 @@ Three guards keep this from becoming a reboot loop:
 
 On a failed check it also records what the radio sees: whether your saved network is visible at all, at what signal, how many other networks are in range, and the state of the Wi-Fi device. That is what turns "the network went away" into an answer — a network that is not visible is the router's problem, a visible network at −85 dBm is yours.
 
+## Reached by its name, not by its address
+
+The wall opens at `http://<name>:8080` (the Pi's host name, `raspberrypi` unless you changed it) but not at the address you saved, and SSH by that address fails too: **the router gave the Pi another address**. It happens when the router restarts, when the Pi's lease runs out while it is off, or when the Pi moves from the cable to the Wi-Fi (each has its own address). The name keeps working because the router, or the Pi's own `.local` name, follows the new address. Nothing on the Pi is broken, and no ZenithBoard update changes the address (seen on the reference Pi, 2 November 2026).
+
+* **Find the new address:** `ping -4 <name>` from a computer, or `hostname -I` on the Pi.
+* **Keep it from moving again:** reserve the address for the Pi in the router (a DHCP reservation by its MAC address): nothing changes on the Pi. Or give the Pi a fixed address itself: `sudo zenithboard net static …` ([README → Fixed IP address](https://github.com/regis57/ZenithBoard#fixed-ip-address)), with a keyboard and a screen at hand the first time.
+* **Then update what pointed at the old address:** the tablets' bookmark of the wall (or use the name), a port forwarded in the router for the wall from outside ([README → A name for your wall](https://github.com/regis57/ZenithBoard#a-name-for-your-wall)), PuTTY's saved session.
+
 ## Logs that survive a restart
 
 ```bash
