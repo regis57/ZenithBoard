@@ -25,7 +25,7 @@ Inspired by [jprochazka/adsb-receiver](https://github.com/jprochazka/adsb-receiv
 
 ## See it
 
-**Watch** on [ZenithBoard's YouTube channel](https://www.youtube.com/@ZenithBoard-ADSB): [what it does, in one minute](https://youtu.be/_MHMGHzQZ1M) · [the wall: dot matrix or split-flap](https://youtu.be/AbJOdFBjovY) · [Bluesky posts, Telegram messages and statistics](https://youtu.be/Dpa9wXBnVHY) · [the 30-second Short](https://youtube.com/shorts/wUyv3iBxQr8)
+**Watch** on [ZenithBoard's YouTube channel](https://www.youtube.com/@ZenithBoard-ADSB): [what it does, in one minute](https://youtu.be/TWK3FKOwq-c) · [the wall: dot matrix or split-flap](https://youtu.be/4lqsWafiTMY) · [Bluesky posts, Telegram messages and statistics](https://youtu.be/d1pPrW5etX0) · [the 30-second Short](https://youtube.com/shorts/ccRPiT7RReM)
 
 <p align="center"><img src="docs/images/wall/zb-wall.gif" alt="The dot-matrix wall in turquoise: BAW357, a British Airways A320neo, its airline name scrolling beside the registration flag, then the next aircraft, D-IDBA, a Raytheon 390" width="460">&nbsp;<img src="docs/images/wall/zb-flap-roll.gif" alt="The split-flap look in green, letters rolling from RYR6QU, Bergamo to Luxembourg, to the next aircraft" width="460"></p>
 
