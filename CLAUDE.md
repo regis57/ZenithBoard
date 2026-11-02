@@ -70,7 +70,7 @@ update to it (29 November 2026 if it is updated on 30 October).
    `gh api -X PUT .../pulls/N/merge -f merge_method=squash -f sha=…`. Check `commits/main` is verified and
    `releases/latest` carries the new tag (the release workflow tags `v<version>` by itself).
 7. Sync the wiki: GitHub's wiki is a separate repository; `docs/wiki/*.md` is the source. From the owner's
-   Chrome (a new tab, never his Pi tab at `192.168.1.196:8080`), for each changed page: fetch the raw file from
+   Chrome (a new tab, never his Pi tab at `rp3:8080`, the Pi's name: its address changed on 2 November 2026), for each changed page: fetch the raw file from
    `raw.githubusercontent.com/regis57/ZenithBoard/main/docs/wiki/NAME.md`, fetch `/wiki/NAME/_edit`, POST the
    form with `wiki[body]`, `wiki[format]=markdown`, `wiki[commit]`, and verify the stored body equals the file.
    A new page goes through `/wiki/_new` first. Without his browser, say the wiki is not synced.
