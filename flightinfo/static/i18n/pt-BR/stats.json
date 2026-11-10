@@ -62,7 +62,9 @@
   "many": "{n} amostras de 15 minutos desde {since}, 30 dias guardados · {period}",
   "other": "{n} amostras de 15 minutos desde {since}, 30 dias guardados · {period}"
  },
+ "different aircraft, each counted once, {period}, a floor": "aeronaves diferentes, cada uma contada uma vez, {period}, no mínimo",
  "distinct aircraft, {period}, a floor": "aeronaves distintas, {period}, no mínimo",
+ "added up day by day, as FlightAware counts: {n}": "somando dia a dia, como conta o FlightAware: {n}",
  "nothing yet": "nada ainda",
  "busiest hour {hour}, {n}": "horário de pico {hour}, {n}",
  "on {day} at {time}": "em {day} às {time}",

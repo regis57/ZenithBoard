@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **31 October 2026**, version **0.99.23**, release candidate for 1.0.
+Last updated: **10 November 2026**, version **0.99.24**, release candidate for 1.0.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -90,6 +90,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 10 November 2026, 18:11 | The owner's `/stats` on his phone: 2 306 distinct aircraft in 24 hours, **6 661** over 7 days, **10 719** over 30 days, busiest days 2 525 (06/11) and 2 963 (01/11): *2 000 a day times 7 is never 6 600, the figures are wrong*. Checked on his own day files (the backup of 21 October): 16–20 October, 13 097 aircraft added day by day for **6 186 different aircraft**; 445 seen all five days, 611 four, 899 three, 1 500 two. The figures were right, the label read as the days added up; his FlightAware gives the other count (76 648 over 30 days, about 2 550 a day added up). 0.99.24 shows both |
 | 9 November 2026, 07:29 | The owner, with FlightAware's *Site ranking over 30 days* for regis57: rank 4786, total 76.648, 76,648 ADS-B Mode-S aircraft and 6,608,812 positions, **MLAT 0 aircraft, 0 positions** (as set since 0.99.6: ADS-B Exchange keeps the only MLAT client), *Other* 2,695 aircraft and 2,078,227 positions. Asked: each network's ranking on `/stats`. Studied the same day, written in *Waiting for 1.1*: only Plane Finder and possibly AirNav Radar let a program read theirs |
 | 2 November 2026, 19:26 | The owner: neither the wall nor SSH answer at the Pi's address, but `http://rp3:8080` works (his phone's screenshot: the split-flap wall, EWG7LW Palma → Cologne). The router had given the Pi another address; the name followed it. No ZenithBoard change touches the address (checked: nothing in 0.99.x changes the network settings). Written in [Reliability and diagnostics](Reliability-and-diagnostics#reached-by-its-name-not-by-its-address); a DHCP reservation in the router keeps it fixed |
 | 1 November 2026, 18:31 | The owner, with a screenshot of the ADS-B Feeder Image's homepage (nineteen networks): adsb.lol and OpenSky for 1.1, each its own switch, MLAT left to the owner; the others looked at and left out. Each read on its own pages that evening: adsb.lol's script installs `adsblol-feed` and `adsblol-mlat`, no account, ODbL data; OpenSky's `opensky-feeder` package needs an account and a receiver serial and has no MLAT client; RadarPlane's address redirected to an unrelated site; HPRadar did not answer. In the Roadmap, *Waiting for 1.1* and *Not planned*. Nothing built: the freeze |

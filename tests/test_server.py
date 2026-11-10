@@ -1129,6 +1129,7 @@ class StatsTest(unittest.TestCase):
                 fh.write("\n".join(hexes.split()) + "\n")
         w = server.read_stats(d, now, "24h")["window"]
         self.assertEqual((w["range"], len(w["labels"]), w["labels"][-1]), ("24h", 24, "22h"))
+        self.assertIsNone(w["totals"]["aircraft_days"], "24 hours keep their one figure")
         self.assertEqual(w["totals"]["messages"], 500 + 700 + 100 + 50, "21:30 yesterday is more than 24 hours ago")
         self.assertEqual(w["totals"]["farthest_km"], 310)
         self.assertEqual(w["totals"]["busiest_hour"], 21)
@@ -1136,6 +1137,8 @@ class StatsTest(unittest.TestCase):
         w = server.read_stats(d, now, "7d")["window"]
         self.assertEqual((len(w["labels"]), w["labels"][0], w["labels"][-1]), (7, "14/10", "20/10"))
         self.assertEqual(w["totals"]["aircraft"], 4, "distinct over the days' files")
+        # 0.99.24 (the owner, 10 November 2026): the days added up beside it, aaaaa2 counted on both its days
+        self.assertEqual(w["totals"]["aircraft_days"], 2 + 2 + 1, "each day's distinct aircraft, added up")
         self.assertEqual(w["totals"]["farthest_km"], 350)
         self.assertEqual(w["totals"]["farthest_when"], "2026-10-15 11:45", "the quarter hour the row stamped 12:00 measured")
         self.assertEqual(w["aircraft"][-1], 2)

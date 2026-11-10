@@ -60,7 +60,9 @@
   "one": "{n} meting van 15 minuten sinds {since}, 30 dagen bewaard · {period}",
   "other": "{n} metingen van 15 minuten sinds {since}, 30 dagen bewaard · {period}"
  },
+ "different aircraft, each counted once, {period}, a floor": "verschillende vliegtuigen, elk één keer geteld, {period}, een ondergrens",
  "distinct aircraft, {period}, a floor": "unieke vliegtuigen, {period}, een ondergrens",
+ "added up day by day, as FlightAware counts: {n}": "dag voor dag opgeteld, zoals FlightAware telt: {n}",
  "nothing yet": "nog niets",
  "busiest hour {hour}, {n}": "drukste uur {hour}, {n}",
  "on {day} at {time}": "op {day} om {time}",
