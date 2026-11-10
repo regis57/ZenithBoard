@@ -27,7 +27,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.99.23"
+VERSION = "0.99.24"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -396,6 +396,9 @@ def stats_window(rows, stats_dir, now, rng):
             aircraft.append(len(s_))
         note = "distinct aircraft per day, a floor"
         total = len(seen_all)
+    # 0.99.24 (the owner, 10 November 2026: "2 000 a day times 7 is never 6 600"): the 7 and 30 days count each
+    # aircraft once, the networks' rankings add the days up; both figures, so neither reads as the other
+    aircraft_days = sum(aircraft) if rng != "24h" else None
     # 0.99.4 (the owner's /stats#7d, 30 October 2026: "busiest hour 18:00, 19 587 531" read as one hour's messages,
     # and was the seven days' 18:00 added up): an hour of one day, on average over the days it was sampled
     by_hour = [round(by_hour[h] / float(len(hour_days[h]))) if hour_days[h] else 0 for h in range(24)]
@@ -404,7 +407,7 @@ def stats_window(rows, stats_dir, now, rng):
     far_series = [far[i] if mcnt[i] else None for i in range(len(keys))]
     return {"range": rng, "label": RANGES[rng][1], "labels": labels, "messages": msgs, "farthest": far_series,
             "aircraft": aircraft, "aircraft_note": note, "_counts": cnt,
-            "totals": {"aircraft": total, "messages": sum(msgs), "farthest_km": max(far) if far else 0,
+            "totals": {"aircraft": total, "aircraft_days": aircraft_days, "messages": sum(msgs), "farthest_km": max(far) if far else 0,
                        "farthest_when": best_when.strftime("%Y-%m-%d %H:%M") if best_when else None,
                        "busiest_hour": bh, "busiest_messages": by_hour[bh] if bh is not None else 0,
                        "samples": sum(mcnt)}}

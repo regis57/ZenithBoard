@@ -143,3 +143,6 @@ th { font: 400 11px ui-monospace, Menlo, Consolas, monospace; letter-spacing: .1
    and the tiles' figures (349.8 مليون) use the system's own font in Arabic; the charts and the code keep theirs */
 html:lang(ar) :is(.sub, .toggle button, h2, .k, figcaption, .rec .k, .tile .v, .big span, details summary, th, .tip) {
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+
+/* 0.99.24: the days added up, a line apart from what the big figure counts */
+#t-aircraft-sum { margin-top: 6px; }

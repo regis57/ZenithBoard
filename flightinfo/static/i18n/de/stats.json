@@ -60,7 +60,9 @@
   "one": "{n} Messung im 15-Minuten-Takt seit {since}, 30 Tage gespeichert · {period}",
   "other": "{n} Messungen im 15-Minuten-Takt seit {since}, 30 Tage gespeichert · {period}"
  },
+ "different aircraft, each counted once, {period}, a floor": "verschiedene Flugzeuge, jedes einmal gezählt, {period}, Mindestwert",
  "distinct aircraft, {period}, a floor": "verschiedene Flugzeuge, {period}, Mindestwert",
+ "added up day by day, as FlightAware counts: {n}": "Tag für Tag zusammengezählt, wie FlightAware zählt: {n}",
  "nothing yet": "noch nichts",
  "busiest hour {hour}, {n}": "stärkste Stunde {hour}, {n}",
  "on {day} at {time}": "am {day} um {time}",

@@ -68,7 +68,9 @@
   "many": "{n} عيّنة (واحدة كل 15 دقيقة) منذ {since}، تُحفظ 30 يومًا · {period}",
   "other": "{n} عيّنة (واحدة كل 15 دقيقة) منذ {since}، تُحفظ 30 يومًا · {period}"
  },
+ "different aircraft, each counted once, {period}, a floor": "طائرات مختلفة، كلٌّ منها محسوبة مرة واحدة، {period}، حدّ أدنى",
  "distinct aircraft, {period}, a floor": "طائرات دون تكرار، {period}، حدّ أدنى",
+ "added up day by day, as FlightAware counts: {n}": "بجمع الأيام يومًا بيوم، كما تعدّ FlightAware: {n}",
  "nothing yet": "لا شيء بعد",
  "busiest hour {hour}, {n}": "ساعة الذروة {hour}، {n}",
  "on {day} at {time}": "يوم {day} الساعة {time}",

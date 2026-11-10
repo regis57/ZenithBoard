@@ -317,7 +317,15 @@ window.ZBI18N.start({ part: "stats" }, function () {
     $("sub").textContent = tn(d.samples, "{n} sample of 15 minutes since {since}, 30 days kept · {period}", "{n} samples of 15 minutes since {since}, 30 days kept · {period}", { n: fmt(d.samples), since: d.since, period: per });
     // the four boxes: all of them the period's (0.43.0: the fourth was the thirty days' best, whatever the toggle)
     $("t-aircraft").textContent = fmt(tot.aircraft || 0);
-    $("t-aircraft-d").textContent = t("distinct aircraft, {period}, a floor", { period: per });
+    // 0.99.24 (the owner, 10 November 2026: "2 000 a day times 7 is never 6 600"): over days, each aircraft once,
+    // and under it the days added up, as the networks' rankings count; the 24 hours keep their one figure
+    $("t-aircraft-d").textContent = days ? t("different aircraft, each counted once, {period}, a floor", { period: per }) :
+      t("distinct aircraft, {period}, a floor", { period: per });
+    var sum = $("t-aircraft-sum");
+    if (sum) {
+      sum.hidden = !(days && tot.aircraft_days);
+      sum.textContent = days && tot.aircraft_days ? t("added up day by day, as FlightAware counts: {n}", { n: fmt(tot.aircraft_days) }) : "";
+    }
     $("t-messages").textContent = big(tot.messages || 0);
     $("t-messages").title = fmt(tot.messages || 0);
     $("t-busiest").textContent = tot.busiest_hour === null || tot.busiest_hour === undefined ? t("nothing yet") :

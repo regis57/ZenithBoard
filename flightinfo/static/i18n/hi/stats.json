@@ -60,7 +60,9 @@
   "one": "{since} से 15 मिनट की {n} रीडिंग, 30 दिन रखे जाते हैं · {period}",
   "other": "{since} से 15 मिनट की {n} रीडिंग, 30 दिन रखे जाते हैं · {period}"
  },
+ "different aircraft, each counted once, {period}, a floor": "अलग-अलग विमान, हर एक एक बार गिना गया, {period}, न्यूनतम",
  "distinct aircraft, {period}, a floor": "अलग-अलग विमान, {period}, न्यूनतम",
+ "added up day by day, as FlightAware counts: {n}": "दिन-ब-दिन जोड़ने पर, जैसे FlightAware गिनता है: {n}",
  "nothing yet": "अभी कुछ नहीं",
  "busiest hour {hour}, {n}": "सबसे व्यस्त घंटा {hour}, {n}",
  "on {day} at {time}": "{day} को {time} बजे",

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.99.24 — release candidate, fix
+A figure that read wrong (seen on the reference Pi, 10 November 2026):
+- **`/stats` over 7 and 30 days read as the days added up.** The owner's phone: 2 306 aircraft in 24 hours, 6 661 over 7 days, 10 719 over 30: *2 000 a day times 7 is never 6 600*. The figures were right: over days each aircraft counts once, and the same airliners come back day after day. Counted on his own day files of 16–20 October: 13 097 aircraft added day by day, 6 186 different ones, 445 of them seen on all five days. His FlightAware counts the other way (76 648 over 30 days, about 2 550 a day added up). The box now says **different aircraft, each counted once**, and under it **the days added up, as FlightAware counts**, from the same day files. The 24 hours keep their one figure.
+- Two new sentences on `/stats`, in the 22 languages.
+- Tests: in `tests/test_server.py`, the 7 days' sum of the day files beside the distinct count, none over 24 hours; in `tests/test_stats_page.js`, the line under the figure over 7 days and none over 24 hours. Previewed in headless Chromium at 360 and 1024 px, in English, Finnish and Arabic.
+- A fix: the hands-off clock goes on.
+
 ## 0.99.23 — release candidate, fix
 Something a novice could not follow (seen on the reference Pi, 31 October 2026):
 - **`zenithboard stats gaps` printed a title over nothing.** On the reference Pi, *Type codes drawn with the generic silhouette:* came out with no line under it, which reads like an output cut short. It meant that in 14 days no aircraft was drawn with the generic silhouette. Each of the two lists now says so when it is empty: *none: every type code seen had its own silhouette*, *none: every callsign seen had its airline name*.

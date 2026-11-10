@@ -235,6 +235,21 @@ function tr(cat, key) { const v = cat[key]; return typeof v === "string" ? v : v
       await ctx.close();
     });
 
+    // 0.99.24 (the owner, 10 November 2026: "2 000 a day times 7 is never 6 600"): over days, each aircraft once and
+    // the days added up under it; the 24 hours keep their one figure
+    await check("7 days: the distinct aircraft and, under them, the days added up", async () => {
+      const { page, ctx } = await statsPage(browser, 390, 860, "fr", "7d", (a) => { a.window.totals.aircraft = 6661; a.window.totals.aircraft_days = 16142; });
+      const r = await page.evaluate(() => ({ d: document.getElementById("t-aircraft-d").textContent, s: document.getElementById("t-aircraft-sum"), }));
+      const sum = await page.$eval("#t-aircraft-sum", (e) => ({ hidden: e.hidden, text: e.textContent }));
+      assert.ok(r.d.includes("chacun compté une fois"), r.d);
+      assert.ok(!sum.hidden && /16.142/.test(sum.text) && sum.text.includes("FlightAware"), JSON.stringify(sum));
+      await ctx.close();
+      const p24 = await statsPage(browser, 390, 860, "fr", "24h");
+      const s24 = await p24.page.$eval("#t-aircraft-sum", (e) => ({ hidden: e.hidden, text: e.textContent }));
+      assert.ok(s24.hidden && s24.text === "", "24 hours: no sum " + JSON.stringify(s24));
+      await p24.ctx.close();
+    });
+
     // 0.99.21 (review B13): right to left, what is Latin or a number reads in its own order
     await check("Arabic: the busiest hour reads 07:00 and its count in order", async () => {
       const { page, ctx } = await statsPage(browser, 1280, 860, "ar", "7d", (a) => { a.window.totals.busiest_hour = 7; a.window.totals.busiest_messages = 249195; });
