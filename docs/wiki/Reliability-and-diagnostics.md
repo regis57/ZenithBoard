@@ -17,7 +17,7 @@ Run it first whenever something odd happened. **"Previous boot ended abruptly"**
 ## Memory and threads, service by service
 
 ```bash
-sudo zenithboard memory           # or: zenithboard threads; menu 4 Troubleshoot -> 3 Memory
+sudo zenithboard memory           # menu 4 Troubleshoot -> 3 Memory
 ```
 
 What each service uses right now: memory, its peak, threads, open files and processes, the largest first, then what runs outside the services and the largest processes one by one (0.34.0). `systemctl status` cannot say it on a Pi: Raspberry Pi OS boots with the kernel's memory controller off, so systemd has no memory figure. The command reads `/proc` instead, for each service's processes (its cgroup lists them), and changes nothing.

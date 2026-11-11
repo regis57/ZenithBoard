@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.99.26 — release candidate, fix
+What 0.99.25 missed (the owner, 11 November 2026: *are you sure nothing breaks in the menu and the console?*):
+- **The web console still sent two old names**: *Colour* ran `zenithboard color …` and *Gain check* ran `zenithboard gain check`. They worked, but each printed the old-name line in the console's result, and 1.1 would have broken them. They now send `colour` and `gain status`. The menus call the functions directly and were not affected; the services name none.
+- Three wiki lines still named an old one (Gain tuning, Reliability and diagnostics, Social sharing): the one name.
+- **A check for 1.1**, in `tests/test_docs.sh`: the old names of Command reference → *Old names* are still accepted with their line, and nothing ZenithBoard runs or prints names one: the console's actions, the menus and `lib/`, the services, the server's messages, the pages and their 22 languages, the wiki. Tried against the console's two old commands put back: it fails on both.
+- A fix: the hands-off clock goes on.
+
 ## 0.99.25 — release candidate, fix
 One name per command (the owner, 11 November 2026: `gain status` and `gain check` printed the same screen, *what for?*):
 - **Every command looked over for doubles.** Eleven old spellings or aliases answered beside the name the docs give. Each command now has one name: `gain status` (not `gain check`: every other command says `status`), `colour` (as `social colour` already did and the docs' English writes it), `config`, `mode`, `memory`, `preset` and `preset del`, `social summary weekly`, `social hashtags`, `social sentence`, `social template`, `telegram template`.
