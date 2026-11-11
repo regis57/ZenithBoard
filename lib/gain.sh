@@ -81,7 +81,7 @@ gain_set() {
   if [ -f /boot/piaware-config.txt ] && [ "$d" = dump1090-fa ]; then
     echo "Note: on the PiAware SD-card image the gain is kept in /boot/piaware-config.txt and may be put back at boot: then use  sudo piaware-config rtlsdr-gain $g"
   fi
-  echo "Now wait 15-30 minutes and run:  zenithboard gain check"
+  echo "Now wait 15-30 minutes and run:  zenithboard gain status"
 }
 
 # gain_numbers DECODER -> "ACCEPTED STRONG MAXKM SIGNAL PEAK" from the last 15 minutes, or nothing

@@ -146,7 +146,7 @@ Click one of the last jobs to read what it printed: it opens at the top of the d
 ### How it behaves, by design
 
 * **It takes the wall's colour.** Its accents, buttons and the logo are in the colour the wall is set to (*Wall →
-  Colour*, `zenithboard color`): amber by default, and black and white when the wall is white — not a night mode
+  Colour*, `zenithboard colour`): amber by default, and black and white when the wall is white — not a night mode
   (the owner asked, 21 October 2026). graphs1090's page, in ZenithBoard's look, takes the same colour.
 * **One change at a time.** The Pi runs the console's commands one after the other, like typing them one by one in a
   terminal. A change made while a long one runs (installing graphs1090, an update: minutes) waits its turn: its control

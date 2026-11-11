@@ -406,7 +406,7 @@ zb_update_verdict() {
 zb_retired_colours() {
   local p n v
   if [ "$(cfg_get THEME amber)" = blue ]; then
-    warn "The wall's colour is set to blue, which was taken out in 0.23.0: the wall shows amber meanwhile. Choose one:  sudo zenithboard color turquoise  (or amber, green, red, white)"
+    warn "The wall's colour is set to blue, which was taken out in 0.23.0: the wall shows amber meanwhile. Choose one:  sudo zenithboard colour turquoise  (or amber, green, red, white)"
   fi
   # the command given is the whole preset with turquoise in place of blue: "preset add" replaces a preset, so a
   # command with theme=turquoise alone would drop its other settings

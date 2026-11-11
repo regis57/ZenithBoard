@@ -25,7 +25,7 @@ Every `zenithboard` command, grouped by what you are trying to do. `zenithboard`
 | `zenithboard units metric` · `imperial` · `aviation` | yes | km, km/h, m — or miles, knots, feet — or nautical miles, knots, feet (0.55.0) |
 | `zenithboard radius N` | yes | How far around the antenna aircraft are shown: 1, 2, 5, 10, 15, 30 or 50, in your unit |
 | `zenithboard location LAT LON [ALT_M]` | yes | Move the antenna. Writes the position **everywhere** it is stored (ZenithBoard, the decoder, the feeders) and tells you which websites to update by hand |
-| `zenithboard color amber` · `green` · `red` · `white` · `turquoise` | yes | Dot colour of every wall (the dark blue was taken out in 0.23.0) |
+| `zenithboard colour amber` · `green` · `red` · `white` · `turquoise` | yes | Dot colour of every wall (the dark blue was taken out in 0.23.0) |
 | `zenithboard mode dots` · `flap` | yes | Dot matrix, or the airport split-flap board. Without an argument: shows the current one |
 | `zenithboard cycle SECONDS` | yes | How long each aircraft stays on screen: whole seconds, 2 to 60 (14 by default; 0.54.10: anything else is refused, as in the menu, the presets and the console) |
 | `zenithboard stats` | | Today, yesterday, the 30-day average and best, and messages per hour as a sparkline. See [Statistics](Statistics) |
@@ -58,7 +58,6 @@ Every `zenithboard` command, grouped by what you are trying to do. `zenithboard`
 | `zenithboard social places on` · `off` | yes (to change) | Name the towns on the maps from the region's own list: `on` downloads GeoNames' files of the countries with a place within 400 km once (24 MB around Metz) and keeps every populated place, ranked by population or by rank where the population is unknown; `on` again makes it again (after moving the antenna); `off` deletes it and goes back to the shipped lists. Off by default. 0.27.0 |
 | `zenithboard social summary` · `summary daily\|weekly\|monthly on` · `off` · `at TIME` · `parts LIST` · `test` · `post` … `post4` | yes (to change) | Summaries of the last 24 hours, the week and the last 30 days (0.38.0), each off by default, at its own time on the Pi's clock (`21:00`, `sun 19:00`, `1 09:00`; a day of the month 1 to 28) with the posts picked (`1,3` or `all`; the first always). Alone: the three, on or off, and (with sudo, 0.48.0) when each last went out and goes next, and the queue. 0.49.0: one per scheduled slot, so a time moved to later today goes today, and a time set when it has already passed (or a summary switched on after its time) goes from the next one. Several due at once share one queue, two minutes apart, the longer period first. See [Social sharing](Social-sharing#the-weeks-summary-0330-optional) |
 | `zenithboard social summary why` | yes (for the state and the whole journal) | Why a summary did not go out (0.49.0): each as set, when it last went and goes next, the queue, what it needs (statistics, sharing, an account), the service and the version it runs (and whether it still runs the code from before the last update, with the restart command, 0.49.1), its journal lines about the summaries and any error over the last two days, and its starts |
-| `zenithboard social weekly on` · `off` · `test` · `post` · `post2` · `post3` · `post4` | yes (on, off) | The same as `social summary weekly …` since 0.38.0. | Four posts on Sundays from 19:00, two minutes apart: the week (aircraft, messages, the busiest day and hour, the airlines and models most seen, the crossings posted, a picture of the week by hour); the cargo airlines and business jets (0.35.0); the military aircraft by country; general aviation (0.36.0). Needs statistics on; never a distance, a direction or a registration. `test` draws all four and prints the texts, posting nothing; `post` … `post4` posts that one now. Off by default. 0.33.0 |
 | `zenithboard social sentence LIST` | yes (to change) | The words of a post: `factual` (as before), `story`, `board`, `spotter`, `lookup`, `custom` (your own templates, 0.51.0); several, comma-separated, or `random`, one drawn at each post. Without a value: the current choice. 0.29.0 |
 | `zenithboard social photolink on` · `off` | yes (to change) | End each post with *Photo: NAME / Planespotters*, a link to the aircraft's photo page, when the wall has one. The link only, never the picture. Off by default. 0.25.0 |
 | `zenithboard social units metric` · `imperial` · `aviation` · `wall` | yes | The posts' units, picture and text (m, km/h, km or ft, knots, mi or ft, kt, NM), or the wall's own `UNITS` (the default). 0.24.3 |
@@ -93,7 +92,7 @@ A tablet can override the colour, look, units, radius, cycle and flags for itsel
 
 | Command | sudo | What it is for |
 |---|---|---|
-| `zenithboard gain check` | | Is the gain right? Reads the decoder's last 15 minutes and gives advice |
+| `zenithboard gain status` | | Is the gain right? Reads the decoder's last 15 minutes and gives advice |
 | `zenithboard gain steps` | | The real gain steps the dongle has (29 of them, 0.0 to 49.6 dB) |
 | `zenithboard gain set DB` · `max` · `default` | yes | Set the gain; snapped to the nearest real step |
 | `zenithboard gain up` · `down` | yes | One step. **One at a time**, then wait 15–30 minutes |
@@ -231,3 +230,22 @@ Listed so that nothing in `ps` or the journal is a mystery. Running them by hand
 | `zenithboard ddns update` | `zenithboard-ddns.timer` | 5 minutes, if a name is set |
 | `zenithboard wifi apply` | `zenithboard-wifi.service` | boot |
 | `zenithboard update-components` | `zenithboard update` | update |
+
+## Old names
+
+One name per command since 0.99.25 (the owner, 11 November 2026: *gain status and gain check, what for?*). The old names below still work, and say once that they are old, so that a note or a script written before keeps working; **they go in 1.1**.
+
+| Old name | Use |
+|---|---|
+| `zenithboard gain check` | `zenithboard gain status` |
+| `zenithboard color …` | `zenithboard colour …` |
+| `zenithboard show` | `zenithboard config` |
+| `zenithboard style …` | `zenithboard mode …` |
+| `zenithboard threads` | `zenithboard memory` |
+| `zenithboard presets …` · `preset rm` · `preset forget` | `zenithboard preset …` · `preset del` |
+| `zenithboard social weekly …` | `zenithboard social summary weekly …` |
+| `zenithboard social tags` · `social color` · `social sentences` · `social templates` | `social hashtags` · `social colour` · `social sentence` · `social template` |
+| `zenithboard telegram templates` | `zenithboard telegram template` |
+
+`--version`, `-h` and `--help` stay beside `version` and `help`: they are what every command-line program answers to.
+

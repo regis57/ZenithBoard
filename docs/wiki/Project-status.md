@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **10 November 2026**, version **0.99.24**, release candidate for 1.0.
+Last updated: **11 November 2026**, version **0.99.25**, release candidate for 1.0.
 
 This page separates what has been proven on a real Raspberry Pi from what has only been written and unit-tested. The difference matters: every test in this project runs against stand-in programs, so a green suite proves the logic and says nothing about the hardware.
 
@@ -18,7 +18,7 @@ One Raspberry Pi 3B, outdoors, on Wi-Fi, with an R820T dongle.
 | readsb + the wall | Running continuously; the split-flap look is the one in daily use |
 | Feeding ADSB Exchange | Feed received and confirmed |
 | ADSB Exchange's stats (0.52.0) | `adsbx-stats on` run; *Stats Ok* and the *Anywhere* map on their page; 6 MB |
-| Gain tuning | `zenithboard gain check` reads real statistics; settled at **48.0 dB** |
+| Gain tuning | `zenithboard gain status` reads real statistics; settled at **48.0 dB** |
 | The 24-hour gain log | A full day recorded, 96 measurements, nothing lost and nothing overrun. See [Gain tuning](Gain-tuning) |
 | Aircraft photos | Real photos from Planespotters on the wall |
 | The Wi-Fi menu | The Pi is on Wi-Fi, joined through the menu |
@@ -35,7 +35,7 @@ One Raspberry Pi 3B, outdoors, on Wi-Fi, with an R820T dongle.
 | `zenithboard memory` (0.34.0) | Service by service on the reference Pi: 155 to 212 MB for all the services with four feeds, social sharing and the wall (180 MB on 21 October, 619 MB available); Plane Finder 19 to 43 MB, growing while it runs. See [Hardware](Hardware) |
 | Feeding Plane Finder | Since 20 October 2026; its page on port 30053 shows the aircraft decoded (KLM31L, PH-HSE, Amsterdam → Geneva) |
 | The statistics page | Running since 0.16.0; the lists of 0.31.0 and 0.37.0's look, toggle, cargo, business jets and flags seen on the real page (*45 cargo aircraft, DHL 11, ASL Airlines Belgium 10…*) |
-| `social weekly test` | Run on the reference Pi (0.33.0, 0.35.0): the right totals (*6 437 aircraft, 354.6 million messages, busiest Friday*), the lists left out until they cover the week (0.34.1) |
+| `social summary weekly test` | Run on the reference Pi (0.33.0, 0.35.0): the right totals (*6 437 aircraft, 354.6 million messages, busiest Friday*), the lists left out until they cover the week (0.34.1) |
 | Social sharing on Bluesky | Posting on its own since 17 October 2026 under *ALL*, both looks, the four maps, the colours in turn; every crossing of a 10 km radius once since 0.20.0. Memory measured by the service itself |
 | The web console | An update run from the page, and a computer signed in by the phone (its QR code, then yes on the phone): done several times on 25 October 2026, on two Pis |
 | Room on a 1 GB board | With four feeders, the wall, statistics and social sharing: 575 to 654 MB of 1 GB still available, 34–35 °C, no throttling (20 October 2026; 656 MB with three feeders on 17 October). See [Hardware](Hardware) |
@@ -90,6 +90,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 11 November 2026, 22:24 | The owner ran `sudo zenithboard gain status` then `gain check` (48.0 dB, 414 832 messages in 15 minutes, 0.1 % very strong at night, farthest 268 km): the same screen twice, *what for?* Every command looked over for doubles: eleven old spellings or aliases (gain check, color, show, style, threads, presets, preset rm/forget, social weekly, social tags/color/sentences/templates, telegram templates). 0.99.25 keeps one name each; the old ones still work with a line saying so, until 1.1. Close but not doubles, kept: `status` (the settings and services) and `health` (the checks); `stats show` (the figures) and `stats status` (the service); `update quick` (a shortcut of `update only zenithboard flightinfo`) |
 | 10 November 2026, 18:11 | The owner's `/stats` on his phone: 2 306 distinct aircraft in 24 hours, **6 661** over 7 days, **10 719** over 30 days, busiest days 2 525 (06/11) and 2 963 (01/11): *2 000 a day times 7 is never 6 600, the figures are wrong*. Checked on his own day files (the backup of 21 October): 16–20 October, 13 097 aircraft added day by day for **6 186 different aircraft**; 445 seen all five days, 611 four, 899 three, 1 500 two. The figures were right, the label read as the days added up; his FlightAware gives the other count (76 648 over 30 days, about 2 550 a day added up). 0.99.24 shows both |
 | 9 November 2026, 07:29 | The owner, with FlightAware's *Site ranking over 30 days* for regis57: rank 4786, total 76.648, 76,648 ADS-B Mode-S aircraft and 6,608,812 positions, **MLAT 0 aircraft, 0 positions** (as set since 0.99.6: ADS-B Exchange keeps the only MLAT client), *Other* 2,695 aircraft and 2,078,227 positions. Asked: each network's ranking on `/stats`. Studied the same day, written in *Waiting for 1.1*: only Plane Finder and possibly AirNav Radar let a program read theirs |
 | 2 November 2026, 19:26 | The owner: neither the wall nor SSH answer at the Pi's address, but `http://rp3:8080` works (his phone's screenshot: the split-flap wall, EWG7LW Palma → Cologne). The router had given the Pi another address; the name followed it. No ZenithBoard change touches the address (checked: nothing in 0.99.x changes the network settings). Written in [Reliability and diagnostics](Reliability-and-diagnostics#reached-by-its-name-not-by-its-address); a DHCP reservation in the router keeps it fixed |

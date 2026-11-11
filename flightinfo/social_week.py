@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""The week's summary post (0.33.0, off by default): `sudo zenithboard social weekly on`.
+"""The week's summary post (0.33.0, off by default): `sudo zenithboard social summary weekly on`.
 
 On Sunday from 19:00, the social service posts what the statistics counted over the seven days ending that day:
 how many aircraft were heard, how many messages decoded, the busiest day and hour, the airlines and the type most

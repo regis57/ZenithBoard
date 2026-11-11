@@ -3,7 +3,7 @@
 The dongle's gain decides how many aircraft you hear. Too low and distant aircraft never arrive; too high and the receiver overloads, so strong nearby signals turn to mush. The sweet spot is a step or two below overload, and the only way to find it is to measure.
 
 ```bash
-zenithboard gain check
+zenithboard gain status
 ```
 
 It reads the decoder's own statistics and tells you where you are, with the time of the check on the first line — which matters, because the answer at 3 a.m. and the answer at 18:00 are different.

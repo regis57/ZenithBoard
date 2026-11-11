@@ -144,7 +144,7 @@ settings_style() {
 }
 
 settings_color() {
-  # the same five as `zenithboard color` and the tablet's gear (turquoise was missing here until 0.21.1; the dark
+  # the same five as `zenithboard colour` and the tablet's gear (turquoise was missing here until 0.21.1; the dark
   # blue went in 0.23.0). A Pi still set to blue sees amber ticked: what the wall shows now
   local cur c items=() col on; cur=$(wall_theme)
   for col in amber green red white turquoise; do

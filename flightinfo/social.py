@@ -84,7 +84,7 @@ DEFAULTS = {
     "SOCIAL_UNITS": "",              # metric | imperial; empty = the wall's UNITS (0.24.3)
     "SOCIAL_MAP": "normal",
     "SOCIAL_PLACES": "0",            # 1: the town names from the region's own list (0.27.0, social places on)
-    "SOCIAL_WEEKLY": "0",            # 1: a summary of the week on Sundays from 19:00 (0.33.0, social weekly on)
+    "SOCIAL_WEEKLY": "0",            # 1: a summary of the week on Sundays from 19:00 (0.33.0, social summary weekly on)
     "SOCIAL_WEEKLY_AT": "sun 19:00",  # 0.38.0: its day and time, and the posts it makes (1 the week, 2 cargo and
     "SOCIAL_WEEKLY_PARTS": "1,2,3,4",  # business jets, 3 military, 4 general aviation)
     "SOCIAL_DAILY": "0", "SOCIAL_DAILY_AT": "21:00", "SOCIAL_DAILY_PARTS": "1",               # the last 24 hours
@@ -1801,7 +1801,7 @@ WEEK_TITLES = {1: "the period: aircraft, messages, busiest times, airlines and m
 
 
 def cmd_week(post=False, second=False, part=None, period="weekly"):
-    """`social summary weekly test` (`social weekly test`): the four posts of that summary, drawn and shown, nothing
+    """`social summary weekly test` (once `social weekly test`): the four posts of that summary, drawn and shown, nothing
     posted; `... post` (post2, post3, post4): that one posted now. The scheduled ones still go out."""
     import social_week
     part = part or (2 if second else 1)
