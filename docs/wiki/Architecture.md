@@ -33,7 +33,7 @@ Everything ZenithBoard installs lives in `/opt/zenithboard`. Nothing else is tou
 |---|---|---|
 | `/etc/zenithboard/config.env` | The menus and the `zenithboard` command | The server, every `lib/*.sh` module |
 | `/run/readsb/aircraft.json` (or `/run/dump1090-fa/`) | The decoder, about once a second | The server, every refresh |
-| `/run/readsb/stats.json` | The decoder | `zenithboard gain check`, the statistics sample |
+| `/run/readsb/stats.json` | The decoder | `zenithboard gain status`, the statistics sample |
 | `/var/lib/zenithboard/stats/` | The statistics timer, every 15 min: `stats.csv`, `seen-DAY`, `gaps-DAY`, `farthest-DAY` | The server, for `/stats` |
 | `/var/lib/zenithboard/data/types.json` | The monthly refresh timer | The server, for silhouette names |
 | `/var/lib/zenithboard/gain-log.csv` | The gain log timer, every 15 min | You, in a spreadsheet. Holds 24 h, rolling |

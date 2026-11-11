@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.99.25 — release candidate, fix
+One name per command (the owner, 11 November 2026: `gain status` and `gain check` printed the same screen, *what for?*):
+- **Every command looked over for doubles.** Eleven old spellings or aliases answered beside the name the docs give. Each command now has one name: `gain status` (not `gain check`: every other command says `status`), `colour` (as `social colour` already did and the docs' English writes it), `config`, `mode`, `memory`, `preset` and `preset del`, `social summary weekly`, `social hashtags`, `social sentence`, `social template`, `telegram template`.
+- **The old names still work** and say so on one line, so a note or a script written before keeps working; they go in 1.1 (Roadmap). Listed in Command reference → *Old names*.
+- The help, the README, the wiki and the messages that named an old one (the gain advice, the retired blue's warning, the weekly picture's) give the one name.
+- Not doubles, kept: `status` (settings and services) and `health` (the checks); `stats show` (the figures) and `stats status` (the service); `update quick`, the shortcut of `update only zenithboard flightinfo`; `--version`, `-h`, `--help`.
+- Tests: `tests/test_reliability.sh`, an old name still works and says so, the new one says nothing, the help shows one name.
+- A fix: the hands-off clock goes on.
+
 ## 0.99.24 — release candidate, fix
 A figure that read wrong (seen on the reference Pi, 10 November 2026):
 - **`/stats` over 7 and 30 days read as the days added up.** The owner's phone: 2 306 aircraft in 24 hours, 6 661 over 7 days, 10 719 over 30: *2 000 a day times 7 is never 6 600*. The figures were right: over days each aircraft counts once, and the same airliners come back day after day. Counted on his own day files of 16–20 October: 13 097 aircraft added day by day, 6 186 different ones, 445 of them seen on all five days. His FlightAware counts the other way (76 648 over 30 days, about 2 550 a day added up). The box now says **different aircraft, each counted once**, and under it **the days added up, as FlightAware counts**, from the same day files. The 24 hours keep their one figure.

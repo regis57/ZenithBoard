@@ -27,7 +27,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.99.24"
+VERSION = "0.99.25"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -2280,7 +2280,7 @@ class Handler(BaseHTTPRequestHandler):
             if not os.path.isfile(os.path.join(SOCIAL_DIR, name)):
                 # 0.36.1: "not found" alone, seen on the reference Pi, did not say why: that post had nothing to say
                 # at the last test (its lists did not cover the week), or no test was run since 0.35.0
-                msg = ("No picture for weekly post %s: at the last 'sudo zenithboard social weekly test' it had nothing "
+                msg = ("No picture for weekly post %s: at the last 'sudo zenithboard social summary weekly test' it had nothing "
                        "to say (see what the test printed), or the test has not been run since this post exists.\n" % path[-1])
                 return self._send(404, msg.encode("utf-8"), "text/plain; charset=utf-8")
             return self._file(SOCIAL_DIR, name)

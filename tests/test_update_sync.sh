@@ -68,7 +68,7 @@ check "refresh: systemd is told once" "$(grep -c daemon-reload "$T/systemctl.log
 #      the command; nothing is said to a Pi that never chose it
 cfg_set THEME blue; cfg_set PRESET_TV "theme=blue mode=flap"
 out=$(zb_retired_colours 2>&1)
-check "retired blue: the wall's colour named, with the command" "$(printf '%s' "$out" | grep -c 'taken out in 0.23.0.*zenithboard color turquoise')" "1"
+check "retired blue: the wall's colour named, with the command" "$(printf '%s' "$out" | grep -c 'taken out in 0.23.0.*zenithboard colour turquoise')" "1"
 check "retired blue: the preset named"            "$(printf '%s' "$out" | grep -c 'preset tv sets theme=blue')" "1"
 check "retired blue: the settings themselves kept" "$(cfg_get THEME):$(cfg_get PRESET_TV)" "blue:theme=blue mode=flap"
 # the command printed for the preset is run as given: it is accepted and keeps the preset's other settings

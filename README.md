@@ -141,7 +141,7 @@ After the questions comes the main menu, **by what you want to do** (0.44.0). Ne
 
 Afterwards, one menu per subject, seven entries at most, each with its way back: **1 ADS-B** (decoder and networks, the antenna, the gain, what is running), **2 The wall** (install, what it shows, its look, photos and routes, presets, remove), **3 Connectivity** (Wi-Fi, a fixed address, *from outside your home, safely*: a VPN rather than an open port, and why; a domain name), **4 Troubleshoot** (health, what is running, memory, logs, the security check, watchdogs, log housekeeping), **5 Updates** (ZenithBoard alone in seconds, everything, a choice, Debian's security fixes), **6 Backup** (make one, put one back, uninstall, the settings file), **7 Options** (statistics, graphs1090 and its look, Bluesky, the web console). Every screen: the wiki's [The menu](https://github.com/regis57/ZenithBoard/wiki/The-menu). Come back with `sudo zenithboard menu`.
 
-Everything in the menus also exists as a command, which is quicker once you know what you want: `zenithboard status`, `sudo zenithboard update`, `zenithboard gain check`… The full list, grouped by subject with what each command is for, is the **[Command reference](https://github.com/regis57/ZenithBoard/wiki/Command-reference)** in the wiki.
+Everything in the menus also exists as a command, which is quicker once you know what you want: `zenithboard status`, `sudo zenithboard update`, `zenithboard gain status`… The full list, grouped by subject with what each command is for, is the **[Command reference](https://github.com/regis57/ZenithBoard/wiki/Command-reference)** in the wiki.
 
 <p align="center"><img src="docs/images/menu-start.png" alt="Start here: the five steps of the first installation" width="400">&nbsp;<img src="docs/images/menu-options.png" alt="7 Options: statistics, graphs1090, Bluesky, web console" width="400"></p>
 <p align="center"><img src="docs/images/menu-connectivity.png" alt="3 Connectivity: Wi-Fi, fixed address, from outside your home safely, domain name, status" width="400">&nbsp;<img src="docs/images/menu-backup.png" alt="6 Backup: make, put back, manage, uninstall, settings file" width="400"></p>
@@ -310,7 +310,7 @@ The dots are **amber by default**. Pick amber, green, red, white or turquoise (`
 
 | Where | How |
 |---|---|
-| **Every screen** | `sudo zenithboard color green` (back to the default: `sudo zenithboard color amber`) |
+| **Every screen** | `sudo zenithboard colour green` (back to the default: `sudo zenithboard colour amber`) |
 | **Menu** | `sudo zenithboard menu` → *2 The wall → 3 Its look* |
 | **One tablet only** | Tap the faint gear in the bottom-right corner → *Colour*. Or open `http://<pi>:8080/?theme=red`. The gear's **Reset** returns that tablet to the Pi's colour. |
 
@@ -442,7 +442,7 @@ The gain is how much the dongle amplifies the radio signal. Too low and distant 
 | | |
 |---|---|
 | **Menu** | `sudo zenithboard menu` → *1 ADS-B → 3 Gain* |
-| **Check** | `zenithboard gain check` reads the decoder's own statistics of the last 15 minutes (messages, farthest aircraft, **share of very strong messages**) and says *too high*, *good* or *room to raise* |
+| **Check** | `zenithboard gain status` reads the decoder's own statistics of the last 15 minutes (messages, farthest aircraft, **share of very strong messages**) and says *too high*, *good* or *room to raise* |
 | **Change** | `sudo zenithboard gain set max` · `gain set 40.2` · `gain down` · `gain up` · `gain set default` · the real steps: `zenithboard gain steps` |
 | **Record 24 h** | `sudo zenithboard gain log on` · `gain log show` · `gain log clear` — a measurement every 15 minutes as a CSV table |
 

@@ -11,7 +11,7 @@ Read the whole file with `zenithboard config`.
 | Key | Default | Set with | What it does |
 |---|---|---|---|
 | `UNITS` | `metric` | `zenithboard units metric\|imperial\|aviation` | km, km/h, m — or miles, knots, feet — or nautical miles, knots, feet (aviation, 0.55.0). The radius is read in the same unit, and `/stats` gives its distances in it |
-| `THEME` | `amber` | `zenithboard color amber\|green\|red\|white\|turquoise` | Dot colour of every wall. A tablet can override it with a link. `blue` (taken out in 0.23.0) shows amber |
+| `THEME` | `amber` | `zenithboard colour amber\|green\|red\|white\|turquoise` | Dot colour of every wall. A tablet can override it with a link. `blue` (taken out in 0.23.0) shows amber |
 | `DISPLAY_MODE` | `dots` | `zenithboard mode dots\|flap` | Dot matrix, or the airport split-flap board |
 | `RADIUS` | `10` | `zenithboard radius N` | Detection radius in your unit. Allowed: 1, 2, 5, 10, 15, 30, 50 |
 | `CYCLE_SECONDS` | `14` | `zenithboard cycle N` | How long each aircraft stays on screen, 2 to 60 seconds. A row too long for its width scrolls once in that time |
