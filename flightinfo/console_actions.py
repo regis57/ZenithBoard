@@ -58,7 +58,7 @@ ACTIONS = {
     # -- the wall
     "units":        ("wall", "Units", ["units", "{value}"], [("value", "enum", ("metric", "imperial", "aviation"))], "wall"),
     "radius":       ("wall", "Detection radius", ["radius", "{value}"], [("value", "enum", ("1", "2", "5", "10", "15", "30", "50"))], "wall"),
-    "color":        ("wall", "Colour", ["color", "{value}"], [("value", "enum", THEMES)], "wall"),
+    "color":        ("wall", "Colour", ["colour", "{value}"], [("value", "enum", THEMES)], "wall"),
     "mode":         ("wall", "Look", ["mode", "{value}"], [("value", "enum", ("dots", "flap"))], "wall"),
     "cycle":        ("wall", "Seconds per aircraft", ["cycle", "{value}"], [("value", "int", (2, 60))], "wall"),
     "photos":       ("wall", "Aircraft photos", ["photos", "{value}"], [("value", "enum", ON_OFF)], "wall"),
@@ -79,7 +79,7 @@ ACTIONS = {
     "graphs-look":  ("receiver", "graphs1090 in ZenithBoard's look", ["graphs", "look", "{value}"], [("value", "enum", ON_OFF)], ""),
     # 0.52.0: ADSB Exchange's stats package, by their own script (lib/adsbxstats.sh); it asks nothing
     "adsbx-stats":  ("receiver", "ADSB Exchange stats", ["adsbx-stats", "{value}"], [("value", "enum", ON_OFF)], "long ask"),
-    "gain-check":   ("receiver", "Gain check", ["gain", "check"], [], "read"),
+    "gain-check":   ("receiver", "Gain check", ["gain", "status"], [], "read"),
     "gain-step":    ("receiver", "Gain one step", ["gain", "{value}"], [("value", "enum", ("up", "down"))], "ask"),
     "gain-log":     ("receiver", "Gain log, 24 h", ["gain", "log", "{value}"], [("value", "enum", ON_OFF)], ""),
     "gain-log-show": ("receiver", "Read the gain log", ["gain", "log", "show"], [], "read"),   # 0.54.15: switched on here, read here too

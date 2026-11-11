@@ -109,7 +109,7 @@ The shape is the one to expect: under 1 % through the night, climbing from 06:00
 | 19:30 | 5.75 % | 937,000 | Real |
 | 20:45 | 5.17 % | 860,000 | Real |
 
-**This is the trap the log exists to avoid.** The share is a fraction, and before dawn the denominator collapses: with 123,000 messages in a quarter hour instead of a million, a single airliner passing overhead is enough to push the share past 6 %. The peak signal in that very sample was −1.8 dBFS, nowhere near overload. A `gain check` run at 05:15 would have said *TOO HIGH* and a step would have been thrown away for nothing.
+**This is the trap the log exists to avoid.** The share is a fraction, and before dawn the denominator collapses: with 123,000 messages in a quarter hour instead of a million, a single airliner passing overhead is enough to push the share past 6 %. The peak signal in that very sample was −1.8 dBFS, nowhere near overload. A `gain status` run at 05:15 would have said *TOO HIGH* and a step would have been thrown away for nothing.
 
 So: **never judge the gain on a quiet hour, in either direction.** Under 1 % at 03:00 means nothing, and over 5 % at 05:00 means nothing either. Only the busy hours carry information, and the log is what lets you find them afterwards instead of guessing when they were.
 
