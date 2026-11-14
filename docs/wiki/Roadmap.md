@@ -86,6 +86,20 @@ Two items of *After 1.0* are to be built from what the reference Pi measures, no
 
 **If the figures never come** (the Pi was off, statistics were switched off), the two items stay in *After 1.0* as they are. Nothing is built on a guess.
 
+## The lots after 1.0
+
+The order in which what waits below would be built once 1.0 is out (drawn up on 14 November 2026 at the owner's request: *be ready to add features of value*). Each feature is a minor version, so a lot is a release. **Lot 0 first is proposed, not yet confirmed by the owner**; the airline names in lot 1 are his decision of the same day.
+
+| Lot | What | Why there |
+|---|---|---|
+| **0. The base** (1.1, first) | One table of rules for every value; one unit-conversion module per language; one window helper for the statistics; one *saved on change* state helper for the two posting services; the page-error smoke test; the dead code and the old command names removed | Every lot after it adds settings, units or state. The checks exist in two or three copies that already disagree, the units in five; the two wrong readings of `/stats` came from windows worked out in several places. Built once here, not paid at each feature |
+| **1. Sharing and the wall, the visible gains** (1.1) | **Airline names for callsigns without a route** (the reading of 14 November: forty prefixes, JFA on 31 aircraft); the heading by default in the posts and messages; aircraft never to post; the closest distance in the Telegram messages | Seen every day, small, no new outside service but adsbdb, already asked for the routes. The distance needs lot 0's state helper |
+| **2. The wall and the receiver's health** (1.2) | The emergency squawk banner on the wall; the alert when the message rate falls against the week before | The data is already there (the squawks heard, thirty days of statistics). Nothing tells today of an antenna or a dongle going weak |
+| **3. Measured first** (1.3) | The watch list of remarkable aircraft | Worth it only if the antenna hears enough of the list: counted before it is built |
+| **4. The networks** (1.4) | adsb.lol and OpenSky; the *Networks* block on `/stats` | The least value for the most risk: two more services, installers never run on the reference Pi, terms to read. Memory is not the obstacle (496 MB of 905 MB available on 14 November) |
+
+**After these lots**, each alone: a setting without a restart (a change of the wall's design); HTTPS for the console; coverage by direction. **Slipped in when their file is open**: the places index, the console's refusal with its reason, Arabic's chips, the root boundary's test.
+
 ## Waiting for 1.1
 
 What is asked during the freeze, kept here so that nothing is lost, and done after 1.0:
