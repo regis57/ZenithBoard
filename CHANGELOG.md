@@ -1,5 +1,10 @@
 # Changelog
 
+## Toward 1.1 — lot 1, not released yet
+
+- **An airline name for a callsign that has no route** (`AIRLINE_LOOKUP`, off by default). The route answer names the airline of a flight it knows; business jets, charters and airlines' second companies have no published route, so their callsigns stayed bare (the owner's `stats gaps` of 14 November 2026: forty prefixes, `JFA` on 31 aircraft). With `sudo zenithboard config-set AIRLINE_LOOKUP 1`, or the new line 5 of the menu *Photos, routes and aircraft names*, the wall asks adsbdb's airline endpoint for the callsign's three letters, once per prefix, and keeps the name thirty days in memory. `zenithboard status` says whether it is on. Only the name is used, never adsbdb's country (Canada for `VJT`), and only for an airline's callsign, not a registration flown as one. Not yet run on the real Pi.
+- **Two names corrected in the built-in list**, found while checking sixteen of those prefixes against adsbdb's real answers: `JAF` is *TUI fly Belgium* (adsbdb: *Jetairfly*, its former name) and `PTN` is *Platoon Aviation* (adsbdb: a Brazilian airline). They are named so with the setting on or off.
+
 ## Toward 1.1 — lot 0, not released yet
 Steps of [the lots after 1.0](https://github.com/regis57/ZenithBoard/wiki/Roadmap#the-lots-after-10) that change nothing on a Pi; they ship with 1.1.0.
 - **A page-error smoke test** (`tests/test_pages_smoke.js`, in CI): the wall, `/stats` and `/console` loaded in headless Chromium from the release's own server, started as the demo starts it. It fails on any page error, on a script or style of ours that does not load, on an empty page; tried with an undefined call added to `stats.js` and a wrong script name in `console.html`: it fails on both. Put in first, as the guard for the changes that follow.

@@ -334,6 +334,130 @@ ADSBDB_EASYJET = {"response": {"flightroute": {
                     "latitude": 47.60068, "longitude": 7.52112, "municipality": "Saint-Louis", "name": "EuroAirport Basel-Mulhouse-Freiburg"}}}}
 
 
+ADSBDB_AIRLINE_JFA = {"response": [{"name": "Jetfly Aviation", "icao": "JFA", "iata": None, "country": "Luxembourg",
+                                    "country_iso": "LU", "callsign": None}]}       # read on 14 November 2026
+ADSBDB_AIRLINE_TAY = {"response": [{"name": "ASL Airlines Belgium", "icao": "TAY", "iata": "3V", "country": "Belgium",
+                                    "country_iso": "BE", "callsign": "QUALITY"}]}
+
+
+class AirlineByDesignatorTests(unittest.TestCase):
+    """1.1: a callsign with no route had no airline name (the owner's `stats gaps`, 14 November 2026: forty prefixes).
+    Its three letters are asked of adsbdb's airline endpoint, when AIRLINE_LOOKUP is on."""
+
+    def setUp(self):
+        with server._learned["lock"]:
+            server._learned["data"].clear()
+        with server._airline_names.lock:
+            server._airline_names.cache.clear()
+
+    def know(self, icao, info):
+        with server._airline_names.lock:
+            server._airline_names.cache[icao] = {"value": info, "retry_at": None, "queued": False, "state": None}
+
+    def test_the_real_answers_give_the_name_and_never_the_country(self):
+        self.assertEqual(server.parse_airline_name(ADSBDB_AIRLINE_JFA, "JFA"),
+                         {"name": "Jetfly Aviation", "iata": None, "cc": None, "learned": True})
+        self.assertEqual(server.parse_airline_name(ADSBDB_AIRLINE_TAY, "TAY"),
+                         {"name": "ASL Airlines Belgium", "iata": "3V", "cc": None, "learned": True})
+
+    def test_an_answer_that_is_not_one_name_for_these_letters_gives_none(self):
+        P = server.parse_airline_name
+        two = {"response": ADSBDB_AIRLINE_JFA["response"] + [{"name": "Another Company", "icao": "JFA"}]}
+        same = {"response": ADSBDB_AIRLINE_JFA["response"] * 2}
+        self.assertIsNone(P(two, "JFA"), "two companies under one designator: no name rather than a guess")
+        self.assertEqual(P(same, "JFA")["name"], "Jetfly Aviation")
+        self.assertIsNone(P(ADSBDB_AIRLINE_JFA, "TAY"), "the answer is about other letters")
+        self.assertEqual(P({"response": ADSBDB_AIRLINE_JFA["response"][0]}, "JFA")["name"], "Jetfly Aviation")
+        for bad in (None, {}, {"response": "unknown airline"}, {"response": []}, {"response": [None, 3]},
+                    {"response": [{"icao": "JFA", "name": ""}]}, {"response": [{"icao": "JFA", "name": "x" * 61}]},
+                    {"response": [{"icao": "JFA", "name": "<b>Jet</b>"}]}):
+            self.assertIsNone(P(bad, "JFA"), bad)
+        self.assertEqual(P({"response": [{"icao": "jfa", "name": "Jetfly Aviation Ltd.", "iata": "toolong"}]}, "JFA"),
+                         {"name": "Jetfly Aviation", "iata": None, "cc": None, "learned": True})
+
+    def test_the_name_is_asked_only_when_the_lookup_is_given(self):
+        asked = []
+        lookup = lambda icao: asked.append(icao) or None
+        self.assertEqual(server.airline_for("JFA12K", {}), ("JFA", None))
+        self.assertEqual(asked, [], "off: nothing asked")
+        self.assertEqual(server.airline_for("JFA12K", {}, lookup), ("JFA", None))
+        self.assertEqual(asked, ["JFA"])
+
+    def test_the_built_in_list_and_the_route_answer_come_first(self):
+        asked = []
+        lookup = lambda icao: asked.append(icao) or {"name": "FROM THE LOOKUP"}
+        self.assertEqual(server.airline_for("JFA1", {"JFA": {"name": "Built in"}}, lookup)[1]["name"], "Built in")
+        server.learn_airline(ADSBDB_EASYJET)
+        self.assertEqual(server.airline_for("EZY1", {}, lookup)[1]["name"], "easyJet")
+        self.assertEqual(asked, [])
+
+    def test_a_registration_flown_as_a_callsign_is_never_asked(self):
+        asked = []
+        lookup = lambda icao: asked.append(icao) or {"name": "A STRANGER"}
+        for cs in ("GABCD", "FGXYZ", "OOABC", "N123AB", "", "JFA"):
+            self.assertIsNone(server.airline_for(cs, {}, lookup)[1], cs)
+        self.assertEqual(asked, [])
+
+    def test_a_name_already_in_memory_is_shown_everywhere_without_asking_again(self):
+        self.know("JFA", {"name": "Jetfly Aviation", "iata": None, "cc": None, "learned": True})
+        self.assertEqual(server.airline_for("JFA12K", {})[1]["name"], "Jetfly Aviation")     # the statistics' reading
+        self.assertIsNone(server.airline_cc("JFA", server.airline_for("JFA12K", {})[1]), "the flag stays the registration's")
+
+    def test_only_three_letters_ever_leave(self):
+        saved = server._airline_names.get
+        self.addCleanup(setattr, server._airline_names, "get", saved)
+        asked = []
+        server._airline_names.get = lambda key: asked.append(key)
+        for bad in ("JF", "JFAX", "JF1", "../x", "J FA", "JFÀ", None, ""):
+            self.assertIsNone(server.lookup_airline(bad))
+        server.lookup_airline(" jfa ")
+        self.assertEqual(asked, ["JFA"])
+
+    def test_the_wall_names_it_and_the_two_found_wrong_are_in_the_built_in_list(self):
+        ac = {"now": 1, "aircraft": [{"hex": "4d0221", "flight": "JFA12K  ", "lat": 49.26, "lon": 6.21, "alt_baro": 30000, "seen_pos": 1}]}
+        asked = []
+        info = {"name": "Jetfly Aviation", "iata": None, "cc": None, "learned": True}
+        off, _ = server.build_planes(ac, 49.25, 6.2, 20, {})
+        on, _ = server.build_planes(ac, 49.25, 6.2, 20, {}, airline_lookup=lambda icao: asked.append(icao) or info)
+        self.assertEqual((off[0]["airline"], on[0]["airline"], asked), (None, "Jetfly Aviation", ["JFA"]))
+        builtin = server.load_airlines({})
+        # adsbdb said "Jetairfly" (its former name) and "Pantanal Linhas Aereas" (Brazil) for the
+        # two designators heard over Moselle: checked against other sources, 14 November 2026
+        self.assertEqual((builtin["JAF"]["name"], builtin["PTN"]["name"]), ("TUI fly Belgium", "Platoon Aviation"))
+        self.assertEqual(server.DEFAULTS["AIRLINE_LOOKUP"], "0", "off by default")
+
+    def test_the_handler_asks_only_with_the_setting_on_and_never_in_the_demo(self):
+        import http.client, tempfile, threading
+        asked = []
+        data = {"now": 1, "aircraft": [{"hex": "4d0221", "flight": "JFA12K  ", "lat": 49.26, "lon": 6.21, "alt_baro": 30000, "seen_pos": 1}]}
+        saved = {n: getattr(server, n) for n in ("read_aircraft", "lookup_airline", "CONFIG_FILE")}
+        self.addCleanup(lambda: [setattr(server, n, v) for n, v in saved.items()])
+        server.read_aircraft = lambda cfg: (data, "/run/readsb/aircraft.json")
+        server.lookup_airline = lambda icao: asked.append(icao) or None
+        with tempfile.NamedTemporaryFile("w", suffix=".env", delete=False) as fh:
+            cfgpath = fh.name
+        self.addCleanup(os.unlink, cfgpath)
+        server.CONFIG_FILE = cfgpath
+        httpd = server.WallServer(("127.0.0.1", 0), server.Handler)
+        threading.Thread(target=httpd.serve_forever, daemon=True).start()
+        self.addCleanup(httpd.server_close)
+        self.addCleanup(httpd.shutdown)
+
+        def planes(text):
+            with open(cfgpath, "w") as fh:
+                fh.write("LAT=49.25\nLON=6.2\nRADIUS=20\nSHOW_PHOTOS=0\nSHOW_ROUTES=0\n" + text)
+            server._cfg_cache.update(mtime=None)
+            c = http.client.HTTPConnection("127.0.0.1", httpd.server_address[1], timeout=5); c.request("GET", "/api/planes")
+            body = json.loads(c.getresponse().read()); c.close(); return body
+        self.assertEqual(len(planes("")["planes"]), 1)
+        planes("AIRLINE_LOOKUP=0\n")
+        self.assertEqual(asked, [], "off, and off by default: no three letters leave the Pi")
+        planes("AIRLINE_LOOKUP=1\nDEMO=1\n")
+        self.assertEqual(asked, [], "the demo asks nothing")
+        planes("AIRLINE_LOOKUP=1\n")
+        self.assertEqual(asked, ["JFA"])
+
+
 class LearnedAirlineTests(unittest.TestCase):
     """0.17.0: a callsign outside the built-in list gets its airline name from the route answer the wall already asks for."""
 

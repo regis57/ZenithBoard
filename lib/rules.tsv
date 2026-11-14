@@ -39,6 +39,7 @@ SOCIAL_RULES	words	military helicopter heavy rare farthest
 TELEGRAM_RULES	words	military helicopter heavy
 SHOW_PHOTOS	number	-
 SHOW_ROUTES	number	-
+AIRLINE_LOOKUP	number	-	0 1
 AUTO_DATA_REFRESH	number	-
 GAINLOG	number	-
 PATCHES	number	-

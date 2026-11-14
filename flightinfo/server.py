@@ -74,6 +74,7 @@ DEFAULTS = {
     "STATS": "0",               # the 15-minute statistics timer; /stats and /api/stats say so when it is off
     "DISPLAY_MODE": "dots",     # dots (dot matrix) | flap (split-flap airport board)
     "SHOW_ROUTES": "1",         # where the flight comes from / goes to (looked up by callsign on adsbdb.com)
+    "AIRLINE_LOOKUP": "0",      # 1.1: name the airline of a callsign that has no route (its three letters asked of adsbdb.com)
     "LOCAL_DB": "0",            # 0.26.0: read registrations and models from tar1090's aircraft database on this Pi
     "LOCAL_DB_DIR": "/usr/local/share/tar1090/git-db/db",
     "PORT": "8080",
@@ -992,14 +993,20 @@ def load_airlines(cfg):
     return _airlines["data"]
 
 
-def airline_for(callsign, airlines):
-    """('AFR', {'name': 'Air France', 'iata': 'AF'}) for 'AFR1234', or (None, None)."""
+def airline_for(callsign, airlines, lookup=None):
+    """('AFR', {'name': 'Air France', 'iata': 'AF'}) for 'AFR1234', or (None, None). The built-in list first, then
+    the name a route answer gave, then (1.1) the name asked for the three letters alone: `lookup` queues that
+    question when it is given (AIRLINE_LOOKUP on); without it only a name already in memory is used."""
     cs = (callsign or "").strip().upper()
     m = _CALLSIGN_RE.match(cs)
     if not m:
         return None, None
     icao = m.group(1)
     info = airlines.get(icao) or learned_airline(icao)
+    if not info and CALLSIGN_RE.match(cs):
+        # an airline's callsign only (three letters then a digit), as for the routes: a registration flown as a
+        # callsign (GABCD) also starts with three letters, and its "prefix" would be named after a stranger
+        info = lookup(icao) if lookup is not None else _airline_names.peek(icao)
     return (icao, info) if info else (icao, None)
 
 
@@ -1051,6 +1058,64 @@ def learn_airline(data):
 def learned_airline(icao):
     with _learned["lock"]:
         return _learned["data"].get(icao)
+
+
+# 1.1 (lot 1): the airline of a callsign that has no route. The route answer names the airline of a flight it knows
+# (above); business and charter operators and airlines' second certificates fly without a published route, so their
+# callsigns stayed bare (the owner's `stats gaps` of 14 November 2026: forty prefixes, JFA on 31 aircraft). adsbdb
+# also answers by designator: api.adsbdb.com/v0/airline/JFA -> {"response": [{"name": "Jetfly Aviation", "icao":
+# "JFA", "iata": null, "country": "Luxembourg", "country_iso": "LU", "callsign": null}]} (read on 14 November 2026).
+# One question per three letters, kept for thirty days in memory like the routes (the server writes nowhere).
+# Only the name is taken: the country it gives is the designator's, not always the operator's (Canada for VJT,
+# VistaJet's Maltese certificate), so the flag stays the registration's. Its names can be old or another company's
+# (JAF "Jetairfly", PTN a Brazilian airline, both read that day): the built-in list wins, and holds the
+# right name for those found wrong. Off by default (AIRLINE_LOOKUP).
+AIRLINE_GAP_S = 1.5                 # as the routes: at most one request every 1.5 s
+AIRLINE_RETRY_S = 600               # no answer: nothing is lost by waiting ten minutes for a name
+AIRLINE_MISS_RETRY_S = 7 * 86400    # a designator adsbdb does not know
+AIRLINE_TTL_S = 30 * 86400          # a name is asked again after thirty days
+
+
+def parse_airline_name(data, icao):
+    """adsbdb /airline answer -> {'name': 'Jetfly Aviation', 'iata': None, 'cc': None, 'learned': True} or None.
+    Several different names under one designator, or a designator that is not the one asked: no name at all."""
+    rows = data.get("response") if isinstance(data, dict) else None
+    if isinstance(rows, dict):
+        rows = [rows]
+    if not isinstance(rows, list):
+        return None
+    mine = [x for x in rows if isinstance(x, dict) and str(x.get("icao") or "").strip().upper() == icao]
+    names = {clean_airline_name(x.get("name")) for x in mine} - {""}
+    if len(names) != 1:
+        return None
+    name = names.pop()
+    if len(name) > 60 or not re.match(r"^[^\x00-\x1f<>]+$", name):
+        return None
+    iata = str(mine[0].get("iata") or "").strip().upper()
+    return {"name": name, "iata": iata if re.match(r"^[A-Z0-9]{2}$", iata) else None, "cc": None, "learned": True}
+
+
+def _airline_api(icao):
+    """-> (info|None, ok). ok is False when there was no answer."""
+    url = "https://api.adsbdb.com/v0/airline/%s" % icao
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.load(resp)
+        return parse_airline_name(data, icao), True
+    except urllib.error.HTTPError as exc:
+        if exc.code != 404:
+            print("airline lookup %s: HTTP %s, retrying in %d s" % (icao, exc.code, AIRLINE_RETRY_S), file=sys.stderr, flush=True)
+        return None, exc.code == 404            # 404: a designator it does not know, a real answer
+    except Exception as exc:
+        print("airline lookup %s failed (%s), retrying in %d s" % (icao, exc, AIRLINE_RETRY_S), file=sys.stderr, flush=True)
+        return None, False
+
+
+def lookup_airline(icao):
+    """Non-blocking: the name already known for these three letters; a request is queued when it is missing."""
+    icao = (icao or "").strip().upper()
+    return _airline_names.get(icao) if re.match(r"^[A-Z]{3}\Z", icao) else None
 
 
 _types = {"key": None, "data": {}, "updated": None}
@@ -1137,7 +1202,7 @@ def checked_route(flight, lat, lon, track, gs, route_lookup, route_fallback):
 
 
 def build_planes(data, lat, lon, radius_km, airlines=None, photo_lookup=None, demo=False, types=None, route_lookup=None,
-                 aircraft_lookup=None, route_fallback=None, only_hex=None, local_db=None):
+                 aircraft_lookup=None, route_fallback=None, only_hex=None, local_db=None, airline_lookup=None):
     """Return (planes_in_radius_sorted_by_distance, total_with_position). only_hex: that aircraft alone, so asking
     about one far aircraft (social sharing's range record) does not set off lookups for everything in between."""
     airlines = airlines or {}
@@ -1156,7 +1221,7 @@ def build_planes(data, lat, lon, radius_km, airlines=None, photo_lookup=None, de
         alt = ac.get("alt_baro", ac.get("alt_geom"))
         on_ground = alt == "ground"
         flight = (ac.get("flight") or "").strip()
-        icao, info = airline_for(flight, airlines)
+        icao, info = airline_for(flight, airlines, airline_lookup)
         photo, credit, link = None, None, None
         if demo and ac.get("demo_photo"):
             photo, credit = ac["demo_photo"], "DEMO ILLUSTRATION"
@@ -1560,6 +1625,7 @@ def _route_api(callsign):
 
 
 _routes = ThrottledLookup(_route_api, ROUTE_GAP_S, ROUTE_RETRY_S, ROUTE_MISS_RETRY_S, found_ttl=ROUTE_TTL_S)
+_airline_names = ThrottledLookup(_airline_api, AIRLINE_GAP_S, AIRLINE_RETRY_S, AIRLINE_MISS_RETRY_S, found_ttl=AIRLINE_TTL_S)
 
 
 def lookup_route(callsign):
@@ -2062,7 +2128,8 @@ def _shown_airport(a):
     return {k: a.get(k) for k in ("city", "name", "iata", "icao", "country")} if isinstance(a, dict) else None
 
 
-def describe_farthest(rec, cfg, route_lookup=None, route_fallback=None, aircraft_lookup=None, airlines=None, types=None):
+def describe_farthest(rec, cfg, route_lookup=None, route_fallback=None, aircraft_lookup=None, airlines=None, types=None,
+                      airline_lookup=None):
     """One of the tracker's records, as the statistics timer writes it down: the airline, the route and the model when
     they are known, the nearest large city; neither the aircraft's position nor the antenna's. "pending" lists what is
     still being looked up, so the timer can wait a few seconds for it."""
@@ -2082,7 +2149,7 @@ def describe_farthest(rec, cfg, route_lookup=None, route_fallback=None, aircraft
             reg, code = reg or found.get("registration"), code or found.get("icao_type")
         elif getattr(aircraft_lookup, "pending", None) and aircraft_lookup.pending(rec.get("hex")):
             pending.append("model")
-    icao, info = airline_for(flight, airlines if airlines is not None else load_airlines(cfg))   # after the route: it teaches airline names
+    icao, info = airline_for(flight, airlines if airlines is not None else load_airlines(cfg), airline_lookup)   # after the route: it teaches airline names
     kind = describe_type({"t": code, "category": rec.get("category"), "dbFlags": rec.get("dbFlags")},
                          types if types is not None else load_types(cfg))
     if not kind["type_name"] and found and found.get("type"):
@@ -2107,7 +2174,9 @@ def farthest_answer(cfg):
     routes = cfg_bool(cfg, "SHOW_ROUTES") and real
     rl = lookup_route if routes else None
     return {"enabled": True, "days": [describe_farthest(r, cfg, rl, lookup_route_fallback if rl else None,
-                                                        lookup_aircraft if routes else None) for r in _farthest.snapshot()]}
+                                                        lookup_aircraft if routes else None,
+                                                        airline_lookup=lookup_airline if real and cfg_bool(cfg, "AIRLINE_LOOKUP") else None)
+                             for r in _farthest.snapshot()]}
 
 
 # --------------------------------------------------------------------------- HTTP
@@ -2321,7 +2390,8 @@ class Handler(BaseHTTPRequestHandler):
         only = only if re.match(r"^[0-9a-f]{6}$", only) else None     # an ICAO address or nothing: no other input reaches the loop
         planes, total = build_planes(data, cfg_float(cfg, "LAT", 0), cfg_float(cfg, "LON", 0), radius_km,
                                      load_airlines(cfg), lookup, demo, load_types(cfg), route_lookup, aircraft_lookup, route_fallback,
-                                     only_hex=only, local_db=local_db_dir(cfg))
+                                     only_hex=only, local_db=local_db_dir(cfg),
+                                     airline_lookup=lookup_airline if real_lookups and cfg_bool(cfg, "AIRLINE_LOOKUP") else None)
         return self._send(200, {"planes": planes, "total": total, "radius_km": radius_km,
                                 "server_id": SERVER_ID, "updated": time.time()})
 

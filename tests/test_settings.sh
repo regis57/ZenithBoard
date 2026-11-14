@@ -157,7 +157,7 @@ menu_switch() {   # menu_switch ENTRY yes|no|esc: the wall's Photos, routes menu
     wt_msg() { echo "MSG $1" >> "$t/wall.log"; }
     ENTRY=$1 ANSWER=$2; wall_data_menu )
 }
-for e in photos:SHOW_PHOTOS routes:SHOW_ROUTES; do
+for e in photos:SHOW_PHOTOS routes:SHOW_ROUTES airlines:AIRLINE_LOOKUP; do
   key=${e#*:}; cfg_set "$key" 1; : > "$t/wall.log"
   menu_switch "${e%%:*}" no
   check "menu ${e%%:*} No: off and the wall restarted, so the tablets reload" '[ "$(cfg_get "$key")" = 0 ] && grep -q "^systemctl restart zenithboard-flightinfo$" "$t/wall.log" && grep -q "^MSG .* OFF" "$t/wall.log"'
