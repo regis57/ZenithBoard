@@ -127,19 +127,19 @@ class WordsTest(unittest.TestCase):
     # because "8\u00a0500\u00a0m above Trémery" was read as a distance from Trémery
     def test_airline_with_route(self):
         self.assertEqual(social.post_text(EZY, CFG).split("\n")[0],
-                         "Flight easyJet #EZY1234 · Airbus A320neo · Edinburgh → Saint-Louis · altitude 11\u00a0280\u00a0m · over Luxembourg")
+                         "Flight easyJet #EZY1234 · Airbus A320neo · Edinburgh → Saint-Louis · altitude 11\u00a0280\u00a0m · \u2192 east · over Luxembourg")
 
     def test_starts_with_the_flight_and_ends_above_the_place(self):
         t = social.post_text(EZY, dict(CFG, SOCIAL_AREA="Trémery")).split("\n")[0]
         self.assertTrue(t.startswith("Flight easyJet #EZY1234 · "), t)
-        self.assertTrue(t.endswith(" · altitude 11\u00a0280\u00a0m · above Trémery"), t)
+        self.assertTrue(t.endswith(" · altitude 11\u00a0280\u00a0m · \u2192 east · above Trémery"), t)
 
     def test_unknown_airline_shows_callsign_and_model(self):
-        self.assertEqual(social.post_text(BELUGA, CFG).split("\n")[0], "Flight #BGA113J · Airbus A330-743 Beluga XL · #F-GXLH · altitude 9\u00a0750\u00a0m · over Luxembourg")
+        self.assertEqual(social.post_text(BELUGA, CFG).split("\n")[0], "Flight #BGA113J · Airbus A330-743 Beluga XL · #F-GXLH · altitude 9\u00a0750\u00a0m · \u2190 west · over Luxembourg")
 
     def test_a_registration_used_as_callsign_is_an_aircraft_not_a_flight(self):
         p = dict(BELUGA, flight="FGXLH", type_name="CESSNA 172", type="C172")
-        self.assertEqual(social.post_text(p, dict(CFG, SOCIAL_AREA="Trémery")).split("\n")[0], "Aircraft #F-GXLH · Cessna 172 · altitude 9\u00a0750\u00a0m · above Trémery")
+        self.assertEqual(social.post_text(p, dict(CFG, SOCIAL_AREA="Trémery")).split("\n")[0], "Aircraft #F-GXLH · Cessna 172 · altitude 9\u00a0750\u00a0m · \u2190 west · above Trémery")
 
     def test_only_airline_callsigns_become_hashtags(self):
         self.assertEqual(social.hashtag_callsign("ETD11K"), "#ETD11K")
@@ -149,12 +149,12 @@ class WordsTest(unittest.TestCase):
 
     def test_helicopter(self):
         t = social.post_text(HELI, CFG)
-        self.assertTrue(t.startswith("Helicopter #D-HABC · Airbus Helicopters H145 · altitude 460\u00a0m · over Luxembourg"), t)
+        self.assertTrue(t.startswith("Helicopter #D-HABC · Airbus Helicopters H145 · altitude 460\u00a0m · \u2191 north · over Luxembourg"), t)
         self.assertIn("#helicopter", t)
 
     def test_military_without_callsign(self):
         t = social.post_text(KC135, CFG)
-        self.assertTrue(t.startswith("Military flight · Boeing KC-135R Stratotanker · altitude 7\u00a0620\u00a0m · over Luxembourg"), t)
+        self.assertTrue(t.startswith("Military flight · Boeing KC-135R Stratotanker · altitude 7\u00a0620\u00a0m · \u2192 east · over Luxembourg"), t)
         self.assertIn("#military", t)
         self.assertTrue(social.post_text(dict(KC135, flight="RCH123"), CFG).startswith("Military flight #RCH123 · "))
 
@@ -177,7 +177,7 @@ class WordsTest(unittest.TestCase):
         # rounded DOWN to 50\u00a0km: enough to tell a record, not enough to draw a circle around the antenna
         t = social.post_text(dict(EZY, distance_km=332.4), CFG, why="farthest")
         self.assertTrue(t.startswith("Flight easyJet #EZY1234 · "), t)
-        self.assertIn("· altitude 11\u00a0280\u00a0m · range record for 30 days: over 300\u00a0km out", t)
+        self.assertIn("· altitude 11\u00a0280\u00a0m · \u2192 east · range record for 30 days: over 300\u00a0km out", t)
         self.assertNotIn("332", t)
         # far from overhead: the place is where it was seen from, not what it flew above
         t = social.post_text(dict(EZY, distance_km=332.4), dict(CFG, SOCIAL_AREA="Trémery"), why="farthest").split("\n")[0]
@@ -192,13 +192,13 @@ class WordsTest(unittest.TestCase):
         self.assertEqual(social.area_words({"SOCIAL_AREA": "near Metz"}), "near Metz")
         self.assertEqual(social.area_words({"SOCIAL_AREA": "over the Moselle"}), "over the Moselle")
         self.assertEqual(social.area_words({"SOCIAL_AREA": "  "}), "")
-        self.assertIn("altitude 1\u00a0750\u00a0m · above Trémery", social.post_text(dict(EZY, alt_ft=5740), dict(CFG, SOCIAL_AREA="Trémery")))
+        self.assertIn("altitude 1\u00a0750\u00a0m · \u2192 east · above Trémery", social.post_text(dict(EZY, alt_ft=5740), dict(CFG, SOCIAL_AREA="Trémery")))
 
     def test_the_altitude_never_reads_as_a_distance(self):
         # reported from the first posts: "10\u00a0670\u00a0m over Trémery" read as 10\u00a0km from Trémery
         for p in (EZY, BELUGA, HELI, KC135):
             line = social.post_text(p, dict(CFG, SOCIAL_AREA="Trémery")).split("\n")[0]
-            self.assertRegex(line, r"· altitude [0-9\u00a0]+\u00a0m · above Trémery$")
+            self.assertRegex(line, r"· altitude [0-9\u00a0]+\u00a0m · [\u2190-\u2199] [a-z-]+ · above Trémery$")
         # and never split across two lines on a phone (0.19.8: "altitude 8" / "600 m")
         self.assertNotRegex(social.post_text(EZY, CFG), r"\d \d|\d m\b")
         self.assertIn("altitude 37\u00a0000\u00a0ft", social.post_text(EZY, dict(CFG, UNITS="imperial")))
@@ -1484,6 +1484,98 @@ class ServiceLoopTest(unittest.TestCase):
         self.assertGreaterEqual(len(tries), 3)
         self.assertLessEqual(len(tries), 4, "half an hour: a try every ten minutes, not every fifteen seconds")
         self.assertTrue(all(b - a >= social.RETRY_AFTER_FAIL_S for a, b in zip(tries, tries[1:])))
+
+
+class HeadingByDefaultTest(unittest.TestCase):
+    """1.1 (asked by the owner, 1 November 2026): where the aircraft is heading, in the default text of the posts and
+    the messages, and everything must still fit: the heading is the first thing left out."""
+    CREDIT = "Map data \u00a9 OpenStreetMap contributors, SRTM | \u00a9 OpenTopoMap"      # the longest of the maps' credits
+    PHOTO = "\U0001F4F7 A Photographer With A Long Name Indeed \u2014 https://www.planespotters.net/photo/1234567"
+
+    def cfg(self, lang="en", **more):
+        return dict(CFG, SOCIAL_AREA="Trémery", SOCIAL_LANG=lang, SOCIAL_HASHTAGS="#avgeek #planespotting #adsb #Moselle", **more)
+
+    def test_the_eight_ways_and_their_arrows(self):
+        L = social.post_lang.of(self.cfg())
+        got = [social.heading_bit({"track": t}, L) for t in (0, 45, 90, 135, 180, 225, 270, 315, 359.9, 22.4, 22.5, -45, 720)]
+        self.assertEqual(got, ["\u2191 north", "\u2197 north-east", "\u2192 east", "\u2198 south-east", "\u2193 south",
+                               "\u2199 south-west", "\u2190 west", "\u2196 north-west", "\u2191 north", "\u2191 north",
+                               "\u2197 north-east", "\u2196 north-west", "\u2191 north"])
+
+    def test_no_track_no_heading_and_nothing_fails(self):
+        L = social.post_lang.of(self.cfg())
+        for t in (None, "", "90", True, float("nan"), float("inf"), [90]):
+            self.assertEqual(social.heading_bit({"track": t}, L), "", repr(t))
+            p = dict(EZY, track=t)
+            self.assertIn("m \u00b7 above Trémery", social.post_text(p, self.cfg(), shape="factual"))
+            self.assertEqual(social.template_values(p, self.cfg(), None, L, 1800000000)["arrow"], "")
+        self.assertEqual(social.heading_bit({"track": 90, "on_ground": True}, L), "", "on the ground a track is not a heading")
+
+    def test_it_comes_after_the_altitude_in_the_two_shapes_made_of_parts(self):
+        c = self.cfg()
+        self.assertIn(" \u00b7 altitude 11\u00a0280\u00a0m \u00b7 \u2192 east \u00b7 above Trémery", social.post_text(EZY, c, shape="factual"))
+        board = social.post_text(EZY, c, shape="board")
+        self.assertTrue(any(line.endswith(" \u00b7 \u2192 east") and "A320" in line for line in board.split("\n")), board)
+        for shape in ("story", "spotter", "lookup"):                 # the three sentences are left as they were written
+            self.assertNotIn("\u2192 east", social.post_text(EZY, c, shape=shape), shape)
+
+    def test_a_range_record_says_it_too(self):
+        t = social.post_text(dict(EZY, distance_km=312.4), self.cfg(), "farthest", shape="factual")
+        self.assertIn("\u00b7 \u2192 east \u00b7 range record for 30 days", t)
+
+    def test_with_the_heading_the_post_is_the_post_without_it_plus_the_heading(self):
+        # every language, the longest airline, model, route and town, with and without the map's credit and the photo's
+        # line: nothing else may be lost for the heading's sake, and the post stays within Bluesky's 300 characters
+        said = dropped = 0
+        for lang in social.post_lang.LANGS:
+            for area in ("Trémery", "Saint-Quentin-en-Yvelines-la-Grande"):
+                for sample in (EZY, social.LONG_SAMPLE, dict(social.LONG_SAMPLE, distance_km=412.0)):
+                    for shape in ("factual", "board"):
+                        for credit, photo in ((None, None), (self.CREDIT, None), (self.CREDIT, self.PHOTO)):
+                            c = dict(self.cfg(lang), SOCIAL_AREA=area)
+                            why = "farthest" if sample.get("distance_km", 0) > 400 else None
+                            got = social.post_text(sample, c, why, credit, photo, shape)
+                            plain = social._post_text(sample, c, why, credit, photo, shape)
+                            bit = social.heading_bit(sample, social.post_lang.of(c))
+                            where = "%s %s %s %s" % (lang, area, shape, bool(photo))
+                            self.assertLessEqual(len(got), social.POST_MAX, where)
+                            if got == plain:
+                                dropped += 1
+                                self.assertNotIn(bit, got, where)
+                            else:
+                                said += 1
+                                self.assertEqual(got.count(bit), 1, where)
+                                self.assertIn(plain, (got.replace(" \u00b7 " + bit, "", 1), got.replace(bit + " \u00b7 ", "", 1)), where)
+        self.assertGreater(said, 100)
+        self.assertGreater(dropped, 0, "the long cases must show the heading left out, or this test proves nothing")
+
+    def test_the_heading_goes_before_a_hashtag_the_photo_line_or_a_word_of_the_text(self):
+        p, cost = dict(social.LONG_SAMPLE), {"photo": 0, "hashtag": 0, "text": 0}
+        for n in range(1, 80):                   # a place name that grows: each thing the heading's room would cost, in turn
+            for photo, tags in ((self.PHOTO, None), (None, None), (None, "none")):
+                c = dict(self.cfg(), SOCIAL_AREA="T" + "r" * (n * 3 if tags else n))
+                if tags:
+                    c["SOCIAL_HASHTAGS"] = tags
+                plain = social._post_text(p, c, None, self.CREDIT, photo, "factual")
+                forced = social._post_text(p, c, None, self.CREDIT, photo, "factual", heading="\u2198 south-east")
+                if forced.replace(" \u00b7 \u2198 south-east", "", 1) == plain:
+                    continue
+                cost["photo" if "planespotters" in plain and "planespotters" not in forced else
+                     "hashtag" if plain.count("#") > forced.count("#") else "text"] += 1
+                self.assertEqual(social.post_text(p, c, None, self.CREDIT, photo, "factual"), plain, "%d %s" % (n, bool(photo)))
+        self.assertTrue(all(cost.values()), cost)
+
+    def test_the_owners_own_templates_are_not_touched(self):
+        import tempfile
+        with tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False, encoding="utf-8") as fh:
+            fh.write("{flight} seen[ at {altitude}]\n")
+        self.addCleanup(os.unlink, fh.name)
+        self.addCleanup(setattr, social, "TEMPLATES_FILE", social.TEMPLATES_FILE)
+        social.TEMPLATES_FILE = fh.name
+        self.assertEqual(social.post_text(EZY, self.cfg(), shape="custom").split("\n")[0], "EZY1234 seen at 11\u00a0280\u00a0m")
+        with open(fh.name, "w", encoding="utf-8") as f2:
+            f2.write("{flight}[ {arrow} {heading}]\n")
+        self.assertIn("\u2192 east", social.post_text(EZY, self.cfg(), shape="custom"))
 
 
 class NoCapTest(unittest.TestCase):

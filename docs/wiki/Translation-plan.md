@@ -120,6 +120,7 @@ ZenithBoard fills in. A part between `[` and `]` is left out when one of its tag
 | `{speed}` | Ground speed, in the posts' units | `820 km/h` |
 | `{climb}` | Climbing, descending or level | `descending` |
 | `{heading}` | Where it is heading, in words | `south-east` |
+| `{arrow}` | The same as an arrow, north up (1.1); no word to translate | `↘` |
 | `{squawk}` | Its transponder code | `7700` |
 | `{why}` | Why it was posted: rare, military, heavy, the farthest… | `A rare visitor.` |
 | `{area}` | The area you wrote yourself (`SOCIAL_AREA`) | `above Metz` |
