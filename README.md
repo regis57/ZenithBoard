@@ -4,7 +4,7 @@
 [![CI](https://github.com/regis57/ZenithBoard/actions/workflows/ci.yml/badge.svg)](https://github.com/regis57/ZenithBoard/actions/workflows/ci.yml)
 <a href="https://buymeacoffee.com/regis57"><img src="https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20beer&emoji=%F0%9F%8D%BA&slug=regis57&button_colour=FFDD00&font_colour=000000&font_family=Cookie&outline_colour=000000&coffee_colour=ffffff" alt="Buy me a beer" height="20"></a>
 
-> **Release candidate for 1.0 (0.99.x).** 0.99.6 (30 October 2026) brought AirNav Radar and Telegram messages, at the owner's word, so the month hands-off starts again: 30 days from the reference Pi's update to 0.99.6, **29 November 2026 at the earliest**. Only fixes ship meanwhile; 1.0 follows if nothing is left open ([what 1.0 takes](https://github.com/regis57/ZenithBoard/wiki/Roadmap#what-10-takes)). Trying it now is welcome: a report in the [issues](https://github.com/regis57/ZenithBoard/issues) helps most.
+> **1.0.0 (14 November 2026).** The release candidate ran on the reference Pi from 25 October 2026, with a fresh install redone on a blank card; the owner closed it on 14 November, fourteen days into the last month hands-off. What is still not proven on hardware is said in [Project status](https://github.com/regis57/ZenithBoard/wiki/Project-status). Features come again from 1.1, in lots ([Roadmap](https://github.com/regis57/ZenithBoard/wiki/Roadmap#the-lots-after-10)). A report in the [issues](https://github.com/regis57/ZenithBoard/issues) helps most.
 
 **See the planes flying right above your house, on an old tablet, in glowing dot-matrix lights — and share the same antenna with the big flight-tracking networks.**
 

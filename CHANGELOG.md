@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.0 — 14 November 2026
+The release candidate becomes 1.0, at the owner's word. **The same code as 0.99.26**: nothing changes on a Pi but the version it shows.
+- The candidate ran on the reference Pi from 25 October 2026 (0.99.0 to 0.99.26, fixes only, AirNav Radar and Telegram let in on 30 October). The fresh install on a blank card was redone during it (the owner).
+- **Closed early, and said so**: the last month hands-off was fourteen days old of thirty (the owner: *je ferme ma RC à 14 jours, assumé*), and a fixed IP address has still never been applied on a real Pi. [Project status](https://github.com/regis57/ZenithBoard/wiki/Project-status) keeps both.
+- The freeze ends. Features come again from 1.1, in lots: [Roadmap → The lots after 1.0](https://github.com/regis57/ZenithBoard/wiki/Roadmap#the-lots-after-10).
+
 ## 0.99.26 — release candidate, fix
 What 0.99.25 missed (the owner, 11 November 2026: *are you sure nothing breaks in the menu and the console?*):
 - **The web console still sent two old names**: *Colour* ran `zenithboard color …` and *Gain check* ran `zenithboard gain check`. They worked, but each printed the old-name line in the console's result, and 1.1 would have broken them. They now send `colour` and `gain status`. The menus call the functions directly and were not affected; the services name none.

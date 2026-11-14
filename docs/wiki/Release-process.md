@@ -12,7 +12,7 @@
 
 Most releases are patches. When in doubt it is a patch.
 
-**During the freeze (from 0.99.0, 25 October 2026, until 1.0)** every release is a patch of 0.99 and a fix only; what counts as one is in [Roadmap → The freeze](Roadmap#the-freeze). A feature asked meanwhile goes to *Waiting for 1.1* in the Roadmap, not into the code, unless the owner decides otherwise: then it ships as the next 0.99.x and the hands-off month starts again (0.99.6, 30 October 2026: AirNav Radar and Telegram).
+**The freeze ended with 1.0.0 (14 November 2026)**: features are minor versions again, built in the lots of the [Roadmap](Roadmap#the-lots-after-10). What follows describes the freeze as it was. **During the freeze (from 0.99.0, 25 October 2026, until 1.0)** every release is a patch of 0.99 and a fix only; what counts as one is in [Roadmap → The freeze](Roadmap#the-freeze). A feature asked meanwhile goes to *Waiting for 1.1* in the Roadmap, not into the code, unless the owner decides otherwise: then it ships as the next 0.99.x and the hands-off month starts again (0.99.6, 30 October 2026: AirNav Radar and Telegram).
 
 ## The version lives in two files
 
