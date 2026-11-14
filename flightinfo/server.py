@@ -27,7 +27,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "1.1.0"
+VERSION = "1.1.1"
 CONFIG_FILE = os.environ.get("ZENITHBOARD_CONFIG", "/etc/zenithboard/config.env")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -1003,7 +1003,7 @@ def airline_for(callsign, airlines, lookup=None):
         return None, None
     icao = m.group(1)
     info = airlines.get(icao) or learned_airline(icao)
-    if not info and CALLSIGN_RE.match(cs):
+    if not info and CALLSIGN_RE.match(cs) and icao not in AIRLINE_NOT_NAMED:
         # an airline's callsign only (three letters then a digit), as for the routes: a registration flown as a
         # callsign (GABCD) also starts with three letters, and its "prefix" would be named after a stranger
         info = lookup(icao) if lookup is not None else _airline_names.peek(icao)
@@ -1070,6 +1070,12 @@ def learned_airline(icao):
 # VistaJet's Maltese certificate), so the flag stays the registration's. Its names can be old or another company's
 # (JAF "Jetairfly", PTN a Brazilian airline, both read that day): the built-in list wins, and holds the
 # right name for those found wrong. Off by default (AIRLINE_LOOKUP).
+# 1.1.1: the owner's forty prefixes read one by one (14 November 2026). Thirty-one names right; three wrong and now in
+# the built-in list (JAF, PTN, OCN: "O Air" where the aircraft are Discover Airlines'); four unknown to adsbdb (KMM,
+# LUA, HBJ, FJD), which stay bare; and two it names after airlines that are not the ones heard over Moselle today
+# (OOM "Zoom Airlines", ECA "Eurocypria Airlines"), whose right name was not found: never asked, left bare, rather
+# than a wrong name shown with confidence.
+AIRLINE_NOT_NAMED = frozenset(("OOM", "ECA"))
 AIRLINE_GAP_S = 1.5                 # as the routes: at most one request every 1.5 s
 AIRLINE_RETRY_S = 600               # no answer: nothing is lost by waiting ten minutes for a name
 AIRLINE_MISS_RETRY_S = 7 * 86400    # a designator adsbdb does not know

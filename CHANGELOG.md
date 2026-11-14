@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.1 — 14 November 2026
+
+- **The rest of the forty prefixes checked** against adsbdb's real answers, from the owner's `zenithboard stats gaps`. Seventeen of the twenty-four are right. **`OCN` is *Discover Airlines*** on the wall, with or without `AIRLINE_LOOKUP`: adsbdb answers *O Air*. **`OOM` and `ECA` are never asked and stay bare**: adsbdb names them *Zoom Airlines* and *Eurocypria Airlines*, which are not the aircraft heard over Moselle today, and their right name was not found; no name rather than a wrong one. `KMM`, `LUA`, `HBJ` and `FJD` are unknown to adsbdb and stay bare. Over the forty: thirty-one right, three corrected in the built-in list (`JAF`, `PTN`, `OCN`), two left bare on purpose, four unknown.
+
 ## 1.1.0 — 14 November 2026
 
 The first release after 1.0: lots 0 and 1 of the Roadmap. **Published the day it was written, at the owner's word, before any of it ran on the reference Pi**: the test suite's stand-ins prove the logic, not the hardware, and the Telegram edit was never tried against Telegram itself. The new settings are off or empty by default (`AIRLINE_LOOKUP`, `SOCIAL_IGNORE`, `TELEGRAM_CLOSEST`); what changes without being asked is the heading in the default posts and messages, and the old command names. Update: `cd ~/ZenithBoard && sudo zenithboard update`.
