@@ -190,20 +190,54 @@
   var SQUAWK_WORDS = { "7500": ["UNLAWFUL", "INTERFERENCE"], "7600": ["RADIO", "FAILURE"], "7700": ["GENERAL", "EMERGENCY"] };
   var SQUAWK_SHOW_MS = 30000, SQUAWK_AGAIN_MS = 3600000;
   var alarm = null, alarmSeen = {}, testSquawk = null;
+  // 14 November 2026, the owner on the first banner (the code, its meaning, the callsign): "it must tell me what plane
+  // and where, with the picture as usual". The banner is the aircraft's own screen: its rows, its silhouette, its
+  // photo, with the code on the first row and where it is on the last. The first form stays for an aircraft the Pi
+  // cannot describe (no position).
+  var SQUAWK_ROW = { "7500": "7500 UNLAWFUL", "7600": "7600 NO RADIO", "7700": "7700 EMERGENCY" };
   function noteSquawks(list, now, force) {
     Object.keys(alarmSeen).forEach(function (k) { if (now - alarmSeen[k] > SQUAWK_AGAIN_MS) delete alarmSeen[k]; });
     if (alarm && now >= alarm.until) alarm = null;
-    if (alarm || !(squawkOn() || force)) return;
+    if (alarm) {                                  // still squawking: its altitude, its place, its photo follow
+      (list || []).forEach(function (s) { if (s && s.hex + ":" + s.code === alarm.key) { alarm.plane = s.plane || alarm.plane; alarm.where = s.where || alarm.where; } });
+      return;
+    }
+    if (!(squawkOn() || force)) return;
     (list || []).some(function (s) {
       var key = s && s.hex + ":" + s.code;
       if (!s || !SQUAWK_WORDS[s.code] || alarmSeen[key] !== undefined) return false;
       alarmSeen[key] = now;
-      alarm = { code: s.code, who: String(s.flight || s.hex || "").toUpperCase().slice(0, 8), until: now + SQUAWK_SHOW_MS };
+      alarm = { key: key, code: s.code, who: String(s.flight || s.hex || "").toUpperCase().slice(0, 8), until: now + SQUAWK_SHOW_MS,
+                plane: s.plane && typeof s.plane === "object" ? s.plane : null, where: s.where || null };
       return true;
     });
   }
+  // "NEAR THIONVILLE", or "35 KM FROM LUXEMBOURG" in the tablet's units: a place near the aircraft, never the antenna
+  function whereWords(w, u) {
+    if (!w) return "";
+    if (w.text) return String(w.text);
+    if (w.near) return "NEAR " + Fmt.plain(w.near);
+    if (w.city && typeof w.km === "number") {
+      var km = Fmt.radiusToKm(1, u);                 // one of the tablet's units, in km
+      return Math.round(w.km / (km > 0 ? km : 1)) + " " + Fmt.distUnit(u) + " FROM " + Fmt.plain(w.city);
+    }
+    return "";
+  }
   function alarmScreen() {
-    var g = blank(), w = SQUAWK_WORDS[alarm.code], who = alarm.who;
+    var g = blank(), w = SQUAWK_WORDS[alarm.code], who = alarm.who, p = alarm.plane, u = units();
+    if (p) {
+      var L = Fmt.planeLines(p, u, 0, 1, COLS), where = whereWords(alarm.where, u), head = SQUAWK_ROW[alarm.code];
+      scroll.prepare("squawk|" + p.hex + "|" + L.airlineFull + "|" + L.typeFull + "|" + where,
+                     [{ y: 25, text: L.airlineFull, mx: ROW_MAX_X }, { y: 34, text: L.typeFull, mx: ROW_MAX_X }, { y: 72, text: where, mx: GW }]);
+      text(g, head, 0, 0, 1); text(g, L.flight, 0, 8, 1); text(g, L.reg, 0, 16, 1);
+      textRow(g, scroll.text(0, L.airlineFull), 25, scroll.off(0), ROW_MAX_X);
+      textRow(g, scroll.text(1, L.typeFull), 34, scroll.off(1), ROW_MAX_X);
+      text(g, L.alt, 0, 43, 1); text(g, L.from, 0, 52, 1); text(g, L.to, 0, 61, 1);
+      textRow(g, scroll.text(2, where), 72, scroll.off(2), GW);
+      silhouette(g, p.shape || "generic", SIL_BOX);
+      return { g: g, sig: "squawk" + alarm.code + p.hex + L.flight + L.reg + L.alt + L.type + L.from + L.to + where + (p.photo || ""), plane: p,
+               lines: [head, L.flight, L.reg, L.airline, L.type, L.alt, L.from, L.to, where.slice(0, FLAP_COLS)] };
+    }
     scroll.stop();
     textCenter(g, "EMERGENCY SQUAWK", 2, 1);
     textCenter(g, alarm.code, 14, 3);
@@ -511,7 +545,11 @@
       error = d.error ? d.error : null; planes = d.planes || []; total = d.total || 0;
       var before = alarm, heard = d.squawks || [];
       var trying = !!testSquawk;
-      if (trying) { heard = [{ hex: "000000", flight: "TEST123", code: testSquawk }].concat(heard); testSquawk = null; }
+      if (trying) {       // the aircraft overhead right now stands in, so the test shows the screen a real one would get
+        var stand = planes[0] || null;
+        heard = [{ hex: stand ? stand.hex : "000000", flight: stand ? stand.flight : "TEST123", code: testSquawk, plane: stand, where: { text: "THIS IS A TEST" } }].concat(heard);
+        testSquawk = null;
+      }
       noteSquawks(heard, performance.now(), trying);   // the page's own clock: a tablet whose date jumps keeps its thirty seconds
       var switched = ensureCurrent();
       show(buildScreen(), switched || before !== alarm);      // the banner comes and goes with the wall's own wipe

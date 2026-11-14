@@ -485,16 +485,44 @@ class SquawkBannerTests(unittest.TestCase):
         data = {"aircraft": [self.ac()]}
         self.assertEqual(server.squawks_for_wall(data, 1000.0), [], "one reply decoded once can be a bad decode")
         self.assertEqual(server.squawks_for_wall(data, 1002.0), [])
-        self.assertEqual(server.squawks_for_wall(data, 1005.0), [{"hex": "4ca7b1", "code": "7700", "flight": "EZY17QZ"}])
+        self.assertEqual(server.squawks_for_wall(data, 1005.0),
+                         [{"hex": "4ca7b1", "code": "7700", "flight": "EZY17QZ", "where": {"near": "Kelsterbach"}, "plane": None}])
         server._wall_squawks["watch"] = server.SquawkWatch()
         got = server.squawks_for_wall({"aircraft": [self.ac(squawk="1000", emergency="nordo")]}, 1000.0)
-        self.assertEqual(got, [{"hex": "4ca7b1", "code": "7600", "flight": "EZY17QZ"}])
+        self.assertEqual([(g["hex"], g["code"], g["flight"]) for g in got], [("4ca7b1", "7600", "EZY17QZ")])
 
     def test_never_a_position_and_nothing_but_letters_and_figures(self):
         data = {"aircraft": [self.ac(flight="<b>x</b> EZY1\n", emergency="general")]}
         got = server.squawks_for_wall(data, 1000.0)
-        self.assertEqual(got, [{"hex": "4ca7b1", "code": "7700", "flight": "BXBEZY1"}])
-        self.assertEqual(set(got[0]), {"hex", "code", "flight"})
+        self.assertEqual((got[0]["hex"], got[0]["code"], got[0]["flight"]), ("4ca7b1", "7700", "BXBEZY1"))
+        self.assertEqual(set(got[0]), {"hex", "code", "flight", "where", "plane"})
+        self.assertNotIn("50.04", json.dumps(got)); self.assertNotIn("8.56", json.dumps(got))
+
+    def test_where_it_is_a_town_near_it_or_a_city_and_how_far_never_its_position(self):
+        # 14 November 2026, the owner on the first banner: "what plane and where"
+        server._squawk_where.clear()
+        self.assertEqual(server.squawk_where(self.ac(), 1000.0), {"near": "Kelsterbach"})
+        sea = server.squawk_where(self.ac(hex="4ca7b2", lat=54.5, lon=4.0), 1000.0)         # the North Sea: no town within 15 km
+        self.assertEqual(set(sea), {"city", "km"})
+        self.assertGreater(sea["km"], 15)
+        for bad in (self.ac(hex="4ca7b3", lat=None), self.ac(hex="4ca7b4", lat="50", lon="8"), self.ac(hex="4ca7b5", lat=True, lon=8.0), {"hex": "4ca7b6"}):
+            self.assertIsNone(server.squawk_where(bad, 1000.0))
+        # asked every two seconds by every wall: the places are read once a minute per aircraft
+        calls = []
+        self.addCleanup(setattr, server, "_towns_near", server._towns_near)
+        server._towns_near = lambda lat, lon, km: calls.append(1) or {"Somewhere": 1.0}
+        self.assertEqual(server.squawk_where(self.ac(), 1030.0), {"near": "Kelsterbach"})
+        self.assertEqual(server.squawk_where(self.ac(), 1061.0), {"near": "Somewhere"})
+        self.assertEqual(len(calls), 1)
+
+    def test_the_aircraft_is_described_as_the_wall_describes_any_other(self):
+        asked = []
+        got = server.squawks_for_wall({"aircraft": [self.ac(emergency="general")]}, 1000.0, describe=lambda h: asked.append(h) or {"hex": h, "type": "A320"})
+        self.assertEqual((asked, got[0]["plane"]), (["4ca7b1"], {"hex": "4ca7b1", "type": "A320"}))
+
+        def broken(h):
+            raise RuntimeError("no")
+        self.assertIsNone(server.squawks_for_wall({"aircraft": [self.ac(emergency="general")]}, 1001.0, describe=broken)[0]["plane"])
 
     def test_what_is_not_an_emergency_or_not_an_aircraft_says_nothing(self):
         rows = [self.ac(squawk="7000"), self.ac(hex="zzzzzz"), self.ac(seen=120), self.ac(seen="x"), None, "x", {}, self.ac(squawk=7700, hex="~4ca7b1")]
@@ -534,7 +562,10 @@ class SquawkBannerTests(unittest.TestCase):
             body = json.loads(c.getresponse().read()); c.close(); return body
         got = get("/api/planes", "")
         self.assertEqual(got["planes"], [], "the aircraft is far outside the wall's radius")
-        self.assertEqual(got["squawks"], [{"hex": "4ca7b1", "code": "7700", "flight": "EZY17QZ"}], "and heard all the same")
+        sq = got["squawks"]
+        self.assertEqual([(s["hex"], s["code"], s["flight"], s["where"]) for s in sq], [("4ca7b1", "7700", "EZY17QZ", {"near": "Kelsterbach"})], "and heard all the same")
+        self.assertEqual((sq[0]["plane"]["hex"].lower(), sq[0]["plane"]["flight"]), ("4ca7b1", "EZY17QZ"), "described as the wall describes any aircraft")
+        self.assertNotIn("lat", sq[0]["plane"]); self.assertNotIn("lon", sq[0]["plane"])
         self.assertEqual(get("/api/planes", "DEMO=1\n")["squawks"], [])
         self.assertIs(get("/api/config", "")["squawk_banner"], False)
         self.assertIs(get("/api/config", "SQUAWK_BANNER=1\n")["squawk_banner"], True)

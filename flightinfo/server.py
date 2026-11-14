@@ -169,14 +169,58 @@ class SquawkWatch(object):
 _wall_squawks = {"watch": SquawkWatch(), "lock": threading.Lock()}
 
 
-def squawks_for_wall(data, now=None):
+SQUAWK_NEAR_KM = 15               # the town nearest the aircraft within this, as the Telegram message says it
+_squawk_where = {}                # hex -> (when, answer): the places list is read at most once a minute per aircraft
+
+
+def squawk_where(ac, now):
+    """Where a squawking aircraft is, from its own position, for the wall's banner: {"near": town} (5 000 inhabitants
+    or more, within 15 km), else {"city": name, "km": n} (the city of 100 000 or more nearest it), else None. A place
+    near the aircraft, never the antenna's, and never the position itself. Reading the places takes a few tenths of a
+    second on a Pi 3 and the wall asks every two seconds: kept a minute per aircraft."""
+    h = str(ac.get("hex", "")).lower().strip()
+    lat, lon = ac.get("lat"), ac.get("lon")
+    if isinstance(lat, bool) or isinstance(lon, bool) or not isinstance(lat, (int, float)) or not isinstance(lon, (int, float)):
+        return None
+    kept = _squawk_where.get(h)
+    if kept and now - kept[0] < 60:
+        return kept[1]
+    out = None
+    try:
+        towns = _towns_near(lat, lon, SQUAWK_NEAR_KM)
+        if towns:
+            out = {"near": tidy_place(min(towns, key=towns.get))}
+        else:
+            city = nearest_city(lat, lon)
+            if city:
+                out = {"city": city["name"], "km": city["km"]}
+    except Exception:                               # a place that cannot be worked out never stops the wall's answer
+        out = None
+    if len(_squawk_where) > 200:
+        _squawk_where.clear()
+    _squawk_where[h] = (now, out)
+    return out
+
+
+def squawks_for_wall(data, now=None, describe=None):
     """What /api/planes says of the emergencies heard anywhere in range (1.2, the wall's banner): the code, the
-    callsign and the address, never a position. Each wall decides whether it shows them (its gear, SQUAWK_BANNER)."""
+    callsign, the address, the town or city nearest the aircraft, and, when `describe` is given, the aircraft as the
+    wall shows any other (model, registration, airline, route, photo), so the banner says which aircraft and where
+    (the owner, 14 November 2026). Never a position. Each wall decides whether it shows them (its gear, SQUAWK_BANNER)."""
     now = time.time() if now is None else now
     with _wall_squawks["lock"]:
         got = _wall_squawks["watch"].look((data or {}).get("aircraft"), now)
-    out = [{"hex": str(ac.get("hex", "")).lower().strip(), "code": code,
-            "flight": re.sub(r"[^A-Z0-9-]", "", str(ac.get("flight") or "").strip().upper())[:8]} for ac, code in got]
+    out = []
+    for ac, code in got:
+        h = str(ac.get("hex", "")).lower().strip()
+        row = {"hex": h, "code": code, "flight": re.sub(r"[^A-Z0-9-]", "", str(ac.get("flight") or "").strip().upper())[:8],
+               "where": squawk_where(ac, now), "plane": None}
+        if describe is not None:
+            try:
+                row["plane"] = describe(h)
+            except Exception:                       # the banner falls back to the code and the callsign
+                row["plane"] = None
+        out.append(row)
     return sorted(out, key=lambda s: (s["code"], s["hex"]))[:5]
 
 
@@ -2450,13 +2494,19 @@ class Handler(BaseHTTPRequestHandler):
         route_fallback = lookup_route_fallback if route_lookup is not None else None
         only = (query.get("hex") or [""])[0].strip().lower()
         only = only if re.match(r"^[0-9a-f]{6}$", only) else None     # an ICAO address or nothing: no other input reaches the loop
-        planes, total = build_planes(data, cfg_float(cfg, "LAT", 0), cfg_float(cfg, "LON", 0), radius_km,
-                                     load_airlines(cfg), lookup, demo, load_types(cfg), route_lookup, aircraft_lookup, route_fallback,
-                                     only_hex=only, local_db=local_db_dir(cfg),
-                                     airline_lookup=lookup_airline if real_lookups and cfg_bool(cfg, "AIRLINE_LOOKUP") else None)
+        def describe(hex_code=only, radius=radius_km):
+            return build_planes(data, cfg_float(cfg, "LAT", 0), cfg_float(cfg, "LON", 0), radius,
+                                load_airlines(cfg), lookup, demo, load_types(cfg), route_lookup, aircraft_lookup, route_fallback,
+                                only_hex=hex_code, local_db=local_db_dir(cfg),
+                                airline_lookup=lookup_airline if real_lookups and cfg_bool(cfg, "AIRLINE_LOOKUP") else None)
+        planes, total = describe()
+
+        def squawking(hex_code):                    # the one aircraft, wherever it is in range, as the wall shows any other
+            found = describe(hex_code, 100000.0)[0]
+            return found[0] if found else None
         # 1.2: the emergencies heard anywhere in range, for the wall's banner; the demo's invented sky has none
         return self._send(200, {"planes": planes, "total": total, "radius_km": radius_km,
-                                "squawks": [] if demo else squawks_for_wall(data),
+                                "squawks": [] if demo else squawks_for_wall(data, describe=squawking),
                                 "server_id": SERVER_ID, "updated": time.time()})
 
     def _static(self, path, headers=None):
