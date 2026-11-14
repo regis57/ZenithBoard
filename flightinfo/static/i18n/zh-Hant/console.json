@@ -463,6 +463,8 @@
  "Only the kinds lit; Everything writes every crossing": "僅限亮起的類型；「全部」會傳送每次飛越",
  "Emergency squawks": "緊急詢答機代碼",
  "7500, 7600, 7700 anywhere the antenna hears them, not only in the radius; once per flight, with where the aircraft is. Never posted to Bluesky.": "7500, 7600, 7700：只要天線能收到就傳送，不限於半徑內；每個航班一次，並附上飛機所在位置。絕不發布到 Bluesky。",
+ "Receiver alert": "接收機警報",
+ "A message when the receiver hears almost nothing for half an hour, falls by day under 40 % of the same hours a week earlier, or loses range for two days; and one when it is normal again. Needs the statistics.": "當接收機半小時內幾乎收不到訊號、白天低於一週前同一時段的 40 %，或連續兩天接收距離下降時傳送一則訊息；恢復正常時再傳送一則。需要開啟統計。",
  "Language of the messages": "訊息語言",
  "The posts' ({lang})": "與貼文相同（{lang}）",
  "The posts'": "與貼文相同",

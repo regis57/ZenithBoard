@@ -463,6 +463,8 @@
  "Only the kinds lit; Everything writes every crossing": "켜진 종류만, 전체는 통과하는 모든 항공기를 전송",
  "Emergency squawks": "비상 스쿼크",
  "7500, 7600, 7700 anywhere the antenna hears them, not only in the radius; once per flight, with where the aircraft is. Never posted to Bluesky.": "7500, 7600, 7700을 반경 안뿐 아니라 안테나가 수신하는 모든 곳에서 알립니다. 항공편마다 한 번, 항공기 위치와 함께 보냅니다. Bluesky에는 절대 게시하지 않습니다.",
+ "Receiver alert": "수신기 경고",
+ "A message when the receiver hears almost nothing for half an hour, falls by day under 40 % of the same hours a week earlier, or loses range for two days; and one when it is normal again. Needs the statistics.": "수신기가 30분 동안 거의 아무것도 듣지 못하거나, 낮에 일주일 전 같은 시간대의 40 % 아래로 떨어지거나, 이틀 동안 수신 거리가 줄면 메시지를 보내고, 정상으로 돌아오면 한 번 더 보냅니다. 통계가 필요합니다.",
  "Language of the messages": "메시지 언어",
  "The posts' ({lang})": "게시물과 동일({lang})",
  "The posts'": "게시물과 동일",

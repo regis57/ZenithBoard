@@ -468,6 +468,8 @@
  "Only the kinds lit; Everything writes every crossing": "الأنواع المضاءة فقط؛ «الكل» يرسل رسالة عن كل عبور",
  "Emergency squawks": "رموز الطوارئ",
  "7500, 7600, 7700 anywhere the antenna hears them, not only in the radius; once per flight, with where the aircraft is. Never posted to Bluesky.": "7500, 7600, 7700 أينما التقطها الهوائي، لا داخل نصف القطر فقط؛ مرة واحدة في كل رحلة، مع موقع الطائرة. ولا تُنشر على Bluesky أبدًا.",
+ "Receiver alert": "تنبيه المستقبِل",
+ "A message when the receiver hears almost nothing for half an hour, falls by day under 40 % of the same hours a week earlier, or loses range for two days; and one when it is normal again. Needs the statistics.": "رسالة عندما لا يسمع المستقبِل شيئًا تقريبًا لنصف ساعة، أو ينخفض نهارًا إلى أقل من 40 % من الساعات نفسها قبل أسبوع، أو يفقد المدى ليومين؛ وأخرى عندما يعود كل شيء طبيعيًا. يتطلب الإحصاءات.",
  "Language of the messages": "لغة الرسائل",
  "The posts' ({lang})": "مثل المنشورات ({lang})",
  "The posts'": "مثل المنشورات",

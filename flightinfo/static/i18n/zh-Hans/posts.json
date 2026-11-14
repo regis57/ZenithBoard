@@ -154,5 +154,9 @@
  "near {place}": "{place} 附近",
  "{distance} from {place} ({country})": "距 {place}（{country}）{distance}",
  "position not known": "位置未知",
- "closest: {distance}": "最近距离：{distance}"
+ "closest: {distance}": "最近距离：{distance}",
+ "Receiver alert: almost nothing heard for {minutes} minutes ({messages} messages in the last quarter hour). Check the antenna, its cable and the dongle.": "接收机警报：{minutes} 分钟内几乎没有收到任何信号（最近一刻钟 {messages} 条消息）。请检查天线、馈线和接收棒。",
+ "Receiver alert: for two hours, {percent} % of the messages of the same hours a week ago. Check the antenna, its cable and the dongle.": "接收机警报：两小时以来，消息量只有一周前同一时段的 {percent} %。请检查天线、馈线和接收棒。",
+ "Receiver alert: for two days the range has been {percent} % of its usual ({range} against {usual}). The antenna, its cable or the dongle may be weakening.": "接收机警报：两天以来，接收距离只有平时的 {percent} %（{range}，平时为 {usual}）。天线、馈线或接收棒可能正在变弱。",
+ "The receiver hears normally again.": "接收机已恢复正常接收。"
 }

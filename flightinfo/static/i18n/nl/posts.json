@@ -168,5 +168,9 @@
  "near {place}": "bij {place}",
  "{distance} from {place} ({country})": "op {distance} van {place} ({country})",
  "position not known": "positie onbekend",
- "closest: {distance}": "dichtste nadering: {distance}"
+ "closest: {distance}": "dichtste nadering: {distance}",
+ "Receiver alert: almost nothing heard for {minutes} minutes ({messages} messages in the last quarter hour). Check the antenna, its cable and the dongle.": "Ontvangerwaarschuwing: al {minutes} minuten bijna niets gehoord ({messages} berichten in het laatste kwartier). Controleer de antenne, de kabel en de dongle.",
+ "Receiver alert: for two hours, {percent} % of the messages of the same hours a week ago. Check the antenna, its cable and the dongle.": "Ontvangerwaarschuwing: al twee uur {percent} % van de berichten van dezelfde uren een week geleden. Controleer de antenne, de kabel en de dongle.",
+ "Receiver alert: for two days the range has been {percent} % of its usual ({range} against {usual}). The antenna, its cable or the dongle may be weakening.": "Ontvangerwaarschuwing: al twee dagen is het bereik {percent} % van het gebruikelijke ({range} tegenover {usual}). De antenne, de kabel of de dongle wordt mogelijk zwakker.",
+ "The receiver hears normally again.": "De ontvanger hoort weer normaal."
 }

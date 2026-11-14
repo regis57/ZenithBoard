@@ -156,5 +156,9 @@
  "near {place}": "{place} 부근",
  "{distance} from {place} ({country})": "{place}({country})에서 {distance}",
  "position not known": "위치 미상",
- "closest: {distance}": "최근접 거리: {distance}"
+ "closest: {distance}": "최근접 거리: {distance}",
+ "Receiver alert: almost nothing heard for {minutes} minutes ({messages} messages in the last quarter hour). Check the antenna, its cable and the dongle.": "수신기 경고: {minutes}분 동안 거의 아무것도 수신되지 않았습니다(최근 15분간 메시지 {messages}개). 안테나, 케이블, 동글을 확인하세요.",
+ "Receiver alert: for two hours, {percent} % of the messages of the same hours a week ago. Check the antenna, its cable and the dongle.": "수신기 경고: 두 시간 동안 일주일 전 같은 시간대 메시지의 {percent} %입니다. 안테나, 케이블, 동글을 확인하세요.",
+ "Receiver alert: for two days the range has been {percent} % of its usual ({range} against {usual}). The antenna, its cable or the dongle may be weakening.": "수신기 경고: 이틀 동안 수신 거리가 평소의 {percent} %입니다({range}, 평소 {usual}). 안테나, 케이블 또는 동글이 약해지고 있을 수 있습니다.",
+ "The receiver hears normally again.": "수신기가 다시 정상적으로 수신합니다."
 }

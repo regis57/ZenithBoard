@@ -466,6 +466,8 @@
  "Only the kinds lit; Everything writes every crossing": "Tylko podświetlone rodzaje; Wszystko zgłasza każdy przelot",
  "Emergency squawks": "Kody alarmowe transpondera",
  "7500, 7600, 7700 anywhere the antenna hears them, not only in the radius; once per flight, with where the aircraft is. Never posted to Bluesky.": "7500, 7600, 7700 wszędzie, gdzie antena je odbiera, nie tylko w promieniu; raz na lot, z informacją, gdzie jest samolot. Nigdy nie są publikowane na Bluesky.",
+ "Receiver alert": "Alert odbiornika",
+ "A message when the receiver hears almost nothing for half an hour, falls by day under 40 % of the same hours a week earlier, or loses range for two days; and one when it is normal again. Needs the statistics.": "Wiadomość, gdy odbiornik przez pół godziny prawie nic nie słyszy, w dzień spada poniżej 40 % tych samych godzin sprzed tygodnia lub przez dwa dni traci zasięg; i druga, gdy wszystko wróci do normy. Wymaga statystyk.",
  "Language of the messages": "Język wiadomości",
  "The posts' ({lang})": "Jak we wpisach ({lang})",
  "The posts'": "Jak we wpisach",

@@ -132,6 +132,7 @@ ACTIONS = {
     "telegram-test-send": ("sharing", "Send a test to the chat", ["telegram", "test", "send"], [], "ask"),
     "telegram-crossings": ("sharing", "Crossings of the sharing radius", ["telegram", "crossings", "{value}"], [("value", "enum", ON_OFF)], ""),
     "telegram-squawks": ("sharing", "Emergency squawks", ["telegram", "squawks", "{value}"], [("value", "enum", ON_OFF)], ""),
+    "telegram-health": ("sharing", "Receiver alert", ["telegram", "health", "{value}"], [("value", "enum", ON_OFF)], ""),
     "telegram-closest": ("sharing", "Closest distance from the antenna", ["telegram", "closest", "{value}"], [("value", "enum", ON_OFF)], ""),
     "telegram-rules": ("sharing", "Which crossings", ["telegram", "rules", "{value}"], [("value", "re", TG_RULES_RE)], ""),
     "telegram-lang": ("sharing", "Language of the messages", ["telegram", "lang", "{value}"], [("value", "enum", ("posts",) + LANGS)], ""),

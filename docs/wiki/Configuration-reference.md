@@ -81,6 +81,10 @@ The dynamic-DNS **token is not stored here.** It is asked for interactively and 
 | `CONSOLE_HOSTS` | — | `zenithboard config-set CONSOLE_HOSTS name1,name2` | Names, besides an address, `*.local`, `*.lan`, `*.home.arpa` and the Pi's own name, that the console may be opened by (a guard against DNS rebinding). Since 0.54.0 the wall's data (`/api/*`, `/social/preview*`) answers to the same names, and to `DDNS_HOST`; a router's own name (`pi.fritz.box`) goes here. Not asked when `ALLOW_FROM=any` |
 | `TELEGRAM` | `0` | `zenithboard telegram on\|off` | Text messages to your own Telegram chat (0.99.6). See [Telegram](Telegram). The bot's token and the chat are in `telegram.env`, not here |
 | `TELEGRAM_CROSSINGS` | `1` | `zenithboard telegram crossings on\|off` | A message for each aircraft crossing the sharing radius (`SOCIAL_RADIUS_KM`), once per crossing |
+| `TELEGRAM_HEALTH` | `0` | `zenithboard telegram health on\|off` | 1.2: the receiver alert, said in the chat ([Telegram](Telegram#the-receiver-alert-12-off-by-default)). Needs `STATS=1` |
+| `HEALTH_DEAF_MESSAGES` | `2000` | `zenithboard config-set` | Under this many messages in a quarter hour, twice running: the receiver is deaf. 1 to 999999 |
+| `HEALTH_DROP_PERCENT` | `40` | same | By day, an hour under this share of the same hour a week earlier, twice running. 1 to 99 |
+| `HEALTH_RANGE_PERCENT` | `85` | same | A day's median range under this share of the fourteen days before, two days running. 1 to 99 |
 | `TELEGRAM_CLOSEST` | `0` | `zenithboard telegram closest on\|off` | 1.1: the closest the aircraft came to the antenna, added to its crossing message at the exit. The Telegram messages only |
 | `TELEGRAM_SQUAWKS` | `1` | `zenithboard telegram squawks on\|off` | A message for each emergency squawk (7500, 7600, 7700) anywhere in range, once per flight and code. Never posted to Bluesky |
 | `TELEGRAM_RULES` | `all` | `zenithboard telegram rules LIST` | Which crossings: `all`, or some of `military,helicopter,heavy` |

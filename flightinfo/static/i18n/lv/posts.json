@@ -180,5 +180,9 @@
  "near {place}": "netālu no {place}",
  "{distance} from {place} ({country})": "{distance} no {place} ({country})",
  "position not known": "pozīcija nav zināma",
- "closest: {distance}": "tuvākais attālums: {distance}"
+ "closest: {distance}": "tuvākais attālums: {distance}",
+ "Receiver alert: almost nothing heard for {minutes} minutes ({messages} messages in the last quarter hour). Check the antenna, its cable and the dongle.": "Uztvērēja brīdinājums: jau {minutes} minūtes gandrīz nekas nav dzirdēts ({messages} ziņojumi pēdējā ceturtdaļstundā). Pārbaudiet antenu, tās kabeli un dongli.",
+ "Receiver alert: for two hours, {percent} % of the messages of the same hours a week ago. Check the antenna, its cable and the dongle.": "Uztvērēja brīdinājums: jau divas stundas {percent} % no to pašu stundu ziņojumiem pirms nedēļas. Pārbaudiet antenu, tās kabeli un dongli.",
+ "Receiver alert: for two days the range has been {percent} % of its usual ({range} against {usual}). The antenna, its cable or the dongle may be weakening.": "Uztvērēja brīdinājums: jau divas dienas uztveršanas attālums ir {percent} % no ierastā ({range} pret {usual}). Antena, tās kabelis vai dongls, iespējams, vājinās.",
+ "The receiver hears normally again.": "Uztvērējs atkal dzird normāli."
 }

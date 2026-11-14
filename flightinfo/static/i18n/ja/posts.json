@@ -156,5 +156,9 @@
  "near {place}": "{place}付近",
  "{distance} from {place} ({country})": "{place}（{country}）から{distance}",
  "position not known": "位置不明",
- "closest: {distance}": "最接近距離: {distance}"
+ "closest: {distance}": "最接近距離: {distance}",
+ "Receiver alert: almost nothing heard for {minutes} minutes ({messages} messages in the last quarter hour). Check the antenna, its cable and the dongle.": "受信機の警告: {minutes}分間ほとんど何も受信していません（直近15分で{messages}件）。アンテナ、ケーブル、ドングルを確認してください。",
+ "Receiver alert: for two hours, {percent} % of the messages of the same hours a week ago. Check the antenna, its cable and the dongle.": "受信機の警告: 2時間にわたり、1週間前の同じ時間帯のメッセージの{percent} %です。アンテナ、ケーブル、ドングルを確認してください。",
+ "Receiver alert: for two days the range has been {percent} % of its usual ({range} against {usual}). The antenna, its cable or the dongle may be weakening.": "受信機の警告: 2日間、受信距離がふだんの{percent} %です（{range}、通常は{usual}）。アンテナ、ケーブル、またはドングルが弱っている可能性があります。",
+ "The receiver hears normally again.": "受信機は再び正常に受信しています。"
 }

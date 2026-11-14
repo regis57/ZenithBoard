@@ -464,6 +464,8 @@
  "Only the kinds lit; Everything writes every crossing": "Ainult esile tõstetud liigid; Kõik saadab sõnumi igast ülelennust",
  "Emergency squawks": "Hädaolukorra transpondrikoodid",
  "7500, 7600, 7700 anywhere the antenna hears them, not only in the radius; once per flight, with where the aircraft is. Never posted to Bluesky.": "7500, 7600, 7700 kõikjal, kus antenn neid vastu võtab, mitte ainult raadiuses; üks kord lennu kohta, koos lennuki asukohaga. Bluesky kontole ei postitata kunagi.",
+ "Receiver alert": "Vastuvõtja hoiatus",
+ "A message when the receiver hears almost nothing for half an hour, falls by day under 40 % of the same hours a week earlier, or loses range for two days; and one when it is normal again. Needs the statistics.": "Sõnum, kui vastuvõtja ei kuule pool tundi peaaegu midagi, langeb päeval alla 40 % nädalatagustest samadest tundidest või kaotab kaheks päevaks leviulatust; ja teine, kui kõik on jälle normaalne. Vajab statistikat.",
  "Language of the messages": "Sõnumite keel",
  "The posts' ({lang})": "Nagu postitustel ({lang})",
  "The posts'": "Nagu postitustel",
