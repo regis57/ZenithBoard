@@ -281,6 +281,8 @@
  "Only the kinds lit; Everything posts every crossing": "켜진 종류만, 전체는 통과하는 모든 항공기를 게시",
  "Least time between posts": "게시 최소 간격",
  "Minutes; 0 = every crossing posted once": "분 단위, 0 = 통과할 때마다 한 번씩 게시",
+ "Aircraft never to post": "게시하지 않을 항공기",
+ "Registrations, ICAO addresses or callsigns, separated by commas (F-GXXX, 3944EF). Left out of the Telegram crossings too; an emergency squawk is always sent.": "등록부호, ICAO 주소 또는 호출부호를 쉼표로 구분하여 입력합니다(F-GXXX, 3944EF). Telegram 통과 알림에서도 제외되며, 비상 스쿽은 항상 전송됩니다.",
  "Town names on the maps": "지도의 도시 이름",
  "From GeoNames, made on the Pi (a few minutes); off: the lists shipped with ZenithBoard": "GeoNames 데이터로 Pi에서 생성(몇 분 소요), 꺼짐: ZenithBoard에 포함된 목록",
  "Try a post (posts nothing)": "게시 테스트(실제로 게시하지 않음)",

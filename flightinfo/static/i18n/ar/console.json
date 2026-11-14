@@ -286,6 +286,8 @@
  "Only the kinds lit; Everything posts every crossing": "الأنواع المضاءة فقط؛ «الكل» ينشر كل عبور",
  "Least time between posts": "أقل مدة بين منشورين",
  "Minutes; 0 = every crossing posted once": "بالدقائق؛ 0 = نشر كل عبور مرة واحدة",
+ "Aircraft never to post": "طائرات لا تُنشر أبدًا",
+ "Registrations, ICAO addresses or callsigns, separated by commas (F-GXXX, 3944EF). Left out of the Telegram crossings too; an emergency squawk is always sent.": "أرقام التسجيل أو عناوين ICAO أو رموز النداء، مفصولة بفواصل (F-GXXX, 3944EF). تُستبعد أيضًا من رسائل العبور على Telegram؛ ورمز الطوارئ يُرسَل دائمًا.",
  "Town names on the maps": "أسماء المدن على الخرائط",
  "From GeoNames, made on the Pi (a few minutes); off: the lists shipped with ZenithBoard": "من GeoNames، تُنشأ على جهاز Pi (بضع دقائق)؛ عند التعطيل: القوائم المرفقة مع ZenithBoard",
  "Try a post (posts nothing)": "تجربة منشور (دون نشر)",

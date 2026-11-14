@@ -345,8 +345,10 @@ def squawk_plane(c, ac):
 
 def crossing_candidates(c, planes, state, pending_since, now):
     """The aircraft inside the radius worth a message, not yet written about in this crossing: (plane, why)."""
-    rules, out = rules_of(c), []
+    rules, out, skip = rules_of(c), [], social.ignore_set(c)
     for p in planes or ():
+        if social.ignored(p, skip):                # 1.1: the owner's aircraft never to post; a squawk is not a crossing
+            continue
         if p.get("on_ground") or not (p.get("flight") or social.known(p)) or social.already_posted(state, p):
             continue
         if p.get("pending"):                       # the wall is still asking for its route or model: wait a little

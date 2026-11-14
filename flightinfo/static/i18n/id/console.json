@@ -281,6 +281,8 @@
  "Only the kinds lit; Everything posts every crossing": "Hanya jenis yang menyala; Semuanya memposting setiap pesawat yang melintas",
  "Least time between posts": "Jeda minimum antarpostingan",
  "Minutes; 0 = every crossing posted once": "Menit; 0 = setiap pesawat yang melintas diposting sekali",
+ "Aircraft never to post": "Pesawat yang tidak pernah diposting",
+ "Registrations, ICAO addresses or callsigns, separated by commas (F-GXXX, 3944EF). Left out of the Telegram crossings too; an emergency squawk is always sent.": "Registrasi, alamat ICAO, atau tanda panggil, dipisahkan dengan koma (F-GXXX, 3944EF). Juga dilewati pada lintasan Telegram; squawk darurat selalu dikirim.",
  "Town names on the maps": "Nama kota di peta",
  "From GeoNames, made on the Pi (a few minutes); off: the lists shipped with ZenithBoard": "Dari GeoNames, dibuat di Pi (beberapa menit); nonaktif: daftar bawaan ZenithBoard",
  "Try a post (posts nothing)": "Coba postingan (tidak memposting apa pun)",

@@ -282,6 +282,8 @@
  "Only the kinds lit; Everything posts every crossing": "Ainult esile tõstetud liigid; Kõik postitab iga ülelennu",
  "Least time between posts": "Postituste minimaalne vahe",
  "Minutes; 0 = every crossing posted once": "Minutites; 0 = iga ülelend postitatakse üks kord",
+ "Aircraft never to post": "Õhusõidukid, mida kunagi ei postitata",
+ "Registrations, ICAO addresses or callsigns, separated by commas (F-GXXX, 3944EF). Left out of the Telegram crossings too; an emergency squawk is always sent.": "Registreerimistähised, ICAO-aadressid või kutsungid, komadega eraldatud (F-GXXX, 3944EF). Jäetakse välja ka Telegrami ülelendudest; hädaolukorra squawk saadetakse alati.",
  "Town names on the maps": "Asulate nimed kaartidel",
  "From GeoNames, made on the Pi (a few minutes); off: the lists shipped with ZenithBoard": "GeoNamesi andmetest, koostatakse Pi-s (mõni minut); väljas: ZenithBoardiga kaasa tulevad loendid",
  "Try a post (posts nothing)": "Proovi postitust (midagi ei postitata)",

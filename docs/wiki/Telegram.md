@@ -56,6 +56,8 @@ Since 1.1 both say where the aircraft is heading, in words (*heading south-east*
 
 **Your own messages**: the console's *Your own Telegram messages* (one for the crossings, one for the squawks; lines kept; the tags a click away; tried on an aircraft overhead before it is saved), or `sudo zenithboard telegram template crossing set -- "TEXT"`. The one before is kept as `.bak` (`telegram template crossing undo`); `set none` gives the default back. A template that cannot be used (an unknown tag, a bracket left open) is refused when saved, and the default is used if one gets broken by hand.
 
+**Aircraft never to post (1.1).** The list kept by `sudo zenithboard social ignore` ([Social sharing](Social-sharing)) holds for the crossing messages too: an aircraft on it by registration, ICAO address or callsign is not written about when it crosses. It never holds for a squawk: an emergency is sent whoever squawks.
+
 ## How a squawk is believed
 
 The service reads the decoder's `aircraft.json` every five seconds. A code is believed when it is heard on **two reads in a row** (one reply decoded wrongly once never sends a message), or at once when the aircraft's own emergency status says the same (readsb's `emergency`: `general`, `nordo`, `unlawful`). Once per flight and code: the same aircraft squawking 7700 for twenty minutes is one message; 7700 then 7600 is two (the radio failed after the emergency); the same airframe as another flight, or the same code more than an hour after it was last heard, is a new event.

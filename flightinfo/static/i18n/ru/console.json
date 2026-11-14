@@ -284,6 +284,8 @@
  "Only the kinds lit; Everything posts every crossing": "Только выделенные типы; «Всё» публикует каждый пролёт",
  "Least time between posts": "Минимальный интервал между публикациями",
  "Minutes; 0 = every crossing posted once": "Минуты; 0 = каждый пролёт публикуется один раз",
+ "Aircraft never to post": "Самолёты, которые никогда не публикуются",
+ "Registrations, ICAO addresses or callsigns, separated by commas (F-GXXX, 3944EF). Left out of the Telegram crossings too; an emergency squawk is always sent.": "Регистрационные номера, адреса ИКАО или позывные через запятую (F-GXXX, 3944EF). Пропускаются и в пролётах для Telegram; аварийный сквок отправляется всегда.",
  "Town names on the maps": "Названия городов на картах",
  "From GeoNames, made on the Pi (a few minutes); off: the lists shipped with ZenithBoard": "Из GeoNames, создаются на Pi (несколько минут); если выключено — списки, поставляемые с ZenithBoard",
  "Try a post (posts nothing)": "Пробная публикация (ничего не публикуется)",

@@ -283,6 +283,8 @@
  "Only the kinds lit; Everything posts every crossing": "Seuls les types allumés ; Tout publie chaque passage",
  "Least time between posts": "Temps minimum entre deux publications",
  "Minutes; 0 = every crossing posted once": "Minutes ; 0 = chaque passage publié une fois",
+ "Aircraft never to post": "Avions à ne jamais publier",
+ "Registrations, ICAO addresses or callsigns, separated by commas (F-GXXX, 3944EF). Left out of the Telegram crossings too; an emergency squawk is always sent.": "Immatriculations, adresses OACI ou indicatifs, séparés par des virgules (F-GXXX, 3944EF). Écartés aussi des passages Telegram ; un squawk d'urgence est toujours envoyé.",
  "Town names on the maps": "Noms des villes sur les cartes",
  "From GeoNames, made on the Pi (a few minutes); off: the lists shipped with ZenithBoard": "Depuis GeoNames, préparés sur le Pi (quelques minutes) ; désactivé : les listes fournies avec ZenithBoard",
  "Try a post (posts nothing)": "Essayer une publication (rien n'est publié)",

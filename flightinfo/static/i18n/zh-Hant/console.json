@@ -281,6 +281,8 @@
  "Only the kinds lit; Everything posts every crossing": "僅限亮起的類型；「全部」會發布每次飛越",
  "Least time between posts": "發文最短間隔",
  "Minutes; 0 = every crossing posted once": "分鐘；0 = 每次飛越都發文一次",
+ "Aircraft never to post": "永不發布的飛機",
+ "Registrations, ICAO addresses or callsigns, separated by commas (F-GXXX, 3944EF). Left out of the Telegram crossings too; an emergency squawk is always sent.": "註冊編號、ICAO 位址或呼號，以逗號分隔（F-GXXX, 3944EF）。Telegram 的過境訊息中同樣略去；緊急應答機代碼一律傳送。",
  "Town names on the maps": "地圖上的城鎮名稱",
  "From GeoNames, made on the Pi (a few minutes); off: the lists shipped with ZenithBoard": "取自 GeoNames，在 Pi 上產生（約需幾分鐘）；關閉：使用 ZenithBoard 內附的清單",
  "Try a post (posts nothing)": "試發貼文（不會實際發布）",
