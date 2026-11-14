@@ -45,7 +45,11 @@ A feature is a minor version, a fix or a change with no change of behaviour a pa
 
 **1.1.0 (14 November 2026)** holds lots 0 and 1, published the day it was written at the owner's word, before any of
 it ran on the reference Pi (said in Project-status): his first paste after the update is read before lot 2 is started.
-The old command names are gone (Command-reference → *Names removed in 1.1*). **Next: lot 2.**
+The old command names are gone (Command-reference → *Names removed in 1.1*).
+
+**1.2.0 (15 November 2026)** holds lot 2 (the squawk banner, `MLAT_NETWORK`, the receiver alert), published at the owner's
+word. What the Pi has and has not shown of it is in Project-status. **Next: lot 3**, measured first: nothing of the watch
+list is built before the counter has run on the Pi and the owner has said which categories he wants.
 
 ## Workflow for a change
 
