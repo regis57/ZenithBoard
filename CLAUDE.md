@@ -33,17 +33,15 @@ on Wi-Fi, near Trémery (Moselle). The owner tests on it; a session never reache
   (`zenithboard stats gaps`, the field log) rather than an assumption.
 - Mastodon is gone (0.19.0) and stays gone. No paid tier, no telemetry, no cloud account.
 
-## Feature freeze (since 25 October 2026)
+## After 1.0 (since 14 November 2026)
 
-The owner froze the features for 1.0: **0.99.x is the release candidate, fixes only** (a crash, a wrong figure, something
-not doing what the docs say, a security or privacy hole, a mistranslation, a doc a novice cannot follow, a provider that
-moved a file). A request for anything new during the freeze is **not built**: say so to the owner, in French, and write
-it under *Waiting for 1.1* in `docs/wiki/Roadmap.md`. Every release is a patch of 0.99 until the owner says 1.0. What
-1.0 still needs, and the hands-off clock, are in Roadmap → What 1.0 takes. **A fix never moves the release candidate's
-date** (the owner, 29 October 2026); only what the month is there to catch (a crash, a forced reboot, a service down on
-the Pi) can move it. Never offer to restart the clock for a fix. **The owner alone lets a feature in during the freeze**
-(30 October 2026: AirNav Radar and Telegram, 0.99.6); then the clock starts again, 30 days from the reference Pi's
-update to it (29 November 2026 if it is updated on 30 October).
+The owner closed the release candidate and published **1.0.0** on 14 November 2026 (the same code as 0.99.26; the month
+hands-off stopped at fourteen days, *assumé*; the fixed IP address still never applied on a real Pi, said in
+Project-status). **The freeze of 25 October is over.** Features are built again, **in the lots of
+`docs/wiki/Roadmap.md` → The lots after 1.0, in their order**: lot 0 (the base) first, then lot 1, one lot after the
+other. A request that is in no lot is written under *Waiting for 1.1* and placed in a lot with the owner, not built on
+the spot. What he put off after the lots, and what is not planned, he confirmed the same day: do not reopen them.
+A feature is a minor version, a fix or a change with no change of behaviour a patch.
 
 ## Workflow for a change
 

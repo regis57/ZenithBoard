@@ -2,9 +2,11 @@
 
 No dates except those the sky sets (a monthly summary, a month of lists). ZenithBoard is a spare-time project and any other date would be a fiction. What this page promises is an order.
 
-**Where it stands (30 October 2026): 0.99.6, the release candidate for 1.0.** Features are frozen since 25 October 2026, 13:42 (the owner); only fixes ship until 1.0 (0.99.1 to 0.99.5), and they do not move the date. On 30 October the owner let two features in, AirNav Radar and Telegram messages (0.99.6), and started the month again: **30 days from the reference Pi's update to 0.99.6**, 29 November 2026 if it is updated on 30 October. So this page reads, in order: what 1.0 still takes; what is watched on the Pi meanwhile; what was asked during the freeze (*Waiting for 1.1*); what comes after 1.0; what is done; what will not be done.
+**Where it stands (14 November 2026): 1.0.0 is out.** The owner closed the release candidate that day, fourteen days into its last month hands-off (*assumé*), the fresh install on a blank card redone during it; the same code as 0.99.26. The freeze of 25 October 2026 is over. So this page reads, in order: **the lots after 1.0**, what is being built now; what waits, item by item; what 1.0 took, kept as the record of the release candidate; what is not planned, and why.
 
 ## What 1.0 takes
+
+**Kept as the record of the release candidate.** 1.0.0 was published on 14 November 2026 at the owner's word, before the date below: the fresh install on a blank card done, the month hands-off stopped at fourteen days, the fixed address still never applied. What follows is as it stood during the candidate.
 
 1.0 means *validated on real hardware, no caveats in [Project status](Project-status)* ([Release process](Release-process)). The state of it on **26 October 2026**, the release candidate **0.99.0** running on the reference Pi since 25 October, 13:51 CET:
 
@@ -88,7 +90,7 @@ Two items of *After 1.0* are to be built from what the reference Pi measures, no
 
 ## The lots after 1.0
 
-The order in which what waits below would be built once 1.0 is out (drawn up on 14 November 2026 at the owner's request: *be ready to add features of value*). Each feature is a minor version, so a lot is a release. **Lot 0 first is proposed, not yet confirmed by the owner**; the airline names in lot 1 are his decision of the same day.
+The order in which what waits below would be built once 1.0 is out (drawn up on 14 November 2026 at the owner's request: *be ready to add features of value*). Each feature is a minor version, so a lot is a release. The owner took it the same day (*on passe à la 1.1, lot par lot*), with the airline names moved into lot 1, and agreed to what is put off after the lots and to what is not planned.
 
 | Lot | What | Why there |
 |---|---|---|
