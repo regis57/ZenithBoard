@@ -71,6 +71,7 @@ DEFAULTS = {
     "CYCLE_SECONDS": "14",
     "SHOW_PHOTOS": "1",
     "FLAGS": "1",               # the registration and maker flags on the dot-matrix wall
+    "SQUAWK_BANNER": "0",       # 1.2: the wall says an emergency squawk heard anywhere in range, for thirty seconds
     "STATS": "0",               # the 15-minute statistics timer; /stats and /api/stats say so when it is off
     "DISPLAY_MODE": "dots",     # dots (dot matrix) | flap (split-flap airport board)
     "SHOW_ROUTES": "1",         # where the flight comes from / goes to (looked up by callsign on adsbdb.com)
@@ -122,7 +123,61 @@ def load_config():
     return _cfg_cache["data"]
 
 
-PRESET_KEYS = ("units", "radius", "cycle", "theme", "mode", "flags")
+PRESET_KEYS = ("units", "radius", "cycle", "theme", "mode", "flags", "squawk")
+
+
+# --------------------------------------------------------------------------- emergency squawks (0.99.6; here since 1.2)
+# The detection the Telegram service has used since 0.99.6, moved here in 1.2 so that the wall's banner believes a
+# code by the same rule: heard on two reads CONFIRM_S apart, or at once when the aircraft's own emergency status says
+# the same. One reply decoded wrongly once never raises anything.
+SQUAWK_CODES = ("7500", "7600", "7700")
+SQUAWK_STATUS = {"unlawful": "7500", "nordo": "7600", "general": "7700"}       # readsb's "emergency" field
+SQUAWK_CONFIRM_S = 4
+
+
+class SquawkWatch(object):
+    """The emergency codes heard at each read of aircraft.json: look() gives [(aircraft, code)] for those believed."""
+    def __init__(self):
+        self.heard = {}                            # "hex:code" -> [first, last]
+
+    def look(self, aircraft, now):
+        out = []
+        for ac in aircraft or []:
+            if not isinstance(ac, dict):
+                continue
+            h = str(ac.get("hex", "")).lower().strip()
+            try:
+                old = float(ac.get("seen", 0) or 0) > 60
+            except (TypeError, ValueError):
+                old = True
+            if not re.match(r"^[0-9a-f]{6}$", h) or old:
+                continue
+            own = SQUAWK_STATUS.get(str(ac.get("emergency") or "").lower())
+            sq = str(ac.get("squawk") or "").strip()
+            code = sq if sq in SQUAWK_CODES else own
+            if not code:
+                continue
+            v = self.heard.setdefault(h + ":" + code, [now, now])
+            v[1] = now
+            if own == code or v[1] - v[0] >= SQUAWK_CONFIRM_S:
+                out.append((ac, code))
+        for k in [k for k, v in self.heard.items() if now - v[1] > 120]:
+            del self.heard[k]
+        return out
+
+
+_wall_squawks = {"watch": SquawkWatch(), "lock": threading.Lock()}
+
+
+def squawks_for_wall(data, now=None):
+    """What /api/planes says of the emergencies heard anywhere in range (1.2, the wall's banner): the code, the
+    callsign and the address, never a position. Each wall decides whether it shows them (its gear, SQUAWK_BANNER)."""
+    now = time.time() if now is None else now
+    with _wall_squawks["lock"]:
+        got = _wall_squawks["watch"].look((data or {}).get("aircraft"), now)
+    out = [{"hex": str(ac.get("hex", "")).lower().strip(), "code": code,
+            "flight": re.sub(r"[^A-Z0-9-]", "", str(ac.get("flight") or "").strip().upper())[:8]} for ac, code in got]
+    return sorted(out, key=lambda s: (s["code"], s["hex"]))[:5]
 
 
 def presets_of(cfg):
@@ -2214,6 +2269,7 @@ def public_config(cfg):
         "cycle_seconds": max(2, cfg_float(cfg, "CYCLE_SECONDS", 14)),
         "show_photos": cfg_bool(cfg, "SHOW_PHOTOS"),
         "flags": cfg_bool(cfg, "FLAGS", "1"),
+        "squawk_banner": cfg_bool(cfg, "SQUAWK_BANNER", "0"),     # 1.2: the default of the gear's "Emergency squawks"
         "stats": cfg_bool(cfg, "STATS"),           # the gear panel offers the /stats page only when there is one
         "display_mode": "flap" if str(cfg.get("DISPLAY_MODE", "dots")).lower() == "flap" else "dots",
         "demo": cfg_bool(cfg, "DEMO"),
@@ -2398,7 +2454,9 @@ class Handler(BaseHTTPRequestHandler):
                                      load_airlines(cfg), lookup, demo, load_types(cfg), route_lookup, aircraft_lookup, route_fallback,
                                      only_hex=only, local_db=local_db_dir(cfg),
                                      airline_lookup=lookup_airline if real_lookups and cfg_bool(cfg, "AIRLINE_LOOKUP") else None)
+        # 1.2: the emergencies heard anywhere in range, for the wall's banner; the demo's invented sky has none
         return self._send(200, {"planes": planes, "total": total, "radius_km": radius_km,
+                                "squawks": [] if demo else squawks_for_wall(data),
                                 "server_id": SERVER_ID, "updated": time.time()})
 
     def _static(self, path, headers=None):

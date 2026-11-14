@@ -157,6 +157,10 @@ menu_switch() {   # menu_switch ENTRY yes|no|esc: the wall's Photos, routes menu
     wt_msg() { echo "MSG $1" >> "$t/wall.log"; }
     ENTRY=$1 ANSWER=$2; wall_data_menu )
 }
+# 1.2: the emergency squawk banner, by command and by the wall's menu; off by default; a tablet's preset may hold it
+check "squawk banner: off by default, the command says so and how to see it" '( PATH="$t/wb:$PATH"; . lib/flightinfo.sh; [ "$(cfg_get SQUAWK_BANNER 0)" = 0 ] && wall_squawk_banner_set 1 | grep -q "squawk_test=7700" && [ "$(cfg_get SQUAWK_BANNER)" = 1 ] && wall_squawk_banner_set 0 | grep -q "OFF" && [ "$(cfg_get SQUAWK_BANNER)" = 0 ] ) && rule_offered SQUAWK_BANNER 1 && ! rule_offered SQUAWK_BANNER 2'
+check "squawk banner: a preset takes squawk=0|1 and nothing else" 'preset_valid_pair squawk=1 && preset_valid_pair squawk=0 && ! preset_valid_pair squawk=yes'
+check "squawk banner: the command and the menu entry" 'grep -q "^  squawk-banner)$" bin/zenithboard && grep -q "squawk \"4  Emergency squawk banner" lib/menus.sh && bash bin/zenithboard squawk-banner | grep -q "banner on the wall: off" && ! bash bin/zenithboard squawk-banner maybe 2>/dev/null'
 for e in photos:SHOW_PHOTOS routes:SHOW_ROUTES airlines:AIRLINE_LOOKUP; do
   key=${e#*:}; cfg_set "$key" 1; : > "$t/wall.log"
   menu_switch "${e%%:*}" no

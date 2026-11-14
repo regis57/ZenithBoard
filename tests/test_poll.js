@@ -177,6 +177,67 @@ const PLANES = { planes: [], total: 3, server_id: "s1" };
     assert.ok(p && /radius_km=10\.000$/.test(p.url), "an error from /api/config must leave the default radius (" + (p && p.url) + ")");
   }
 
+  // ---- 1.2: the emergency squawk banner. Off unless the Pi's setting or the tablet's gear says so; thirty seconds;
+  // once per aircraft and code in an hour; on the dots and on the split-flap board; ?squawk_test= to see it
+  {
+    const HEARD = Object.assign({}, PLANES, { squawks: [{ hex: "4ca7b1", flight: "EZY17QZ", code: "7700" }] });
+    const answer = (cfg, planes) => (url) => (url.startsWith("/api/config") ? json(Object.assign({}, CONFIG, cfg)) : json(planes()));
+    let w = wall({ answer: answer({}, () => HEARD) });
+    await w.run(10000);
+    assert.strictEqual(w.drawn().indexOf("EMERGENCY SQUAWK"), -1, "off by default: a squawk heard changes nothing on the wall");
+    assert.ok(w.drawn().indexOf("NO FLIGHTS") >= 0);
+
+    let heard = HEARD;
+    w = wall({ answer: answer({ squawk_banner: true }, () => heard) });
+    await w.run(6000);
+    for (const part of ["EMERGENCY SQUAWK", "7700", "GENERAL EMERGENCY", "EZY17QZ"]) assert.ok(w.drawn().indexOf(part) >= 0, "the banner must say " + part);
+    w.glyphs.length = 0;
+    await w.run(20000);
+    assert.strictEqual(w.drawn().indexOf("NO FLIGHTS"), -1, "the banner stays its thirty seconds, whatever the aircraft cycle does");
+    await w.run(9000);
+    assert.ok(w.drawn().indexOf("NO FLIGHTS") >= 0, "after thirty seconds the wall is the wall again");
+    w.glyphs.length = 0;
+    await w.run(20 * 60000);
+    assert.strictEqual(w.drawn().indexOf("EMERGENCY SQUAWK"), -1, "the same aircraft and code, still heard: one banner in the hour");
+    heard = Object.assign({}, PLANES, { squawks: HEARD.squawks.concat([{ hex: "3c6444", flight: "DLH4YK", code: "7600" }]) });
+    await w.run(6000);
+    assert.ok(w.drawn().indexOf("RADIO FAILURE") >= 0 && w.drawn().indexOf("DLH4YK") >= 0, "another aircraft's code is another banner");
+    heard = PLANES; w.glyphs.length = 0;
+    await w.run(61 * 60000);
+    heard = HEARD;
+    await w.run(6000);
+    assert.ok(w.drawn().indexOf("GENERAL EMERGENCY") >= 0, "an hour later it is a new event");
+
+    w = wall({ search: "?squawk=1", answer: answer({}, () => HEARD) });
+    await w.run(6000);
+    assert.ok(w.drawn().indexOf("EMERGENCY SQUAWK") >= 0, "a tablet can turn it on by itself");
+    w = wall({ search: "?squawk=0", answer: answer({ squawk_banner: true }, () => HEARD) });
+    await w.run(6000);
+    assert.strictEqual(w.drawn().indexOf("EMERGENCY SQUAWK"), -1, "and off, whatever the Pi's default");
+
+    w = wall({ search: "?mode=flap", answer: answer({ squawk_banner: true }, () => Object.assign({}, PLANES, { squawks: [{ hex: "4ca7b1", flight: "", code: "7600" }] })) });
+    await w.run(6000);
+    const rows = w.flapRows.find((r) => /EMERGENCY SQUAWK/.test(r));
+    assert.ok(rows && /7600/.test(rows) && /RADIO\s*\|\s*FAILURE/.test(rows) && /4CA7B1/.test(rows), "flap: the code, its meaning on two rows, the address when there is no callsign (" + rows + ")");
+    rows.split("|").forEach((r) => assert.ok(r.length <= 16, "flap: '" + r + "' is wider than the board"));
+
+    w = wall({ search: "?squawk_test=7500", answer: answer({}, () => PLANES) });
+    await w.run(6000);
+    assert.ok(w.drawn().indexOf("UNLAWFUL INTERFERENCE") >= 0 && w.drawn().indexOf("TEST123") >= 0, "?squawk_test= shows it once, the setting off");
+    w = wall({ search: "?squawk_test=1234", answer: answer({ squawk_banner: true }, () => PLANES) });
+    await w.run(6000);
+    assert.strictEqual(w.drawn().indexOf("EMERGENCY SQUAWK"), -1, "only the three emergency codes");
+    w = wall({ answer: answer({ squawk_banner: true }, () => Object.assign({}, PLANES, { squawks: [{ hex: "4ca7b1", code: "1200" }, null, { code: "7700<b>" }] })) });
+    await w.run(6000);
+    assert.strictEqual(w.drawn().indexOf("EMERGENCY SQUAWK"), -1, "an answer that is not one of the three codes shows nothing");
+
+    const words = JSON.parse(read("app.js").match(/var SQUAWK_WORDS = (\{[^;]+\});/)[1].replace(/(\d{4})/g, "$1"));
+    for (const code of ["7500", "7600", "7700"]) {
+      assert.ok(words[code].join(" ").length <= 21, code + ": its meaning must fit one row of the dots");
+      words[code].forEach((x) => assert.ok(x.length <= 16, code + ": '" + x + "' must fit the split-flap board"));
+    }
+  }
+
   // ---- every screen fits the wall: 21 letters a row at size 1, 10 at size 2 (6 dots a letter, 128 dots)
   const app = read("app.js");
   for (const m of app.matchAll(/textCenter\(g, "([^"]+)", \d+, (\d)\)/g)) {
@@ -190,5 +251,5 @@ const PLANES = { planes: [], total: 3, server_id: "s1" };
     for (const ch of m[1]) assert.ok(flapChars.indexOf(ch) >= 0, "'" + ch + "' of '" + m[1] + "' has no flap");
   }
 
-  console.log("poll ok: a hung Pi -> one request at a time, NO ANSWER after three given up; a refused name -> WRONG NAME, no reload");
+  console.log("poll ok: a hung Pi -> one request at a time, NO ANSWER after three given up; a refused name -> WRONG NAME, no reload; the squawk banner");
 })().catch((e) => { console.error(e); process.exit(1); });

@@ -27,6 +27,7 @@ ADSB_SDR	re	^[A-Za-z0-9_-]{1,32}$
 UAT_SDR	re	^[A-Za-z0-9_-]{1,32}$
 WIFI_COUNTRY	re	^[A-Z]{2}$
 FLAGS	number	-	0 1
+SQUAWK_BANNER	number	-	0 1
 PORT	number	-
 # -- sharing: the Bluesky posts and the Telegram messages (the languages stay in lib/common.sh's ZB_LANG_CODES, held to
 #    the pages' and the posts' lists by tests/test_i18n.sh)
