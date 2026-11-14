@@ -43,6 +43,10 @@ other. A request that is in no lot is written under *Waiting for 1.1* and placed
 the spot. What he put off after the lots, and what is not planned, he confirmed the same day: do not reopen them.
 A feature is a minor version, a fix or a change with no change of behaviour a patch.
 
+**1.1.0 (14 November 2026)** holds lots 0 and 1, published the day it was written at the owner's word, before any of
+it ran on the reference Pi (said in Project-status): his first paste after the update is read before lot 2 is started.
+The old command names are gone (Command-reference → *Names removed in 1.1*). **Next: lot 2.**
+
 ## Workflow for a change
 
 1. `git checkout main && git pull`, then a branch named for the change.

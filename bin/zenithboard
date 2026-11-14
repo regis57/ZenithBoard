@@ -268,13 +268,28 @@ localdb_set() {
 
 cmd_config() { echo "# $ZB_CONFIG"; cat "$ZB_CONFIG" 2>/dev/null || echo "(no configuration yet - run: sudo ./install.sh)"; }
 
-# 0.99.25 (the owner, 11 November 2026: "gain status and gain check, a quoi bon ?"): one name per command. The old
-# names still work this release, with this line on stderr, so a note or a script written before keeps working.
-old_name() { warn "\"zenithboard $1\" is an old name: use \"zenithboard $2\" (the old one goes in 1.1)."; }
+# 1.1.0: the names 0.99.25 called old are gone, as it announced. Each is refused before anything is done, with the name
+# to use (Command reference -> Names removed in 1.1); nothing below answers to them any more.
+gone_name() { die "\"zenithboard $1\" was removed in 1.1.0: use \"zenithboard $2\"."; }
+case "${1:-} ${2:-}" in
+  "show "*) gone_name show config ;;
+  "color "*) gone_name color colour ;;
+  "style "*) gone_name style mode ;;
+  "threads "*) gone_name threads memory ;;
+  "presets "*) gone_name presets preset ;;
+  "preset rm"|"preset forget") gone_name "preset $2" "preset del" ;;
+  "gain check") gone_name "gain check" "gain status" ;;
+  "social weekly") gone_name "social weekly" "social summary weekly" ;;
+  "social tags") gone_name "social tags" "social hashtags" ;;
+  "social color") gone_name "social color" "social colour" ;;
+  "social sentences") gone_name "social sentences" "social sentence" ;;
+  "social templates") gone_name "social templates" "social template" ;;
+  "telegram templates") gone_name "telegram templates" "telegram template" ;;
+esac
 
 case "${1:-}" in
   status) cmd_status ;;
-  config|"show") [ "$1" = config ] || old_name show config; cmd_config ;;
+  config) cmd_config ;;
   units)
     root_or_die; valid_units "${2:-}" || die "Usage: zenithboard units metric|imperial|aviation"
     cfg_set UNITS "$2"; restart_flightinfo
@@ -286,8 +301,7 @@ case "${1:-}" in
     root_or_die; valid_lat "${2:-x}" && valid_lon "${3:-x}" || die "Usage: zenithboard location LAT LON [ALT_M]   e.g. 49.1193 6.1757 180"
     [ -z "${4:-}" ] || [[ $4 =~ ^-?[0-9]+$ ]] || die "The altitude is whole metres above sea level: $4"
     zb_apply_location "$2" "$3" "${4:-}" ;;
-  colour|color)
-    [ "$1" = colour ] || old_name "color" "colour"
+  colour)
     root_or_die; valid_theme "${2:-}" || die "Usage: zenithboard colour amber|green|red|white|turquoise   (blue was taken out in 0.23.0)"
     cfg_set THEME "$2"; restart_flightinfo
     graphs_look_keep                                # 0.43.0: graphs1090 in ZenithBoard's look takes the new colour too
@@ -336,12 +350,11 @@ case "${1:-}" in
       import) root_or_die; [ -n "${3:-}" ] || die "Usage: sudo zenithboard settings import FILE"; settings_import "$3" && settings_apply ;;
       *) die "Usage: zenithboard settings export [FILE]   |   sudo zenithboard settings import FILE" ;;
     esac ;;
-  preset|presets)
-    [ "$1" = preset ] || old_name presets preset
+  preset)
     case "${2:-list}" in
       list) preset_list ;;
       add) root_or_die; [ -n "${3:-}" ] || die "Usage: sudo zenithboard preset add NAME key=value...   (keys: $PRESET_KEYS)"; preset_add "${@:3}" ;;
-      del|rm|forget) [ "$2" = del ] || old_name "preset $2" "preset del"; root_or_die; [ -n "${3:-}" ] || die "Usage: sudo zenithboard preset del NAME"; preset_del "$3" ;;
+      del) root_or_die; [ -n "${3:-}" ] || die "Usage: sudo zenithboard preset del NAME"; preset_del "$3" ;;
       *) die "Usage: zenithboard preset list | add NAME key=value... | del NAME" ;;
     esac ;;
   config-set)
@@ -349,8 +362,7 @@ case "${1:-}" in
     [[ ${2:-} =~ ^[A-Z][A-Z0-9_]*$ ]] || die "Usage: zenithboard config-set KEY VALUE   (KEY: capital letters, digits and _, starting with a letter)"
     case "${3:-}" in *$'\n'*|*$'\r'*) die "A value is one line." ;; esac
     root_or_die; cfg_set "$2" "${3:-}"; restart_flightinfo ;;
-  mode|style)
-    [ "$1" = mode ] || old_name style mode
+  mode)
     case "${2:-}" in
       dots|flap) root_or_die; cfg_set DISPLAY_MODE "$2"; restart_flightinfo
                  echo "Look of the wall: $2. The wall reloads by itself. A tablet that chose its own look keeps it: open the gear on the wall and press Reset, or use  ?mode=$2  in its address." ;;
@@ -386,28 +398,27 @@ case "${1:-}" in
       setup)  root_or_die; social_setup ;;
       words)  root_or_die; social_setup_words && echo "Saved." ;;
       picture) root_or_die; social_setup_picture ;;
-      hashtags|tags) [ "$2" = hashtags ] || old_name "social tags" "social hashtags"; if [ -n "${3:-}" ]; then root_or_die; fi; social_set_hashtags "${@:3}" ;;
+      hashtags) if [ -n "${3:-}" ]; then root_or_die; fi; social_set_hashtags "${@:3}" ;;
       gap)    if [ -n "${3:-}" ]; then root_or_die; fi; social_set_gap "${3:-}" ;;
       look)   root_or_die; social_set_look "${3:-}" ;;
-      colour|color) [ "$2" = colour ] || old_name "social color" "social colour"; root_or_die; social_set_colour "${3:-}" ;;
+      colour) root_or_die; social_set_colour "${3:-}" ;;
       units) root_or_die; social_set_units "${3:-}" ;;
       photolink) [ -z "${3:-}" ] || root_or_die; social_set_photolink "${3:-}" ;;
       places) [ -z "${3:-}" ] || root_or_die; social_set_places "${3:-}" ;;
-      sentence|sentences) [ "$2" = sentence ] || old_name "social sentences" "social sentence"; [ -z "${3:-}" ] || root_or_die; social_set_sentence "${3:-}" ;;
+      sentence) [ -z "${3:-}" ] || root_or_die; social_set_sentence "${3:-}" ;;
       map)    root_or_die; social_set_map "${3:-}" ;;
       on)     root_or_die; social_on ;;
       off)    root_or_die; social_off ;;
       test)   root_or_zb; social_need_tools && social_prepare_dir && { [ "$(id -u)" -ne 0 ] && python3 "$SOCIAL_PY" test "${3:-}" || sudo -u "$ZB_USER" python3 "$SOCIAL_PY" test "${3:-}"; } ;;
       area)   [ -z "${*:3}" ] || root_or_die; social_set_area "${@:3}" ;;
       lang)   [ -z "${3:-}" ] || root_or_die; social_set_lang "${3:-}" ;;
-      template|templates) [ "$2" = template ] || old_name "social templates" "social template"; case "${3:-list}" in list|tags|test) ;; *) root_or_die ;; esac; social_template "${@:3}" ;;
+      template) case "${3:-list}" in list|tags|test) ;; *) root_or_die ;; esac; social_template "${@:3}" ;;
       radius) [ -z "${3:-}" ] || root_or_die; social_set_radius "${3:-}" ;;
       rules)  [ -z "${3:-}" ] || root_or_die; social_set_rules "${3:-}" ;;
       ignore) case "${3:-list}" in list) ;; *) root_or_die ;; esac; social_ignore "${@:3}" ;;
       post)   root_or_zb; social_need_tools && social_prepare_dir && { [ "$(id -u)" -ne 0 ] && python3 "$SOCIAL_PY" post "${3:-}" || sudo -u "$ZB_USER" python3 "$SOCIAL_PY" post "${3:-}"; } ;;
-      weekly|summary)
-        # 0.38.0: `social summary daily|weekly|monthly ...`; `social weekly ...` (0.33.0) is the weekly one
-        if [ "$2" = weekly ]; then old_name "social weekly" "social summary weekly"; set -- social summary weekly "${@:3}"; fi
+      summary)
+        # 0.38.0: `social summary daily|weekly|monthly ...`
         case "${4:-}" in
           test|post|post2|post3|post4)
             root_or_zb; social_need_tools && social_prepare_dir || exit 1
@@ -436,7 +447,7 @@ case "${1:-}" in
       rules)  [ -z "${3:-}" ] || root_or_die; telegram_set_rules "${3:-}" ;;
       lang)   [ -z "${3:-}" ] || root_or_die; telegram_set_lang "${3:-}" ;;
       units)  [ -z "${3:-}" ] || root_or_die; telegram_set_units "${3:-}" ;;
-      template|templates) [ "$2" = template ] || old_name "telegram templates" "telegram template"; case "${4:-show}" in show|default|tags|test) ;; *) root_or_die ;; esac; telegram_template "${@:3}" ;;
+      template) case "${4:-show}" in show|default|tags|test) ;; *) root_or_die ;; esac; telegram_template "${@:3}" ;;
       remove) root_or_die; telegram_remove "${3:-}" ;;
       *) die "Usage: zenithboard telegram setup|chat|on|off|status|check|hello|test [crossing|squawk] [send]|crossings on|off|squawks on|off|closest on|off|rules LIST|lang CODE|units NAME|template crossing|squawk ...|remove" ;;
     esac ;;
@@ -507,13 +518,13 @@ case "${1:-}" in
       *) die "Usage: zenithboard net status|static IP MASK GATEWAY [DNS]|dhcp" ;;
     esac ;;
   health) health_check ;;
-  memory|threads) [ "$1" = memory ] || old_name threads memory; python3 "$ZB_HOME/tools/memory_report.py" ;;
+  memory) python3 "$ZB_HOME/tools/memory_report.py" ;;
   watchdog) case "${2:-status}" in on) root_or_die; watchdog_on ;; off) root_or_die; watchdog_off ;; status) echo "Hardware watchdog: $(watchdog_state)" ;; *) die "Usage: zenithboard watchdog on|off|status" ;; esac ;;
   keeplogs) case "${2:-status}" in on) root_or_die; keeplogs_on ;; off) root_or_die; keeplogs_off ;; status) echo "Logs kept after a restart: $(keeplogs_state)" ;; *) die "Usage: zenithboard keeplogs on|off|status" ;; esac ;;
   netwatch) case "${2:-status}" in on) root_or_die; netwatch_on ;; off) root_or_die; netwatch_off ;; run) root_or_die; netwatch_run ;; status) netwatch_status ;; *) die "Usage: zenithboard netwatch on|off|status" ;; esac ;;
   gain)
-    case "${2:-check}" in
-      status|check) [ "$2" = status ] || old_name "gain check" "gain status"; gain_check ;;
+    case "${2:-status}" in
+      status) gain_check ;;
       set) root_or_die; [ -n "${3:-}" ] || die "Usage: sudo zenithboard gain set DB|max|default"; gain_set "$3" ;;
       up|down) root_or_die; d=$(gain_decoder); gain_set "$(gain_step_move "$(gain_current "$d")" "$2")" ;;
       steps) echo "$GAIN_STEPS" ;;

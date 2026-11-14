@@ -2,7 +2,7 @@
 
 A Raspberry Pi that listens to the aircraft overhead and shows them on a tablet or a TV as a dot-matrix wall or an airport split-flap board. It can also feed what it hears to ADSB Exchange, FlightAware, Flightradar24 and Plane Finder, and post the aircraft crossing a radius to Bluesky.
 
-Current version: **1.0.0** (14 November 2026: the owner closed the release candidate, fourteen days into its last month hands-off, the fresh install on a blank card redone. What is not proven on hardware stays said in [Project status](Project-status); features come again from 1.1, in lots: [Roadmap](Roadmap#the-lots-after-10)).
+Current version: **1.1.0** (14 November 2026: the first release after 1.0, lots 0 and 1 of the [Roadmap](Roadmap#the-lots-after-10), published before it ran on the reference Pi; [Project status](Project-status) says what the Pi has shown since. 1.0.0, the same day: the owner closed the release candidate, fourteen days into its last month hands-off, the fresh install on a blank card redone. What is not proven on hardware stays said in [Project status](Project-status); features come again from 1.1, in lots: [Roadmap](Roadmap#the-lots-after-10)).
 
 ## Installing it
 

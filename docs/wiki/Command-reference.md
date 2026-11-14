@@ -233,11 +233,11 @@ Listed so that nothing in `ps` or the journal is a mystery. Running them by hand
 | `zenithboard wifi apply` | `zenithboard-wifi.service` | boot |
 | `zenithboard update-components` | `zenithboard update` | update |
 
-## Old names
+## Names removed in 1.1
 
-One name per command since 0.99.25 (the owner, 11 November 2026: *gain status and gain check, what for?*). The old names below still work, and say once that they are old, so that a note or a script written before keeps working; **they go in 1.1**.
+One name per command since 0.99.25 (the owner, 11 November 2026: *gain status and gain check, what for?*), which kept the old names working with a line saying they would go in 1.1. **1.1.0 removed them**: each is now refused before anything is done, with the name to use (`"zenithboard gain check" was removed in 1.1.0: use "zenithboard gain status".`). A note or a script that still says one has to be changed.
 
-| Old name | Use |
+| Removed | Use |
 |---|---|
 | `zenithboard gain check` | `zenithboard gain status` |
 | `zenithboard color …` | `zenithboard colour …` |
