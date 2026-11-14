@@ -67,6 +67,7 @@ jobs:
           node tests/test_scroll.js
           node tests/test_poll.js
           node tests/test_statsjs.js
+          node tests/test_units_table.js
           node tests/test_i18n.js
           node tests/test_console_keys.js
           node tests/test_stats_page.js

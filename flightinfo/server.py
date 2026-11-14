@@ -53,9 +53,9 @@ import console  # noqa: E402  (the web console, 0.39.0: off unless CONSOLE=1)
 
 SERVER_ID = str(int(time.time()))  # changes on restart -> browsers reload themselves
 
-KM_PER_MI = 1.609344
-KM_PER_NM = 1.852
-UNITS = ("metric", "imperial", "aviation")        # 0.55.0: aviation = nautical miles, knots, feet
+import units as unit_table          # the one table of units for the Python side (lot 0 after 1.0)
+KM_PER_MI, KM_PER_NM = unit_table.KM_PER_MI, unit_table.KM_PER_NM
+UNITS = unit_table.SYSTEMS                           # 0.55.0: aviation = nautical miles, knots, feet
 RADIUS_PRESETS = [1, 2, 5, 10, 15, 30, 50]
 THEMES = ("amber", "green", "red", "white", "turquoise")      # 0.23.0: the dark blue (#0404e2) is gone, turquoise stays
 MAX_POSITION_AGE_S = 30  # ignore aircraft whose position is older than this
@@ -733,8 +733,8 @@ def read_fleet(cfg, stats_dir=None, now=None, since=None, rng=None):
                 alts.append(int(alt))
         except ValueError:
             pass                                 # "ground" or garbled: not a height, not counted
-    imperial = public_config(cfg)["units"] in ("imperial", "aviation")          # 0.55.0: aviation counts in feet too
-    step = 5000 if imperial else 1000 / 0.3048                   # bands of 5 000 ft, or of 1 km
+    imperial = unit_table.feet_and_knots(public_config(cfg)["units"])          # 0.55.0: aviation counts in feet too
+    step = 5000 if imperial else 1000 / unit_table.M_PER_FT                   # bands of 5 000 ft, or of 1 km
     top_band = 9 if imperial else 13
     bands = [0] * (top_band + 1)
     for a in alts:
@@ -876,7 +876,7 @@ def wall_host_ok(cfg, host):
 
 
 def radius_to_km(radius, units):
-    return radius * KM_PER_MI if units == "imperial" else radius * KM_PER_NM if units == "aviation" else radius
+    return unit_table.to_km(radius, units)
 
 
 def aircraft_json_path(cfg):

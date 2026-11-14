@@ -35,6 +35,8 @@ import urllib.request
 
 from PIL import Image, ImageDraw, ImageEnhance, ImageFont, ImageOps
 
+import units as units_table          # the one table of units (lot 0 after 1.0)
+
 
 def N_(text):
     """A word of the posts' alt text, looked up in the posts' language by social.py (post_lang.py, 0.51.0)."""
@@ -338,7 +340,7 @@ def _icon(d, x, y, track, size, color, heli=False):
 
 
 def _nice_scale(m_per_px, units, max_px=150):
-    unit_m, label = (1609.344, "MI") if units == "imperial" else (1852.0, "NM") if units == "aviation" else (1000.0, "KM")
+    unit_m, label = units_table.to_km(1000.0, units), units_table.distance_label(units).upper()      # metres in one mile, nautical mile or kilometre
     best = None
     for v in (0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500):
         px = v * unit_m / m_per_px

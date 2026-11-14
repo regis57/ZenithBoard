@@ -243,13 +243,13 @@ window.ZBI18N.start({ part: "stats" }, function () {
   // out rather than guessed: no airline, no route, no city each simply drop their part.
   function altText(ft, units) {
     if (typeof ft !== "number") return null;
-    return units === "imperial" || units === "aviation" ? fmt(Math.round(ft / 100) * 100) + " ft" : fmt(Math.round(ft * 0.3048 / 10) * 10) + " m";
+    return Units.feetAndKnots(units) ? fmt(Math.round(ft / 100) * 100) + " ft" : fmt(Math.round(Units.metres(ft) / 10) * 10) + " m";
   }
   // 0.55.0: the distances in the wall's units: km, miles, or nautical miles (aviation, as pilots count). Before, the
   // page said km whatever the units.
   var UNITS = "metric";
-  function unitName(u) { u = u || UNITS; return u === "imperial" ? "mi" : u === "aviation" ? "NM" : "km"; }
-  function dist(km, u) { u = u || UNITS; return Math.round(u === "imperial" ? km / 1.609344 : u === "aviation" ? km / 1.852 : km); }
+  function unitName(u) { return Units.distanceLabel(u || UNITS); }
+  function dist(km, u) { return Math.round(Units.distance(km, u || UNITS)); }
   function place(a) {
     if (!a) return null;
     var where = a.city || a.name, code = a.iata || a.icao;

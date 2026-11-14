@@ -56,6 +56,7 @@ import uuid
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import server  # noqa: E402  (config, aircraft.json path, user agent)
 import post_lang  # noqa: E402  (0.51.0: the posts' language)
+import units as units_table  # noqa: E402  (the one table of units, lot 0 after 1.0)
 
 N_ = post_lang.N_                # marks a sentence of the posts where it is defined (tools/i18n.py finds it)
 
@@ -198,8 +199,8 @@ def map_of(c):
 def units_of(c):
     """The posts' units: their own setting (0.24.3), else the wall's UNITS, else metric."""
     for k in ("SOCIAL_UNITS", "UNITS"):
-        u = str(c.get(k, "") or "").strip().lower()
-        if u in ("metric", "imperial", "aviation"):        # 0.55.0: aviation, feet, knots and nautical miles
+        u = units_table.system(c.get(k, ""), None)         # 0.55.0: aviation, feet, knots and nautical miles
+        if u:
             return u
     return "metric"
 
@@ -604,9 +605,9 @@ def metres(alt_ft, units, lang=None):
     if alt_ft is None:
         return None
     lang = lang or post_lang.get("en")
-    if units in ("imperial", "aviation"):
+    if units_table.feet_and_knots(units):
         return lang.num(int(round(alt_ft / 100.0) * 100)) + NBSP + "ft"
-    return lang.unit(int(round(alt_ft * 0.3048 / 10.0) * 10), "meter")       # 0.52.1: 10 670 м in Russian
+    return lang.unit(int(round(units_table.metres(alt_ft) / 10.0) * 10), "meter")       # 0.52.1: 10 670 м in Russian
 
 
 def nice_type(p):
@@ -695,10 +696,10 @@ def range_words(km, lang=None, units="metric"):
     Imperial (0.99.16): down to 25 mi ("over 200 mi"), "mi" after the figure in every language, as NM is."""
     lang = lang or post_lang.get("en")
     if units == "aviation":
-        step = int(km / 1.852 // 25) * 25
+        step = int(units_table.distance(km, "aviation") // 25) * 25
         return lang.t("over {distance} out", distance=lang.num(max(step, 25)) + NBSP + "NM")
     if units == "imperial":                      # 0.99.16: in miles, down to 25 mi (it said kilometres)
-        step = int(km / 1.609344 // 25) * 25
+        step = int(units_table.distance(km, "imperial") // 25) * 25
         return lang.t("over {distance} out", distance=lang.num(max(step, 25)) + NBSP + "mi")
     step = int(km // 50) * 50
     return lang.t("over {distance} out", distance=lang.unit(max(step, 50), "kilometer"))
@@ -773,9 +774,9 @@ def speed_words(gs_kt, units, lang=None):
     """839 km/h, or 453 kt; 0.52.1: km/h as the posts' language writes it (839 км/ч, 839 km/j, 839 km/u)."""
     if not gs_kt:
         return ""
-    if units in ("imperial", "aviation"):
+    if units_table.feet_and_knots(units):
         return "%d%skt" % (int(round(gs_kt)), NBSP)
-    n = int(round(gs_kt * 1.852))
+    n = int(round(units_table.kmh(gs_kt)))
     return (lang or post_lang.get("en")).unit(n, "kilometer-per-hour", str(n))
 
 
@@ -784,10 +785,10 @@ def height_words(alt_ft, units, lang=None):
     if not alt_ft:
         return ""
     lang = lang or post_lang.get("en")
-    if units in ("imperial", "aviation"):
+    if units_table.feet_and_knots(units):
         n = int(round(alt_ft / 100.0) * 100)
         return ("{:,}".format(n) if lang.code == "en" else lang.num(n)) + NBSP + "ft"
-    return lang.unit(alt_ft * 0.3048 / 1000.0, "kilometer", lang.dec(alt_ft * 0.3048 / 1000.0, 1))
+    return lang.unit(units_table.metres(alt_ft) / 1000.0, "kilometer", lang.dec(units_table.metres(alt_ft) / 1000.0, 1))
 
 
 def what_words(p, L):

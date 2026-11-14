@@ -1,0 +1,137 @@
+{
+ "_": "One table for both sides: flightinfo/units.py (tests/test_units_table.py) and flightinfo/static/units.js (tests/test_units_table.js). Figures from the definitions: 1 mi = 1.609344 km, 1 NM = 1.852 km, 1 kt = 1.852 km/h, 1 ft = 0.3048 m.",
+ "factors": {
+  "KM_PER_MI": 1.609344,
+  "KM_PER_NM": 1.852,
+  "KMH_PER_KT": 1.852,
+  "M_PER_FT": 0.3048
+ },
+ "systems": [
+  "metric",
+  "imperial",
+  "aviation"
+ ],
+ "system": [
+  [
+   "metric",
+   "metric"
+  ],
+  [
+   " Imperial ",
+   "imperial"
+  ],
+  [
+   "AVIATION",
+   "aviation"
+  ],
+  [
+   "",
+   "metric"
+  ],
+  [
+   "nautical",
+   "metric"
+  ],
+  [
+   null,
+   "metric"
+  ]
+ ],
+ "feet_and_knots": {
+  "metric": false,
+  "imperial": true,
+  "aviation": true
+ },
+ "label": {
+  "metric": "km",
+  "imperial": "mi",
+  "aviation": "NM"
+ },
+ "distance": [
+  [
+   0,
+   "metric",
+   0
+  ],
+  [
+   100,
+   "metric",
+   100
+  ],
+  [
+   160.9344,
+   "imperial",
+   100
+  ],
+  [
+   185.2,
+   "aviation",
+   100
+  ],
+  [
+   10,
+   "imperial",
+   6.2137119
+  ],
+  [
+   10,
+   "aviation",
+   5.399568
+  ],
+  [
+   402.6,
+   "aviation",
+   217.3866091
+  ]
+ ],
+ "to_km": [
+  [
+   10,
+   "metric",
+   10
+  ],
+  [
+   10,
+   "imperial",
+   16.09344
+  ],
+  [
+   10,
+   "aviation",
+   18.52
+  ],
+  [
+   50,
+   "aviation",
+   92.6
+  ]
+ ],
+ "metres": [
+  [
+   0,
+   0
+  ],
+  [
+   1000,
+   304.8
+  ],
+  [
+   37000,
+   11277.6
+  ]
+ ],
+ "kmh": [
+  [
+   0,
+   0
+  ],
+  [
+   100,
+   185.2
+  ],
+  [
+   453,
+   838.956
+  ]
+ ]
+}

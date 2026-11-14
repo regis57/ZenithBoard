@@ -56,7 +56,7 @@ A feature is a minor version, a fix or a change with no change of behaviour a pa
    ```
    for t in tests/*.sh; do bash $t || echo "FAIL $t"; done
    python3 -m unittest discover -s tests
-   for j in format shapes scene flap layout flags scroll statsjs i18n poll console_keys stats_page pages_smoke; do node tests/test_$j.js || echo "FAIL $j"; done
+   for j in format shapes scene flap layout flags scroll statsjs units_table i18n poll console_keys stats_page pages_smoke; do node tests/test_$j.js || echo "FAIL $j"; done
    for f in flightinfo/static/*.js tools/*.js tools/graphs1090-look/*.js; do node --check "$f"; done
    shellcheck -x -S warning install.sh bin/zenithboard bin/zenithboard-demo lib/*.sh tests/*.sh tools/*.sh
    ```
