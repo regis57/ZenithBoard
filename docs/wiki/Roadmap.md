@@ -77,6 +77,13 @@ Two items of *After 1.0* are to be built from what the reference Pi measures, no
 2. Each shape is drawn in `flightinfo/static/shapes.js` with the primitives already there, previewed as a picture here, and shipped only once it has been seen — the rule for everything on the wall.
 3. `aircraft.classify` maps the code to the new shape; `tests/test_shapes.js` holds the mapping so a code cannot quietly fall back to generic again.
 
+**The reading (14 November 2026, taken by the owner as the reading of the 17th; 28 days of samples).**
+
+* **Silhouettes: closed.** *Type codes drawn with the generic silhouette: none: every type code seen had its own silhouette.* Nothing to draw; the item leaves *After 1.0*.
+* **Airline names: worth building.** Forty prefixes named no airline, every one on five aircraft or more, far over the bar of three: `JFA` 31, `VJT` 19, `WMT` 17, `KLC` 14, `GAC` 12, `PGC`, `LXA` and `JAF` 11, `PTN` and `CTM` 10, then thirty more between 9 and 5 (`TUI`, `TAY`, `FJO`, `AAB`, `VJH`, `RUK`…). Mostly business and charter operators, and airlines' second certificates, whose flights have no published route, which is why the route answer never named them.
+* **adsbdb answers by designator** (asked on 14 November 2026: `api.adsbdb.com/v0/airline/JFA` → *Jetfly Aviation*, `VJT` → *Vistajet*, `WMT` → *Wizz Air Malta*, `TUI` → *TUIfly*), so step 2 takes its first way: one lookup per prefix, cached for months. Its country is not to be shown without a check: it gives *Canada* for `VJT`, VistaJet's Maltese certificate. The name alone is used; the flag stays the registration's.
+* **Memory, the same paste:** 496 MB of 905 MB available with the five networks, Bluesky, Telegram, Tailscale and graphs1090 (409 MB in use; the Bluesky service the largest, 93 MB, peak 129 MB): the figure the two networks of *Waiting for 1.1* are to be measured against.
+
 **If the figures never come** (the Pi was off, statistics were switched off), the two items stay in *After 1.0* as they are. Nothing is built on a guess.
 
 ## Waiting for 1.1
@@ -144,7 +151,7 @@ What is asked during the freeze, kept here so that nothing is lost, and done aft
 
 What was planned before the freeze and is not a fix, in the order it would come. Nothing here starts before 1.0 is out; then *Waiting for 1.1* first.
 
-* **Airline names for callsigns without a route**, and **more silhouettes**: decided on the figures of 17 November 2026 (procedure above). Since 0.17.0 every airline with a known route is already named from the route answer, so the lookup is worth it only if bare callsigns are still common on a real wall.
+* **Airline names for callsigns without a route**: **to build**, on the reading of 14 November 2026 (forty prefixes on five aircraft or more; adsbdb answers by designator; above). **More silhouettes: closed** by the same reading (no type code drawn with the generic shape). Decided on the figures (procedure above). Since 0.17.0 every airline with a known route is already named from the route answer, so the lookup is worth it only if bare callsigns are still common on a real wall.
 * **Coverage by direction on `/stats`** (which side of the sky the antenna hears best), once there are weeks of real data, on the page alone: the posts never give a direction.
 * **The web console, further:** HTTPS, which passkeys and Face ID need; and the post pictures previewed inside the page rather than in a new tab. A Pi on a home network can have a certificate browsers trust in two ways (the owner's choice of 26 October 2026: both written down, Tailscale first):
   1. **Tailscale**, already in ZenithBoard (`zenithboard tailscale`): with MagicDNS and HTTPS switched on in Tailscale's admin console, `tailscale cert` (or `tailscale serve`) gives the Pi a real Let's Encrypt certificate for a name like `zenithboard.your-tailnet.ts.net`, nothing to install on the phones. *Limits:* only the devices on the tailnet reach it, each with the Tailscale app; the name shows the tailnet's.
