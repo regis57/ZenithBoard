@@ -220,7 +220,7 @@ def read_stats(stats_dir=None, now=None, rng="30d"):
     t = days.get(today) or {"day": today, "messages": 0, "farthest_km": 0, "aircraft": 0, "samples": 0}
     busiest = max(hours, key=lambda h: h["messages"]) if rows else None
     # 0.31.0: the sky by hour, the last HEAT_DAYS days: the aircraft with a position, on average over the hour's samples
-    heat_days = [(now - datetime.timedelta(days=i)).strftime("%Y-%m-%d") for i in range(HEAT_DAYS - 1, -1, -1)]
+    heat_days = [k.isoformat() for k in StatsWindow(now, "30d").keys]
     cells = {}
     for when, msgs, far_, pos, seen in rows:
         d = when.strftime("%Y-%m-%d")
@@ -270,12 +270,57 @@ def _measured(when):
     return when - QUARTER
 
 
-def _window_start_24h(now):
-    """0.99.15 (review B7): where the page's last 24 hours begin: the first of the 24 hourly slots that end with the
-    current one. The window's totals and chart, the box (decoder samples and records written down) and the line under
-    it all start here: read_farthest started at now minus 24 hours to the minute, so a record between then and the top
-    of the next hour was in the line and not in the box, and the note under the line said the box was farther."""
-    return (now - datetime.timedelta(hours=23)).replace(minute=0, second=0, microsecond=0)
+# 0.37.0: the page's toggle. Each range: its totals and one series for the three charts, by hour for 24 hours and by
+# day for 7 or 30. The sky by hour keeps its thirty days whatever the toggle says.
+RANGES = {"24h": (1, "the last 24 hours"), "7d": (7, "the last 7 days"), "30d": (30, "the last 30 days")}
+
+
+def range_of(value):
+    return value if value in RANGES else "30d"
+
+
+class StatsWindow:
+    """The one place that says which slot of the page's period a moment falls in (lot 0 after 1.0; the review of
+    0.99.8, S5). The chart's bars, the boxes over them and the farthest aircraft's line each worked their window out,
+    and drifted apart twice: 0.99.4 (the box and the line disagreed on the week's farthest) and 0.99.15 (a record in
+    the line and not in the box, the last 24 hours not starting at the same minute). Now they all ask here.
+
+    24 hours: the 24 hourly slots that end with the current hour (0.99.15), so the window starts at the top of the hour
+    23 hours back. 7 and 30 days: that many calendar days ending today. Nothing later than now is in any window."""
+
+    def __init__(self, now, rng):
+        self.now, self.range = now, range_of(rng)
+        self.hourly = self.range == "24h"
+        if self.hourly:
+            self.start = (now - datetime.timedelta(hours=23)).replace(minute=0, second=0, microsecond=0)
+            self.keys = [self.start + datetime.timedelta(hours=i) for i in range(24)]
+            self.labels = ["%02dh" % k.hour for k in self.keys]
+        else:
+            n = RANGES[self.range][0]
+            self.keys = [(now - datetime.timedelta(days=i)).date() for i in range(n - 1, -1, -1)]
+            self.start = datetime.datetime.combine(self.keys[0], datetime.time.min)
+            self.labels = ["%02d/%02d" % (k.day, k.month) for k in self.keys]
+        self._index = {k: i for i, k in enumerate(self.keys)}
+
+    def slot(self, when):
+        """The index of the slot `when` falls in, or None when it is outside the window or later than now."""
+        if when is None or when > self.now:
+            return None
+        return self._index.get(when.replace(minute=0, second=0, microsecond=0) if self.hourly else when.date())
+
+    @property
+    def first_day(self):
+        """The first calendar day the window touches, as the day files are named."""
+        return self.start.strftime("%Y-%m-%d")
+
+
+def _record_when(rec):
+    """When a farthest-DAY record was seen (its day and its time, midnight when the time was not written down), or
+    None when it cannot be read: then it is in no window, for the box and for the line alike."""
+    try:
+        return datetime.datetime.strptime("%s %s" % (rec["day"], rec.get("time") or "00:00"), "%Y-%m-%d %H:%M")
+    except (KeyError, ValueError, TypeError):
+        return None
 
 
 def _with_farthest(w, recs, now):
@@ -283,25 +328,12 @@ def _with_farthest(w, recs, now):
     gave the week's farthest as SQ308 at 262 NM on 25/10. The box and the chart read the decoder's farthest once a
     quarter hour; the line reads the wall's watch, every five seconds, written down once a day. Each slot of the
     window, and the box, now take the larger of the two, so the box and the line agree."""
-    labels, tot, series = w.get("labels") or [], w.get("totals") or {}, list(w.get("farthest") or [])
+    tot, series = w.get("totals") or {}, list(w.get("farthest") or [])
+    win = StatsWindow(now, w.get("range"))
     for r in recs:
-        try:
-            when = datetime.datetime.strptime("%s %s" % (r["day"], r.get("time") or "00:00"), "%Y-%m-%d %H:%M")
-        except ValueError:
-            continue
-        if when > now:
-            continue
-        if w.get("range") == "24h":
-            start = _window_start_24h(now)
-            if when < start:
-                continue
-            i = int((when - start).total_seconds() // 3600)
-        else:
-            label = "%02d/%02d" % (when.day, when.month)
-            if label not in labels or when.date() < (now - datetime.timedelta(days=len(labels))).date():
-                continue
-            i = labels.index(label)
-        if not 0 <= i < len(series):
+        when = _record_when(r)
+        i = win.slot(when)
+        if i is None or not i < len(series):
             continue
         km = int(round(r["km"]))
         if series[i] is None or km > series[i]:
@@ -330,29 +362,9 @@ def _with_heat(w, heat):
     return w
 
 
-# 0.37.0: the page's toggle. Each range: its totals and one series for the three charts, by hour for 24 hours and by
-# day for 7 or 30. The sky by hour keeps its thirty days whatever the toggle says.
-RANGES = {"24h": (1, "the last 24 hours"), "7d": (7, "the last 7 days"), "30d": (30, "the last 30 days")}
-
-
-def range_of(value):
-    return value if value in RANGES else "30d"
-
-
 def stats_window(rows, stats_dir, now, rng):
-    rng = range_of(rng)
-    if rng == "24h":
-        start = _window_start_24h(now)
-        keys = [(start + datetime.timedelta(hours=i)) for i in range(24)]
-        labels = ["%02dh" % k.hour for k in keys]
-        slot = lambda when: when.replace(minute=0, second=0, microsecond=0)
-        index = {k: i for i, k in enumerate(keys)}
-    else:
-        n = RANGES[rng][0]
-        keys = [(now - datetime.timedelta(days=i)).date() for i in range(n - 1, -1, -1)]
-        labels = ["%02d/%02d" % (k.day, k.month) for k in keys]
-        slot = lambda when: when.date()
-        index = {k: i for i, k in enumerate(keys)}
+    win = StatsWindow(now, rng)
+    rng, keys, labels = win.range, win.keys, win.labels
     # mcnt: the rows whose quarter hour falls in a slot (their messages and farthest, 0.99.22); cnt: the rows stamped
     # in it (their aircraft with a position, a look at that moment)
     msgs, far, pos, cnt, mcnt = ([0] * len(keys) for _ in range(5))
@@ -362,12 +374,12 @@ def stats_window(rows, stats_dir, now, rng):
     for when, m, fk, p, seen in rows:
         if when > now:
             continue
-        i = index.get(slot(when))
+        i = win.slot(when)
         if i is not None:
             cnt[i] += 1
             pos[i] += p
         q = _measured(when)
-        i = index.get(slot(q))
+        i = win.slot(q)
         if i is None:
             continue
         msgs[i] += m
@@ -446,7 +458,7 @@ def _fleet_names(stats_dir, now, rng):
             elif n[6:] == yday:
                 out.append((n, lambda f, cut=cut: len(f) > 6 and f[6] >= cut))
         return out
-    first = (now - datetime.timedelta(days=RANGES[rng][0] - 1)).strftime("%Y-%m-%d")
+    first = StatsWindow(now, rng).first_day
     return [(n, lambda f: True) for n in names if n[6:] >= first]
 
 
@@ -788,14 +800,9 @@ def read_farthest(stats_dir, now, rng=None):
         r["cc"] = (airline_cc(m.group(1), load_airlines({}).get(m.group(1))) if m else None) or icao_country(str(r.get("hex") or ""))
         recs.append(r)
     today = now.strftime("%Y-%m-%d")
-    rng = range_of(rng)
-    if rng == "24h":
-        # the same 24 hours as the box and the chart (0.99.15), and nothing later than now, as the box skips it too
-        start, end = _window_start_24h(now).strftime("%Y-%m-%d %H:%M"), now.strftime("%Y-%m-%d %H:%M")
-        inside = [r for r in recs if start <= "%s %s" % (r["day"], r.get("time") or "00:00") <= end]
-    else:
-        first = (now - datetime.timedelta(days=RANGES[rng][0] - 1)).strftime("%Y-%m-%d")
-        inside = [r for r in recs if r["day"] >= first]
+    # the same window as the box and the chart, slot for slot (StatsWindow): a record is in the line when it is in a bar
+    win = StatsWindow(now, rng)
+    inside = [r for r in recs if win.slot(_record_when(r)) is not None]
     return {"today": next((r for r in recs if r["day"] == today), None),
             "best": max(recs, key=lambda r: (r["km"], r["day"])) if recs else None,
             "period": max(inside, key=lambda r: (r["km"], r["day"])) if inside else None,
