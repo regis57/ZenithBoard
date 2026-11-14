@@ -32,7 +32,6 @@ import datetime
 import json
 import os
 import re
-import signal
 import sys
 import time
 import urllib.error
@@ -42,6 +41,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import server  # noqa: E402  (config, aircraft.json, places, user agent)
 import post_lang  # noqa: E402  (the posts' language and their template language)
 import units as units_table  # noqa: E402  (the one table of units, lot 0 after 1.0)
+import saved_state  # noqa: E402  (the state kept on the card, written when it has changed; lot 0 after 1.0)
 import social  # noqa: E402  (the crossing rule, the wall's answers, the template tags)
 
 N_ = post_lang.N_
@@ -257,24 +257,22 @@ def send(sec, text):
 
 
 # --------------------------------------------------------------------------- state
+_SAVED = {}
+
+
+def saved():
+    """The one keeper of state.json for this process (flightinfo/saved_state.py); STATE_DIR is read at each call."""
+    if STATE_DIR not in _SAVED:
+        _SAVED[STATE_DIR] = saved_state.SavedState(STATE_DIR, "telegram")
+    return _SAVED[STATE_DIR]
+
+
 def load_state():
-    try:
-        with open(os.path.join(STATE_DIR, "state.json"), encoding="utf-8") as fh:
-            s = json.load(fh)
-            return s if isinstance(s, dict) else {}
-    except (OSError, ValueError):
-        return {}
+    return saved().load()
 
 
 def save_state(s):
-    try:
-        os.makedirs(STATE_DIR, exist_ok=True)
-        tmp = os.path.join(STATE_DIR, "state.json.tmp")
-        with open(tmp, "w", encoding="utf-8") as fh:
-            json.dump(s, fh)
-        os.replace(tmp, os.path.join(STATE_DIR, "state.json"))
-    except OSError as exc:
-        print("telegram: cannot save state: %s" % exc, file=sys.stderr, flush=True)
+    return saved().save(s)
 
 
 def prune(s, now):
@@ -458,15 +456,11 @@ def cmd_run():
         "on" if server.cfg_bool(c, "TELEGRAM_CROSSINGS", "1") else "off", c.get("SOCIAL_RADIUS_KM"),
         "all" if "all" in rules_of(c) else ", ".join(sorted(rules_of(c))),
         "on" if server.cfg_bool(c, "TELEGRAM_SQUAWKS", "1") else "off", lang_of(c)), flush=True)
-    last_ask = last_save = 0
-
-    def stop(signum, frame):
-        # systemd stops the service with SIGTERM: what this pass already sent is written down first, so a restart
-        # never sends it again (0.99.16)
-        state["queue"] = len(outbox.items)
-        save_state(state)
-        sys.exit(0)
-    signal.signal(signal.SIGTERM, stop)
+    last_ask = 0
+    # systemd stops the service with SIGTERM: what this pass already sent is written down first, so a restart
+    # never sends it again (0.99.16; through the shared helper since lot 0)
+    saved().on_stop(lambda: state, lambda s: s.update(queue=len(outbox.items)),
+                    save=lambda s: save_state(s))
     while True:
         now = time.time()
         c = cfg()
@@ -476,28 +470,25 @@ def cmd_run():
             last_ask = now
             prune(state, now)
             sec = outbox.follow_move(secrets() or sec)
-        before = len(outbox.items)
         try:
             one_look(c, state, aircraft, squawks, pending_since, outbox, now, ask)
         except Exception as exc:                    # a message that cannot be made must not stop the service
             print("telegram: could not make a message: %s" % exc, flush=True)
-        queued, sent = len(outbox.items) > before, 0
         if outbox.items:
             if ready(sec):
                 try:
-                    sent = outbox.flush(sec, state, now) or 0
+                    outbox.flush(sec, state, now)
                 except Exception as exc:            # whatever went wrong with one message, the service goes on
                     outbox.note("flush", "telegram: could not send: %s" % scrub(exc, sec), now, 600)
                     outbox.pause_until = now + PAUSE_OFFLINE_S
             else:
                 outbox.note("nochat", "telegram: no bot or chat set up, nothing can be sent: sudo zenithboard telegram setup", now, 3600)
                 outbox.items = [m for m in outbox.items if now - m["made"] <= KEEP_S.get(m["kind"], 600)]
-        # written at once when this pass queued or sent anything (0.99.16: a message sent with the queue then empty
-        # waited up to a minute to be written down, and a restart in that minute sent it again)
-        if queued or sent or outbox.items or now - last_save >= 60:
-            state["queue"] = len(outbox.items)
-            save_state(state)
-            last_save = now
+        # written at every pass that changed anything (0.99.16: a message sent with the queue then empty waited up
+        # to a minute to be written down, and a restart in that minute sent it again). The helper compares with the
+        # file, so a quiet pass costs the card nothing
+        state["queue"] = len(outbox.items)
+        save_state(state)
         time.sleep(READ_EVERY_S)
 
 

@@ -57,6 +57,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import server  # noqa: E402  (config, aircraft.json path, user agent)
 import post_lang  # noqa: E402  (0.51.0: the posts' language)
 import units as units_table  # noqa: E402  (the one table of units, lot 0 after 1.0)
+import saved_state  # noqa: E402  (the state kept on the card, written when it has changed; lot 0 after 1.0)
 
 N_ = post_lang.N_                # marks a sentence of the posts where it is defined (tools/i18n.py finds it)
 
@@ -215,24 +216,23 @@ def theme_of(c):
 
 
 # --------------------------------------------------------------------------- state (what was posted, what is rare)
+_SAVED = {}
+
+
+def saved():
+    """The one keeper of state.json for this process (flightinfo/saved_state.py). STATE_DIR is read at each call: the
+    tests and `zenithboard-demo` point it elsewhere."""
+    if STATE_DIR not in _SAVED:
+        _SAVED[STATE_DIR] = saved_state.SavedState(STATE_DIR, "social")
+    return _SAVED[STATE_DIR]
+
+
 def load_state():
-    try:
-        with open(os.path.join(STATE_DIR, "state.json"), "r", encoding="utf-8") as fh:
-            s = json.load(fh)
-            return s if isinstance(s, dict) else {}
-    except (OSError, ValueError):
-        return {}
+    return saved().load()
 
 
 def save_state(s):
-    try:
-        os.makedirs(STATE_DIR, exist_ok=True)
-        tmp = os.path.join(STATE_DIR, "state.json.tmp")
-        with open(tmp, "w", encoding="utf-8") as fh:
-            json.dump(s, fh)
-        os.replace(tmp, os.path.join(STATE_DIR, "state.json"))
-    except OSError as exc:
-        print("social: cannot save state: %s" % exc, file=sys.stderr, flush=True)
+    return saved().save(s)
 
 
 def memory_mb():
@@ -1667,6 +1667,8 @@ def cmd_run():
         c.get("SOCIAL_RADIUS_KM"), gap_words(c), ", ".join(sorted(rules_of(c))) or "none",
         state.get("since"), "" if warmed(state, time.time()) else
         " (rare and farthest wait for %d days of it)" % WARMUP_DAYS), flush=True)
+    # stopped by systemd (an update, a restart): what was posted is on the card before the service leaves
+    saved().on_stop(lambda: state, save=lambda s: save_state(s))
     while True:
         now = time.time()
         c = cfg()
