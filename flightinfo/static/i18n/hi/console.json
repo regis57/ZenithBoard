@@ -282,6 +282,8 @@
  "Only the kinds lit; Everything posts every crossing": "केवल चालू किए गए प्रकार; \"सब कुछ\" हर गुज़रने वाले विमान को पोस्ट करता है",
  "Least time between posts": "पोस्ट के बीच न्यूनतम समय",
  "Minutes; 0 = every crossing posted once": "मिनट; 0 = हर गुज़रने वाला विमान एक बार पोस्ट होता है",
+ "Aircraft never to post": "विमान जिन्हें कभी पोस्ट न किया जाए",
+ "Registrations, ICAO addresses or callsigns, separated by commas (F-GXXX, 3944EF). Left out of the Telegram crossings too; an emergency squawk is always sent.": "पंजीकरण, ICAO पते या कॉलसाइन, अल्पविराम से अलग (F-GXXX, 3944EF)। Telegram की उड़ान-सूचनाओं से भी बाहर; आपातकालीन स्क्वॉक हमेशा भेजा जाता है।",
  "Town names on the maps": "मैप पर शहरों के नाम",
  "From GeoNames, made on the Pi (a few minutes); off: the lists shipped with ZenithBoard": "GeoNames से, Pi पर तैयार (कुछ मिनट); बंद: ZenithBoard के साथ आने वाली सूचियाँ",
  "Try a post (posts nothing)": "एक पोस्ट आज़माएँ (कुछ भी पोस्ट नहीं होता)",

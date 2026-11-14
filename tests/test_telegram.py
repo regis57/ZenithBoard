@@ -135,6 +135,20 @@ class CrossingTest(Base):
         self.look(CFG, st, [], sq, box, 1000.0 + 900 + telegram.CROSSING_GAP_S + 10)
         self.assertEqual(len(box.items), 2, "an hour outside the radius ends the crossing")
 
+    def test_an_aircraft_never_to_post_has_no_crossing_message_and_its_squawk_is_still_sent(self):
+        # 1.1: SOCIAL_IGNORE holds for the crossings, by registration, address or callsign; never for an emergency
+        for word in ("G-EZWA", "gezwa", "4CA7B1", "ezy17qz"):
+            sq, box, st = telegram.Squawks(), telegram.Outbox(), {}
+            self.planes = [EZY, RCH]
+            self.look(dict(CFG, SOCIAL_IGNORE=word), st, [], sq, box, 1000.0)
+            self.assertEqual([m["what"] for m in box.items], ["RCH123"], word)
+        sq, box, st = telegram.Squawks(), telegram.Outbox(), {}
+        self.planes = [EZY]
+        c = dict(CFG, SOCIAL_IGNORE="G-EZWA,4CA7B1,EZY17QZ")
+        self.look(c, st, [ac()], sq, box, 1000.0, ask=False)
+        self.look(c, st, [ac()], sq, box, 1005.0, ask=False)
+        self.assertEqual([m["kind"] for m in box.items], ["squawk"], "whoever squawks")
+
     def test_rules(self):
         sq, box, st = telegram.Squawks(), telegram.Outbox(), {}
         self.planes = [EZY, RCH]

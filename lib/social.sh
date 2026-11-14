@@ -269,6 +269,60 @@ social_set_rules() {    # social_set_rules [all|LIST]: what is worth a post, as 
   echo "What is worth a post: $(IFS=,; echo "${out[*]}"). The service takes it at its next look."
 }
 
+# ---- 1.1: aircraft never to post (asked by the owner, 1 November 2026). A registration (F-GXXX), an ICAO address
+# (3944ef) or a callsign (SAMU57), kept in capitals in SOCIAL_IGNORE, comma-separated, fifty at most. The Bluesky
+# posts and the Telegram crossings leave them out; an emergency squawk is sent whoever squawks, and the wall shows
+# every aircraft. Empty by default; each change says what the list holds now, and `remove` puts back what `add` did.
+SOCIAL_IGNORE_MAX=50
+social_ignore_word() {   # WORD -> the word in capitals, or returns 1
+  local w=${1^^}
+  [[ $w =~ ^[A-Z0-9][A-Z0-9-]{1,8}$ ]] || return 1
+  printf '%s' "$w"
+}
+social_ignore_show() {
+  local cur; cur=$(cfg_get SOCIAL_IGNORE "")
+  if [ -z "$cur" ]; then echo "Aircraft never to post: none."
+  else echo "Aircraft never to post ($(tr ',' '\n' <<<"$cur" | grep -c .)): ${cur//,/, }"; fi
+}
+social_ignore() {        # social_ignore [list] | add WORD... | remove WORD... | set none|LIST | clear
+  local verb=${1:-list} cur w clean out=() known n=0 changed=0
+  cur=$(cfg_get SOCIAL_IGNORE "")
+  [ "$#" -eq 0 ] || shift
+  case "$verb" in
+    list)
+      social_ignore_show
+      echo "Change:  sudo zenithboard social ignore add F-GXXX   (a registration, an ICAO address or a callsign), remove F-GXXX, clear"
+      echo "They are left out of the Bluesky posts and the Telegram crossings. An emergency squawk is always sent; the wall shows every aircraft."
+      return 0 ;;
+    clear) cfg_set SOCIAL_IGNORE ""; social_ignore_show
+           [ -z "$cur" ] || echo "It held: ${cur//,/, }   (put it back: sudo zenithboard social ignore set $cur)"
+           return 0 ;;
+    set)
+      [ "$#" -ge 1 ] || { echo "Usage: zenithboard social ignore set none|F-GXXX,3944EF,..." >&2; return 1; }
+      [ "$*" != none ] || { cfg_set SOCIAL_IGNORE ""; social_ignore_show; return 0; }
+      IFS=', ' read -r -a out <<<"$*"; set -- "${out[@]}"; out=(); cur=""; verb=add ;;
+  esac
+  case "$verb" in add|remove) ;; *) echo "Usage: zenithboard social ignore [list] | add WORD... | remove WORD... | clear" >&2; return 1 ;; esac
+  [ "$#" -ge 1 ] || { echo "Usage: zenithboard social ignore $verb F-GXXX   (a registration, an ICAO address or a callsign)" >&2; return 1; }
+  IFS=, read -r -a out <<<"$cur"
+  for w in "$@"; do
+    clean=$(social_ignore_word "$w") || { echo "Not a registration, an ICAO address or a callsign: $w   (2 to 9 letters, digits or hyphens)" >&2; return 1; }
+    known=0; for n in "${!out[@]}"; do [ "${out[$n]}" != "$clean" ] || known=1; done
+    if [ "$verb" = add ]; then
+      [ "$known" = 1 ] || { out+=("$clean"); changed=1; }
+    else
+      [ "$known" = 1 ] || { echo "Not on the list: $clean" >&2; continue; }
+      for n in "${!out[@]}"; do [ "${out[$n]}" != "$clean" ] || unset "out[$n]"; done
+      changed=1
+    fi
+  done
+  out=("${out[@]}")
+  [ "${#out[@]}" -le "$SOCIAL_IGNORE_MAX" ] || { echo "At most $SOCIAL_IGNORE_MAX aircraft on the list (it would hold ${#out[@]})." >&2; return 1; }
+  [ "$changed" = 0 ] || cfg_set SOCIAL_IGNORE "$(IFS=,; echo "${out[*]}")"
+  social_ignore_show
+  [ "$changed" = 0 ] || echo "The services take it at their next look, no restart needed."
+}
+
 # ---- 0.51.0: the posts' language (SOCIAL_LANG), English until it is set: every post, the summaries' words included
 social_py() { if [ "$(id -u)" -eq 0 ] && id "$ZB_USER" >/dev/null 2>&1 && [ "$ZB_USER" != root ]; then runuser -u "$ZB_USER" -- python3 "$SOCIAL_PY" "$@"; else python3 "$SOCIAL_PY" "$@"; fi; }
 social_set_lang() {     # social_set_lang [CODE]
@@ -738,7 +792,17 @@ social_menu() {
           remove) clear; social_remove "" || true; read -rp "Press Enter to continue..." _ ;;
           status) clear; social_status; read -rp "Press Enter to continue..." _ ;;
         esac ;;
-      words) social_setup_words && wt_msg "Saved." 7 || true ;;
+      words)
+        # 1.1: the aircraft never to post sit beside the rules (the menu holds seven entries at most)
+        local wr
+        wr=$(wt_menu "Words and rules." \
+          words "1  Place name, radius, gap, what is worth a post" \
+          ignore "2  Aircraft never to post: $(cfg_get SOCIAL_IGNORE "" | tr ',' '\n' | grep -c .)" \
+          back "Return to the previous menu") || continue
+        case "$wr" in
+          words) social_setup_words && wt_msg "Saved." 7 || true ;;
+          ignore) social_ignore_menu ;;
+        esac ;;
       look) social_look_menu ;;
       weekly) summary_menu ;;
       try)
@@ -752,6 +816,29 @@ social_menu() {
           post) clear; social_need_tools && social_prepare_dir && sudo -u "$ZB_USER" python3 "$SOCIAL_PY" post; read -rp "Press Enter to continue..." _ ;;
         esac ;;
       status) clear; social_status; read -rp "Press Enter to continue..." _ ;;
+      *) return 0 ;;
+    esac
+  done
+}
+social_ignore_menu() {   # 1.1: the aircraft never to post, one at a time
+  local c v
+  while true; do
+    c=$(wt_menu "Aircraft never to post.\n\n$(social_ignore_show)\n\nA registration (F-GXXX), an ICAO address (3944ef) or a callsign (SAMU57). They are left out of the Bluesky posts and the Telegram crossings. An emergency squawk is always sent, and the wall shows every aircraft." \
+      add "1  Add one" \
+      remove "2  Take one off the list" \
+      clear "3  Empty the list" \
+      back "Return to the previous menu") || return 0
+    case "$c" in
+      add) v=$(wt_input "The registration, ICAO address or callsign never to post:" "") || continue
+           [ -n "$v" ] || continue
+           wt_msg "$(social_ignore add "$v" 2>&1)" 10 ;;
+      remove) [ -n "$(cfg_get SOCIAL_IGNORE "")" ] || { wt_msg "The list is empty." 7; continue; }
+           v=$(wt_input "Take which one off the list?\n\n$(cfg_get SOCIAL_IGNORE "" | sed 's/,/, /g')" "") || continue
+           [ -n "$v" ] || continue
+           wt_msg "$(social_ignore remove "$v" 2>&1)" 10 ;;
+      clear) [ -n "$(cfg_get SOCIAL_IGNORE "")" ] || { wt_msg "The list is empty." 7; continue; }
+           wt_yesno "Empty the list of aircraft never to post?\n\n$(cfg_get SOCIAL_IGNORE "" | sed 's/,/, /g')" 12 || continue
+           wt_msg "$(social_ignore clear 2>&1)" 8 ;;
       *) return 0 ;;
     esac
   done

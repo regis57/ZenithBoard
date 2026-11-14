@@ -282,6 +282,8 @@
  "Only the kinds lit; Everything posts every crossing": "Aina zilizowashwa tu; Kila kitu huchapisha kila ndege inayopita",
  "Least time between posts": "Muda wa chini kati ya machapisho",
  "Minutes; 0 = every crossing posted once": "Dakika; 0 = kila ndege inayopita huchapishwa mara moja",
+ "Aircraft never to post": "Ndege zisizochapishwa kamwe",
+ "Registrations, ICAO addresses or callsigns, separated by commas (F-GXXX, 3944EF). Left out of the Telegram crossings too; an emergency squawk is always sent.": "Usajili, anwani za ICAO au ishara za wito, zikitenganishwa kwa koma (F-GXXX, 3944EF). Huachwa pia katika mipito ya Telegram; squawk ya dharura hutumwa kila mara.",
  "Town names on the maps": "Majina ya miji kwenye ramani",
  "From GeoNames, made on the Pi (a few minutes); off: the lists shipped with ZenithBoard": "Kutoka GeoNames, yanatengenezwa kwenye Pi (dakika chache); imezimwa: orodha zinazokuja na ZenithBoard",
  "Try a post (posts nothing)": "Jaribu chapisho (hakuna kinachochapishwa)",

@@ -396,6 +396,13 @@ Measured with the real code, GeoNames' real files and EOX's real tiles, on 20 Oc
 
 ## What gets posted, and what never does
 
+**Aircraft never to post (1.1).** The regulars that would fill the feed, a flying school's aircraft, the police helicopter over its own base, are left out by name: `sudo zenithboard social ignore add F-GXXX` (menu *7 Options → 3 Bluesky → 3 Words and rules → 2*, or the console's *Aircraft never to post*). A word is a registration (`F-GXXX`, with or without its hyphen), an ICAO address (`3944ef`) or a callsign (`SAMU57`), fifty at most; `sudo zenithboard social ignore` lists them, `remove F-GXXX` takes one off, `clear` empties the list and says how to put it back. The list is empty by default and the services take a change at their next look. What it does and does not do:
+
+* An aircraft on the list is never a candidate for a post, a range record included, and has no crossing message on Telegram.
+* **An emergency squawk is always sent**, whoever squawks.
+* The wall still shows it, and it is still counted: its type stays as common as it is for the `rare` rule, and the day's range is what the antenna heard.
+* *Try it* and *Post now* never pick it by themselves; asked for by its address (`sudo zenithboard social post HEX`), it is posted: that is your own hand.
+
 **The rules.** An aircraft is a candidate while inside the sharing radius (except a range record, below), known (a type, a registration or an airline — an aircraft with nothing known is never posted), airborne, with at least thirty seconds of track, and not already posted during this crossing (below). Among the candidates, the rules say which are worth it:
 
 | Rule | Posts an aircraft that is… |

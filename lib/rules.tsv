@@ -35,6 +35,7 @@ SOCIAL_GAP_MIN	int	0 1440
 SOCIAL_STYLE	enum	dotmap flap alternate
 SOCIAL_MAP	enum	normal night satellite terrain none rotate
 SOCIAL_THEME	enum	amber green red white turquoise rotate
+SOCIAL_IGNORE	re	^([A-Z0-9][A-Z0-9-]{1,8}(,[A-Z0-9][A-Z0-9-]{1,8}){0,49})?$
 SOCIAL_RULES	words	military helicopter heavy rare farthest
 TELEGRAM_RULES	words	military helicopter heavy
 SHOW_PHOTOS	number	-

@@ -283,6 +283,8 @@
  "Only the kinds lit; Everything posts every crossing": "Tikai iezīmētie veidi; Viss publicē katru pārlidojumu",
  "Least time between posts": "Minimālais laiks starp ierakstiem",
  "Minutes; 0 = every crossing posted once": "Minūtes; 0 = katrs pārlidojums tiek publicēts vienreiz",
+ "Aircraft never to post": "Gaisa kuģi, kurus nekad nepublicēt",
+ "Registrations, ICAO addresses or callsigns, separated by commas (F-GXXX, 3944EF). Left out of the Telegram crossings too; an emergency squawk is always sent.": "Reģistrācijas zīmes, ICAO adreses vai izsaukuma signāli, atdalīti ar komatiem (F-GXXX, 3944EF). Izlaisti arī Telegram pārlidojumos; ārkārtas squawk tiek nosūtīts vienmēr.",
  "Town names on the maps": "Apdzīvoto vietu nosaukumi kartēs",
  "From GeoNames, made on the Pi (a few minutes); off: the lists shipped with ZenithBoard": "No GeoNames, tiek izveidoti Pi (dažas minūtes); izslēgts: ZenithBoard komplektā iekļautie saraksti",
  "Try a post (posts nothing)": "Izmēģināt ierakstu (nekas netiek publicēts)",

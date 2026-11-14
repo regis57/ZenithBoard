@@ -562,6 +562,35 @@ def interest(p, rules, state, now=None):
     return sum(r[1] for r in reasons), reasons[0][0]
 
 
+# 1.1 (asked by the owner, 1 November 2026): aircraft never to post. The regulars that fill a feed (a flying school's
+# aircraft, the police helicopter over its own base) are left out by registration, ICAO address or callsign:
+# SOCIAL_IGNORE, a comma-separated list set by `zenithboard social ignore`. It holds for the posts and for the
+# crossings written to the owner's chat by the other service, which asks here; never for an emergency squawk, sent
+# whoever squawks, nor for the wall, which shows the sky.
+IGNORE_MAX = 50
+IGNORE_WORD = re.compile(r"^[A-Z0-9][A-Z0-9-]{1,8}\Z")
+
+
+def ignore_set(c):
+    """The owner's list as a set of capitals, a registration also without its hyphen. A broken entry counts for nothing."""
+    out = set()
+    for w in str((c or {}).get("SOCIAL_IGNORE") or "").upper().split(",")[:IGNORE_MAX]:
+        w = w.strip()
+        if IGNORE_WORD.match(w):
+            out.add(w)
+            out.add(w.replace("-", ""))
+    out.discard("")
+    return out
+
+
+def ignored(p, skip):
+    """True when the aircraft's registration, ICAO address or callsign is on the list."""
+    if not skip:
+        return False
+    mine = (str(p.get("registration") or ""), str(p.get("hex") or ""), str(p.get("flight") or ""))
+    return any(w and (w in skip or w.replace("-", "") in skip) for w in (x.strip().upper() for x in mine))
+
+
 def choose(planes, tracks, rules, state, now, settle=True):
     """The best candidate right now, or None. settle=False: do not wait for lookups still on their way."""
     best, best_first = None, 0
@@ -1672,6 +1701,10 @@ def one_poll(c, state, tracks, aircraft, now):
     rules = rules_of(c)
     planes = ask_wall(c, radius)
     note_seen(state, planes + inside_now(c, aircraft, radius), now)   # inside: a crossing already posted goes on
+    # 1.1: the aircraft never to post are seen and counted like the others (a type stays as common as it is), and
+    # never become a candidate
+    skip, seen_all = ignore_set(c), planes
+    planes = [p for p in planes if not ignored(p, skip)]
     # every crossing is posted (0.20.0): one worth a post that left the radius before its turn is asked about
     # where it is now. Only those worth it are followed, so the wall is not asked about every aircraft that leaves
     tracks.note_inside([p for p in planes if known(p) and not p.get("on_ground") and interest(p, rules, state, now)[0] > 0], now)
@@ -1681,16 +1714,16 @@ def one_poll(c, state, tracks, aircraft, now):
                   if h not in here and not already_posted(state, {"hex": h, "flight": calls.get(h, "")}))
     for _, h in late[:LATE_ASKS]:
         p = ask_wall_one(c, h)
-        if p:
+        if p and not ignored(p, skip):
             planes = planes + [dict(p, _late=True)]
     far_hex, far_km = farthest_now(c, aircraft)
     if "farthest" in rules and far_hex and warmed(state, now) and far_km > max(RECORD_MIN_KM, range_best(state)):
         rec = next((p for p in planes if p.get("hex") == far_hex), None) or ask_wall_one(c, far_hex)
-        if rec:
+        if rec and not ignored(rec, skip):
             rec = dict(rec, _record=True)
             planes = [p for p in planes if p.get("hex") != far_hex] + [rec]
     best = choose(planes, tracks, rules, state, now)
-    note_types(state, planes, now)
+    note_types(state, planes + [p for p in seen_all if ignored(p, skip)], now)
     if far_km:
         note_range(state, far_km, now)
     return planes, best
@@ -1777,6 +1810,9 @@ def _collect_once(hex_code=None, seconds=35):
         now = time.time()
         tracks.feed(read_aircraft(c), now)
         planes = ask_wall(c, radius)
+        if not hex_code:                           # 1.1: left to choose, it never picks an aircraft never to post;
+            skip = ignore_set(c)                   # asked for by its address, the owner's own hand decides
+            planes = [p for p in planes if not ignored(p, skip)]
         if hex_code:
             if any(p.get("hex") == hex_code.lower() for p in planes) and len(tracks.of(hex_code)) >= TRACE_MIN_POINTS:
                 break
@@ -2038,6 +2074,8 @@ def cmd_status():
     print("Radius: %s km   Area: %s   Gap: %s   Rules: %s" % (c.get("SOCIAL_RADIUS_KM"), c.get("SOCIAL_AREA") or "(none)",
                                                                gap_words(c), ", ".join(sorted(rules_of(c))) or "none"))
     print("Hashtags: %s   (change: sudo zenithboard social hashtags ...)" % c.get("SOCIAL_HASHTAGS"))
+    never = sorted(w for w in str(c.get("SOCIAL_IGNORE") or "").upper().split(",") if IGNORE_WORD.match(w.strip()))
+    print("Aircraft never to post: %s   (change: sudo zenithboard social ignore add|remove ...)" % (", ".join(never) or "none"))
     print("Town names on the maps: %s" % places_words(c))
     print("Post sentence: %s%s   (change: sudo zenithboard social sentence ...)" % (",".join(sentences_of(c)),
           "  (one drawn at each post)" if len(sentences_of(c)) > 1 else ""))

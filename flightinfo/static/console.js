@@ -759,6 +759,9 @@ window.ZBI18N.start({ part: "console" }, function () {
           row(t("Sharing radius"), t("Kilometres; an aircraft inside it is a candidate. Not the wall's radius."), numberApply("social-radius", c.SOCIAL_RADIUS_KM, 1, 200)),
           row(t("What is worth a post"), c.SOCIAL_RULES === "all" || c.SOCIAL_RULES === "any" ? t("Everything: every crossing, the special ones first") : t("Only the kinds lit; Everything posts every crossing"), rulesChips(c.SOCIAL_RULES)),
           row(t("Least time between posts"), t("Minutes; 0 = every crossing posted once"), numberApply("social-gap", c.SOCIAL_GAP_MIN, 0, 1440)),
+          // 1.1: the regulars left out of the posts and of the Telegram crossings (the owner, 1 November 2026)
+          row(t("Aircraft never to post"), t("Registrations, ICAO addresses or callsigns, separated by commas (F-GXXX, 3944EF). Left out of the Telegram crossings too; an emergency squawk is always sent."),
+            textApply("social-ignore", c.SOCIAL_IGNORE, 500, t("none"), function (v) { return v.toUpperCase().split(/[,\s]+/).filter(Boolean).join(",") || "none"; }, "none")),
           row(t("Town names on the maps"), t("From GeoNames, made on the Pi (a few minutes); off: the lists shipped with ZenithBoard"), sw("social-places", on(c.SOCIAL_PLACES))),
           h("div", { "class": "actions" }, btn(t("Try a post (posts nothing)"), "social-test"), h("a", { "class": "btn", href: "/social/preview", target: "_blank", rel: "noopener", text: t("Last picture ↗") }), btn(t("Status"), "social-status"))
         ], "w6"),

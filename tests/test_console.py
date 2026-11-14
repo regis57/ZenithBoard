@@ -136,6 +136,12 @@ class ActionsTest(unittest.TestCase):
         self.assertEqual(actions.build("social-hashtags", {"value": "#ADSB avgeek ZenithBoard"}), ["social", "hashtags", "#ADSB", "avgeek", "ZenithBoard"])
         self.assertEqual(actions.build("social-rules", {"value": "military,rare"}), ["social", "rules", "military,rare"])
         self.assertEqual(actions.build("social-radius", {"value": "25"}), ["social", "radius", "25"])
+        self.assertEqual(actions.build("social-ignore", {"value": "F-GXXX,3944EF,SAMU57"}), ["social", "ignore", "set", "F-GXXX,3944EF,SAMU57"])
+        self.assertEqual(actions.build("social-ignore", {"value": "none"}), ["social", "ignore", "set", "none"])
+        for value in ("f-gxxx", "F-GXXX, 3944EF", "F-GXXX;id", "A", "TOOLONGWORD", "F-GXXX,", ",".join(["AB123"] * 51), "--help", "F-GXXX\nSOCIAL=1"):
+            with self.assertRaises(actions.Refused, msg=value):
+                actions.build("social-ignore", {"value": value})
+        self.assertIn("SOCIAL_IGNORE", console.SHOWN_KEYS)
         bad = [("social-area", {"value": "a;b"}), ("social-area", {"value": "two\nlines"}), ("social-area", {"value": "x" * 41}),
                ("social-hashtags", {"value": "#a #b`id`"}), ("social-hashtags", {"value": "#a  #b"}), ("social-rules", {"value": "all,rare"}),
                ("social-rules", {"value": "drones"}), ("social-radius", {"value": "201"}), ("social-places", {"value": "maybe"})]

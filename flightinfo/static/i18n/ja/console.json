@@ -281,6 +281,8 @@
  "Only the kinds lit; Everything posts every crossing": "点灯している種類のみ。「すべて」は通過するすべてを投稿",
  "Least time between posts": "投稿の最小間隔",
  "Minutes; 0 = every crossing posted once": "分単位。0 = 通過ごとに1回投稿",
+ "Aircraft never to post": "投稿しない航空機",
+ "Registrations, ICAO addresses or callsigns, separated by commas (F-GXXX, 3944EF). Left out of the Telegram crossings too; an emergency squawk is always sent.": "登録記号、ICAOアドレス、コールサインをカンマ区切りで（F-GXXX, 3944EF）。Telegramの通過通知からも除外されます。緊急スコークは常に送信されます。",
  "Town names on the maps": "地図上の町名",
  "From GeoNames, made on the Pi (a few minutes); off: the lists shipped with ZenithBoard": "GeoNamesのデータをもとにPi上で作成（数分）。オフ：ZenithBoard付属のリスト",
  "Try a post (posts nothing)": "投稿をテスト（実際には投稿されません）",

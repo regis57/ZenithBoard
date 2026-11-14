@@ -1486,6 +1486,86 @@ class ServiceLoopTest(unittest.TestCase):
         self.assertTrue(all(b - a >= social.RETRY_AFTER_FAIL_S for a, b in zip(tries, tries[1:])))
 
 
+class NeverPostTest(unittest.TestCase):
+    """1.1 (asked by the owner, 1 November 2026): the regulars left out of the posts by registration, ICAO address or
+    callsign. They stay on the wall and in the counts; an emergency squawk is Telegram's business and is always sent."""
+
+    def test_the_list_is_read_whatever_its_case_and_a_broken_entry_counts_for_nothing(self):
+        self.assertEqual(social.ignore_set({}), set())
+        self.assertEqual(social.ignore_set({"SOCIAL_IGNORE": ""}), set())
+        got = social.ignore_set({"SOCIAL_IGNORE": "f-gxlh, 3944EF ,SAMU57,,a;b,x,TOOLONGWORD,-AB"})
+        self.assertEqual(got, {"F-GXLH", "FGXLH", "3944EF", "SAMU57"})
+        self.assertEqual(len(social.ignore_set({"SOCIAL_IGNORE": ",".join("AB%03d" % i for i in range(80))})), social.IGNORE_MAX)
+
+    def test_by_registration_address_or_callsign(self):
+        skip = social.ignore_set({"SOCIAL_IGNORE": "F-GXLH,4071F1,SAMU57"})
+        self.assertTrue(social.ignored({"registration": "F-GXLH"}, skip))
+        self.assertTrue(social.ignored({"registration": "f-gxlh"}, skip))
+        self.assertTrue(social.ignored({"flight": "FGXLH   "}, skip), "the registration flown as a callsign, without its hyphen")
+        self.assertTrue(social.ignored({"hex": "4071f1", "flight": "EZY1234"}, skip))
+        self.assertTrue(social.ignored({"flight": "SAMU57 "}, skip))
+        for other in ({"registration": "F-GXLI"}, {"hex": "4071f2"}, {"flight": "SAMU5"}, {"flight": "SAMU571"}, {}, {"registration": None, "hex": None}):
+            self.assertFalse(social.ignored(other, skip), other)
+        self.assertFalse(social.ignored({"registration": "F-GXLH"}, set()), "an empty list leaves nobody out")
+        self.assertTrue(social.ignored({"registration": "D-HABC"}, social.ignore_set({"SOCIAL_IGNORE": "DHABC"})), "typed without the hyphen")
+
+    def poll(self, c):
+        tracks, now = social.Tracks(), time.time()
+        for p in (EZY, HELI):
+            for pt in trace(12, now - 60):
+                tracks.feed([{"hex": p["hex"], "lat": pt[0], "lon": pt[1], "alt_baro": 30000, "seen_pos": 0}], pt[3])
+        self.addCleanup(setattr, social, "ask_wall", social.ask_wall)
+        self.addCleanup(setattr, social, "ask_wall_one", social.ask_wall_one)
+        social.ask_wall = lambda c, r: [dict(EZY), dict(HELI)]
+        social.ask_wall_one = lambda c, h: None
+        st = warm()
+        planes, best = social.one_poll(c, st, tracks, [], now)
+        return st, planes, best
+
+    def test_an_ignored_aircraft_is_never_a_candidate_and_is_still_counted(self):
+        c = dict(CFG, SOCIAL_RULES="all", SOCIAL_RADIUS_KM="15")
+        _, _, best = self.poll(c)
+        first = best[2]["hex"]
+        other = HELI["hex"] if first == EZY["hex"] else EZY["hex"]
+        reg = EZY["registration"] if first == EZY["hex"] else HELI["registration"]
+        st, planes, best = self.poll(dict(c, SOCIAL_IGNORE=reg.lower()))
+        self.assertEqual(best[2]["hex"], other, "the next one is posted in its place")
+        self.assertNotIn(first, [p["hex"] for p in planes])
+        st2, _, _ = self.poll(c)
+        self.assertEqual(st.get("types"), st2.get("types"), "its type is as common as it was: the counts do not change")
+        st, planes, best = self.poll(dict(c, SOCIAL_IGNORE="%s,%s" % (EZY["hex"], HELI["registration"])))
+        self.assertIsNone(best, "both on the list: nothing to post")
+
+    def test_a_hand_post_never_picks_it_but_posts_it_when_asked_by_its_address(self):
+        now = [time.time()]
+        for name, fake in (("cfg", lambda: dict(CFG, SOCIAL_RADIUS_KM="15", SOCIAL_IGNORE=EZY["registration"])), ("load_state", warm),
+                           ("read_aircraft", lambda c: [{"hex": EZY["hex"], "lat": pt[0], "lon": pt[1], "alt_baro": 30000, "seen_pos": 0}
+                                                        for pt in trace(12, now[0] - 60)][-1:]),
+                           ("ask_wall", lambda c, r: [dict(EZY)])):
+            self.addCleanup(setattr, social, name, getattr(social, name))
+            setattr(social, name, fake)
+        self.addCleanup(setattr, time, "sleep", time.sleep); time.sleep = lambda s: None
+        self.assertIsNone(social._collect_once(None, seconds=0.2)[2], "nothing else overhead: nothing to post")
+        self.assertEqual(social._collect_once(EZY["hex"], seconds=0.2)[2]["hex"], EZY["hex"])
+
+    def test_a_range_record_set_by_an_ignored_aircraft_is_not_posted(self):
+        far = {"hex": "4b1801", "flight": "SWR18", "type": "A21N", "type_name": "AIRBUS A-321neo", "airline": "Swiss",
+               "registration": "HB-JPA", "shape": "narrow", "alt_ft": 38000, "on_ground": False, "track": 90, "distance_km": 210}
+        c = dict(CFG, LAT="49.20", LON="6.20", SOCIAL_RULES="farthest", SOCIAL_RADIUS_KM="15")
+        now, tracks = time.time(), social.Tracks()
+        for pt in trace(12, now - 60):
+            tracks.feed([{"hex": "4b1801", "lat": pt[0], "lon": pt[1], "alt_baro": 38000, "seen_pos": 0}], pt[3])
+        self.addCleanup(setattr, social, "ask_wall", social.ask_wall)
+        self.addCleanup(setattr, social, "ask_wall_one", social.ask_wall_one)
+        social.ask_wall = lambda c, r: []
+        social.ask_wall_one = lambda c, h: dict(far) if h == "4b1801" else None
+        sky = [{"hex": "4b1801", "lat": 49.20, "lon": 6.20 + 210 / (111.32 * 0.6534), "seen_pos": 1}]
+        self.assertIsNotNone(social.one_poll(c, warm(far={social.day_of(now - 86400): 180.0}), tracks, sky, now)[1])
+        st = warm(far={social.day_of(now - 86400): 180.0})
+        self.assertIsNone(social.one_poll(dict(c, SOCIAL_IGNORE="HB-JPA"), st, tracks, sky, now)[1])
+        self.assertAlmostEqual(st["far"][social.day_of(now)], 210, delta=1, msg="the day's range is still what the antenna heard")
+
+
 class HeadingByDefaultTest(unittest.TestCase):
     """1.1 (asked by the owner, 1 November 2026): where the aircraft is heading, in the default text of the posts and
     the messages, and everything must still fit: the heading is the first thing left out."""

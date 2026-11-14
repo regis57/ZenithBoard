@@ -284,6 +284,8 @@
  "Only the kinds lit; Everything posts every crossing": "Tik pažymėtos rūšys; Viskas skelbia kiekvieną praskridimą",
  "Least time between posts": "Mažiausias tarpas tarp įrašų",
  "Minutes; 0 = every crossing posted once": "Minutėmis; 0 – kiekvienas praskridimas skelbiamas vieną kartą",
+ "Aircraft never to post": "Orlaiviai, kurių niekada neskelbti",
+ "Registrations, ICAO addresses or callsigns, separated by commas (F-GXXX, 3944EF). Left out of the Telegram crossings too; an emergency squawk is always sent.": "Registracijos ženklai, ICAO adresai arba šaukiniai, atskirti kableliais (F-GXXX, 3944EF). Praleidžiami ir „Telegram“ praskridimuose; avarinis squawk siunčiamas visada.",
  "Town names on the maps": "Gyvenviečių pavadinimai žemėlapiuose",
  "From GeoNames, made on the Pi (a few minutes); off: the lists shipped with ZenithBoard": "Iš GeoNames, sudaroma Pi (kelios minutės); išjungta – su ZenithBoard pateikiami sąrašai",
  "Try a post (posts nothing)": "Išbandyti įrašą (nieko neskelbiama)",

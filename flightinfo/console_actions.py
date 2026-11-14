@@ -28,6 +28,8 @@ UNIT_SYSTEMS = rules.choices("UNITS")
 PERIODS = ("daily", "weekly", "monthly")
 # 0.50.0: the words of the posts, as lib/social.sh checks them again (social_hashtags_clean, social_area_clean)
 HASHTAGS_RE = r"none|default|#?[A-Za-z0-9_]{1,40}( #?[A-Za-z0-9_]{1,40}){0,7}"
+IGNORE_WORD = r"[A-Z0-9][A-Z0-9-]{1,8}"            # as lib/social.sh and flightinfo/social.py take it
+IGNORE_RE = r"none|" + IGNORE_WORD + r"(," + IGNORE_WORD + r"){0,49}"
 AREA_RE = r"[^\W_][\w '\u2019.,-]{0,39}"
 RULES = rules.choices("SOCIAL_RULES")
 RULES_RE = r"^(all|(%s)(,(%s)){0,4})$" % ("|".join(RULES), "|".join(RULES))
@@ -111,6 +113,7 @@ ACTIONS = {
     "social-area":  ("sharing", "Place name", ["social", "area", "{value}"], [("value", "text", (40, AREA_RE))], ""),
     "social-radius": ("sharing", "Sharing radius", ["social", "radius", "{value}"], [("value", "int", rules.bounds("SOCIAL_RADIUS_KM"))], ""),
     "social-rules": ("sharing", "What is worth a post", ["social", "rules", "{value}"], [("value", "re", RULES_RE)], ""),
+    "social-ignore": ("sharing", "Aircraft never to post", ["social", "ignore", "set", "{value}"], [("value", "text", (500, IGNORE_RE))], ""),
     "social-hashtags": ("sharing", "Hashtags", ["social", "hashtags", "{value*}"], [("value", "text", (340, HASHTAGS_RE))], ""),
     "social-places": ("sharing", "Town names on the maps", ["social", "places", "{value}"], [("value", "enum", ON_OFF)], "long"),
     "summary":      ("sharing", "Summary", ["social", "summary", "{period}", "{value}"], [("period", "enum", PERIODS), ("value", "enum", ON_OFF)], ""),
