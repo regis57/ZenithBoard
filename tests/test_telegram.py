@@ -194,6 +194,19 @@ class WordsTest(Base):
         fr = telegram.fill("crossing", dict(EZY, track=200, alt_ft=30000), dict(CFG, TELEGRAM_LANG="fr"))
         self.assertIn(" \u00b7 cap sud", fr)
 
+    def test_a_line_left_with_only_the_templates_signs_goes(self):
+        # 1.1.2, seen in the owner's chat: his template wrote the route without brackets, and a jet with no route
+        # left a line holding only the arrow
+        tpl = "\u2708 {flight}\n{from} \u2192 {to}\n{from_code} - {to_code}\n({registration})\n{heading} \u00b7 {altitude}\n{time}"
+        bare = dict(EZY, route=None, registration="", track=135, alt_ft=41000)
+        lines = telegram.fill("crossing", bare, CFG, template=tpl, now=1800000000.0).splitlines()
+        self.assertEqual(len(lines), 3, lines)
+        self.assertTrue(lines[0].endswith("EZY17QZ") and lines[1].startswith("south-east \u00b7 ") and ":" in lines[2], lines)
+        full = dict(EZY, track=135, route={"from": {"city": "Geneva", "iata": "GVA"}, "to": {"city": "London", "iata": "LTN"}})
+        text = telegram.fill("crossing", full, CFG, template=tpl, now=1800000000.0)
+        self.assertIn("Geneva (GVA) \u2192 London (LTN)\nGVA - LTN\n(G-EZWA)", text, "a line with something in it is kept as written")
+        self.assertEqual(telegram.fill("crossing", bare, CFG, template="{from} \u2192 {to}", now=1800000000.0), "")
+
     def test_squawk_default_says_the_code_its_meaning_and_where(self):
         text = telegram.fill("squawk", EZY, CFG, ac=ac(), code="7700")
         self.assertIn("Squawk 7700: General emergency", text.splitlines()[0])

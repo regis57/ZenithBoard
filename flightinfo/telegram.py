@@ -207,6 +207,9 @@ def near_words(lat, lon, L, units):
                country=L.country(cc, server.country_name(cc)) if cc else "")
 
 
+BARE_SIGNS = " \t\u00a0\u2192\u2190\u2194\u00b7\u2022|/,;:-\u2013\u2014>()[]"     # arrows, dots, dashes, brackets: no word, no figure
+
+
 def fill(kind, p, c, why=None, now=None, template=None, ac=None, code=None):
     """One message: the template filled, empty [parts] and empty lines gone, within Telegram's length."""
     v = view(c)
@@ -224,7 +227,10 @@ def fill(kind, p, c, why=None, now=None, template=None, ac=None, code=None):
         values["near"] = near_words(src.get("lat", p.get("lat")), src.get("lon", p.get("lon")), L, social.units_of(v))
     text = L.render(tpl, values)
     lines = [re.sub(r"[ \t]{2,}", " ", x).strip() for x in text.split("\n")]
-    text = "\n".join(x for x in lines if x and x not in ("✈", "\U0001F6A8"))
+    # 1.1.2 (the owner's chat, 14 November 2026: PJZ600, a business jet with no route, showed a line holding only
+    # "→", his own template writing {from} → {to} without brackets): a line left with nothing but the template's own
+    # signs, every tag in it being empty, goes like an empty one
+    text = "\n".join(x for x in lines if x and x not in ("✈", "\U0001F6A8") and x.strip(BARE_SIGNS))
     return text[:MAX_TEXT]
 
 
