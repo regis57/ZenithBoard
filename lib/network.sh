@@ -38,9 +38,6 @@ net_guess_gateway() {   # the usual router address of the subnet: first host (19
   m=$(( (0xFFFFFFFF << (32 - p)) & 0xFFFFFFFF ))
   net_int_ip $(( ($(net_ip_int "$ip") & m) + 1 ))
 }
-net_default_mask() {   # a sensible mask to propose when nothing is known: /24 (what almost every home router uses)
-  net_prefix_to_mask 24
-}
 net_dns_preset() {   # cloudflare | google | router GATEWAY | a custom list  ->  "A B"
   case "$1" in
     cloudflare) echo "1.1.1.1 1.0.0.1" ;;
