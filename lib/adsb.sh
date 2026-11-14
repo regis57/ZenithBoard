@@ -4,30 +4,117 @@
 #
 # Architecture (identical for both decoders):
 #   SDR dongle -> decoder -> Beast TCP on 127.0.0.1:30005 -> every feeder reads from there.
-#   Exactly ONE MLAT client may run (it is ADSB Exchange's). FlightAware / FR24 / AirNav Radar MLAT are switched off.
+#   Exactly ONE MLAT client may run: the one of the network chosen (MLAT_NETWORK, ADSB Exchange by default, 1.2).
 
-# ------------------------------------------------------------------ MLAT guard
+# ------------------------------------------------------------------ MLAT: one client, the network of your choice (1.2)
+# Until 1.2 the single MLAT client was ADSB Exchange's, written into the code. The owner, 14 November 2026: "not
+# blocked on ADSB Exchange for ever". MLAT_NETWORK names the network that does it: adsbx (the default: a Pi that
+# touches nothing changes nothing), flightaware, airnav, or none. Still ONE client at a time, which is what a 1 GB Pi
+# carries and what the networks ask for.
+#   Flightradar24 is not offered: its own support page asks for its MLAT to be OFF on a receiver that also shares with
+#   other networks ("How to disable MLAT on T-feeds", read 14 November 2026), and this receiver always does.
+#   Plane Finder has no MLAT client.
+# What each switch is, read on the same day:
+#   ADSB Exchange  the adsbexchange-mlat service, enabled and started, or disabled and stopped
+#   FlightAware    piaware-config allow-mlat yes|no (flightaware.com/adsb/piaware/advanced_configuration; it also
+#                  needs the receiver's location set on FlightAware's My ADS-B page)
+#   AirNav Radar   [mlat] autostart_mlat=true|false in /etc/rbfeeder.ini, with their mlat-client package for "true"
+#                  (airnavradar.com/raspberry-pi/guide, step 4: apt-get install mlat-client)
+MLAT_NETWORKS=$(rule_choices MLAT_NETWORK)
 mlat_count() { pgrep -fc 'mlat-client' || true; }
+mlat_name() { case "$1" in adsbx) echo "ADSB Exchange" ;; flightaware) echo "FlightAware" ;; airnav) echo "AirNav Radar" ;; none) echo "none" ;; *) echo "$1" ;; esac; }
+mlat_network() {   # the network chosen; anything that is not one of them reads as the default
+  local n; n=$(cfg_get MLAT_NETWORK adsbx)
+  rule_ok MLAT_NETWORK "$n" && echo "$n" || echo adsbx
+}
+mlat_installed() { case "$1" in adsbx) is_adsbx ;; flightaware) is_piaware ;; airnav) is_radarbox ;; none) return 0 ;; *) return 1 ;; esac; }
+# piaware-config -showall lists every setting, the defaults too, one "name value" a line (its README); a single
+# setting cannot be asked for. Empty when it cannot be read: the switch is then written rather than assumed.
+mlat_piaware_now() { piaware-config -showall 2>/dev/null | awk '$1 == "allow-mlat" { print $2; exit }'; }
 
-zb_mlat_guard() {
-  log "Enforcing a single MLAT client (ADSB Exchange)"
-  if is_piaware; then
-    piaware-config allow-mlat no >/dev/null 2>&1 || true
-    unit_active piaware && systemctl restart piaware || true
+# One network's own switch, put where the choice says; a feeder is restarted only when its switch moved.
+mlat_switch_adsbx() {      # on|off
+  is_adsbx || return 0
+  unit_exists adsbexchange-mlat || return 0
+  if [ "$1" = on ]; then systemctl enable --now adsbexchange-mlat >/dev/null 2>&1 || warn "ADSB Exchange's MLAT service did not start: zenithboard logs adsbexchange"
+  else systemctl disable --now adsbexchange-mlat >/dev/null 2>&1 || true; fi
+}
+mlat_switch_flightaware() {   # on|off
+  is_piaware || return 0
+  local want=no; [ "$1" = on ] && want=yes
+  [ "$(mlat_piaware_now)" = "$want" ] && return 0
+  piaware-config allow-mlat "$want" >/dev/null 2>&1 || true
+  unit_active piaware && systemctl restart piaware || true
+}
+mlat_switch_fr24() {       # always off: Flightradar24 asks for it on a receiver that shares with other networks
+  is_fr24 && [ -f "$FR24_INI" ] || return 0
+  if grep -Eq '^mlat="?no"?[[:space:]]*$' "$FR24_INI" && grep -Eq '^mlat-without-gps="?no"?[[:space:]]*$' "$FR24_INI"; then return 0; fi
+  ini_set "$FR24_INI" mlat no
+  ini_set "$FR24_INI" mlat-without-gps no
+  unit_active fr24feed && systemctl restart fr24feed || true
+}
+mlat_switch_airnav() {     # on|off; returns 1 when "on" could not be had (their client's package)
+  is_radarbox && [ -f "$RB24_INI" ] || return 0
+  local want=false; [ "$1" = on ] && want=true
+  if [ "$want" = true ] && ! pkg_installed mlat-client; then
+    log "Installing AirNav Radar's MLAT client (their package mlat-client, signed, from their repository)"
+    apt_install mlat-client >/dev/null 2>&1 || { warn "AirNav Radar's mlat-client package could not be installed: its MLAT stays off. Try: sudo apt-get install mlat-client"; want=false; }
   fi
-  if is_fr24 && [ -f /etc/fr24feed.ini ]; then
-    ini_set /etc/fr24feed.ini mlat no
-    ini_set /etc/fr24feed.ini mlat-without-gps no
-    unit_active fr24feed && systemctl restart fr24feed || true
-  fi
-  # 0.99.6: AirNav's own line for it (the owner, 30 October 2026): autostart_mlat=false in [mlat], then a restart
-  if is_radarbox && [ -f "$RB24_INI" ] && [ "$(ini_sec_get "$RB24_INI" mlat autostart_mlat)" != false ]; then
-    ini_sec_set "$RB24_INI" mlat autostart_mlat false
+  # 0.99.6: AirNav's own line for it (the owner, 30 October 2026): autostart_mlat in [mlat], then a restart
+  if [ "$(ini_sec_get "$RB24_INI" mlat autostart_mlat)" != "$want" ]; then
+    ini_sec_set "$RB24_INI" mlat autostart_mlat "$want"
     unit_active rbfeeder && systemctl restart rbfeeder || true
   fi
+  [ "$1" != on ] || [ "$want" = true ]
+}
+
+zb_mlat_guard() {
+  local net; net=$(mlat_network)
+  # the network that held MLAT was removed: it comes back to ADSB Exchange, always fed, and it is said
+  if ! mlat_installed "$net"; then
+    warn "MLAT was with $(mlat_name "$net"), which is not installed any more: it goes back to ADSB Exchange. Choose another with: sudo zenithboard mlat NETWORK"
+    net=adsbx; cfg_set MLAT_NETWORK adsbx
+  fi
+  log "Enforcing a single MLAT client ($(mlat_name "$net"))"
+  # the others off first, then the one chosen on: never two at once, even for a moment
+  [ "$net" = adsbx ] || mlat_switch_adsbx off
+  [ "$net" = flightaware ] || mlat_switch_flightaware off
+  [ "$net" = airnav ] || mlat_switch_airnav off
+  mlat_switch_fr24
+  case "$net" in
+    adsbx) mlat_switch_adsbx on ;;
+    flightaware) mlat_switch_flightaware on ;;
+    airnav) mlat_switch_airnav on || { warn "MLAT goes back to ADSB Exchange."; cfg_set MLAT_NETWORK adsbx; mlat_switch_adsbx on; } ;;
+  esac
   sleep 3
   local n; n=$(mlat_count)
   if [ "${n:-0}" -gt 1 ]; then warn "$n mlat-client processes are running (expected 1). Run: zenithboard status"; else log "MLAT clients running: ${n:-0}"; fi
+}
+
+# zenithboard mlat [status] | NETWORK
+mlat_status() {
+  local net n; net=$(mlat_network); n=$(mlat_count)
+  echo "MLAT is done by: $(mlat_name "$net")$( [ "$net" = none ] && echo " (no MLAT client runs)")"
+  echo "MLAT clients running: ${n:-0}   (one at most)"
+  is_adsbx && echo "  ADSB Exchange    $(unit_active adsbexchange-mlat && echo "its MLAT service runs" || echo "its MLAT service is stopped")"
+  is_piaware && echo "  FlightAware      allow-mlat $(mlat_piaware_now)"
+  if is_radarbox && [ -f "$RB24_INI" ]; then echo "  AirNav Radar     autostart_mlat $(ini_sec_get "$RB24_INI" mlat autostart_mlat)"; fi
+  is_fr24 && echo "  Flightradar24    off, always: Flightradar24 asks for it on a receiver that shares with other networks"
+  echo "Change:  sudo zenithboard mlat ${MLAT_NETWORKS// /|}   (a network must be installed to be chosen)"
+}
+mlat_set() {     # mlat_set NETWORK
+  local net=${1:-} was; was=$(mlat_network)
+  rule_ok MLAT_NETWORK "$net" || { echo "Usage: zenithboard mlat [status] | ${MLAT_NETWORKS// /|}   (Flightradar24 is not offered: it asks for its MLAT to be off on a receiver that shares with other networks)" >&2; return 1; }
+  mlat_installed "$net" || { echo "$(mlat_name "$net") is not installed on this Pi, so it cannot do MLAT. Install it first: menu 1 ADS-B -> 1 Decoder and networks." >&2; return 1; }
+  cfg_set MLAT_NETWORK "$net"
+  zb_mlat_guard
+  net=$(mlat_network)
+  echo "MLAT is done by: $(mlat_name "$net")."
+  case "$net" in
+    flightaware) echo "FlightAware also needs the receiver's location set on its My ADS-B page; its MLAT column takes some hours to fill." ;;
+    none) echo "No MLAT client runs: aircraft that send no position are not located by this Pi for any network." ;;
+  esac
+  [ "$net" = "$was" ] || echo "It was: $(mlat_name "$was"). Put it back:  sudo zenithboard mlat $was"
 }
 
 # ------------------------------------------------------------------ decoder
@@ -133,7 +220,7 @@ adsbx_answers() {
     "$(cfg_get LAT)" "$(cfg_get LON)" "$alt" "$alt" "$alt"
 }
 install_adsbx() {
-  log "Installing ADSB Exchange feeder (mandatory base layer, owns the single MLAT client)"
+  log "Installing ADSB Exchange feeder (the base layer, always fed; it does MLAT unless another network is chosen: zenithboard mlat)"
   echo "    The ADSB Exchange script will now ask for a station name and your position."
   local ax; ax=$(zb_tmp axfeed.sh) || return 1
   fetch "$ADSBX_FEED_URL" "$ax" || return 1
@@ -254,7 +341,7 @@ fr24_signup_help() {
     Email .................... your FR24 email (a free account is created if you have none)
     Sharing key .............. ALREADY FEEDING FR24? Paste your key (flightradar24.com > account > My data sharing,
                                or fr24key= in /etc/fr24feed.ini of an old receiver). Otherwise just press Enter.
-    MLAT ..................... no   (ADSB Exchange keeps the only MLAT)
+    MLAT ..................... no   (Flightradar24 asks for it on a receiver that shares with other networks)
     Autoconfig / receiver .... yes, or: Beast (TCP), host 127.0.0.1, port 30005
     Raw / BS data feed ....... no
   ZenithBoard re-applies the receiver settings afterwards, so a wrong answer is corrected.
@@ -307,8 +394,8 @@ remove_planefinder() { systemctl disable --now pfclient 2>/dev/null || true; apt
 # --- AirNav Radar (RadarBox) -------------------------------------------------------------------------------------
 # 0.99.6, asked for by the owner (30 October 2026). rbfeeder from AirNav's own repository, added with its key pinned
 # (lib/versions.sh says where each value was read). It reads the decoder's Beast port like every other feeder, makes its
-# own sharing key at its first start and keeps it in /etc/rbfeeder.ini, and its MLAT is off: ADSB Exchange keeps the only
-# MLAT client. rbfeeder.ini has sections ([client], [network], [mlat]) and plain key=value lines, hence a setter of its
+# own sharing key at its first start and keeps it in /etc/rbfeeder.ini, and its MLAT is off unless it
+# is the network chosen (zenithboard mlat, 1.2). rbfeeder.ini has sections ([client], [network], [mlat]) and plain key=value lines, hence a setter of its
 # own, ini_sec_set in lib/common.sh (ini_set writes KEY="VALUE" at the top level, the form of fr24feed.ini).
 RB24_INI="${RB24_INI:-/etc/rbfeeder.ini}"
 rb24_keyring() { echo "${ZB_APT_DIR:-/etc/apt}/keyrings/zenithboard-rb24.gpg"; }
@@ -352,7 +439,9 @@ rb24_add_repo() {
   fi
 }
 
-# Its settings, every time it is installed (a wrong one is put right): the decoder's Beast port, the antenna, MLAT off.
+# Its settings, every time it is installed (a wrong one is put right): the decoder's Beast port, the antenna, and its
+# MLAT off unless it is the network chosen and its client is there (1.2: an update no longer switches off, for the
+# guard to switch on again, the MLAT of a Pi that gave it to AirNav).
 rb24_write_ini() {
   local alt; alt=$(awk -v a="$(cfg_get ALT_M 0)" 'BEGIN { printf "%.0f", a }')
   ini_sec_set "$RB24_INI" client network_mode true
@@ -362,7 +451,8 @@ rb24_write_ini() {
   ini_sec_set "$RB24_INI" network mode beast
   ini_sec_set "$RB24_INI" network external_host 127.0.0.1
   ini_sec_set "$RB24_INI" network external_port 30005
-  ini_sec_set "$RB24_INI" mlat autostart_mlat false
+  if [ "$(mlat_network)" = airnav ] && pkg_installed mlat-client; then ini_sec_set "$RB24_INI" mlat autostart_mlat true
+  else ini_sec_set "$RB24_INI" mlat autostart_mlat false; fi
 }
 rb24_key() { local k; k=$(ini_sec_get "$RB24_INI" client key); [[ $k =~ ^[A-Za-z0-9]{8,64}$ ]] && printf '%s' "$k"; }
 # The station's serial (EXTRPI...), which its page on AirNav's site is named by: rbfeeder prints it when the server
@@ -455,7 +545,7 @@ adsb_menu() {
   is_uat978 && st_uat=ON
   # 978 MHz UAT is only used in the United States; a region that has it installed keeps seeing it so it can be removed
   if is_region_us || is_uat978; then items+=(UAT978 "978 MHz UAT (USA only, needs a 2nd dongle)" "$st_uat"); fi
-  feeders=$(wt_check "Where do you want to share your data?\n\nADSB Exchange is mandatory (it owns the single MLAT client).\nUnchecking an installed feeder REMOVES it.${ticked:+\n\nTicked already: the networks your backup fed.}" "${items[@]}") || { ADSB_CANCELLED=1; return 0; }
+  feeders=$(wt_check "Where do you want to share your data?\n\nADSB Exchange is mandatory. One network does MLAT, ADSB Exchange unless you choose another afterwards (5 MLAT, in the ADS-B menu).\nUnchecking an installed feeder REMOVES it.${ticked:+\n\nTicked already: the networks your backup fed.}" "${items[@]}") || { ADSB_CANCELLED=1; return 0; }
   feeders=" ${feeders//\"/} ADSBX "
 
   [ "$dec_now" != "$dec_sel" ] && plan+="- Decoder: ${dec_now:-none} -> $dec_sel\n"

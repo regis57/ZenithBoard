@@ -31,7 +31,7 @@ GRAPHS1090_INSTALL_URL="https://github.com/wiedehopf/graphs1090/raw/master/insta
 
 TAR1090_UNINSTALL_URL="https://github.com/wiedehopf/tar1090/raw/master/uninstall.sh"   # printed, never run by us
 
-# ADSB Exchange feeder (installs adsbexchange-feed + the ONE mlat client)
+# ADSB Exchange feeder (installs adsbexchange-feed + its MLAT client, the one that runs unless MLAT_NETWORK names another)
 ADSBX_FEED_URL="https://adsbexchange.com/feed.sh"
 ADSBX_UPDATE_URL="https://adsbexchange.com/feed-update.sh"
 ADSBX_UNINSTALL="/usr/local/share/adsbexchange/uninstall.sh"

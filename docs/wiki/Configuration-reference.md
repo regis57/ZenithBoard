@@ -32,6 +32,7 @@ Read the whole file with `zenithboard config`.
 |---|---|---|---|
 | `LAT` | asked at install | `zenithboard location LAT LON [ALT_M]` | Antenna latitude. The command also updates the decoder and the feeders |
 | `LON` | asked at install | same | Antenna longitude |
+| `MLAT_NETWORK` | `adsbx` | `zenithboard mlat adsbx\|flightaware\|airnav\|none`, the menu, the console | 1.2: the network whose MLAT client runs, one at a time. The network must be installed |
 | `ALT_M` | `0` | same | Antenna height above sea level, in whole metres, -500 to 9000 (one range for the command, the import and the console since lot 0 after 1.0). Matters for MLAT |
 | `REGION` | `world` | `zenithboard region world\|us` | `us` adds the optional 978 MHz UAT step to the menu |
 

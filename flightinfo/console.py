@@ -85,7 +85,7 @@ SECURITY_HEADERS = {
 SHOWN_KEYS = {
     "UNITS": "metric", "RADIUS": "10", "THEME": "amber", "DISPLAY_MODE": "dots", "CYCLE_SECONDS": "14",
     "SHOW_PHOTOS": "1", "SHOW_ROUTES": "1", "LOCAL_DB": "0", "GRAPHS_LOOK": "zenithboard", "TAILSCALE": "0", "CONSOLE_TAILSCALE": "0", "AUTO_DATA_REFRESH": "1", "STATS": "0", "GAINLOG": "0",
-    "REGION": "world", "LAT": "", "LON": "", "ALT_M": "0", "PORT": "8080", "DDNS_PROVIDER": "none",
+    "MLAT_NETWORK": "adsbx", "REGION": "world", "LAT": "", "LON": "", "ALT_M": "0", "PORT": "8080", "DDNS_PROVIDER": "none",
     "SOCIAL": "0", "SOCIAL_STYLE": "dotmap", "SOCIAL_THEME": "", "SOCIAL_UNITS": "", "SOCIAL_MAP": "normal",
     "SOCIAL_PHOTOLINK": "0", "SOCIAL_SENTENCE": "factual", "SOCIAL_GAP_MIN": "0", "SOCIAL_AREA": "",
     "SOCIAL_RADIUS_KM": "15", "SOCIAL_RULES": "rare,military,helicopter,heavy,farthest",

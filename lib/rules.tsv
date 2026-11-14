@@ -17,6 +17,7 @@ SOCIAL_UNITS	enum	metric imperial aviation
 TELEGRAM_UNITS	enum	metric imperial aviation
 THEME	enum	amber green red white turquoise
 DISPLAY_MODE	enum	dots flap
+MLAT_NETWORK	enum	adsbx flightaware airnav none
 DECODER	enum	readsb dump1090-fa
 RADIUS	float	0.1 500	1 2 5 10 15 30 50
 CYCLE_SECONDS	int	2 60

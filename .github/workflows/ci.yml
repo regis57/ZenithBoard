@@ -34,6 +34,7 @@ jobs:
           bash tests/test_versions.sh
           bash tests/test_fr24_key.sh
           bash tests/test_radarbox.sh
+          bash tests/test_mlat.sh
           bash tests/test_telegram.sh
           bash tests/test_logs_uat.sh
           bash tests/test_wifi.sh

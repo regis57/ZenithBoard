@@ -738,6 +738,15 @@ window.ZBI18N.start({ part: "console" }, function () {
           f.graphs === "on" ? row(t("graphs1090 in ZenithBoard's look"), t("A black page in the wall's colour, its graphs drawn to match; off: graphs1090's own"), sw("graphs-look", S.cfg.GRAPHS_LOOK !== "original")) : null,
           f.svc_adsbexchange_feed !== undefined || f.adsbx_stats === "on" ? row(t("ADSB Exchange stats"), t("Their map of only your aircraft, from anywhere, and Feed Details on their page. The Pi sends them the aircraft it hears every 5 seconds."),
             [sw("adsbx-stats", f.adsbx_stats === "on"), adsbxMap() ? h("a", { href: adsbxMap(), target: "_blank", rel: "noopener noreferrer", text: t("Open ↗") }) : null]) : null,
+          // 1.2: which network's MLAT client runs (the owner, 14 November 2026: not ADSB Exchange for ever). Only the
+          // networks installed, and none; Flightradar24 asks for its own to be off beside other networks
+          (function () {
+            var nets = [["adsbx", "ADSB Exchange", "adsbexchange_feed"], ["flightaware", "FlightAware", "piaware"], ["airnav", "AirNav Radar", "rbfeeder"]]
+              .filter(function (n) { return f["svc_" + n[2]] !== undefined; });
+            if (!nets.length) return null;
+            return row(t("MLAT: which network does it"), t("One network's MLAT client runs on the Pi, one at a time. Only the networks installed are listed; Flightradar24 asks for its own to be off beside other networks."),
+              select("mlat-network", nets.map(function (n) { return n[0]; }).concat(["none"]), c.MLAT_NETWORK || "adsbx", nets.map(function (n) { return n[1]; }).concat([t("None")])));
+          })(),
           row(t("Gain"), t("Check it first; then one step at a time"), [btn(t("Check"), "gain-check"), btn(t("− Down"), "gain-step", { value: "down" }, "btn", { key: "gain-step" }), btn(t("Up +"), "gain-step", { value: "up" }, "btn", { key: "gain-step" })]),
           row(t("Gain log, 24 hours"), t("One measurement every 15 minutes, as a table"), [sw("gain-log", on(c.GAINLOG)), on(c.GAINLOG) ? btn(t("Read it"), "gain-log-show") : null])
         ], "w6"),

@@ -90,6 +90,7 @@ ACTIONS = {
     "gain-log-show": ("receiver", "Read the gain log", ["gain", "log", "show"], [], "read"),   # 0.54.15: switched on here, read here too
     "status":       ("receiver", "Status", ["status"], [], "read"),
     "mlat-guard":   ("receiver", "One MLAT client only", ["mlat-guard"], [], ""),
+    "mlat-network": ("receiver", "MLAT: which network does it", ["mlat", "{value}"], [("value", "enum", rules.choices("MLAT_NETWORK"))], "long"),
     # -- sharing (the Bluesky account itself is set up over SSH: it asks for an app password)
     "social":       ("sharing", "Social sharing", ["social", "{value}"], [("value", "enum", ON_OFF)], "ask long"),
     "social-status": ("sharing", "Sharing status", ["social", "status"], [], "read"),

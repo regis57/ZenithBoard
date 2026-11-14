@@ -66,7 +66,7 @@ start_here() {
   fi
   # 2 · ADS-B
   if [ -z "$(installed_decoder)" ] || ! is_adsbx; then
-    wt_msg "ADS-B first: the decoder that reads the dongle, and ADSB Exchange (always fed: it runs the one MLAT client; MLAT locates aircraft that send no position, by comparing when several receivers heard them). On the next screens tick the other networks you want: FlightAware, Flightradar24, Plane Finder, AirNav Radar. Their installers are theirs and ask their own questions in the terminal (a station name, an e-mail, a key): the screen tells you what to answer.\n\nA backup restored a moment ago gave each network its identity back: they find it by themselves." 16 || return 0
+    wt_msg "ADS-B first: the decoder that reads the dongle, and ADSB Exchange (always fed: it runs the one MLAT client unless you give MLAT to another network later; MLAT locates aircraft that send no position, by comparing when several receivers heard them). On the next screens tick the other networks you want: FlightAware, Flightradar24, Plane Finder, AirNav Radar. Their installers are theirs and ask their own questions in the terminal (a station name, an e-mail, a key): the screen tells you what to answer.\n\nA backup restored a moment ago gave each network its identity back: they find it by themselves." 16 || return 0
     adsb_menu
     if [ -z "$(installed_decoder)" ]; then
       if [ -n "${ADSB_CANCELLED:-}" ]; then wt_msg "You left the ADS-B step before the end, so no decoder is installed and the rest waits: the wall and the console need one.\n\nChoose Start here again to do it." 11
@@ -152,6 +152,19 @@ start_console() {
 }
 
 # ---------------------------------------------------------------- 1 ADS-B
+# 1.2: which network does MLAT. Only the networks installed are offered, and "none"; one client at a time.
+mlat_menu() {
+  local c items=() n
+  for n in adsbx flightaware airnav; do
+    mlat_installed "$n" && items+=("$n" "$(mlat_name "$n")$( [ "$n" = "$(mlat_network)" ] && echo "   (now)")")
+  done
+  items+=(none "None: no MLAT client$( [ "$(mlat_network)" = none ] && echo "   (now)")" back "Return to the previous menu")
+  c=$(wt_menu "MLAT: which network does it\n\nMLAT locates the aircraft that send no position, by comparing when several receivers hear the same reply. One network's client does it on this Pi, one at a time: now $(mlat_name "$(mlat_network)").\n\nOnly the networks installed are listed. Flightradar24 is not: it asks for its MLAT to be off on a receiver that shares with other networks. Plane Finder has none." "${items[@]}") || return 0
+  case "$c" in
+    back|"") return 0 ;;
+    *) clear; mlat_set "$c"; menu_pause ;;
+  esac
+}
 adsb_section_menu() {
   local c
   while true; do
@@ -160,8 +173,10 @@ adsb_section_menu() {
       antenna "2  The antenna: position, altitude, region" \
       gain "3  Gain: check it, tune the dongle" \
       status "4  What is running, and the MLAT check" \
+      mlat "5  MLAT: which network does it ($(mlat_name "$(mlat_network)"))" \
       back "Return to the previous menu") || return 0
     case "$c" in
+      mlat) mlat_menu ;;
       networks) adsb_menu ;;
       antenna)
         settings_location || continue
