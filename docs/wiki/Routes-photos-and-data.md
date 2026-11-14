@@ -27,7 +27,13 @@ The route answer names the airline of a flight it knows. Business jets, charters
 * **What leaves the Pi:** the three letters of the callsign, nothing else. With the setting off, nothing.
 * **Only an airline's callsign** (three letters, then a digit) is asked. A registration flown as a callsign (`GABCD`) also starts with three letters, and would be named after a stranger.
 * **Only the name is taken.** The country adsbdb gives is the designator's, not always the operator's (it says Canada for `VJT`, VistaJet's Maltese certificate), so the flag stays the one of the aircraft's registration.
-* **The built-in list wins, then the route answer, then this.** adsbdb's names are kept by volunteers and some are old: of sixteen of the owner's prefixes read on 14 November 2026, fourteen were right (`KLC` KLM Cityhopper, `GAC` GlobeAir, `LXA` Luxaviation, `FJO` Flexjet Operations Malta, `RUK` Ryanair UK…) and two were not: `JAF` came back as *Jetairfly*, TUI fly Belgium's former name, and `PTN` as a Brazilian airline, where the aircraft over Moselle are Platoon Aviation's. Both are now in the built-in list under their right names, with or without the setting. A name you find wrong is worth an issue: it goes into that list.
+* **The built-in list wins, then the route answer, then this.** adsbdb's names are kept by volunteers and some are old. The owner's forty prefixes were read one by one on 14 November 2026:
+  * **thirty-one right** (`JFA` Jetfly Aviation, `KLC` KLM Cityhopper, `GAC` GlobeAir, `LXA` Luxaviation, `FJO` Flexjet Operations Malta, `RUK` Ryanair UK, `DLA` Air Dolomiti, `EFW` BA Euroflyer, `LHX` City Airlines, `NJU` NetJets UK, `PVD` Padaviation…);
+  * **three wrong, now in the built-in list under their right names**, with or without the setting: `JAF` came back as *Jetairfly*, TUI fly Belgium's former name; `PTN` as a Brazilian airline, where the aircraft over Moselle are Platoon Aviation's; `OCN` as *O Air*, where they are Discover Airlines' (1.1.1);
+  * **two never asked and left bare** (1.1.1): `OOM` and `ECA` come back as *Zoom Airlines* and *Eurocypria Airlines*, which are not the aircraft heard today, and their right name was not found. No name rather than a wrong one;
+  * **four unknown to adsbdb**: `KMM`, `LUA`, `HBJ`, `FJD` stay bare.
+
+  A name you find wrong, or one you know for those six, is worth an issue: it goes into the built-in list.
 * **An answer that is not one name** (two companies under the same letters, a name of more than sixty characters, an answer about other letters) names nothing.
 
 ## Nothing blocks the display

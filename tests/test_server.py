@@ -424,6 +424,19 @@ class AirlineByDesignatorTests(unittest.TestCase):
         # adsbdb said "Jetairfly" (its former name) and "Pantanal Linhas Aereas" (Brazil) for the
         # two designators heard over Moselle: checked against other sources, 14 November 2026
         self.assertEqual((builtin["JAF"]["name"], builtin["PTN"]["name"]), ("TUI fly Belgium", "Platoon Aviation"))
+        # 1.1.1, the rest of the owner's forty prefixes: OCN came back as "O Air" where the aircraft are Discover Airlines'
+        self.assertEqual(builtin["OCN"]["name"], "Discover Airlines")
+
+    def test_a_prefix_adsbdb_names_after_another_company_is_never_asked(self):
+        # OOM ("Zoom Airlines") and ECA ("Eurocypria Airlines"): not the aircraft heard today, their right name not found
+        asked = []
+        lookup = lambda icao: asked.append(icao) or {"name": "A STRANGER"}
+        for cs in ("OOM12A", "ECA4521"):
+            self.assertEqual(server.airline_for(cs, {}, lookup), (cs[:3], None))
+        self.know("OOM", {"name": "Zoom Airlines", "iata": None, "cc": None, "learned": True})
+        self.assertIsNone(server.airline_for("OOM12A", {})[1], "nor shown from memory")
+        self.assertEqual(asked, [])
+        self.assertEqual(server.airline_for("OOM12A", {"OOM": {"name": "Named by the list"}}, lookup)[1]["name"], "Named by the list")
         self.assertEqual(server.DEFAULTS["AIRLINE_LOOKUP"], "0", "off by default")
 
     def test_the_handler_asks_only_with_the_setting_on_and_never_in_the_demo(self):
