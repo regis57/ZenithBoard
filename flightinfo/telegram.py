@@ -29,7 +29,9 @@ config.env, in a log or on a command line. A network error that could carry the 
 Standard library only, like the wall and the Bluesky service, whose rules and words it shares (social.py).
 """
 import datetime
+import hashlib
 import json
+import math
 import os
 import re
 import sys
@@ -59,6 +61,7 @@ DEFAULTS = {
     "TELEGRAM_RULES": "all",          # all, or some of military,helicopter,heavy: which crossings are written
     "TELEGRAM_LANG": "",              # empty: the posts' language (SOCIAL_LANG), English until that is set
     "TELEGRAM_UNITS": "",             # empty: the posts' units, else the wall's
+    "TELEGRAM_CLOSEST": "0",          # 1.1: the closest the aircraft came to the antenna, added to its crossing message
 }
 RULES = ("military", "helicopter", "heavy")   # rare and farthest need the Bluesky service's thirty days of history
 
@@ -71,7 +74,7 @@ CONFIRM_S = 4                     # a code is believed once seen on two reads th
                                   # emergency status saying the same: one bad decode of a reply never sends a message
 SEND_EVERY_S = 3.1                # Telegram: about 20 messages a minute into one group, one a second into a private chat
 SENDS_PER_LOOK = 3
-KEEP_S = {"squawk": 3600, "crossing": 600, "test": 600}   # a message that cannot go out is dropped after this long
+KEEP_S = {"squawk": 3600, "crossing": 600, "test": 600, "edit": 1800}   # a message that cannot go out is dropped after this long
 PAUSE_ON_FAIL_S = 600             # a refused token or chat: tried again ten minutes later, not at every look
 PAUSE_OFFLINE_S = 60
 MAX_TEXT = 4096                   # Telegram's longest message
@@ -285,6 +288,10 @@ def prune(s, now):
     cut = (datetime.date.fromtimestamp(now) - datetime.timedelta(days=7)).isoformat()
     s["days"] = {d: n for d, n in (s.get("days") or {}).items() if d >= cut}
     s.pop("posts", None); s.pop("post_days", None)          # social.remember's counts: not kept here
+    if "closest" in s:                                       # 1.1: a crossing followed for its closest distance, two hours at most
+        s["closest"] = {k: v for k, v in (s.get("closest") or {}).items() if isinstance(v, dict) and now - float(v.get("t0", 0)) < 7200}
+        if not s["closest"]:
+            del s["closest"]
     return s
 
 
@@ -361,6 +368,98 @@ def crossing_candidates(c, planes, state, pending_since, now):
     return out
 
 
+# --------------------------------------------------------------------------- the closest distance (1.1)
+# Asked by the owner on 1 November 2026: how close the aircraft came to the antenna, in the messages' units, in the
+# crossing's message. The Telegram messages only, never a post or a picture; off by default (TELEGRAM_CLOSEST),
+# because a group's members learn it too. The closest point is known once the aircraft has left the radius, and the
+# message goes out when it enters: so the bot edits its own message at the exit (editMessageText: one message, one
+# notification, nothing late; read on core.telegram.org/bots/api, 14 November 2026: the edited Message comes back,
+# and no time limit is stated for a bot's own messages). What is kept for it, in state.json under "closest", per
+# aircraft: the message's id and text, a mark of the chat it went to, the least distance so far, the last position.
+CLOSEST = N_("closest: {distance}")
+CLOSEST_LOST_S = 120              # no position for this long inside the radius: the crossing is over as far as we can tell
+CLOSEST_MAX_S = 45 * 60           # an aircraft holding inside the radius: the message is completed after this long
+CLOSEST_UNSENT_S = 900            # a message that never went out leaves nothing to complete
+
+
+def chat_mark(sec):
+    """A mark of the chat a message went to, to edit it only there: a message's id means something in its own chat
+    alone, and the same number in another chat is another message. Not the chat's id itself, which stays in
+    telegram.env."""
+    return hashlib.sha256(("zenithboard:" + str((sec or {}).get("TELEGRAM_CHAT_ID", ""))).encode("utf-8")).hexdigest()[:16]
+
+
+def closest_words(km, L, units):
+    """2.4 km, 1.3 NM, 12 km: one decimal under ten, as the language writes it."""
+    v = units_table.distance(km, units)
+    text = L.dec(v, 1) if v < 9.95 else L.num(v)
+    if units in ("aviation", "imperial"):
+        return text + post_lang.NBSP + units_table.distance_label(units)
+    return L.unit(v, "kilometer", text=text)
+
+
+def _least_km(a, b):
+    """The least distance from the antenna (the origin) to the straight line flown between two positions, each
+    (east km, north km): an airliner flies a kilometre between two reads, and its closest point is between them."""
+    (ax, ay), (bx, by) = a, b
+    dx, dy = bx - ax, by - ay
+    span = dx * dx + dy * dy
+    if span <= 0:
+        return math.hypot(ax, ay)
+    t = max(0.0, min(1.0, -(ax * dx + ay * dy) / span))
+    return math.hypot(ax + t * dx, ay + t * dy)
+
+
+def closest_follow(c, state, aircraft, outbox, now):
+    """At every read: the least distance of each crossing written about, and its message completed once the aircraft
+    is out of the radius, lost, or has stayed too long."""
+    watch = state.get("closest")
+    if not watch:
+        return
+    if not server.cfg_bool(c, "TELEGRAM_CLOSEST", "0") or not server.cfg_bool(c, "TELEGRAM_CROSSINGS", "1"):
+        state.pop("closest", None)                 # switched off: nothing more is edited
+        return
+    lat0, lon0 = server.cfg_float(c, "LAT", 0), server.cfg_float(c, "LON", 0)
+    radius = server.cfg_float(c, "SOCIAL_RADIUS_KM", 15)
+    here = {str(a.get("hex", "")).lower(): a for a in aircraft or [] if isinstance(a.get("lat"), (int, float))
+            and isinstance(a.get("lon"), (int, float)) and float(a.get("seen_pos", 0) or 0) <= 30}
+    kx = 111.32 * math.cos(math.radians(lat0))
+    for h, e in list(watch.items()):
+        if not isinstance(e, dict):
+            del watch[h]
+            continue
+        ac, out = here.get(h), False
+        if ac:
+            at = [(ac["lon"] - lon0) * kx, (ac["lat"] - lat0) * 110.57]
+            km = math.hypot(at[0], at[1])
+            prev = e.get("at")
+            if isinstance(prev, list) and len(prev) == 2 and now - float(e.get("seen", 0)) <= 60:
+                km = min(km, _least_km(prev, at))
+            if km <= radius or not isinstance(e.get("km"), (int, float)):
+                e["km"] = min(km, e["km"]) if isinstance(e.get("km"), (int, float)) else km
+            e["at"], e["seen"] = at, now
+            out = math.hypot(at[0], at[1]) > radius
+        if not e.get("id"):                        # its message has not gone out yet (or never will)
+            if now - float(e.get("t0", 0)) > CLOSEST_UNSENT_S:
+                del watch[h]
+            continue
+        if out or now - float(e.get("seen", 0)) > CLOSEST_LOST_S or now - float(e.get("t0", 0)) > CLOSEST_MAX_S:
+            if isinstance(e.get("km"), (int, float)):
+                v = view(c)
+                L = post_lang.of(v)
+                line = L.t(CLOSEST, distance=closest_words(e["km"], L, social.units_of(v)))
+                outbox.add("edit", (str(e.get("text") or "") + "\n" + line)[:MAX_TEXT], e.get("what") or h, now,
+                           edit={"id": e["id"], "chat": e.get("chat")})
+            del watch[h]
+    if not watch:
+        state.pop("closest", None)
+
+
+def edit(sec, message_id, text):
+    return call(sec, "editMessageText", {"chat_id": sec.get("TELEGRAM_CHAT_ID"), "message_id": message_id, "text": text,
+                                         "link_preview_options": {"is_disabled": True}})
+
+
 # --------------------------------------------------------------------------- the outbox
 class Outbox(object):
     def __init__(self):
@@ -375,8 +474,8 @@ class Outbox(object):
             sec["TELEGRAM_CHAT_ID"] = self.moved[1]
         return sec
 
-    def add(self, kind, text, what, now):
-        self.items.append({"kind": kind, "text": text, "what": what, "made": now})
+    def add(self, kind, text, what, now, hex=None, edit=None):
+        self.items.append({"kind": kind, "text": text, "what": what, "made": now, "hex": hex, "edit": edit})
         self.items.sort(key=lambda m: (m["kind"] != "squawk", m["made"]))    # an emergency goes first
 
     def note(self, key, line, now, every=600):
@@ -385,28 +484,70 @@ class Outbox(object):
             self.said[key] = now
             print(line, flush=True)
 
-    def flush(self, sec, state, now, sender=None):
-        sender = sender or send
+    def flush(self, sec, state, now, sender=None, editor=None):
+        sender, editor = sender or send, editor or edit
         for m in [m for m in self.items if now - m["made"] > KEEP_S.get(m["kind"], 600)]:
             print("telegram: dropped the %s message about %s: it could not go out for %d min" % (m["kind"], m["what"], (now - m["made"]) // 60), flush=True)
             self.items.remove(m)
         n = 0
         while self.items and n < SENDS_PER_LOOK and now >= self.next_at and now >= self.pause_until:
             m = self.items[0]
+            if m["kind"] == "edit":                # 1.1: the closest distance, added to a message already sent
+                self.items.pop(0)
+                how = self.complete(m, sec, state, now, editor)
+                if how == "wait":                  # no answer or asked to wait: tried again, the message keeps its turn
+                    self.items.insert(0, m)
+                    return n
+                if how == "asked":
+                    n += 1
+                    self.next_at = now + SEND_EVERY_S
+                    if self.items and n < SENDS_PER_LOOK:
+                        time.sleep(SEND_EVERY_S)
+                        now += SEND_EVERY_S
+                continue
             try:
-                sender(sec, m["text"])
+                got = sender(sec, m["text"])
             except TgError as exc:
                 return self.refused(exc, sec, state, now)
             self.items.pop(0)
             n += 1
             count(state, m["kind"], now)
             state["last"] = {"t": now, "kind": m["kind"], "what": m["what"]}
+            follow = (state.get("closest") or {}).get(m.get("hex")) if m.get("hex") else None
+            if isinstance(follow, dict):           # 1.1: the message's id, kept with the crossing to complete it at the exit
+                mid = got.get("message_id") if isinstance(got, dict) else None
+                if isinstance(mid, int) and not isinstance(mid, bool) and mid > 0:
+                    follow.update(id=mid, chat=chat_mark(sec), text=m["text"])
+                else:
+                    state["closest"].pop(m["hex"], None)
+                    if not state["closest"]:
+                        del state["closest"]
             print("telegram: sent the %s message about %s" % (m["kind"], m["what"]), flush=True)
             self.next_at = now + SEND_EVERY_S
             if self.items and n < SENDS_PER_LOOK:
                 time.sleep(SEND_EVERY_S)
                 now += SEND_EVERY_S
         return n
+
+    def complete(self, m, sec, state, now, editor):
+        """One edit: "asked" (Telegram was asked, done or refused for good), "skipped" (not asked: another chat by
+        now), or "wait" (no answer, or too many messages: later). A refusal of the edit itself (the message deleted,
+        too old) is said once and dropped: the message stays as it was."""
+        what = m.get("edit") or {}
+        if what.get("chat") != chat_mark(sec):
+            self.note("edit-chat", "telegram: the chat changed since the message about %s: its closest distance is not added" % m["what"], now, 60)
+            return "skipped"
+        try:
+            editor(sec, what.get("id"), m["text"])
+        except TgError as exc:
+            if exc.code in (0, 429) or (exc.params or {}).get("migrate_to_chat_id"):
+                self.refused(exc, sec, state, now)
+                return "skipped" if (exc.params or {}).get("migrate_to_chat_id") else "wait"
+            self.note("edit", "telegram: could not add the closest distance to the message about %s (%s %s): it stays as it was" % (
+                m["what"], exc.code, exc.text), now, 600)
+            return "asked"
+        print("telegram: added the closest distance to the message about %s" % m["what"], flush=True)
+        return "asked"
 
     def refused(self, exc, sec, state, now):
         state["error"] = {"t": now, "text": "%s %s" % (exc.code or "", exc.text)}
@@ -440,13 +581,22 @@ def one_look(c, state, aircraft, squawks, pending_since, outbox, now, ask=True):
                 what = "%s (%s)" % (p.get("flight") or p.get("registration") or ac.get("hex"), code)
                 outbox.add("squawk", fill("squawk", p, c, now=now, ac=ac, code=code), what, now)
                 print("telegram: squawk %s heard from %s" % (code, what.split(" (")[0]), flush=True)
+    closest_follow(c, state, aircraft, outbox, now)
     if ask and server.cfg_bool(c, "TELEGRAM_CROSSINGS", "1"):
         radius = server.cfg_float(c, "SOCIAL_RADIUS_KM", 15)
         planes = social.ask_wall(c, radius)
         social.note_seen(state, planes + social.inside_now(c, aircraft, radius), now)
+        closest = server.cfg_bool(c, "TELEGRAM_CLOSEST", "0")
         for p, why in crossing_candidates(c, planes, state, pending_since, now):
             social.remember(state, p, now)
-            outbox.add("crossing", fill("crossing", p, c, why, now), p.get("flight") or p.get("registration") or p.get("hex"), now)
+            what, h = p.get("flight") or p.get("registration") or p.get("hex"), str(p.get("hex") or "").lower()
+            # an antenna with no position set has no distance to give
+            follow = closest and re.match(r"^[0-9a-f]{6}$", h) and (server.cfg_float(c, "LAT", 0) or server.cfg_float(c, "LON", 0))
+            if follow:                             # 1.1: followed from now on; its message is completed at the exit
+                km = p.get("distance_km")
+                state.setdefault("closest", {})[h] = {"t0": now, "seen": now, "what": what,
+                                                     "km": float(km) if isinstance(km, (int, float)) and not isinstance(km, bool) else None}
+            outbox.add("crossing", fill("crossing", p, c, why, now), what, now, hex=h if follow else None)
         if len(pending_since) > 2000:
             pending_since.clear()
 
@@ -625,6 +775,8 @@ def cmd_status():
     print("  Crossings: %s, the sharing radius (%s km), %s" % ("on" if server.cfg_bool(c, "TELEGRAM_CROSSINGS", "1") else "off",
                                                               c.get("SOCIAL_RADIUS_KM"), "every crossing" if "all" in rules_of(c) else ", ".join(sorted(rules_of(c)))))
     print("  Emergency squawks: %s, anywhere the antenna hears them (7500, 7600, 7700)" % ("on" if server.cfg_bool(c, "TELEGRAM_SQUAWKS", "1") else "off"))
+    print("  Closest distance from the antenna, added to each crossing's message: %s" % (
+        "on" if server.cfg_bool(c, "TELEGRAM_CLOSEST", "0") else "off (sudo zenithboard telegram closest on)"))
     print("  Language: %s   Units: %s" % (lang_of(c), social.units_of(view(c))))
     for kind in ("crossing", "squawk"):
         mine = template_file_text(kind)

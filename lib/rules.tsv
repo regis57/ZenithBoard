@@ -51,6 +51,7 @@ UPDATE_VERIFY	number	-
 UAT978	number	-
 SOCIAL	number	-
 TELEGRAM	number	-
+TELEGRAM_CLOSEST	number	-	0 1
 WIFI_HARDEN	number	-
 NETWATCH	number	-
 LOG_AUTOCLEAN	number	-

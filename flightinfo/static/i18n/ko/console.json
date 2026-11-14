@@ -454,6 +454,8 @@
  "needs a bot": "봇 필요",
  "Aircraft crossing the sharing radius": "공유 반경을 통과하는 항공기",
  "One message per crossing, as the Bluesky posts, inside the sharing radius ({n} km)": "Bluesky 게시물과 마찬가지로 공유 반경({n}km) 안에서 통과할 때마다 메시지 1건",
+ "Closest distance from the antenna": "안테나로부터의 최근접 거리",
+ "Added to the crossing's message once the aircraft has left the radius (closest: 2.4 km). Everyone in the chat reads it; never in a Bluesky post or a picture.": "항공기가 반경을 벗어나면 통과 메시지에 추가됩니다(최근접 거리: 2.4km). 채팅의 모든 참여자가 읽을 수 있으며, Bluesky 게시물이나 이미지에는 절대 표시되지 않습니다.",
  "Which crossings": "메시지를 보낼 항공기",
  "Everything: every crossing": "전체: 통과하는 모든 항공기",
  "Only the kinds lit; Everything writes every crossing": "켜진 종류만, 전체는 통과하는 모든 항공기를 전송",

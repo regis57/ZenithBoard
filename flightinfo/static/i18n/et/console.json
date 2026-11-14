@@ -455,6 +455,8 @@
  "needs a bot": "vajab botti",
  "Aircraft crossing the sharing radius": "Jagamise raadiusest läbi lendavad lennukid",
  "One message per crossing, as the Bluesky posts, inside the sharing radius ({n} km)": "Üks sõnum iga ülelennu kohta, nagu Bluesky postitused, jagamise raadiuses ({n} km)",
+ "Closest distance from the antenna": "Lähim kaugus antennist",
+ "Added to the crossing's message once the aircraft has left the radius (closest: 2.4 km). Everyone in the chat reads it; never in a Bluesky post or a picture.": "Lisatakse ülelennu sõnumile, kui õhusõiduk on raadiusest lahkunud (lähim kaugus: 2,4 km). Seda loevad kõik vestluses osalejad; mitte kunagi Bluesky postituses ega pildil.",
  "Which crossings": "Millised ülelennud",
  "Everything: every crossing": "Kõik: iga ülelend",
  "Only the kinds lit; Everything writes every crossing": "Ainult esile tõstetud liigid; Kõik saadab sõnumi igast ülelennust",

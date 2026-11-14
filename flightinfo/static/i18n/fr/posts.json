@@ -183,5 +183,6 @@
  "ZenithBoard is connected to this chat. The aircraft crossing the sharing radius and the emergency squawks the antenna hears will be written here.": "ZenithBoard est relié à cette discussion. Les avions qui traversent le rayon de partage et les codes d'urgence que l'antenne entend seront écrits ici.",
  "near {place}": "près de {place}",
  "{distance} from {place} ({country})": "à {distance} de {place} ({country})",
- "position not known": "position inconnue"
+ "position not known": "position inconnue",
+ "closest: {distance}": "au plus près : {distance}"
 }

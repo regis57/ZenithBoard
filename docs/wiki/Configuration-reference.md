@@ -79,6 +79,7 @@ The dynamic-DNS **token is not stored here.** It is asked for interactively and 
 | `CONSOLE_HOSTS` | — | `zenithboard config-set CONSOLE_HOSTS name1,name2` | Names, besides an address, `*.local`, `*.lan`, `*.home.arpa` and the Pi's own name, that the console may be opened by (a guard against DNS rebinding). Since 0.54.0 the wall's data (`/api/*`, `/social/preview*`) answers to the same names, and to `DDNS_HOST`; a router's own name (`pi.fritz.box`) goes here. Not asked when `ALLOW_FROM=any` |
 | `TELEGRAM` | `0` | `zenithboard telegram on\|off` | Text messages to your own Telegram chat (0.99.6). See [Telegram](Telegram). The bot's token and the chat are in `telegram.env`, not here |
 | `TELEGRAM_CROSSINGS` | `1` | `zenithboard telegram crossings on\|off` | A message for each aircraft crossing the sharing radius (`SOCIAL_RADIUS_KM`), once per crossing |
+| `TELEGRAM_CLOSEST` | `0` | `zenithboard telegram closest on\|off` | 1.1: the closest the aircraft came to the antenna, added to its crossing message at the exit. The Telegram messages only |
 | `TELEGRAM_SQUAWKS` | `1` | `zenithboard telegram squawks on\|off` | A message for each emergency squawk (7500, 7600, 7700) anywhere in range, once per flight and code. Never posted to Bluesky |
 | `TELEGRAM_RULES` | `all` | `zenithboard telegram rules LIST` | Which crossings: `all`, or some of `military,helicopter,heavy` |
 | `TELEGRAM_LANG` | *(empty)* | `zenithboard telegram lang CODE\|posts` | The messages' language; empty: the posts' (`SOCIAL_LANG`) |

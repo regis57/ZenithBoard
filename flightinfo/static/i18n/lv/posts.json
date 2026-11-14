@@ -179,5 +179,6 @@
  "ZenithBoard is connected to this chat. The aircraft crossing the sharing radius and the emergency squawks the antenna hears will be written here.": "ZenithBoard ir pievienots šai tērzēšanai. Šeit tiks rakstīts par gaisa kuģiem, kas šķērso kopīgošanas rādiusu, un antenas uztvertajiem avārijas transpondera kodiem.",
  "near {place}": "netālu no {place}",
  "{distance} from {place} ({country})": "{distance} no {place} ({country})",
- "position not known": "pozīcija nav zināma"
+ "position not known": "pozīcija nav zināma",
+ "closest: {distance}": "tuvākais attālums: {distance}"
 }

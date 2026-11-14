@@ -167,5 +167,6 @@
  "ZenithBoard is connected to this chat. The aircraft crossing the sharing radius and the emergency squawks the antenna hears will be written here.": "ZenithBoard on selle vestlusega ühendatud. Siia kirjutatakse jagamise raadiusest läbi lendavad lennukid ja hädaolukorra transpondrikoodid, mida antenn vastu võtab.",
  "near {place}": "{place} lähedal",
  "{distance} from {place} ({country})": "{distance} linnast {place} ({country})",
- "position not known": "asukoht teadmata"
+ "position not known": "asukoht teadmata",
+ "closest: {distance}": "lähim kaugus: {distance}"
 }

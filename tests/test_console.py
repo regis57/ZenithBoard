@@ -142,6 +142,10 @@ class ActionsTest(unittest.TestCase):
             with self.assertRaises(actions.Refused, msg=value):
                 actions.build("social-ignore", {"value": value})
         self.assertIn("SOCIAL_IGNORE", console.SHOWN_KEYS)
+        self.assertEqual(actions.build("telegram-closest", {"value": "on"}), ["telegram", "closest", "on"])
+        with self.assertRaises(actions.Refused):
+            actions.build("telegram-closest", {"value": "maybe"})
+        self.assertEqual(console.SHOWN_KEYS["TELEGRAM_CLOSEST"], "0", "off unless the owner turns it on")
         bad = [("social-area", {"value": "a;b"}), ("social-area", {"value": "two\nlines"}), ("social-area", {"value": "x" * 41}),
                ("social-hashtags", {"value": "#a #b`id`"}), ("social-hashtags", {"value": "#a  #b"}), ("social-rules", {"value": "all,rare"}),
                ("social-rules", {"value": "drones"}), ("social-radius", {"value": "201"}), ("social-places", {"value": "maybe"})]

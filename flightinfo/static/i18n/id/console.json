@@ -454,6 +454,8 @@
  "needs a bot": "perlu bot",
  "Aircraft crossing the sharing radius": "Pesawat yang melintasi radius berbagi",
  "One message per crossing, as the Bluesky posts, inside the sharing radius ({n} km)": "Satu pesan untuk setiap pesawat yang melintas, seperti postingan Bluesky, di dalam radius berbagi ({n} km)",
+ "Closest distance from the antenna": "Jarak terdekat dari antena",
+ "Added to the crossing's message once the aircraft has left the radius (closest: 2.4 km). Everyone in the chat reads it; never in a Bluesky post or a picture.": "Ditambahkan ke pesan lintasan setelah pesawat keluar dari radius (jarak terdekat: 2,4 km). Semua orang di obrolan membacanya; tidak pernah di postingan Bluesky atau gambar.",
  "Which crossings": "Pesawat melintas mana saja",
  "Everything: every crossing": "Semuanya: setiap pesawat yang melintas",
  "Only the kinds lit; Everything writes every crossing": "Hanya jenis yang menyala; Semuanya mengirim pesan untuk setiap pesawat yang melintas",

@@ -457,6 +457,8 @@
  "needs a bot": "reikia boto",
  "Aircraft crossing the sharing radius": "Dalijimosi spindulį kertantys orlaiviai",
  "One message per crossing, as the Bluesky posts, inside the sharing radius ({n} km)": "Po vieną žinutę apie kiekvieną praskridimą, kaip ir Bluesky įrašai, dalijimosi spindulyje ({n} km)",
+ "Closest distance from the antenna": "Mažiausias atstumas iki antenos",
+ "Added to the crossing's message once the aircraft has left the radius (closest: 2.4 km). Everyone in the chat reads it; never in a Bluesky post or a picture.": "Pridedama prie praskridimo žinutės, kai orlaivis palieka spindulį (mažiausias atstumas: 2,4 km). Ją mato visi pokalbio nariai; niekada „Bluesky“ įraše ar paveikslėlyje.",
  "Which crossings": "Kurie praskridimai",
  "Everything: every crossing": "Viskas: kiekvienas praskridimas",
  "Only the kinds lit; Everything writes every crossing": "Tik pažymėtos rūšys; Viskas rašo apie kiekvieną praskridimą",

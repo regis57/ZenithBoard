@@ -155,5 +155,6 @@
  "ZenithBoard is connected to this chat. The aircraft crossing the sharing radius and the emergency squawks the antenna hears will be written here.": "ZenithBoard terhubung ke obrolan ini. Pesawat yang melintasi radius berbagi dan kode transponder darurat yang ditangkap antena akan ditulis di sini.",
  "near {place}": "dekat {place}",
  "{distance} from {place} ({country})": "{distance} dari {place} ({country})",
- "position not known": "posisi tidak diketahui"
+ "position not known": "posisi tidak diketahui",
+ "closest: {distance}": "jarak terdekat: {distance}"
 }

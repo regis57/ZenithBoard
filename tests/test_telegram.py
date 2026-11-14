@@ -241,6 +241,171 @@ class WordsTest(Base):
         self.assertLessEqual(len(text), telegram.MAX_TEXT)
 
 
+class ClosestTest(Base):
+    """1.1 (asked by the owner, 1 November 2026): how close the aircraft came to the antenna, added to its crossing
+    message once it has left the radius, by editing the message. The Telegram messages only, off by default."""
+    SEC = {"TELEGRAM_BOT_TOKEN": TOKEN, "TELEGRAM_CHAT_ID": "-100555"}
+    ON = dict(CFG, TELEGRAM_CLOSEST="1", TELEGRAM_SQUAWKS="0")
+
+    def at(self, east_km, north_km=0.0, hex_code="4ca7b1", seen_pos=1):
+        import math
+        return {"hex": hex_code, "flight": "EZY17QZ", "lat": 49.2 + north_km / 110.57,
+                "lon": 6.2 + east_km / (111.32 * math.cos(math.radians(49.2))), "seen_pos": seen_pos, "seen": 1}
+
+    def fly(self, c=None, sec=None, path=None, sender=None, editor=None, state=None, box=None, t0=1000.0):
+        """An aircraft flown west to east past the antenna, 2.4 km north of it, a read every five seconds."""
+        c, sec = c or self.ON, sec or dict(self.SEC)
+        st, box, sq = ({} if state is None else state), box or telegram.Outbox(), telegram.Squawks()
+        sent, edits = [], []
+        sender = sender or (lambda s, text: sent.append(text) or {"message_id": 4242})
+        editor = editor or (lambda s, mid, text: edits.append((mid, text)))
+        path = path if path is not None else [(-14.0 + i * 1.15, 2.4) for i in range(27)]     # 230 m/s: to 15.9 km east
+        now = t0
+        for i, (x, y) in enumerate(path):
+            inside = (x * x + y * y) ** 0.5 <= 15
+            self.planes = [dict(EZY, distance_km=round((x * x + y * y) ** 0.5, 1))] if inside else []
+            self.look(c, st, [self.at(x, y)], sq, box, now, ask=(i % 3 == 0))
+            box.flush(sec, st, now, sender=sender, editor=editor)
+            now += 5
+        return st, box, sent, edits, now
+
+    def test_off_by_default_nothing_is_kept_and_nothing_is_edited(self):
+        self.assertEqual(telegram.DEFAULTS["TELEGRAM_CLOSEST"], "0")
+        st, box, sent, edits, _ = self.fly(c=dict(CFG, TELEGRAM_SQUAWKS="0"))
+        self.assertEqual((len(sent), edits), (1, []))
+        self.assertNotIn("closest", st)
+
+    def test_the_message_is_completed_once_at_the_exit_with_the_real_closest_distance(self):
+        st, box, sent, edits, _ = self.fly()
+        self.assertEqual(len(sent), 1, "one message, at the entry, as before")
+        self.assertNotIn("closest", sent[0])
+        self.assertEqual(len(edits), 1, "and one edit, at the exit")
+        mid, text = edits[0]
+        self.assertEqual(mid, 4242)
+        self.assertTrue(text.startswith(sent[0] + "\n"), "the message as it was, and one line more")
+        self.assertEqual(text[len(sent[0]) + 1:], "closest: 2.4\u00a0km", "2.4 km north of the antenna: between two reads, not at one")
+        self.assertNotIn("closest", st, "nothing is kept once it is done")
+        self.assertEqual(st["days"][social.day_of(1000.0)], {"crossing": 1}, "an edit is not a message sent")
+        self.assertEqual(box.items, [])
+
+    def test_in_the_messages_units_and_language(self):
+        for more, want in ((dict(TELEGRAM_UNITS="aviation"), "closest: 1.3\u00a0NM"), (dict(TELEGRAM_UNITS="imperial"), "closest: 1.5\u00a0mi"),
+                           (dict(TELEGRAM_LANG="fr"), "au plus près\u00a0: 2,4\u202fkm")):
+            _, _, sent, edits, _ = self.fly(c=dict(self.ON, **more))
+            self.assertEqual(edits[0][1].split("\n")[-1], want)
+        L = telegram.post_lang.of({"SOCIAL_LANG": "en"})
+        self.assertEqual([telegram.closest_words(km, L, "metric") for km in (0.04, 2.44, 9.94, 9.96, 12.4, 148.7)],
+                         ["0.0\u00a0km", "2.4\u00a0km", "9.9\u00a0km", "10\u00a0km", "12\u00a0km", "149\u00a0km"])
+        for lang in telegram.post_lang.LANGS:
+            line = telegram.post_lang.of({"SOCIAL_LANG": lang}).t(telegram.CLOSEST, distance="2.4 km")
+            self.assertTrue("2.4 km" in line and "{" not in line and (lang == "en" or line != "closest: 2.4 km"), "%s: %r" % (lang, line))
+
+    def test_an_aircraft_lost_inside_the_radius_or_holding_there_is_completed_too(self):
+        st, box, sq, edits = {}, telegram.Outbox(), telegram.Squawks(), []
+        self.planes = [dict(EZY, distance_km=6.0)]
+        self.look(self.ON, st, [self.at(6.0)], sq, box, 1000.0)
+        box.flush(dict(self.SEC), st, 1000.0, sender=lambda s, t: {"message_id": 7}, editor=lambda s, m, t: edits.append(t))
+        self.planes = []
+        self.look(self.ON, st, [], sq, box, 1000.0 + telegram.CLOSEST_LOST_S - 5, ask=False)
+        self.assertEqual(box.items, [], "not yet: it may come back")
+        self.look(self.ON, st, [], sq, box, 1000.0 + telegram.CLOSEST_LOST_S + 5, ask=False)
+        box.flush(dict(self.SEC), st, 1200.0, sender=None, editor=lambda s, m, t: edits.append(t))
+        self.assertEqual([t.split("\n")[-1] for t in edits], ["closest: 6.0\u00a0km"])
+        # holding: still inside after three quarters of an hour
+        st, box, edits = {}, telegram.Outbox(), []
+        self.planes = [dict(EZY, distance_km=5.0)]
+        self.look(self.ON, st, [self.at(5.0)], sq, box, 5000.0)
+        box.flush(dict(self.SEC), st, 5000.0, sender=lambda s, t: {"message_id": 8}, editor=lambda s, m, t: edits.append(t))
+        for t in range(5, telegram.CLOSEST_MAX_S + 30, 20):
+            self.look(self.ON, st, [self.at(3.0 if t > 600 else 5.0)], sq, box, 5000.0 + t, ask=False)
+        box.flush(dict(self.SEC), st, 9000.0, editor=lambda s, m, t: edits.append(t))
+        self.assertEqual([t.split("\n")[-1] for t in edits], ["closest: 3.0\u00a0km"])
+
+    def test_the_id_is_kept_through_a_restart(self):
+        import json
+        st, box, sent, edits, now = self.fly(path=[(-14.0 + i * 1.15, 2.4) for i in range(10)])
+        self.assertEqual((len(sent), edits), (1, []))
+        kept = json.loads(json.dumps(telegram.prune(st, now)))                      # what state.json holds, read back
+        self.assertEqual(kept["closest"]["4ca7b1"]["id"], 4242)
+        self.assertNotIn("-100555", json.dumps(kept), "the chat's id is not written in the state")
+        self.assertNotIn(TOKEN, json.dumps(kept))
+        _, _, sent2, edits2, _ = self.fly(path=[(-14.0 + i * 1.15, 2.4) for i in range(10, 27)], state=kept, t0=now + 20)
+        self.assertEqual(sent2, [], "the crossing was written about: not twice")
+        self.assertEqual([t.split("\n")[-1] for mid, t in edits2], ["closest: 2.4\u00a0km"])
+        self.assertEqual(edits2[0][0], 4242)
+
+    def test_an_edit_telegram_refuses_is_said_once_and_dropped(self):
+        import contextlib
+        import io
+
+        def gone(sec, mid, text):
+            raise telegram.TgError(400, "Bad Request: message to edit not found")
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            st, box, sent, _, _ = self.fly(editor=gone)
+        self.assertEqual(box.items, [], "not tried again")
+        self.assertEqual(box.pause_until, 0.0, "and the other messages do not wait for it")
+        self.assertEqual(out.getvalue().count("could not add the closest distance to the message about EZY17QZ"), 1)
+        self.assertNotIn("closest", st)
+
+    def test_no_answer_keeps_the_edit_for_later(self):
+        calls = []
+
+        def offline(sec, mid, text):
+            calls.append(mid)
+            raise telegram.TgError(0, "no answer: timed out")
+        st, box, sent, _, now = self.fly(editor=offline)
+        self.assertEqual([m["kind"] for m in box.items], ["edit"])
+        edits = []
+        box.pause_until = 0
+        box.flush(dict(self.SEC), st, now + 100, editor=lambda s, m, t: edits.append(m))
+        self.assertEqual(edits, [4242])
+        box.add("edit", "x", "OLD1", 1000.0, edit={"id": 1, "chat": telegram.chat_mark(self.SEC)})
+        box.flush(dict(self.SEC), st, 1000.0 + telegram.KEEP_S["edit"] + 5, editor=lambda s, m, t: edits.append(m))
+        self.assertEqual(edits, [4242], "an edit that could not go out for half an hour is dropped")
+
+    def test_a_message_is_never_edited_in_another_chat(self):
+        # a message's id belongs to its chat: the same number in the chat set up since is another message
+        st, box, sent, edits, now = self.fly(path=[(-14.0 + i * 1.15, 2.4) for i in range(10)])
+        other = dict(self.SEC, TELEGRAM_CHAT_ID="-100999")
+        _, box2, _, edits2, _ = self.fly(path=[(-14.0 + i * 1.15, 2.4) for i in range(10, 27)], state=st, sec=other, t0=now)
+        self.assertEqual((edits, edits2, box2.items), ([], [], []))
+
+    def test_a_send_without_an_id_or_an_antenna_without_a_position_follows_nothing(self):
+        st, box, sent, edits, _ = self.fly(sender=lambda s, t: True)
+        self.assertEqual((edits, st.get("closest")), ([], None))
+        st, box, sent, edits, _ = self.fly(c=dict(self.ON, LAT="0", LON="0"))
+        self.assertEqual(edits, [])
+
+    def test_switched_off_meanwhile_nothing_more_is_edited(self):
+        st, box, sent, edits, now = self.fly(path=[(-14.0 + i * 1.15, 2.4) for i in range(10)])
+        self.assertIn("closest", st)
+        _, _, _, edits2, _ = self.fly(c=dict(self.ON, TELEGRAM_CLOSEST="0"), path=[(-14.0 + i * 1.15, 2.4) for i in range(10, 27)], state=st, t0=now)
+        self.assertEqual(edits2, [])
+        self.assertNotIn("closest", st)
+
+    def test_a_squawk_message_is_never_followed(self):
+        st, box, sq = {}, telegram.Outbox(), telegram.Squawks()
+        c = dict(CFG, TELEGRAM_CLOSEST="1", TELEGRAM_CROSSINGS="0")
+        self.look(c, st, [ac(emergency="general")], sq, box, 1000.0, ask=False)
+        self.assertEqual([(m["kind"], m["hex"]) for m in box.items], [("squawk", None)])
+        self.assertNotIn("closest", st)
+
+    def test_the_bluesky_service_never_says_a_distance_from_the_antenna(self):
+        with open(os.path.join(HERE, "..", "flightinfo", "social.py"), encoding="utf-8") as fh:
+            src = fh.read()
+        self.assertNotIn("TELEGRAM_CLOSEST", src)
+        self.assertNotIn("closest:", src)
+
+    def test_the_real_request(self):
+        seen = {}
+        self.addCleanup(setattr, telegram, "call", telegram.call)
+        telegram.call = lambda sec, method, payload=None, timeout=20: seen.update(method=method, payload=payload)
+        telegram.edit(dict(self.SEC), 4242, "text")
+        self.assertEqual(seen["method"], "editMessageText")
+        self.assertEqual(seen["payload"], {"chat_id": "-100555", "message_id": 4242, "text": "text", "link_preview_options": {"is_disabled": True}})
+
+
 class OutboxTest(Base):
     def test_squawk_first_spaced_and_counted(self):
         box, st, got = telegram.Outbox(), {}, []

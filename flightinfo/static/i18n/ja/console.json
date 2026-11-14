@@ -454,6 +454,8 @@
  "needs a bot": "ボットが必要",
  "Aircraft crossing the sharing radius": "共有半径を通過する航空機",
  "One message per crossing, as the Bluesky posts, inside the sharing radius ({n} km)": "Blueskyの投稿と同じく、共有半径（{n} km）内の通過1回ごとに1件のメッセージ",
+ "Closest distance from the antenna": "アンテナからの最接近距離",
+ "Added to the crossing's message once the aircraft has left the radius (closest: 2.4 km). Everyone in the chat reads it; never in a Bluesky post or a picture.": "航空機が半径の外に出た後、通過メッセージに追加されます（最接近距離: 2.4 km）。チャットの全員が読めます。Blueskyの投稿や画像には決して表示されません。",
  "Which crossings": "メッセージの対象",
  "Everything: every crossing": "すべて：通過するすべての航空機",
  "Only the kinds lit; Everything writes every crossing": "点灯している種類のみ。「すべて」は通過するすべてを送信",

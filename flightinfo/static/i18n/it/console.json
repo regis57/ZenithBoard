@@ -456,6 +456,8 @@
  "needs a bot": "serve un bot",
  "Aircraft crossing the sharing radius": "Aerei che attraversano il raggio dei post",
  "One message per crossing, as the Bluesky posts, inside the sharing radius ({n} km)": "Un messaggio per passaggio, come i post su Bluesky, entro il raggio dei post ({n} km)",
+ "Closest distance from the antenna": "Distanza minima dall'antenna",
+ "Added to the crossing's message once the aircraft has left the radius (closest: 2.4 km). Everyone in the chat reads it; never in a Bluesky post or a picture.": "Aggiunta al messaggio del passaggio quando l'aereo è uscito dal raggio (distanza minima: 2,4 km). La leggono tutti nella chat; mai in un post Bluesky o in un'immagine.",
  "Which crossings": "Quali passaggi",
  "Everything: every crossing": "Tutto: ogni passaggio",
  "Only the kinds lit; Everything writes every crossing": "Solo i tipi accesi; Tutto segnala ogni passaggio",

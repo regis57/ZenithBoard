@@ -191,5 +191,6 @@
  "ZenithBoard is connected to this chat. The aircraft crossing the sharing radius and the emergency squawks the antenna hears will be written here.": "ZenithBoard подключён к этому чату. Сюда будут приходить сообщения о бортах, пролетающих в радиусе публикаций, и об аварийных кодах транспондера, которые принимает антенна.",
  "near {place}": "около {place}",
  "{distance} from {place} ({country})": "в {distance} от {place} ({country})",
- "position not known": "местоположение неизвестно"
+ "position not known": "местоположение неизвестно",
+ "closest: {distance}": "минимальное расстояние: {distance}"
 }
