@@ -90,6 +90,7 @@ Short notes from the Pi that is actually outside. Kept because the second time s
 
 | When | What happened |
 |---|---|
+| 14 November 2026, 17:50 | The owner puts the choice of the MLAT network in **lot 2** (*passe mlat en lot 2*), and has zenithboard.app say 1.0 is out (its notice in the 22 languages, the same day) |
 | 14 November 2026, 17:42 | The owner: MLAT must not stay on ADSB Exchange for ever; the network that does it is to be chosen, with what depends on it in the menu, the console and the command. Not in a lot, so written under *Waiting for 1.1* with its dependencies (the guard, the installs, the update, status, backup, the 22 languages) and proposed first in lot 4, before adsb.lol and OpenSky |
 | 14 November 2026, 17:25 | **The owner closes the release candidate and publishes 1.0.0**: the fresh install on a blank card *a bien été faite* during the candidate; the hands-off month (started again on 30 October, 22:27, with 0.99.6) is stopped at fourteen days, *assumé*. The freeze ends: 1.1 follows, lot by lot (Roadmap). He agreed the same day to what is put off after the lots and to what is not planned. Still open and said as such: the fixed IP address never applied on a real Pi |
 | 14 November 2026, 17:17 | The owner asked for the work after the release candidate in lots, justified, and put the airline names in lot 1 (*je suis d'accord, lot 1*). Written in the Roadmap, *The lots after 1.0*: the base first (proposed, his word awaited), then the visible gains, the wall and the receiver's health, the watch list once measured, the networks last |
