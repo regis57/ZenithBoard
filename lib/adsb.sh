@@ -86,9 +86,15 @@ zb_mlat_guard() {
     flightaware) mlat_switch_flightaware on ;;
     airnav) mlat_switch_airnav on || { warn "MLAT goes back to ADSB Exchange."; cfg_set MLAT_NETWORK adsbx; mlat_switch_adsbx on; } ;;
   esac
-  sleep 3
-  local n; n=$(mlat_count)
-  if [ "${n:-0}" -gt 1 ]; then warn "$n mlat-client processes are running (expected 1). Run: zenithboard status"; else log "MLAT clients running: ${n:-0}"; fi
+  # A feeder that was just restarted takes some seconds to start its client: on the real Pi (the owner, 14 November
+  # 2026, 23:26) piaware's came up after the three seconds this waited, and the line said "0" where `status`, a
+  # moment later, counted 1. Up to twenty seconds for the chosen network's client, three when none is wanted.
+  local n i=0
+  sleep 3; n=$(mlat_count)
+  while [ "$net" != none ] && [ "${n:-0}" -lt 1 ] && [ "$i" -lt 9 ]; do sleep 2; i=$((i + 1)); n=$(mlat_count); done
+  if [ "${n:-0}" -gt 1 ]; then warn "$n mlat-client processes are running (expected 1). Run: zenithboard status"
+  elif [ "${n:-0}" -lt 1 ] && [ "$net" != none ]; then warn "No MLAT client runs yet for $(mlat_name "$net"): it may still be starting. Look again with: zenithboard mlat"
+  else log "MLAT clients running: ${n:-0}"; fi
 }
 
 # zenithboard mlat [status] | NETWORK

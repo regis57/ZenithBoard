@@ -134,7 +134,8 @@ Also menu *1 ADS-B → 5 MLAT*, and the console's *Receiver* (*MLAT: which netwo
 * **The others are switched off first**, then the chosen one on: never two at once. A feeder is restarted only when its own switch moved.
 * **Flightradar24 is not offered.** Its support page [How to disable MLAT on T-feeds](https://support.fr24.com/support/solutions/articles/3000115339-how-to-disable-mlat-on-t-feeds-) asks for its MLAT to be off on a receiver that also shares with other networks, and this receiver always does. Its `mlat` and `mlat-without-gps` stay `no`, whatever is chosen. **Plane Finder** has no MLAT client.
 * **The guard follows the choice**: `zenithboard update`, each install and `sudo zenithboard mlat-guard` enforce the chosen network's client instead of ADSB Exchange's. If the network that held MLAT is removed, MLAT goes back to ADSB Exchange, and it is said.
-* **Not yet run on a real Pi** (14 November 2026): the switches are those of each network's own documentation, tried against stand-ins. After a change, `zenithboard status` must count one MLAT client, and the network's own page shows MLAT after some hours.
+* **On the reference Pi** (14 November 2026, 23:26 to 23:28): MLAT moved to FlightAware and back. piaware's own log said *multilateration data requested*, started `fa-mlat-client` and connected its results; `zenithboard status` counted one client; `sudo zenithboard mlat adsbx` gave it back, piaware saying *multilateration data no longer required*. It stayed two minutes with FlightAware: its *MLAT* column after a day, and the memory with that client, are not read yet. **AirNav Radar's switch has not run on a real Pi.**
+* After a change, `zenithboard status` must count one MLAT client; the network's own page shows MLAT after some hours.
 
 ## How you hear about it
 
