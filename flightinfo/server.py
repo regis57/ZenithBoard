@@ -57,7 +57,8 @@ import units as unit_table          # the one table of units for the Python side
 KM_PER_MI, KM_PER_NM = unit_table.KM_PER_MI, unit_table.KM_PER_NM
 UNITS = unit_table.SYSTEMS                           # 0.55.0: aviation = nautical miles, knots, feet
 RADIUS_PRESETS = [1, 2, 5, 10, 15, 30, 50]
-THEMES = ("amber", "green", "red", "white", "turquoise")      # 0.23.0: the dark blue (#0404e2) is gone, turquoise stays
+import rules as rule_table        # lib/rules.tsv, the settings' one table of rules (lot 0 after 1.0)
+THEMES = rule_table.choices("THEME")          # blue was taken out in 0.23.0
 MAX_POSITION_AGE_S = 30  # ignore aircraft whose position is older than this
 
 DEFAULTS = {

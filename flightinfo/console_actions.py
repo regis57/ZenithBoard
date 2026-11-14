@@ -19,9 +19,12 @@ A text value (0.51.0: the owner's own post templates, one per line) is passed as
 import re
 import unicodedata
 
+import rules          # lib/rules.tsv: the settings' one table of rules (lot 0 after 1.0)
+
 HHMM = r"([01]?[0-9]|2[0-3]):[0-5][0-9]"
 ON_OFF = ("on", "off")
-THEMES = ("amber", "green", "red", "white", "turquoise")
+THEMES = rules.choices("THEME")
+UNIT_SYSTEMS = rules.choices("UNITS")
 PERIODS = ("daily", "weekly", "monthly")
 # 0.50.0: the words of the posts, as lib/social.sh checks them again (social_hashtags_clean, social_area_clean)
 HASHTAGS_RE = r"none|default|#?[A-Za-z0-9_]{1,40}( #?[A-Za-z0-9_]{1,40}){0,7}"
@@ -56,11 +59,11 @@ SECTIONS = (
 #   ask   -- the page asks "are you sure" first
 ACTIONS = {
     # -- the wall
-    "units":        ("wall", "Units", ["units", "{value}"], [("value", "enum", ("metric", "imperial", "aviation"))], "wall"),
-    "radius":       ("wall", "Detection radius", ["radius", "{value}"], [("value", "enum", ("1", "2", "5", "10", "15", "30", "50"))], "wall"),
+    "units":        ("wall", "Units", ["units", "{value}"], [("value", "enum", UNIT_SYSTEMS)], "wall"),
+    "radius":       ("wall", "Detection radius", ["radius", "{value}"], [("value", "enum", rules.choices("RADIUS"))], "wall"),
     "color":        ("wall", "Colour", ["colour", "{value}"], [("value", "enum", THEMES)], "wall"),
-    "mode":         ("wall", "Look", ["mode", "{value}"], [("value", "enum", ("dots", "flap"))], "wall"),
-    "cycle":        ("wall", "Seconds per aircraft", ["cycle", "{value}"], [("value", "int", (2, 60))], "wall"),
+    "mode":         ("wall", "Look", ["mode", "{value}"], [("value", "enum", rules.choices("DISPLAY_MODE"))], "wall"),
+    "cycle":        ("wall", "Seconds per aircraft", ["cycle", "{value}"], [("value", "int", rules.bounds("CYCLE_SECONDS"))], "wall"),
     "photos":       ("wall", "Aircraft photos", ["photos", "{value}"], [("value", "enum", ON_OFF)], "wall"),
     "routes":       ("wall", "Flight routes", ["routes", "{value}"], [("value", "enum", ON_OFF)], "wall"),
     "localdb":      ("wall", "Receiver map's aircraft database", ["data", "localdb", "{value}"], [("value", "enum", ON_OFF)], "wall"),
@@ -71,7 +74,7 @@ ACTIONS = {
     # -- the receiver
     "region":       ("receiver", "Region", ["region", "{value}"], [("value", "enum", ("world", "us"))], ""),
     "location":     ("receiver", "Antenna position", ["location", "{lat}", "{lon}", "{alt}"],
-                     [("lat", "float", (-90, 90)), ("lon", "float", (-180, 180)), ("alt", "int", (-500, 9000), True)], "ask wall long"),
+                     [("lat", "float", rules.bounds("LAT")), ("lon", "float", rules.bounds("LON")), ("alt", "int", rules.bounds("ALT_M"), True)], "ask wall long"),
     "stats":        ("receiver", "Statistics", ["stats", "{value}"], [("value", "enum", ON_OFF)], ""),
     "stats-show":   ("receiver", "Statistics", ["stats"], [], "read"),
     "stats-gaps":   ("receiver", "Unknown callsigns and types", ["stats", "gaps"], [], "read"),
@@ -91,7 +94,7 @@ ACTIONS = {
     "social-test":  ("sharing", "Try a post", ["social", "test"], [], "read long"),
     "social-look":  ("sharing", "Picture", ["social", "look", "{value}"], [("value", "enum", ("dotmap", "flap", "alternate"))], "long"),
     "social-colour": ("sharing", "Picture colour", ["social", "colour", "{value}"], [("value", "enum", THEMES + ("wall", "rotate"))], ""),
-    "social-units": ("sharing", "Units of the posts", ["social", "units", "{value}"], [("value", "enum", ("metric", "imperial", "aviation", "wall"))], ""),
+    "social-units": ("sharing", "Units of the posts", ["social", "units", "{value}"], [("value", "enum", UNIT_SYSTEMS + ("wall",))], ""),
     "social-map":   ("sharing", "Map", ["social", "map", "{value}"], [("value", "enum", ("normal", "night", "satellite", "terrain", "none", "rotate"))], ""),
     "social-photolink": ("sharing", "Photo link", ["social", "photolink", "{value}"], [("value", "enum", ON_OFF)], ""),
     "social-sentence": ("sharing", "Words of a post", ["social", "sentence", "{value}"],
@@ -127,7 +130,7 @@ ACTIONS = {
     "telegram-squawks": ("sharing", "Emergency squawks", ["telegram", "squawks", "{value}"], [("value", "enum", ON_OFF)], ""),
     "telegram-rules": ("sharing", "Which crossings", ["telegram", "rules", "{value}"], [("value", "re", TG_RULES_RE)], ""),
     "telegram-lang": ("sharing", "Language of the messages", ["telegram", "lang", "{value}"], [("value", "enum", ("posts",) + LANGS)], ""),
-    "telegram-units": ("sharing", "Units of the messages", ["telegram", "units", "{value}"], [("value", "enum", ("posts", "metric", "imperial", "aviation"))], ""),
+    "telegram-units": ("sharing", "Units of the messages", ["telegram", "units", "{value}"], [("value", "enum", ("posts",) + UNIT_SYSTEMS)], ""),
     "telegram-template": ("sharing", "Your own message", ["telegram", "template", "{kind}", "set", "--", "{text}"],
                      [("kind", "enum", TG_KINDS), ("text", "text", (TG_TEMPLATE_MAX, None))], ""),
     "telegram-template-try": ("sharing", "Try your message", ["telegram", "template", "{kind}", "test", "--", "{text}"],

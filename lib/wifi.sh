@@ -27,7 +27,7 @@ wifi_active_ssid() { nmcli -t -f ACTIVE,SSID device wifi list 2>/dev/null | awk 
 wifi_active_signal() { nmcli -t -f ACTIVE,SIGNAL device wifi list 2>/dev/null | awk -F: '$1=="yes" {print $2; exit}'; }
 
 # ------------------------------------------------------------------ validation and helpers
-valid_country() { [[ "${1:-}" =~ ^[A-Z]{2}$ ]]; }
+valid_country() { rule_ok WIFI_COUNTRY "${1:-}"; }
 valid_ssid()    { local n; n=$(printf '%s' "${1:-}" | wc -c); [ "$n" -ge 1 ] && [ "$n" -le 32 ] && ! printf '%s' "$1" | grep -q '[[:cntrl:]]'; }
 # WPA passphrase: 8-63 printable characters, or exactly 64 hexadecimal digits
 valid_wifi_psk() {

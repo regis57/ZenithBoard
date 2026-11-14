@@ -865,7 +865,10 @@ class ThemeTest(unittest.TestCase):
             if name != "amber":                        # amber is the default, it has no rule of its own
                 self.assertIn('body[data-theme="%s"]' % name, css, name)
             self.assertIn('<option value="%s">' % name, html, name)
-            self.assertIn(name, shell.split("valid_theme()")[1].split("\n")[0], name)
+        # the command, the menus, the import and the web console read lib/rules.tsv, as the server does (lot 0 after 1.0)
+        rules_line = [l for l in self._read("lib", "rules.tsv").split("\n") if l.startswith("THEME\t")][0]
+        self.assertEqual(tuple(rules_line.split("\t")[2].split(" ")), tuple(server.THEMES))
+        self.assertIn('valid_theme() { rule_ok THEME', shell)
         # the tablet's own list, which a remembered or linked colour is checked against (0.23.0)
         app = self._read("flightinfo", "static", "app.js")
         self.assertIn("var THEMES = %s;" % json.dumps(list(server.THEMES)).replace('","', '", "'), app)

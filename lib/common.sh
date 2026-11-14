@@ -13,10 +13,47 @@ ZB_DATA="${ZB_VAR_DIR:-/var/lib/zenithboard}"; export ZB_DATA
 # the tests wrote the real /etc/systemd/system)
 ZB_UNIT_DIR="${ZB_SYSTEMD_DIR:-/etc/systemd/system}"; export ZB_UNIT_DIR
 ZB_USER="zenithboard"; export ZB_USER
-RADIUS_PRESETS="1 2 5 10 15 30 50"
-
 # shellcheck source=lib/versions.sh
 . "$(dirname "${BASH_SOURCE[0]}")/versions.sh"
+
+# ------------------------------------------------------------------ the one table of rules (lot 0 after 1.0)
+# lib/rules.tsv says what each setting's value may be; everything in the shell that checks a value asks here, the web
+# console asks flightinfo/rules.py, and tests/test_rules.py holds the two to the same answers.
+ZB_RULES_FILE="${ZB_RULES_FILE:-$(dirname "${BASH_SOURCE[0]}")/rules.tsv}"
+declare -gA ZB_RULE_KIND=() ZB_RULE_ARG=() ZB_RULE_OFFER=()
+rules_load() {
+  local k kind arg offer
+  while IFS=$'\t' read -r k kind arg offer || [ -n "$k" ]; do
+    case "$k" in ''|'#'*) continue ;; esac
+    ZB_RULE_KIND[$k]=$kind; ZB_RULE_ARG[$k]=$arg; ZB_RULE_OFFER[$k]=${offer:-}
+  done < "$ZB_RULES_FILE"
+}
+rules_load
+rule_known() { [ -n "${ZB_RULE_KIND[${1:-_}]:-}" ]; }
+rule_ok() {   # rule_ok KEY VALUE -> 0 when VALUE may be stored for KEY (a key with no rule: 1)
+  local kind=${ZB_RULE_KIND[${1:-_}]:-} arg=${ZB_RULE_ARG[${1:-_}]:-} v=${2:-} x
+  case "$kind" in
+    enum) for x in $arg; do [ "$x" = "$v" ] && return 0; done; return 1 ;;
+    int) [[ $v =~ ^-?[0-9]{1,6}$ ]] || return 1
+         x=$((10#${v#-})); [ "${v:0:1}" != - ] || x=$((-x))
+         [ "$x" -ge "${arg% *}" ] && [ "$x" -le "${arg#* }" ] ;;
+    float) [[ $v =~ ^-?[0-9]+([.][0-9]+)?$ ]] && awk -v v="$v" -v a="${arg% *}" -v b="${arg#* }" 'BEGIN { exit !(v + 0 >= a + 0 && v + 0 <= b + 0) }' ;;
+    re) [[ $v =~ $arg ]] ;;
+    number) [[ $v =~ ^-?[0-9]+([.][0-9]+)?$ ]] ;;
+    *) return 1 ;;
+  esac
+}
+rule_choices() {   # the values offered for KEY (the command, the menus, the console), space-separated; empty when it has no list
+  local k=${1:-_}
+  if [ -n "${ZB_RULE_OFFER[$k]:-}" ]; then printf '%s' "${ZB_RULE_OFFER[$k]}"
+  elif [ "${ZB_RULE_KIND[$k]:-}" = enum ]; then printf '%s' "${ZB_RULE_ARG[$k]}"; fi
+}
+rule_offered() {   # rule_offered KEY VALUE -> 0 when VALUE is one the command and the console offer (else as rule_ok)
+  local c x; c=$(rule_choices "${1:-_}")
+  [ -n "$c" ] || { rule_ok "$@"; return; }
+  for x in $c; do [ "$x" = "${2:-}" ] && return 0; done; return 1
+}
+RADIUS_PRESETS=$(rule_choices RADIUS)
 
 # ------------------------------------------------------------------ output
 if [ -t 1 ]; then C_B=$'\e[1m'; C_G=$'\e[32m'; C_Y=$'\e[33m'; C_R=$'\e[31m'; C_0=$'\e[0m'; else C_B=""; C_G=""; C_Y=""; C_R=""; C_0=""; fi
@@ -104,21 +141,21 @@ DEF
 is_number() { [[ "$1" =~ ^-?[0-9]+([.][0-9]+)?$ ]]; }
 # seconds each aircraft stays on the wall: whole seconds, 2 to 60, as the presets and the console have it (the audit of
 # 22-23 October 2026: the menu and the command took 0, -3 and 600)
-valid_cycle() { [[ ${1:-} =~ ^[0-9]{1,2}$ ]] && [ "$((10#$1))" -ge 2 ] && [ "$((10#$1))" -le 60 ]; }
+valid_cycle() { rule_ok CYCLE_SECONDS "${1:-}"; }
 # the review of 0.99.8: what goes into the decoders' and feeders' own files (by sed or as an option) holds no character
 # a shell or sed gives a meaning to
-valid_alt() { [[ ${1:-} =~ ^-?[0-9]{1,4}$ ]]; }                 # metres, whole
-valid_sdr() { [[ ${1:-} =~ ^[A-Za-z0-9_-]{1,32}$ ]]; }          # a dongle's serial or index
+valid_alt() { rule_ok ALT_M "${1:-}"; }                         # metres, whole: -500 to 9000, as the console had it (the command took -9999 to 9999)
+valid_sdr() { rule_ok ADSB_SDR "${1:-}"; }                      # a dongle's serial or index
 valid_plain_value() { case "${1:-}" in *[\"\\\|\&\;\<\>\$\`]*|*$'\n'*|*$'\r'*) return 1 ;; *) return 0 ;; esac; }
-valid_lat() { is_number "$1" && awk -v v="$1" 'BEGIN{exit !(v>=-90 && v<=90)}'; }
-valid_lon() { is_number "$1" && awk -v v="$1" 'BEGIN{exit !(v>=-180 && v<=180)}'; }
-valid_radius() { local r; for r in $RADIUS_PRESETS; do [ "$r" = "$1" ] && return 0; done; return 1; }
-valid_theme() { case "$1" in amber|green|red|white|turquoise) return 0 ;; *) return 1 ;; esac; }   # blue: gone in 0.23.0
+valid_lat() { rule_ok LAT "${1:-}"; }
+valid_lon() { rule_ok LON "${1:-}"; }
+valid_radius() { rule_offered RADIUS "${1:-}"; }
+valid_theme() { rule_ok THEME "${1:-}"; }   # blue: gone in 0.23.0
 # The wall's colour as it shows: one taken out (the dark blue, 0.23.0) shows as amber until another is chosen, and the
 # menus and messages say amber, not the word left in config.env
 wall_theme() { local t; t=$(cfg_get THEME amber); if valid_theme "$t"; then printf '%s' "$t"; else printf amber; fi; }
 # 0.55.0: aviation, the way pilots and controllers count: distances in nautical miles, speeds in knots, heights in feet
-valid_units() { [ "$1" = metric ] || [ "$1" = imperial ] || [ "$1" = aviation ]; }
+valid_units() { rule_ok UNITS "${1:-}"; }
 units_distance() { case "$1" in imperial) echo mi ;; aviation) echo NM ;; *) echo km ;; esac; }   # the radius's unit
 
 # ------------------------------------------------------------------ system state

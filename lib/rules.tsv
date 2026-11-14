@@ -1,0 +1,48 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# The one table of rules for the settings' values (lot 0 after 1.0; the review of 0.99.8, A3b). The command, the menus,
+# the presets and the import read it through lib/common.sh (rule_ok, rule_offered, rule_choices); the web console
+# through flightinfo/rules.py. A value was checked in two or three places and the copies disagreed (the antenna's
+# altitude: -9999..9999 for the command, -500..9000 for the console; the radius: seven choices for the command, any
+# number for an import, 0..500 for a preset). A rule is now changed here, once.
+#
+# Tab-separated: KEY, KIND, RULE, OFFERED (optional).
+#   RULE is what may be STORED in config.env (an import, a preset): enum = the values, space-separated; int and float =
+#   lowest and highest, both allowed; re = a pattern that bash and Python both read; number = any number ('-').
+#   OFFERED, when given, is the shorter list the command, the menus and the console offer (the radius: seven choices,
+#   while a tablet's preset may hold any radius up to 500).
+# tests/test_rules.py holds the shell and Python readers to the same answers.
+UNITS	enum	metric imperial aviation
+SOCIAL_UNITS	enum	metric imperial aviation
+TELEGRAM_UNITS	enum	metric imperial aviation
+THEME	enum	amber green red white turquoise
+DISPLAY_MODE	enum	dots flap
+DECODER	enum	readsb dump1090-fa
+RADIUS	float	0.1 500	1 2 5 10 15 30 50
+CYCLE_SECONDS	int	2 60
+LAT	float	-90 90
+LON	float	-180 180
+ALT_M	int	-500 9000
+ADSB_SDR	re	^[A-Za-z0-9_-]{1,32}$
+UAT_SDR	re	^[A-Za-z0-9_-]{1,32}$
+WIFI_COUNTRY	re	^[A-Z]{2}$
+FLAGS	number	-	0 1
+PORT	number	-
+SOCIAL_RADIUS_KM	number	-
+SOCIAL_GAP_MIN	number	-
+SHOW_PHOTOS	number	-
+SHOW_ROUTES	number	-
+AUTO_DATA_REFRESH	number	-
+GAINLOG	number	-
+PATCHES	number	-
+STATS	number	-
+CONSOLE	number	-
+CONSOLE_PHONE_SIGNIN	number	-
+UPDATE_VERIFY	number	-
+UAT978	number	-
+SOCIAL	number	-
+TELEGRAM	number	-
+WIFI_HARDEN	number	-
+NETWATCH	number	-
+LOG_AUTOCLEAN	number	-
+SOCIAL_PHOTOLINK	number	-
+SOCIAL_PLACES	number	-
