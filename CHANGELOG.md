@@ -1,5 +1,9 @@
 # Changelog
 
+## Toward 1.1 — lot 0, not released yet
+Steps of [the lots after 1.0](https://github.com/regis57/ZenithBoard/wiki/Roadmap#the-lots-after-10) that change nothing on a Pi; they ship with 1.1.0.
+- **A page-error smoke test** (`tests/test_pages_smoke.js`, in CI): the wall, `/stats` and `/console` loaded in headless Chromium from the release's own server, started as the demo starts it. It fails on any page error, on a script or style of ours that does not load, on an empty page; tried with an undefined call added to `stats.js` and a wrong script name in `console.html`: it fails on both. Put in first, as the guard for the changes that follow.
+
 ## 1.0.0 — 14 November 2026
 The release candidate becomes 1.0, at the owner's word. **The same code as 0.99.26**: nothing changes on a Pi but the version it shows.
 - The candidate ran on the reference Pi from 25 October 2026 (0.99.0 to 0.99.26, fixes only, AirNav Radar and Telegram let in on 30 October). The fresh install on a blank card was redone during it (the owner).
