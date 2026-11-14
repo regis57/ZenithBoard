@@ -1428,6 +1428,42 @@ class FarthestTest(unittest.TestCase):
         self.addCleanup(lambda: __import__("shutil").rmtree(d, ignore_errors=True))
         return d
 
+    def test_one_window_decides_the_slot_for_the_bars_the_boxes_and_the_line(self):
+        # lot 0 after 1.0 (the review of 0.99.8, S5): StatsWindow is the one place that says which slot a moment falls
+        # in. 24 hours: 24 hourly slots ending with the current hour; days: calendar days ending today; nothing after now.
+        import datetime
+        D = datetime.datetime
+        now = D(2026, 10, 20, 14, 20, 30)
+        w = server.StatsWindow(now, "24h")
+        self.assertEqual((w.start, len(w.keys), w.labels[0], w.labels[-1], w.first_day), (D(2026, 10, 19, 15, 0), 24, "15h", "14h", "2026-10-19"))
+        self.assertEqual([w.slot(D(2026, 10, 19, 14, 59)), w.slot(D(2026, 10, 19, 15, 0)), w.slot(D(2026, 10, 20, 14, 20)), w.slot(D(2026, 10, 20, 14, 21)), w.slot(None)],
+                         [None, 0, 23, None, None])
+        w = server.StatsWindow(now, "7d")
+        self.assertEqual((w.start, w.labels[0], w.labels[-1], w.first_day), (D(2026, 10, 14), "14/10", "20/10", "2026-10-14"))
+        self.assertEqual([w.slot(D(2026, 10, 13, 23, 59)), w.slot(D(2026, 10, 14)), w.slot(D(2026, 10, 20, 14, 20)), w.slot(D(2026, 10, 20, 23, 0))], [None, 0, 6, None])
+        self.assertEqual(len(server.StatsWindow(now, "30d").keys), 30)
+        self.assertEqual(server.StatsWindow(now, "nonsense").range, "30d")
+        # the same day and month a year earlier is not in the window (the old code matched the label "20/10")
+        self.assertIsNone(w.slot(D(2025, 10, 20, 12, 0)))
+
+    def test_a_record_is_in_the_line_exactly_when_it_is_in_a_bar(self):
+        # the line under the box and the box asked two functions: a record of today stamped later than now (a clock set
+        # back), or with a time that cannot be read, was in the line and not in the box. Both ask StatsWindow now.
+        import datetime, json as js
+        d = self._dir()
+        now = datetime.datetime(2026, 10, 20, 14, 20)
+        with open(os.path.join(d, "stats.csv"), "w") as fh:
+            fh.write("when,messages,farthest_km,aircraft_pos,aircraft_seen\n2026-10-20 10:00,100,300,20,50\n")
+        for day, rec in (("2026-10-20", {"km": 500, "time": "18:00", "hex": "3c6444"}), ("2026-10-19", {"km": 450, "time": "9h", "hex": "3c6445"}),
+                         ("2026-10-18", {"km": 400, "time": "12:00", "hex": "3c6446"})):
+            with open(os.path.join(d, "farthest-" + day), "w") as fh:
+                js.dump(rec, fh)
+        for rng in ("24h", "7d", "30d"):
+            s = server.read_stats(d, now, rng)
+            box, line = s["window"]["totals"]["farthest_km"], s["farthest"]["period"]
+            self.assertEqual(box, (line or {}).get("km") or 300, rng)
+            self.assertEqual((line or {}).get("km"), None if rng == "24h" else 400, rng)
+
     def test_the_24_hours_begin_at_the_same_time_for_the_line_and_the_box(self):
         # 0.99.15 (review B7): the line under the box counted records from now minus 24 hours to the minute, the box and
         # the chart from the top of the hour 23 hours back. At 14:20, yesterday's 14:45 was in the line, not in the box:
@@ -1435,7 +1471,7 @@ class FarthestTest(unittest.TestCase):
         import datetime, json as js
         d = self._dir()
         now = datetime.datetime(2026, 10, 20, 14, 20)
-        self.assertEqual(server._window_start_24h(now), datetime.datetime(2026, 10, 19, 15, 0))
+        self.assertEqual(server.StatsWindow(now, "24h").start, datetime.datetime(2026, 10, 19, 15, 0))
         with open(os.path.join(d, "stats.csv"), "w") as fh:
             fh.write("when,messages,farthest_km,aircraft_pos,aircraft_seen\n2026-10-20 10:00,100,300,20,50\n")
         rec = {"km": 400, "time": "14:45", "flight": "", "hex": "3c6444"}

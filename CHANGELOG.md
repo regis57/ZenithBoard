@@ -3,6 +3,7 @@
 ## Toward 1.1 — lot 0, not released yet
 Steps of [the lots after 1.0](https://github.com/regis57/ZenithBoard/wiki/Roadmap#the-lots-after-10) that change nothing on a Pi; they ship with 1.1.0.
 - **A page-error smoke test** (`tests/test_pages_smoke.js`, in CI): the wall, `/stats` and `/console` loaded in headless Chromium from the release's own server, started as the demo starts it. It fails on any page error, on a script or style of ours that does not load, on an empty page; tried with an undefined call added to `stats.js` and a wrong script name in `console.html`: it fails on both. Put in first, as the guard for the changes that follow.
+- **One window for the statistics** (`StatsWindow` in `server.py`): the chart's bars, the boxes, the farthest aircraft's line, the sky by hour and the lists' day files each worked out which slot a moment falls in, and drifted apart twice (0.99.4, 0.99.15). They all ask one class now. Compared before and after on forty made-up histories (24 hours, 7 and 30 days, around midnight and the top of the hour): the same answers, but for the one case it is there to settle: a farthest record stamped later than now, or with a time that cannot be read, was in the line under the box and not in the box; it is now in neither. The lists' *last 24 hours* keep their own rule (the last-seen time, to the minute), on purpose.
 
 ## 1.0.0 — 14 November 2026
 The release candidate becomes 1.0, at the owner's word. **The same code as 0.99.26**: nothing changes on a Pi but the version it shows.
