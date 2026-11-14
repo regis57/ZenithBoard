@@ -97,6 +97,17 @@ start; echo yes > "$t/piaware.conf"; ini_sec_set "$RB24_INI" mlat autostart_mlat
 zb_mlat_guard >/dev/null 2>&1
 check "an update that switched the others back on: all off again, each restarted once" '[ "$(fa)" = no ] && [ "$(rb)" = false ] && [ "$(grep -c "restart piaware" "$t/log")" = 1 ] && [ "$(grep -c "restart rbfeeder" "$t/log")" = 1 ]'
 
+# ---- the count after a change waits for the client (seen on the real Pi: "0" said three seconds after piaware restarted)
+start; : > "$t/calls"; mlat_count() { echo x >> "$t/calls"; [ "$(wc -l < "$t/calls")" -ge 4 ] && echo 1 || echo 0; }   # asked in $(...): the count is kept in a file
+zb_mlat_guard > "$t/out" 2>&1
+check "the client came up a little later: counted, not said missing"   'grep -q "MLAT clients running: 1" "$t/out" && ! grep -q "No MLAT client runs yet" "$t/out"'
+mlat_count() { echo 0; }
+zb_mlat_guard > "$t/out" 2>&1
+check "it never came: said, with where to look again"                  'grep -q "No MLAT client runs yet for ADSB Exchange" "$t/out"'
+cfg_set MLAT_NETWORK none; zb_mlat_guard > "$t/out" 2>&1
+check "none chosen: zero is what is wanted"                            'grep -q "MLAT clients running: 0" "$t/out" && ! grep -q "No MLAT client" "$t/out"'
+mlat_count() { echo 1; }
+
 # ---- status, the rule table, the command
 start; mlat_set flightaware >/dev/null 2>&1
 out=$(mlat_status)
