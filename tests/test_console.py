@@ -142,6 +142,11 @@ class ActionsTest(unittest.TestCase):
             with self.assertRaises(actions.Refused, msg=value):
                 actions.build("social-ignore", {"value": value})
         self.assertIn("SOCIAL_IGNORE", console.SHOWN_KEYS)
+        self.assertEqual(actions.build("mlat-network", {"value": "flightaware"}), ["mlat", "flightaware"])
+        for value in ("flightradar24", "status", "adsbx;id", ""):
+            with self.assertRaises(actions.Refused, msg=value):
+                actions.build("mlat-network", {"value": value})
+        self.assertEqual(console.SHOWN_KEYS["MLAT_NETWORK"], "adsbx")
         self.assertEqual(actions.build("telegram-closest", {"value": "on"}), ["telegram", "closest", "on"])
         with self.assertRaises(actions.Refused):
             actions.build("telegram-closest", {"value": "maybe"})

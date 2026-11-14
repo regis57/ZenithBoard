@@ -22,7 +22,7 @@ In its order, each step skipped when it is done already:
 1. **A backup from another card?** Yes: it asks for the file in your home folder (copied there with WinSCP from
    Windows: [Moving to a new card](Moving-to-a-new-card)) and puts it back. The networks then find their identities
    by themselves at step 2.
-2. **ADS-B**: the decoder (readsb), ADSB Exchange (always: it runs the one MLAT client), and the other networks you
+2. **ADS-B**: the decoder (readsb), ADSB Exchange (always; it runs the one MLAT client unless you give MLAT to another network, 1.2), and the other networks you
    tick. Their installers are theirs, and ask in the terminal (a station name, an e-mail, a key); the screen says what
    to answer. Without a decoder the rest waits, and says so.
 3. **The wall**, the page the tablet shows. The web console is one of its pages: without the wall, no console.
@@ -56,7 +56,7 @@ Once everything is done, the entry says *all done: check it again*.
 
 The decoder and the networks (install, add, remove: an unticked network is removed after a confirmation), the
 antenna's position and region (applied everywhere it is stored: the decoder, the networks that take it, the wall), the
-gain ([Gain tuning](Gain-tuning)), and what is running with the single-MLAT check.
+gain ([Gain tuning](Gain-tuning)), what is running with the single-MLAT check, and (1.2) which network does MLAT.
 
 0.52.0: the list of networks has *ADSB Exchange stats: their map of your aircraft*, unticked until it is on. Ticked, it installs
 ADSB Exchange's stats package; unticked again, it removes it ([ADSB Exchange's stats](Providers#adsb-exchanges-stats-0520-optional)).

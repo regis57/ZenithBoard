@@ -157,7 +157,8 @@ ZenithBoard $ZB_VERSION - ADSB Flight Info
   zenithboard update                    upgrade ZenithBoard + decoder + feeders
   zenithboard update list               what is installed and can be updated one by one
   zenithboard update only NAME...       update just those (e.g. readsb flightinfo)
-  zenithboard mlat-guard                re-enforce a single MLAT client
+  zenithboard mlat [NETWORK]            which network does MLAT: adsbx (default), flightaware, airnav or none; alone: what it is now
+  zenithboard mlat-guard                re-enforce a single MLAT client, the chosen network's
   zenithboard adsbx-stats on|off|status|url   ADSB Exchange's stats: their map of only your aircraft, Feed Details on their page (off by default)
   zenithboard logs [flightinfo|decoder|uat|social|telegram|adsbexchange|piaware|fr24|planefinder|radarbox]   show the last 100 lines of a service
   zenithboard logs usage|review         size of the system logs / size + recent warnings
@@ -197,13 +198,16 @@ cmd_status() {
   show_state "Flightradar24" is_fr24 fr24feed
   show_state "Plane Finder" is_planefinder pfclient
   show_state "AirNav Radar (rbfeeder)" is_radarbox rbfeeder
-  if is_radarbox; then printf '  %-26s %s\n' "" "MLAT $( [ "$(ini_sec_get "$RB24_INI" mlat autostart_mlat)" = false ] && echo "off (ADSB Exchange keeps the only one)" || echo "NOT off: sudo zenithboard mlat-guard")$( s=$(rb24_station); [ -z "$s" ] || echo "   station $s: $RB24_STATION_URL$s")"; fi
+  if is_radarbox; then printf '  %-26s %s\n' "" "MLAT $( if [ "$(mlat_network)" = airnav ]; then [ "$(ini_sec_get "$RB24_INI" mlat autostart_mlat)" = true ] && echo "on (the network chosen: zenithboard mlat)" || echo "NOT on: sudo zenithboard mlat-guard"; else [ "$(ini_sec_get "$RB24_INI" mlat autostart_mlat)" = false ] && echo "off ($(mlat_name "$(mlat_network)") keeps the only one)" || echo "NOT off: sudo zenithboard mlat-guard"; fi)$( s=$(rb24_station); [ -z "$s" ] || echo "   station $s: $RB24_STATION_URL$s")"; fi
   if is_region_us || is_uat978; then show_state "978 MHz UAT (dump978-fa)" is_uat978 dump978-fa; fi
   echo "Displays:"
   show_state "FlightInfo wall" is_flightinfo zenithboard-flightinfo
   if is_graphs; then show_state "graphs1090 (port $GRAPHS_PORT)" true graphs1090; fi
   local n; n=$(mlat_count)
-  if [ "${n:-0}" = 0 ] && is_adsbx; then echo "MLAT clients running: 0  ${C_Y}(none: ADSB Exchange's MLAT is not running, see: zenithboard logs adsbexchange)${C_0}"
+  local mn; mn=$(mlat_network)
+  echo "MLAT is done by: $(mlat_name "$mn")   (change: sudo zenithboard mlat ${MLAT_NETWORKS// /|})"
+  if [ "${n:-0}" = 0 ] && [ "$mn" = none ]; then echo "MLAT clients running: 0  ${C_G}(OK: none chosen)${C_0}"
+  elif [ "${n:-0}" = 0 ] && mlat_installed "$mn"; then echo "MLAT clients running: 0  ${C_Y}(none: $(mlat_name "$mn")'s MLAT is not running; try: sudo zenithboard mlat-guard)${C_0}"
   elif [ "${n:-0}" -le 1 ]; then echo "MLAT clients running: ${n:-0}  ${C_G}(OK: max 1)${C_0}"; else echo "MLAT clients running: $n  ${C_R}(too many! run: sudo zenithboard mlat-guard)${C_0}"; fi
   local j; j=$(decoder_json)
   if [ -f "$j" ]; then echo "Aircraft in decoder right now: $(grep -o '"hex"' "$j" | wc -l)"; fi
@@ -487,6 +491,11 @@ case "${1:-}" in
       *) die "Usage: zenithboard routes on|off|test [CALLSIGN]" ;;
     esac ;;
   mlat-guard) root_or_die; zb_mlat_guard ;;
+  mlat)
+    case "${2:-status}" in
+      status) mlat_status ;;
+      *) root_or_die; mlat_set "$2" ;;
+    esac ;;
   adsbx-stats)                                    # 0.52.0: ADSB Exchange's stats package, optional
     case "${2:-status}" in
       on)     root_or_die; adsbx_stats_on ;;

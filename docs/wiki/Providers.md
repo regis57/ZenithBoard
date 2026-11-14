@@ -113,6 +113,29 @@ Each feeder fails on its own. A 404 from Plane Finder does not stop FlightAware 
 
 ---
 
+## MLAT: one client, the network of your choice (1.2)
+
+MLAT locates the aircraft that send no position, by comparing when several receivers hear the same reply. Each network has its own client for it; **one runs on the Pi, one at a time**, which is what a 1 GB Pi carries. Until 1.2 it was ADSB Exchange's, written into the code. It is now a setting, `MLAT_NETWORK`, and ADSB Exchange is only its default: a Pi that touches nothing changes nothing.
+
+```
+zenithboard mlat                      # who does it now, and each network's own switch
+sudo zenithboard mlat flightaware     # or: adsbx, airnav, none
+```
+
+Also menu *1 ADS-B → 5 MLAT*, and the console's *Receiver* (*MLAT: which network does it*). Only a network that is installed can be chosen, and each change says how to go back.
+
+| Choice | What is switched | Read on 14 November 2026 |
+|---|---|---|
+| `adsbx` (default) | the `adsbexchange-mlat` service, enabled and started | as since the first release |
+| `flightaware` | `piaware-config allow-mlat yes`, piaware restarted | [PiAware advanced configuration](https://flightaware.com/adsb/piaware/advanced_configuration): it also needs the receiver's location set on FlightAware's *My ADS-B* page |
+| `airnav` | their `mlat-client` package installed from their signed repository, then `[mlat] autostart_mlat=true` in `/etc/rbfeeder.ini`, rbfeeder restarted | [AirNav's Raspberry Pi guide](https://www.airnavradar.com/raspberry-pi/guide), step 4 |
+| `none` | every client off | aircraft that send no position are then located by this Pi for nobody |
+
+* **The others are switched off first**, then the chosen one on: never two at once. A feeder is restarted only when its own switch moved.
+* **Flightradar24 is not offered.** Its support page [How to disable MLAT on T-feeds](https://support.fr24.com/support/solutions/articles/3000115339-how-to-disable-mlat-on-t-feeds-) asks for its MLAT to be off on a receiver that also shares with other networks, and this receiver always does. Its `mlat` and `mlat-without-gps` stay `no`, whatever is chosen. **Plane Finder** has no MLAT client.
+* **The guard follows the choice**: `zenithboard update`, each install and `sudo zenithboard mlat-guard` enforce the chosen network's client instead of ADSB Exchange's. If the network that held MLAT is removed, MLAT goes back to ADSB Exchange, and it is said.
+* **Not yet run on a real Pi** (14 November 2026): the switches are those of each network's own documentation, tried against stand-ins. After a change, `zenithboard status` must count one MLAT client, and the network's own page shows MLAT after some hours.
+
 ## How you hear about it
 
 **Before an install fails.** On the 1st of each month a GitHub workflow requests every pinned address (`tools/check-links.sh`). If one stops answering, it opens a single issue — *A pinned download address no longer answers* — naming which. You can run the same check in your own clone:
@@ -171,7 +194,7 @@ The monthly check proves that an address **answers**. It does not prove that the
 
 **Plane Finder does not move on its own.** Its version is a number in `lib/versions.sh`. A new client version arrives only when that number is changed.
 
-**Feeders can rewrite their own settings.** An update of FlightAware or Flightradar24 can switch their MLAT back on, and ADSB Exchange owns the only MLAT client. `zenithboard update` ends with the MLAT guard; `zenithboard status` counts the running MLAT clients (one at most); `sudo zenithboard mlat-guard` puts it right at any time.
+**Feeders can rewrite their own settings.** An update of FlightAware or Flightradar24 can switch their MLAT back on, and only one MLAT client may run, the chosen network's (below). `zenithboard update` ends with the MLAT guard; `zenithboard status` counts the running MLAT clients (one at most); `sudo zenithboard mlat-guard` puts it right at any time.
 
 ---
 

@@ -691,7 +691,7 @@ readsb (or dump1090-fa) --- aircraft.json ---> FlightInfo server ---> tablet (do
                                       +--> AirNav Radar    (MLAT off)
 ```
 
-**Single MLAT:** ADSB Exchange owns the only MLAT client. The installer switches MLAT off in PiAware, Flightradar24 and AirNav Radar, and `zenithboard status` counts running MLAT processes so you can verify it is exactly one.
+**Single MLAT:** one network's MLAT client runs, ADSB Exchange's by default; since 1.2 `sudo zenithboard mlat flightaware|airnav|adsbx|none` gives it to another installed network ([Providers](https://github.com/regis57/ZenithBoard/wiki/Providers#mlat-one-client-the-network-of-your-choice-12); Flightradar24 asks for its own to stay off beside other networks). The installer switches MLAT off in the others, and `zenithboard status` counts running MLAT processes so you can verify it is exactly one.
 
 The processes, the files each one reads and writes, and the timers are set out in the wiki: **[Architecture](https://github.com/regis57/ZenithBoard/wiki/Architecture)**.
 
