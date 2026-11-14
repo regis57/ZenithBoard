@@ -4,6 +4,8 @@
 [![CI](https://github.com/regis57/ZenithBoard/actions/workflows/ci.yml/badge.svg)](https://github.com/regis57/ZenithBoard/actions/workflows/ci.yml)
 <a href="https://buymeacoffee.com/regis57"><img src="https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20beer&emoji=%F0%9F%8D%BA&slug=regis57&button_colour=FFDD00&font_colour=000000&font_family=Cookie&outline_colour=000000&coffee_colour=ffffff" alt="Buy me a beer" height="20"></a>
 
+> **1.1.0 (14 November 2026).** The first release after 1.0, lots 0 and 1 of the [Roadmap](https://github.com/regis57/ZenithBoard/wiki/Roadmap#the-lots-after-10): airline names for callsigns without a route, the heading in the posts and messages, aircraft never to post, the closest distance in the Telegram messages (the new settings are off by default), and the old command names removed. Published the day it was written, **before any of it ran on the reference Pi**: [Project status](https://github.com/regis57/ZenithBoard/wiki/Project-status) says what the Pi has shown since.
+>
 > **1.0.0 (14 November 2026).** The release candidate ran on the reference Pi from 25 October 2026, with a fresh install redone on a blank card; the owner closed it on 14 November, fourteen days into the last month hands-off. What is still not proven on hardware is said in [Project status](https://github.com/regis57/ZenithBoard/wiki/Project-status). Features come again from 1.1, in lots ([Roadmap](https://github.com/regis57/ZenithBoard/wiki/Roadmap#the-lots-after-10)). A report in the [issues](https://github.com/regis57/ZenithBoard/issues) helps most.
 
 **See the planes flying right above your house, on an old tablet, in glowing dot-matrix lights — and share the same antenna with the big flight-tracking networks.**

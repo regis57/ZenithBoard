@@ -147,11 +147,11 @@ check "card: no lsblk, the partition alone"                       'health_check 
 mk df 'printf "Filesystem 1-blocks Used Available Capacity Mounted on\n/dev/root 31167209472 29000000000 500000000 95%% /\n"'
 check "card: nearly full says so"                                 'health_check 2>&1 | grep -q "95% full.*free some space"'
 rm -f "$t/bin/df" "$t/bin/findmnt" "$t/bin/lsblk"
-check "memory command and menu entry"                             'grep -q "memory|threads)" bin/zenithboard && grep -q "memory) clear; python3" lib/menus.sh'
-# 0.99.25 (the owner, 11 November 2026): one name per command; an old name still works and says so, the new one says nothing
+check "memory command and menu entry"                             'grep -q "^  memory) python3" bin/zenithboard && grep -q "memory) clear; python3" lib/menus.sh'
+# 0.99.25 (the owner, 11 November 2026): one name per command; 1.1.0 removed the old names, each refused with the name to use
 old=$(bash bin/zenithboard style 2>&1); new=$(bash bin/zenithboard mode 2>&1)
-check "old name: style still works, and says to use mode"          'printf "%s" "$old" | grep -q "Look of the wall" && printf "%s" "$old" | grep -q "old name: use \"zenithboard mode\""'
-check "new name: mode says nothing about old names"                '! printf "%s" "$new" | grep -q "old name" && printf "%s" "$new" | grep -q "Look of the wall"'
+check "removed name (1.1.0): style is refused, and says to use mode" '! bash bin/zenithboard style >/dev/null 2>&1 && ! printf "%s" "$old" | grep -q "Look of the wall" && printf "%s" "$old" | grep -q "was removed in 1.1.0: use \"zenithboard mode\""'
+check "mode says nothing about removed names"                      '! printf "%s" "$new" | grep -q "removed" && printf "%s" "$new" | grep -q "Look of the wall"'
 check "help: one name per command (gain status, colour, no social weekly)" 'u=$(bash bin/zenithboard help 2>&1); printf "%s" "$u" | grep -q "zenithboard gain status" && ! printf "%s" "$u" | grep -q "gain check\|zenithboard color \|social weekly"'
 printf 'Oct 08 03:09:58 rp3 systemd[1]: Reached target Shutdown.\nOct 08 03:10:00 rp3 systemd-journald[200]: Journal stopped\n' > "$t/prevtail"
 check "previous boot with a clean shutdown" 'health_check 2>&1 | grep -q "ended normally"'

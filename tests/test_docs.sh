@@ -67,13 +67,12 @@ done
 check "CLAUDE.md's shell and node loops print FAIL" 'grep -qF "do bash \$t || echo \"FAIL \$t\"; done" CLAUDE.md && grep -qF "do node tests/test_\$j.js || echo \"FAIL \$j\"; done" CLAUDE.md'
 
 # 0.99.25 (the owner, 11 November 2026: "es-tu sûr que tu ne casses rien dans le menu et la console ? pour ne rien casser
-# en 1.1"): the old command names of Command reference -> Old names are still accepted, and nothing ZenithBoard runs or
-# prints uses one: the console's actions, the menus, the services, the messages, the translated pages, the wiki. When
-# 1.1 removes them, only the table and the old_name lines in bin/zenithboard have to go; this check says if anything else
-# still needed them.
+# en 1.1") kept the old command names working and checked that nothing used them. 1.1.0 removed them: each name of
+# Command reference -> Names removed in 1.1 is refused with the name to use, does nothing, and nothing ZenithBoard runs
+# or prints names one: the console's actions, the menus, the services, the messages, the translated pages, the wiki.
 old_out=$(python3 - <<'PY'
 import glob, os, re, subprocess, sys, importlib.util
-ref = open("docs/wiki/Command-reference.md", encoding="utf-8").read().split("## Old names", 1)[1]
+ref = open("docs/wiki/Command-reference.md", encoding="utf-8").read().split("## Names removed in 1.1", 1)[1]
 olds = []
 for row in ref.splitlines():
     if not row.startswith("| `zenithboard"): continue
@@ -85,16 +84,16 @@ for row in ref.splitlines():
         e = extra.split()
         olds.append(e if e[0] in ("social", "telegram", "preset", "gain") else [cmd[0]] + e)
 bad = []
-if len(olds) < 14: bad.append("the Old names table reads %d old names, expected 14" % len(olds))
-# 1. still accepted, with the old_name line (until 1.1)
+if len(olds) < 14: bad.append("the table reads %d removed names, expected 14" % len(olds))
+# 1. refused, with the name to use, whatever follows it
 env = dict(os.environ)
+src = open("bin/zenithboard").read()
+if "old_name" in src: bad.append("bin/zenithboard still has an old_name line")
 for o in olds:
-    probe = o + (["list"] if o[-1] in ("presets",) else [])
-    if o in (["show"], ["threads"], ["style"], ["gain", "check"]):
-        r = subprocess.run(["bash", "bin/zenithboard"] + probe, capture_output=True, text=True, env=env, timeout=60)
-        if "old name" not in r.stderr: bad.append("%s: no old-name line (%r)" % (" ".join(o), r.stderr[-120:]))
-    elif not re.search(r"(?m)^\s+[a-z|\"-]*\b%s\b[a-z|\"-]*\).*?old_name|old_name \"?%s" % (re.escape(o[-1]), re.escape(" ".join(o))), open("bin/zenithboard").read()):
-        bad.append("%s: not answered by bin/zenithboard with an old-name line" % " ".join(o))
+    for tail in ([], ["on"], ["list"]):
+        r = subprocess.run(["bash", "bin/zenithboard"] + o + tail, capture_output=True, text=True, env=env, timeout=60)
+        if r.returncode == 0 or ('"zenithboard %s" was removed in 1.1.0: use "zenithboard ' % " ".join(o)) not in r.stderr or r.stdout.strip():
+            bad.append("%s %s: not refused as a removed name (%d, %r)" % (" ".join(o), " ".join(tail), r.returncode, (r.stderr or r.stdout)[-120:]))
 # 2. the console sends none of them
 spec = importlib.util.spec_from_file_location("ca", "flightinfo/console_actions.py"); ca = importlib.util.module_from_spec(spec)
 sys.path.insert(0, "flightinfo"); spec.loader.exec_module(ca)
@@ -111,12 +110,12 @@ for f in files:
     for o in olds:
         for m in re.finditer(r"zenithboard %s\b(?![-|])" % re.escape(" ".join(o)), text):
             line = text[: m.start()].count("\n") + 1
-            if "old name" in text.splitlines()[line - 1] or "old_name" in text.splitlines()[line - 1]: continue
+            if "was removed in 1.1.0" in text.splitlines()[line - 1]: continue
             bad.append("%s:%d names the old %s" % (f, line, " ".join(o)))
-print("\n".join(bad) if bad else "OK %d old names" % len(olds))
+print("\n".join(bad) if bad else "OK %d removed names" % len(olds))
 PY
 )
-check "old names: still accepted, and nothing uses them ($old_out)" '[ "${old_out#OK}" != "$old_out" ]'
+check "removed names: each refused with the name to use, and nothing uses them ($old_out)" '[ "${old_out#OK}" != "$old_out" ]'
 [ "${old_out#OK}" != "$old_out" ] || printf '%s\n' "$old_out" >&2
 
 [ "$fail" = 0 ] && echo "ALL OK" || { echo "SOME FAILED"; exit 1; }
