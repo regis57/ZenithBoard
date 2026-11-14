@@ -985,7 +985,7 @@ window.ZBI18N.start({ part: "console" }, function () {
     ["type_code", t("the ICAO type code (B738)")], ["category", t("airliner, cargo aircraft, business jet, helicopter…")],
     ["from", t("departure, city and code: Dublin (DUB)")], ["to", t("arrival, city and code")], ["from_code", t("the departure's code")],
     ["to_code", t("the arrival's code")], ["altitude", t("the altitude")], ["speed", t("the ground speed")], ["climb", t("climbing, descending or level")],
-    ["heading", t("where it is heading: south-east")], ["squawk", t("its transponder code")], ["why", t("why it is posted: A rare visitor.")],
+    ["heading", t("where it is heading: south-east")], ["arrow", t("the same, as an arrow: \u2198")], ["squawk", t("its transponder code")], ["why", t("why it is posted: A rare visitor.")],
     ["area", t("your place name, as the posts say it")], ["time", t("the time")], ["date", t("the date")],
     ["photo", t("its Planespotters page, when photo links are on")], ["tracker", t("its page on ADSB Exchange's map")],
     ["hashtags", t("your hashtags (then not added again at the end)")]];

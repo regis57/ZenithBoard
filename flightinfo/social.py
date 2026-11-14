@@ -806,7 +806,7 @@ def what_words(p, L):
     return typ or (L.t("helicopter") if heli else "")
 
 
-def styled_text(shape, p, c, why=None, now=None):
+def styled_text(shape, p, c, why=None, now=None, heading=""):
     """The post's text in one of the shapes other than factual, or None when the flight lacks what the shape needs
     (an airline or a type) or the result is too long: the factual text is used then. 0.51.0: each shape is a template
     of the posts' catalogue, in the posts' language (SOCIAL_LANG)."""
@@ -839,7 +839,7 @@ def styled_text(shape, p, c, why=None, now=None):
                    what=what, to=b, area=area, altitude=alt, callsign=cs, **{"from": a})
     elif shape == "board":
         lines = ["\u2708 " + " · ".join(x for x in (cs, reg) if x), "%s \u2192 %s" % (a, b) if a and b else "",
-                 " · ".join(x for x in (typ, alt, speed) if x), L.t("[{area|cap} at {time}]", area=area, time=clock)]
+                 " · ".join(x for x in (typ, alt, speed, heading) if x), L.t("[{area|cap} at {time}]", area=area, time=clock)]
         text = "\n".join(x for x in lines if x.strip())
     elif shape == "spotter":
         rest = L.t("[{altitude}][ {area}][ at {speed}]", altitude=alt, area=area, speed=speed).strip()
@@ -860,7 +860,27 @@ def styled_text(shape, p, c, why=None, now=None):
     return text if len(text) <= STYLED_MAX else None
 
 
+HEADING_SHAPES = ("factual", "board")       # the two made of parts; the three sentences and the owner's templates are left as written
+
+
 def post_text(p, c, why=None, credit=None, photo=None, shape=None):
+    """The post as it goes out. 1.1: with where the aircraft is heading ("↘ south-east") after the altitude, by
+    default, **when everything else still fits**: the post with the heading must be the post without it plus the
+    heading, to the letter. If its room would cost a hashtag, the photo's line, a part of the text or the board style
+    itself, the heading is what is left out (asked for by the owner, 1 November 2026: "il faut que tout rentre")."""
+    shape = shape or sentence_for(c)
+    plain = _post_text(p, c, why, credit, photo, shape)
+    bit = heading_bit(p, post_lang.of(c)) if shape in HEADING_SHAPES else ""
+    if not bit:
+        return plain
+    full = _post_text(p, c, why, credit, photo, shape, heading=bit)
+    for added in (" \u00b7 " + bit, bit + " \u00b7 ", bit):
+        if added in full and full.replace(added, "", 1) == plain:
+            return full
+    return plain
+
+
+def _post_text(p, c, why=None, credit=None, photo=None, shape=None, heading=""):
     """The post, short, nothing the wall does not know. Starts with the flight ("Flight Etihad #ETD11K"), ends with
     the place ("above Trémery"); a range record ends with where it was seen from instead, since it was nowhere near
     overhead. credit: the map's credit line, when the picture has a map. 0.51.0: in the posts' language
@@ -902,9 +922,11 @@ def post_text(p, c, why=None, credit=None, photo=None, shape=None):
     height = L.t("altitude {altitude}", altitude=alt) if alt else ""
     if record:
         parts.append(height)
+        parts.append(heading)
         parts.append(L.join([L.t("range record for 30 days: {range}", range=range_words(p["distance_km"], L, units)), seen_from(c, L)]))
     else:
         parts.append(height)
+        parts.append(heading)
         parts.append(area_words(c, L))
     text = " · ".join(x for x in parts if x)          # starts with the flight itself: no icon in front of it
     if why in ("rare", "heavy"):                 # 0.29.0: the reason, said first (the others already say theirs)
@@ -916,7 +938,7 @@ def post_text(p, c, why=None, credit=None, photo=None, shape=None):
         if mine:
             text, placed = mine, "{hashtags" in template
     elif shape != "factual":
-        text = styled_text(shape, p, c, why) or text
+        text = styled_text(shape, p, c, why, heading=heading) or text
     tags = "" if placed else post_hashtags(p, c)    # a template that placed them has them once
     rtag, keep = reg_hashtag(p), 0
     if rtag:
@@ -957,12 +979,32 @@ TEMPLATES_FILE = os.environ.get("ZENITHBOARD_SOCIAL_TEMPLATES") or "/etc/zenithb
 TEMPLATE_MAX = 250               # a filled template longer than this gives the factual words (room for the longest map credit, 46)
 TEMPLATE_TAGS = ("flight", "callsign", "airline", "airline_country", "flag", "registration", "reg_country", "type",
                  "type_code", "category", "from", "to", "from_code", "to_code", "altitude", "speed", "climb", "heading",
-                 "squawk", "why", "area", "time", "date", "photo", "tracker", "hashtags")
+                 "arrow", "squawk", "why", "area", "time", "date", "photo", "tracker", "hashtags")
 WHY_WORDS = {"rare": N_("A rare visitor."), "military": N_("Military traffic."), "heavy": N_("A heavy overhead."),
              "helicopter": N_("A helicopter."), "farthest": N_("A new 30-day range record.")}
 LIST_WORDS = (N_("{a}, {b}"), N_("{a}; {b}"), N_("{sentence}."))   # post_lang's join and a sentence's full stop (0.51.0)
 COMPASS = (N_("north"), N_("north-east"), N_("east"), N_("south-east"), N_("south"), N_("south-west"), N_("west"),
            N_("north-west"))
+# 1.1: the same eight ways as arrows, north up as on the picture's map. The default texts say the heading with one
+# ("↘ south-east"): an arrow is read in every language, where "heading south-east" would have been one more sentence
+# to translate twenty-two times without a reviewer.
+ARROWS = ("\u2191", "\u2197", "\u2192", "\u2198", "\u2193", "\u2199", "\u2190", "\u2196")
+
+
+def compass_index(track):
+    """0 (north) to 7 (north-west) for a track in degrees, or None when the aircraft sent none."""
+    if isinstance(track, bool) or not isinstance(track, (int, float)) or track != track or track in (float("inf"), float("-inf")):
+        return None
+    return int((float(track) % 360 + 22.5) // 45) % 8
+
+
+def heading_bit(p, L):
+    """"↘ south-east": where the aircraft is heading, from its own track (never a direction from the antenna). Empty
+    when it sent no track, or on the ground (a track there is the way the nose points, or noise)."""
+    i = compass_index(p.get("track"))
+    if i is None or p.get("on_ground"):
+        return ""
+    return ARROWS[i] + " " + L.t(COMPASS[i])
 
 
 def custom_templates(c=None):
@@ -1022,8 +1064,8 @@ def template_values(p, c, why, L, now=None):
     r_cc = server.icao_country(p.get("hex", "")) if p.get("hex") else ""
     vr = p.get("vrate_fpm")
     climb = "" if not isinstance(vr, (int, float)) else (L.t("climbing") if vr > 300 else L.t("descending") if vr < -300 else L.t("level"))
-    track = p.get("track")
-    heading = L.t(COMPASS[int((float(track) % 360 + 22.5) // 45) % 8]) if isinstance(track, (int, float)) else ""
+    way = compass_index(p.get("track"))
+    heading = L.t(COMPASS[way]) if way is not None else ""
     hexc = str(p.get("hex") or "").lower()
     photo = str(p.get("photo_link") or "") if server.cfg_bool(c, "SOCIAL_PHOTOLINK", "0") and PHOTO_PAGE.match(str(p.get("photo_link") or "")) else ""
     squawk = str(p.get("squawk") or "")
@@ -1035,7 +1077,7 @@ def template_values(p, c, why, L, now=None):
         "type": nice_type(p), "type_code": p.get("type") or "", "category": category_words(p, L),
         "from": a_words, "to": b_words, "from_code": a_code, "to_code": b_code,
         "altitude": metres(p.get("alt_ft"), units, L) or "", "speed": speed_words(p.get("gs_kt"), units, L),
-        "climb": climb, "heading": heading, "squawk": squawk if re.match(r"^[0-7]{4}$", squawk) else "",
+        "climb": climb, "heading": heading, "arrow": ARROWS[way] if way is not None else "", "squawk": squawk if re.match(r"^[0-7]{4}$", squawk) else "",
         "why": L.t(WHY_WORDS[why]) if why in WHY_WORDS else "", "area": area_words(c, L),
         "time": L.clock(time.localtime(now).tm_hour, time.localtime(now).tm_min), "date": L.day_month(datetime.date.fromtimestamp(now or time.time())),
         "photo": photo, "tracker": ("https://globe.adsbexchange.com/?icao=" + hexc) if re.match(r"^[0-9a-f]{6}$", hexc) else "",
@@ -1872,7 +1914,8 @@ TAG_HELP = (("flight", "the flight number when known (FR4512), else the callsign
             ("category", "airliner, cargo aircraft, business jet, helicopter, military aircraft..."),
             ("from", "departure, city and code: Dublin (DUB)"), ("to", "arrival, city and code"), ("from_code", "the departure's code"),
             ("to_code", "the arrival's code"), ("altitude", "the altitude, in the posts' units"), ("speed", "the ground speed"),
-            ("climb", "climbing, descending or level"), ("heading", "where it is heading: south-east"), ("squawk", "its transponder code"),
+            ("climb", "climbing, descending or level"), ("heading", "where it is heading: south-east"),
+            ("arrow", "the same as an arrow, north up: \u2198"), ("squawk", "its transponder code"),
             ("why", "why it is posted: A rare visitor."), ("area", "your place name, as the posts say it (above Trémery)"),
             ("time", "the time on the Pi's clock"), ("date", "the date"), ("photo", "its Planespotters page, when photo links are on"),
             ("tracker", "its page on ADSB Exchange's map"), ("hashtags", "your hashtags (then not added again at the end)"))
