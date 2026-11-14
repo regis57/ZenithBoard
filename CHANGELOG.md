@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.2 — 14 November 2026
+
+- **A Telegram line left with only an arrow or a dot is dropped.** Seen in the owner's chat on PJZ600, a business jet with no route: his own template writes `{from} → {to}` without brackets, and the message had a line holding only *→*. A line whose tags are all empty, leaving nothing but the template's own signs (arrows, dots, dashes, brackets), now goes like an empty line. A line with a word or a figure in it is kept as written.
+- **The closest distance is confirmed on the real Pi and against Telegram itself**: the same message, sent at 21:33 by 1.1.0, was completed by the bot's edit with *au plus près : 1,2 km*. 1.1.0's notes said the edit had only been tried against a stand-in.
+
 ## 1.1.1 — 14 November 2026
 
 - **The rest of the forty prefixes checked** against adsbdb's real answers, from the owner's `zenithboard stats gaps`. Seventeen of the twenty-four are right. **`OCN` is *Discover Airlines*** on the wall, with or without `AIRLINE_LOOKUP`: adsbdb answers *O Air*. **`OOM` and `ECA` are never asked and stay bare**: adsbdb names them *Zoom Airlines* and *Eurocypria Airlines*, which are not the aircraft heard over Moselle today, and their right name was not found; no name rather than a wrong one. `KMM`, `LUA`, `HBJ` and `FJD` are unknown to adsbdb and stay bare. Over the forty: thirty-one right, three corrected in the built-in list (`JAF`, `PTN`, `OCN`), two left bare on purpose, four unknown.
