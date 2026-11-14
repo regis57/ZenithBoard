@@ -148,6 +148,7 @@ ZenithBoard $ZB_VERSION - ADSB Flight Info
   zenithboard telegram remove           forget the token and the chat, stop the service (asks you to type remove)
   zenithboard photos on|off             aircraft photos on the wall (needs internet on the Pi)
   zenithboard photos test [HEX]         check that this Pi can fetch photos from Planespotters
+  zenithboard squawk-banner on|off      the wall says an emergency squawk (7500 7600 7700) heard anywhere in range, for 30 seconds (default: off)
   zenithboard routes on|off             show where each flight comes from / goes to (looked up by callsign, needs internet)
   zenithboard data update               refresh the aircraft model list now (names for the silhouettes)
   zenithboard data auto on|off          monthly automatic refresh of that list (default: on)
@@ -469,6 +470,13 @@ case "${1:-}" in
       off) root_or_die; wall_photos_set 0 ;;
       test) python3 "$ZB_HOME/tools/photo_check.py" "${3:-}" ;;
       *) die "Usage: zenithboard photos on|off|test [HEX]" ;;
+    esac ;;
+  squawk-banner)
+    case "${2:-}" in
+      on)  root_or_die; wall_squawk_banner_set 1 ;;
+      off) root_or_die; wall_squawk_banner_set 0 ;;
+      "")  echo "Emergency squawk banner on the wall: $( [ "$(cfg_get SQUAWK_BANNER 0)" = 1 ] && echo on || echo off)   (change: sudo zenithboard squawk-banner on|off)" ;;
+      *) die "Usage: zenithboard squawk-banner on|off" ;;
     esac ;;
   routes)
     [ "${2:-}" != test ] || { python3 "$ZB_HOME/tools/route_check.py" "${3:-}"; exit $?; }

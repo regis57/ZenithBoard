@@ -471,6 +471,77 @@ class AirlineByDesignatorTests(unittest.TestCase):
         self.assertEqual(asked, ["JFA"])
 
 
+class SquawkBannerTests(unittest.TestCase):
+    """1.2 (asked by the owner, 26 October 2026): the wall is told of the emergency squawks heard anywhere in range, by
+    the rule the Telegram service has believed them by since 0.99.6."""
+
+    def setUp(self):
+        server._wall_squawks["watch"] = server.SquawkWatch()
+
+    def ac(self, **more):
+        return dict({"hex": "4CA7B1", "flight": "EZY17QZ ", "squawk": "7700", "seen": 1, "lat": 50.04, "lon": 8.56}, **more)
+
+    def test_a_code_is_believed_on_two_reads_or_with_the_aircrafts_own_status(self):
+        data = {"aircraft": [self.ac()]}
+        self.assertEqual(server.squawks_for_wall(data, 1000.0), [], "one reply decoded once can be a bad decode")
+        self.assertEqual(server.squawks_for_wall(data, 1002.0), [])
+        self.assertEqual(server.squawks_for_wall(data, 1005.0), [{"hex": "4ca7b1", "code": "7700", "flight": "EZY17QZ"}])
+        server._wall_squawks["watch"] = server.SquawkWatch()
+        got = server.squawks_for_wall({"aircraft": [self.ac(squawk="1000", emergency="nordo")]}, 1000.0)
+        self.assertEqual(got, [{"hex": "4ca7b1", "code": "7600", "flight": "EZY17QZ"}])
+
+    def test_never_a_position_and_nothing_but_letters_and_figures(self):
+        data = {"aircraft": [self.ac(flight="<b>x</b> EZY1\n", emergency="general")]}
+        got = server.squawks_for_wall(data, 1000.0)
+        self.assertEqual(got, [{"hex": "4ca7b1", "code": "7700", "flight": "BXBEZY1"}])
+        self.assertEqual(set(got[0]), {"hex", "code", "flight"})
+
+    def test_what_is_not_an_emergency_or_not_an_aircraft_says_nothing(self):
+        rows = [self.ac(squawk="7000"), self.ac(hex="zzzzzz"), self.ac(seen=120), self.ac(seen="x"), None, "x", {}, self.ac(squawk=7700, hex="~4ca7b1")]
+        for now in (1000.0, 1005.0):
+            self.assertEqual(server.squawks_for_wall({"aircraft": rows}, now), [])
+        for bad in (None, {}, {"aircraft": None}, {"aircraft": "x"}):
+            self.assertEqual(server.squawks_for_wall(bad, 1010.0), [])
+        many = {"aircraft": [self.ac(hex="4ca7%02x" % i, emergency="general") for i in range(12)]}
+        self.assertEqual(len(server.squawks_for_wall(many, 1020.0)), 5, "five at most: a wall shows one at a time")
+
+    def test_the_telegram_service_believes_by_the_same_rule(self):
+        import telegram
+        self.assertIs(telegram.Squawks, server.SquawkWatch)
+        self.assertEqual((telegram.CONFIRM_S, telegram.STATUS_CODE, tuple(sorted(telegram.EMERGENCY))),
+                         (server.SQUAWK_CONFIRM_S, server.SQUAWK_STATUS, server.SQUAWK_CODES))
+
+    def test_the_handler_gives_them_and_the_demo_none(self):
+        import http.client, tempfile, threading
+        data = {"now": 1, "aircraft": [self.ac(emergency="general")]}
+        saved = {n: getattr(server, n) for n in ("read_aircraft", "CONFIG_FILE")}
+        self.addCleanup(lambda: [setattr(server, n, v) for n, v in saved.items()])
+        server.read_aircraft = lambda cfg: (data, "/run/readsb/aircraft.json")
+        with tempfile.NamedTemporaryFile("w", suffix=".env", delete=False) as fh:
+            cfgpath = fh.name
+        self.addCleanup(os.unlink, cfgpath)
+        server.CONFIG_FILE = cfgpath
+        httpd = server.WallServer(("127.0.0.1", 0), server.Handler)
+        threading.Thread(target=httpd.serve_forever, daemon=True).start()
+        self.addCleanup(httpd.server_close)
+        self.addCleanup(httpd.shutdown)
+
+        def get(path, text):
+            with open(cfgpath, "w") as fh:
+                fh.write("LAT=49.25\nLON=6.2\nRADIUS=5\nSHOW_PHOTOS=0\nSHOW_ROUTES=0\n" + text)
+            server._cfg_cache.update(mtime=None)
+            c = http.client.HTTPConnection("127.0.0.1", httpd.server_address[1], timeout=5); c.request("GET", path)
+            body = json.loads(c.getresponse().read()); c.close(); return body
+        got = get("/api/planes", "")
+        self.assertEqual(got["planes"], [], "the aircraft is far outside the wall's radius")
+        self.assertEqual(got["squawks"], [{"hex": "4ca7b1", "code": "7700", "flight": "EZY17QZ"}], "and heard all the same")
+        self.assertEqual(get("/api/planes", "DEMO=1\n")["squawks"], [])
+        self.assertIs(get("/api/config", "")["squawk_banner"], False)
+        self.assertIs(get("/api/config", "SQUAWK_BANNER=1\n")["squawk_banner"], True)
+        self.assertEqual(server.DEFAULTS["SQUAWK_BANNER"], "0", "off by default")
+        self.assertEqual(get("/api/config", "PRESET_KITCHEN=squawk=1 mode=flap\n")["presets"], {"kitchen": {"squawk": "1", "mode": "flap"}})
+
+
 class LearnedAirlineTests(unittest.TestCase):
     """0.17.0: a callsign outside the built-in list gets its airline name from the route answer the wall already asks for."""
 

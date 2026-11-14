@@ -35,7 +35,11 @@
   function loadPrefs() {
     try { prefs = JSON.parse(localStorage.getItem("zenithboard") || "{}") || {}; } catch (e) { prefs = {}; }
     var q = new URLSearchParams(location.search);       // ?units=imperial&radius=5&cycle=8&theme=green&mode=flap
-    ["units", "radius", "cycle", "theme", "mode", "flags"].forEach(function (k) { if (q.has(k)) prefs[k] = q.get(k); });
+    ["units", "radius", "cycle", "theme", "mode", "flags", "squawk"].forEach(function (k) { if (q.has(k)) prefs[k] = q.get(k); });
+    // 1.2: ?squawk_test=7700 shows the emergency banner once, with an invented callsign, to see it before the day
+    // it is needed; nothing is heard, nothing is kept
+    var st = q.get("squawk_test");
+    if (SQUAWK_WORDS[st]) testSquawk = st;
     if (q.has("p")) prefs.preset = String(q.get("p")).toLowerCase();   // a named preset of the Pi's (0.21.0), applied once /api/config is in
     savePrefs();
   }
@@ -61,6 +65,7 @@
   }
   function mode() { return prefs.mode === "flap" || prefs.mode === "dots" ? prefs.mode : (server.display_mode === "flap" ? "flap" : "dots"); }
   function flagsOn() { return prefs.flags !== undefined ? (prefs.flags === "1" || prefs.flags === true) : server.flags !== false; }
+  function squawkOn() { return prefs.squawk !== undefined ? (prefs.squawk === "1" || prefs.squawk === true) : server.squawk_banner === true; }
   function cols() { return flagsOn() ? COLS_FLAGS : COLS; }
   function applyTheme() { document.body.setAttribute("data-theme", theme()); }
 
@@ -177,8 +182,43 @@
     at(reg, FLAG_Y1); at(made, FLAG_Y2);
   }
 
+  // ------------------------------------------------------------------ the emergency squawk banner (1.2)
+  // Asked for by the owner on 26 October 2026: when 7500, 7600 or 7700 is heard anywhere in the antenna's range, not
+  // only inside the wall's radius, the wall says so for thirty seconds: the code, what it means, the callsign. Off
+  // unless the Pi's setting (SQUAWK_BANNER) or this tablet's gear turns it on. Once per aircraft and code in an hour:
+  // a code heard for forty minutes is one event, not eighty banners. Nothing is published anywhere.
+  var SQUAWK_WORDS = { "7500": ["UNLAWFUL", "INTERFERENCE"], "7600": ["RADIO", "FAILURE"], "7700": ["GENERAL", "EMERGENCY"] };
+  var SQUAWK_SHOW_MS = 30000, SQUAWK_AGAIN_MS = 3600000;
+  var alarm = null, alarmSeen = {}, testSquawk = null;
+  function noteSquawks(list, now, force) {
+    Object.keys(alarmSeen).forEach(function (k) { if (now - alarmSeen[k] > SQUAWK_AGAIN_MS) delete alarmSeen[k]; });
+    if (alarm && now >= alarm.until) alarm = null;
+    if (alarm || !(squawkOn() || force)) return;
+    (list || []).some(function (s) {
+      var key = s && s.hex + ":" + s.code;
+      if (!s || !SQUAWK_WORDS[s.code] || alarmSeen[key] !== undefined) return false;
+      alarmSeen[key] = now;
+      alarm = { code: s.code, who: String(s.flight || s.hex || "").toUpperCase().slice(0, 8), until: now + SQUAWK_SHOW_MS };
+      return true;
+    });
+  }
+  function alarmScreen() {
+    var g = blank(), w = SQUAWK_WORDS[alarm.code], who = alarm.who;
+    scroll.stop();
+    textCenter(g, "EMERGENCY SQUAWK", 2, 1);
+    textCenter(g, alarm.code, 14, 3);
+    textCenter(g, w.join(" "), 41, 1);
+    textCenter(g, who, 55, 2);
+    // a frame of dots round the wall, so that it reads as something else than an aircraft overhead from across a room
+    for (var x = 0; x < GW; x += 2) { put(g, x, GH - 1, ON); }
+    for (var x2 = 0; x2 < GW; x2 += 2) { put(g, x2, 11, ON); put(g, x2, 51, ON); }
+    return { g: g, sig: "squawk" + alarm.code + who, plane: null,
+             lines: ["", centered("EMERGENCY SQUAWK"), "", centered(alarm.code), centered(w[0]), centered(w[1]), "", centered(who), ""] };
+  }
+
   function centered(str) { str = String(str); var n = Math.max(0, Math.floor((FLAP_COLS - str.length) / 2)); return new Array(n + 1).join(" ") + str; }
   function buildScreen() {
+    if (alarm && performance.now() < alarm.until && error !== "offline" && error !== "host") return alarmScreen();
     var g = blank(), u = units();
     if (error || !planes.length) scroll.stop();            // nothing with a long name on screen: stop moving
     if (error === "offline") {
@@ -469,8 +509,12 @@
       if (serverId && d.server_id && d.server_id !== serverId) { location.reload(); return; }   // server restarted/upgraded
       serverId = d.server_id || serverId;
       error = d.error ? d.error : null; planes = d.planes || []; total = d.total || 0;
+      var before = alarm, heard = d.squawks || [];
+      var trying = !!testSquawk;
+      if (trying) { heard = [{ hex: "000000", flight: "TEST123", code: testSquawk }].concat(heard); testSquawk = null; }
+      noteSquawks(heard, performance.now(), trying);   // the page's own clock: a tablet whose date jumps keeps its thirty seconds
       var switched = ensureCurrent();
-      show(buildScreen(), switched);
+      show(buildScreen(), switched || before !== alarm);      // the banner comes and goes with the wall's own wipe
     }).catch(function () {
       if (++failures === 3) { error = "offline"; show(buildScreen(), false); }
       // self-heal, 0.54.4: only when the Pi answers again. A reload with the network still down meets the browser's own
@@ -506,6 +550,7 @@
     document.getElementById("s-theme").value = theme();
     document.getElementById("s-mode").value = mode();
     document.getElementById("s-flags").value = flagsOn() ? "1" : "0";
+    document.getElementById("s-squawk").value = squawkOn() ? "1" : "0";
     versionLine(document.getElementById("s-version"), server.version);
     // The way to the statistics page, beside the version and in the same grey. It is offered only while the page
     // has something to show: with statistics off, /stats says so rather than charting nothing, and a link to a
@@ -533,6 +578,7 @@
     document.getElementById("s-theme").onchange = function () { prefs.theme = this.value; savePrefs(); applyTheme(); resize(); };
     document.getElementById("s-mode").onchange = function () { prefs.mode = this.value; savePrefs(); applyMode(); };
     document.getElementById("s-flags").onchange = function () { prefs.flags = this.value; savePrefs(); scroll.stop(); lastSig = ""; poll(); };
+    document.getElementById("s-squawk").onchange = function () { prefs.squawk = this.value; savePrefs(); if (this.value !== "1") alarm = null; lastSig = ""; poll(); };
     document.getElementById("s-reset").onclick = function () { var m = mode(); prefs = {}; savePrefs(); applyTheme(); fillPanel(); startCycle(); if (mode() !== m) applyMode(); else { lastSig = ""; poll(); resize(); } };
     document.getElementById("s-full").onclick = function () {
       var el = document.documentElement; (el.requestFullscreen || el.webkitRequestFullscreen || function () {}).call(el); keepAwake();

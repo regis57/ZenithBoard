@@ -83,6 +83,27 @@ Flags are a dot-matrix matter. The split-flap board is sixteen letter drums and 
 
 At the foot of the gear panel sits one grey line: the version the wall is running, and behind it the release notes for that version on GitHub. When statistics are on, the way to the [statistics page](Statistics) sits beside it in the same grey; switch them off and the link goes, because the page would only say it is off. It is a link and nothing more — the page asks GitHub for nothing, so a wall with no way out to the internet still names its version. The statistics page carries the same line at its foot.
 
+## The emergency squawk banner (1.2, off by default)
+
+![The banner on the dots: EMERGENCY SQUAWK, 7700, GENERAL EMERGENCY, the callsign](https://raw.githubusercontent.com/regis57/ZenithBoard/main/docs/images/wall-squawk-dots.png)
+
+When an aircraft squawks **7500** (unlawful interference), **7600** (radio failure) or **7700** (general emergency) **anywhere in the antenna's range**, not only inside the wall's radius, the wall leaves what it was showing and says so for **thirty seconds**: the code, what it means, and the callsign (the aircraft's address when it sends none). Then it is the wall again.
+
+| | |
+|---|---|
+| For every screen | `sudo zenithboard squawk-banner on` (or `off`), or menu *2 The wall → 2 What it shows → 4* |
+| For this tablet only | the gear, **Emergency squawks**, or `?squawk=1` in the address (`?squawk=0` to keep it off on one screen) |
+| To see it now | add `?squawk_test=7700` (or `7500`, `7600`) to the wall's address: the banner once, with the callsign TEST123, the setting on or off |
+
+* **Once per aircraft and code in an hour**: a code heard for forty minutes is one banner, not eighty. Another aircraft, or another code, is another banner once the first has had its thirty seconds.
+* **A code is believed** the way the [Telegram messages](Telegram) have believed it since 0.99.6: heard on two reads at least four seconds apart, or at once when the aircraft's own emergency status says the same. One reply decoded wrongly once shows nothing.
+* **Nothing is published.** The banner is on your own wall, in your own room; an emergency is not a fact to broadcast. The wall is told the code, the callsign and the address, never where the aircraft is.
+* On the split-flap board the same words turn on the flaps, the meaning on two rows:
+
+![The banner on the split-flap board](https://raw.githubusercontent.com/regis57/ZenithBoard/main/docs/images/wall-squawk-flap.png)
+
+The words are English, like the rest of the wall. A tablet shows a banner only for what is heard while its page is open; the demo's invented sky has no emergency.
+
 ## Staying up
 
 The page refreshes itself. It polls `/api/planes` for the aircraft inside the radius, cycles through them at `CYCLE_SECONDS` each, keeps the screen awake, and reloads itself if the Pi restarts — so a power cut ends with the wall back on screen and nobody touching the tablet. If the decoder stops answering it says **NO DATA – RECEIVER NOT RESPONDING – CHECK THE DECODER** instead of showing stale aircraft. If it is the tablet that no longer reaches the Pi (three polls in a row fail: the Wi-Fi, the Pi restarting) it says **NO ANSWER – THE TABLET LOST THE PI – CHECK THE WI-FI** (0.54.4; before, it blamed the decoder). After a minute of that it tries to reload itself, but only once the Pi answers again: a reload with the network still down would leave the browser's own error page on the wall. A poll that gets no answer at all — the Pi frozen, or the Wi-Fi up but nothing coming back — is given up after five seconds and counts as a failed one, and the wall never has more than one poll out at a time (0.99.17: before, such polls waited for ever and piled up, and the wall kept its last aircraft). Opened by a name the Pi does not answer to (a name of your own that is not in `CONSOLE_HOSTS`), the wall says **WRONG NAME – USE THE PI ADDRESS – OR ADD THIS NAME TO CONSOLE_HOSTS** rather than NO ANSWER, and does not reload itself: the Pi is there, it is the name that is refused. `sudo zenithboard config-set CONSOLE_HOSTS your.name`, or the Pi's address, and the wall comes back by itself.

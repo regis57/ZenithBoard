@@ -70,7 +70,7 @@ ASK_EVERY_S = 15
 SETTLE_S = social.SETTLE_S        # a crossing whose route or model the wall is still looking up waits up to this long
 CROSSING_GAP_S = social.CROSSING_GAP_S
 SQUAWK_GAP_S = 3600               # the same flight squawking the same code again within the hour is the same event
-CONFIRM_S = 4                     # a code is believed once seen on two reads this far apart, or with the aircraft's own
+CONFIRM_S = server.SQUAWK_CONFIRM_S   # a code is believed once seen on two reads this far apart, or with the aircraft's own
                                   # emergency status saying the same: one bad decode of a reply never sends a message
 SEND_EVERY_S = 3.1                # Telegram: about 20 messages a minute into one group, one a second into a private chat
 SENDS_PER_LOOK = 3
@@ -83,7 +83,7 @@ NEAR_TOWN_KM = 15
 
 EMERGENCY = {"7500": N_("Unlawful interference (hijacking)"), "7600": N_("Radio failure (lost communications)"),
              "7700": N_("General emergency")}
-STATUS_CODE = {"unlawful": "7500", "nordo": "7600", "general": "7700"}      # readsb's "emergency" field
+STATUS_CODE = server.SQUAWK_STATUS      # readsb's "emergency" field
 
 # The defaults. The words are the posts' catalogue's; the rest is tags, in every language alike. An empty [part] goes,
 # and so does a line left empty.
@@ -307,30 +307,9 @@ def count(s, kind, now):
 
 
 # --------------------------------------------------------------------------- what is worth a message
-class Squawks(object):
-    """The emergency codes heard at each read; a code counts once it is heard twice, CONFIRM_S apart, or with the
-    aircraft's own emergency status saying the same."""
-    def __init__(self):
-        self.heard = {}                            # "hex:code" -> [first, last]
-
-    def look(self, aircraft, now):
-        out = []
-        for ac in aircraft or []:
-            h = str(ac.get("hex", "")).lower().strip()
-            if not re.match(r"^[0-9a-f]{6}$", h) or float(ac.get("seen", 0) or 0) > 60:
-                continue
-            own = STATUS_CODE.get(str(ac.get("emergency") or "").lower())
-            sq = str(ac.get("squawk") or "").strip()
-            code = sq if sq in EMERGENCY else own
-            if not code:
-                continue
-            v = self.heard.setdefault(h + ":" + code, [now, now])
-            v[1] = now
-            if own == code or v[1] - v[0] >= CONFIRM_S:
-                out.append((ac, code))
-        for k in [k for k, v in self.heard.items() if now - v[1] > 120]:
-            del self.heard[k]
-        return out
+# 1.2: the detection lives in the wall's server (server.SquawkWatch), which the wall's banner uses too: one rule for
+# believing a code. The name is kept for what this service and its tests call.
+Squawks = server.SquawkWatch
 
 
 def squawk_seen(state, ac, code, now):

@@ -84,11 +84,12 @@ Every `zenithboard` command, grouped by what you are trying to do. `zenithboard`
 | `zenithboard telegram remove` | yes | Forget the token and the chat, stop the service, delete what it remembers. Asks you to type `remove`; your templates stay |
 | `zenithboard photos on` · `off` | yes | Aircraft photos from Planespotters. Off: the animated sky scene instead |
 | `zenithboard photos test [HEX]` | | Can this Pi reach Planespotters? One real request, and the answer |
+| `zenithboard squawk-banner on` · `off` | yes (to change) | 1.2: the wall shows a banner for thirty seconds when 7500, 7600 or 7700 is heard anywhere in the antenna's range: the code, what it means, the callsign. Off by default; a tablet can choose for itself in its gear. See it with `?squawk_test=7700` in the wall's address |
 | `zenithboard routes on` · `off` | yes | Origin and destination, looked up by callsign. Off: no callsign leaves the Pi |
 | `zenithboard routes test [CALLSIGN]` | | Can this Pi reach adsbdb.com? One real route lookup, and the answer |
 | `zenithboard config-set PORT 8090` | yes | Change the wall's port (or any other setting by name; prefer the dedicated commands, they check what you type). The key is a name: capital letters, digits and `_`, starting with a letter; the value is one line (0.99.9) |
 
-A tablet can override the colour, look, units, radius, cycle and flags for itself, with the gear or a link such as `?mode=flap&theme=green&flags=0`. See [The wall](The-wall).
+A tablet can override the colour, look, units, radius, cycle, flags and the emergency squawk banner for itself, with the gear or a link such as `?mode=flap&theme=green&flags=0&squawk=1`. See [The wall](The-wall).
 
 ## The receiver
 

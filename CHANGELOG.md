@@ -1,5 +1,9 @@
 # Changelog
 
+## Toward 1.2 — lot 2, not released yet
+
+- **The emergency squawk banner on the wall** (asked by the owner on 26 October 2026; `SQUAWK_BANNER`, **off by default**). When 7500, 7600 or 7700 is heard anywhere in the antenna's range, not only inside the wall's radius, the wall says so for thirty seconds: *EMERGENCY SQUAWK*, the code, what it means, the callsign; on the dots and on the split-flap board; once per aircraft and code in an hour. `sudo zenithboard squawk-banner on|off`, menu *2 The wall → 2 What it shows → 4*, or each tablet's gear (*Emergency squawks*; `?squawk=1` in its address; a preset's `squawk=1`). **See it before the day it is needed: `?squawk_test=7700`** at the end of the wall's address. Nothing is published, and the wall is told the code, the callsign and the address, never a position. A code is believed by the rule the Telegram service has used since 0.99.6, which now lives in one place (`server.SquawkWatch`). Previewed in headless Chromium (`docs/images/wall-squawk-dots.png`, `wall-squawk-flap.png`); not yet seen on the real wall.
+
 ## 1.1.2 — 14 November 2026
 
 - **A Telegram line left with only an arrow or a dot is dropped.** Seen in the owner's chat on PJZ600, a business jet with no route: his own template writes `{from} → {to}` without brackets, and the message had a line holding only *→*. A line whose tags are all empty, leaving nothing but the template's own signs (arrows, dots, dashes, brackets), now goes like an empty line. A line with a word or a figure in it is kept as written.

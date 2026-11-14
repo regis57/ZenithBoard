@@ -212,13 +212,15 @@ wall_menu() {
 wall_show_menu() {
   local c s
   while true; do
-    c=$(wt_menu "What the wall shows\n\nRadius: $(cfg_get RADIUS)    Units: $(cfg_get UNITS)    Seconds per aircraft: $(cfg_get CYCLE_SECONDS 14)" \
+    c=$(wt_menu "What the wall shows\n\nRadius: $(cfg_get RADIUS)    Units: $(cfg_get UNITS)    Seconds per aircraft: $(cfg_get CYCLE_SECONDS 14)    Emergency squawk banner: $( [ "$(cfg_get SQUAWK_BANNER 0)" = 1 ] && echo on || echo off)" \
       radius "1  Detection radius" \
       units "2  Units: metric, imperial or aviation (everywhere)" \
       cycle "3  Seconds each aircraft stays" \
+      squawk "4  Emergency squawk banner (7500, 7600, 7700)" \
       back "Return to the previous menu") || return 0
     case "$c" in
       radius) change_radius ;;
+      squawk) menu_yesno_apply wall_squawk_banner_set "Show a banner on the wall when an emergency squawk is heard?\n\n7500 (unlawful interference), 7600 (radio failure) or 7700 (general emergency), anywhere in the antenna's range and not only inside the wall's radius: the code, what it means and the callsign, for 30 seconds, once per aircraft in an hour.\n\nNothing is published anywhere. To see it now, add  ?squawk_test=7700  to the wall's address." 17 ;;
       units) settings_units && restart_flightinfo ;;
       cycle)
         while s=$(wt_input "Seconds each aircraft stays on the wall: whole seconds, 2 to 60." "$(cfg_get CYCLE_SECONDS 14)"); do

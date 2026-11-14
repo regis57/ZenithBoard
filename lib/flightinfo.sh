@@ -87,6 +87,13 @@ wall_airlines_set() {   # wall_airlines_set 1|0
   if [ "$1" = 1 ]; then echo "Airline names by callsign are ON: the three letters of a callsign without a known airline are looked up on adsbdb.com. The wall reloads by itself."
   else echo "Airline names by callsign are OFF: no three-letter code is sent to the internet for a name."; fi
 }
+# 1.2 (asked by the owner, 26 October 2026): the wall says an emergency squawk (7500, 7600, 7700) heard anywhere in the
+# antenna's range, for thirty seconds. The default of every screen; a tablet's gear can choose its own. Off by default.
+wall_squawk_banner_set() {   # wall_squawk_banner_set 1|0
+  cfg_set SQUAWK_BANNER "$1"; restart_flightinfo
+  if [ "$1" = 1 ]; then echo "Emergency squawk banner: ON. When 7500, 7600 or 7700 is heard anywhere in range, the wall shows the code, what it means and the callsign for 30 seconds. See it now: open the wall with  ?squawk_test=7700  at the end of its address. The wall reloads by itself."
+  else echo "Emergency squawk banner: OFF. A tablet that turned it on in its own gear panel keeps it."; fi
+}
 wall_routes_set() {   # wall_routes_set 1|0
   cfg_set SHOW_ROUTES "$1"; restart_flightinfo
   if [ "$1" = 1 ]; then echo "Flight routes are ON (origin and destination, looked up by callsign). The wall reloads by itself."

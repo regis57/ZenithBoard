@@ -67,7 +67,7 @@ settings_apply() {
 
 # ---- presets: a name for a set of the tablet's own choices, kept in config.env as PRESET_<NAME>, so that a
 # second screen opens  http://PI:8080/?p=kitchen  instead of a long address. The wall serves them in /api/config.
-PRESET_KEYS="units radius cycle theme mode flags"
+PRESET_KEYS="units radius cycle theme mode flags squawk"
 
 preset_valid_name() { [[ $1 =~ ^[a-z][a-z0-9]{0,15}$ ]]; }
 preset_key_of() { printf 'PRESET_%s' "$(printf '%s' "$1" | tr '[:lower:]' '[:upper:]')"; }
@@ -81,6 +81,7 @@ preset_valid_pair() {   # preset_valid_pair key=value -> 0 when it is one of the
     theme) rule_ok THEME "$v" ;;
     mode) rule_ok DISPLAY_MODE "$v" ;;
     flags) rule_offered FLAGS "$v" ;;
+    squawk) rule_offered SQUAWK_BANNER "$v" ;;   # 1.2: the emergency squawk banner, a tablet's own choice
     *) return 1 ;;
   esac
 }
@@ -90,7 +91,7 @@ preset_add() {   # preset_add NAME key=value...
   preset_valid_name "$name" || { echo "A preset name is 1 to 16 lower-case letters or digits, starting with a letter (kitchen, tv2)." >&2; return 1; }
   [ $# -gt 0 ] || { echo "Give what the preset sets: one or more of  $PRESET_KEYS  as key=value." >&2; return 1; }
   for p in "$@"; do
-    preset_valid_pair "$p" || { echo "Not a tablet setting, or a bad value: $p   (keys: $PRESET_KEYS; mode dots|flap; units metric|imperial|aviation; flags 0|1)" >&2; return 1; }
+    preset_valid_pair "$p" || { echo "Not a tablet setting, or a bad value: $p   (keys: $PRESET_KEYS; mode dots|flap; units metric|imperial|aviation; flags 0|1; squawk 0|1)" >&2; return 1; }
     pairs+=("$p")
   done
   cfg_set "$(preset_key_of "$name")" "${pairs[*]}"
