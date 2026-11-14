@@ -93,7 +93,7 @@ What the message knows comes from the wall (airline, model, route, as for the po
 |---|---|
 | `/etc/zenithboard/telegram.env` | The token and the chat (its id and name). root:zenithboard, mode 0640. Never in `config.env`, a log, a backup, the console or a command line |
 | `/etc/zenithboard/telegram-crossing.txt`, `telegram-squawk.txt` | Your own messages, your words (a backup keeps them) |
-| `/var/lib/zenithboard/telegram/state.json` | The crossings and squawks already written about (an hour), the counts of seven days, the last refusal |
+| `/var/lib/zenithboard/telegram/state.json` | The crossings and squawks already written about (an hour), the counts of seven days, the last refusal. Written when it has changed and before the service stops |
 | `config.env` | `TELEGRAM`, `TELEGRAM_CROSSINGS`, `TELEGRAM_SQUAWKS`, `TELEGRAM_RULES`, `TELEGRAM_LANG`, `TELEGRAM_UNITS` ([Configuration reference](Configuration-reference)) |
 
 The service, `zenithboard-telegram`, runs as the wall's user in the same sandbox as the Bluesky service, text only (about 25 MB). It reaches `api.telegram.org` and the wall on the loopback, nothing else. A backup keeps the switch and your templates; restored on a new card, it asks for the token again (`telegram setup`).
