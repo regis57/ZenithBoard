@@ -23,8 +23,9 @@ SOCIAL_PY="$ZB_HOME/flightinfo/social.py"
 or_text() { if [ -n "$1" ]; then printf '%s' "$1"; else printf '%s' "$2"; fi; }   # a value, or what to say when it is empty
 social_state() { [ "$(cfg_get SOCIAL 0)" = 1 ] && echo on || echo off; }
 social_account() { social_secret_get BLUESKY_HANDLE; }
-SOCIAL_THEMES="amber green red white turquoise"           # the wall's colours; the dark blue went in 0.23.0
-SOCIAL_MAPS="normal night satellite terrain none rotate"
+# the lists and ranges: lib/rules.tsv, the one table (lot 0 after 1.0)
+SOCIAL_THEMES=$(rule_choices THEME)                        # the wall's colours; the dark blue went in 0.23.0
+SOCIAL_MAPS=$(rule_choices SOCIAL_MAP)
 
 # ---- the service
 social_install_units() {
@@ -59,7 +60,7 @@ social_need_tools() {    # what every look needs since 0.24.0: Node (the dots, t
   social_need_node && social_need_pil
 }
 # The look as it is drawn: "dots" was taken out in 0.24.0 and is read as dotmap, like anything unknown
-social_look() { local l; l=$(cfg_get SOCIAL_STYLE dotmap); social_valid_in "$l" dotmap flap alternate && printf '%s' "$l" || printf dotmap; }
+social_look() { local l; l=$(cfg_get SOCIAL_STYLE dotmap); rule_ok SOCIAL_STYLE "$l" && printf '%s' "$l" || printf dotmap; }
 
 # 0.19.0 took Mastodon out. A Pi set up before that keeps its Bluesky account; the Mastodon token and the list of
 # networks are dropped, so no secret stays behind for a feature that is gone. Run by every update; does nothing twice.
@@ -239,8 +240,8 @@ social_set_area() {     # social_set_area [WORDS...|none]
   cfg_set SOCIAL_AREA "$v"
   echo "Place name: $v   (the posts say: $(social_area_reads "$v"))"
 }
-social_valid_radius() { [[ ${1:-} =~ ^[0-9]{1,3}$ ]] && [ "$((10#$1))" -ge 1 ] && [ "$((10#$1))" -le 200 ] || { echo "Sharing radius: whole kilometres, 1 to 200" >&2; return 1; }; }
-social_valid_gap() { [[ ${1:-} =~ ^[0-9]{1,4}$ ]] && [ "$((10#$1))" -le 1440 ] || { echo "Gap: whole minutes, 0 to 1440 (0 = none)" >&2; return 1; }; }
+social_valid_radius() { [[ ${1:-} =~ ^[0-9]{1,3}$ ]] && rule_ok SOCIAL_RADIUS_KM "$1" || { echo "Sharing radius: whole kilometres, 1 to 200" >&2; return 1; }; }
+social_valid_gap() { [[ ${1:-} =~ ^[0-9]{1,4}$ ]] && rule_ok SOCIAL_GAP_MIN "$1" || { echo "Gap: whole minutes, 0 to 1440 (0 = none)" >&2; return 1; }; }
 social_set_radius() {   # social_set_radius [KM]: an aircraft inside it is a candidate; not the wall's radius
   if [ -z "${1:-}" ]; then
     echo "Sharing radius: $(cfg_get SOCIAL_RADIUS_KM 15) km"
@@ -250,7 +251,7 @@ social_set_radius() {   # social_set_radius [KM]: an aircraft inside it is a can
   cfg_set SOCIAL_RADIUS_KM "$((10#$1))"
   echo "Sharing radius: $((10#$1)) km. The service takes it at its next look, no restart needed."
 }
-SOCIAL_RULE_WORDS="military helicopter heavy rare farthest"
+SOCIAL_RULE_WORDS=$(rule_choices SOCIAL_RULES)
 social_set_rules() {    # social_set_rules [all|LIST]: what is worth a post, as the wizard's ticks
   local w out=() seen=" "
   if [ -z "${1:-}" ]; then
@@ -345,7 +346,7 @@ social_set_gap() {
 # ---- the picture: the look, its colour, the map (the looks with a map: dotmap and flap)
 social_valid_in() { local v=$1; shift; [[ $v =~ ^[a-z]+$ ]] && [[ " $* " == *" $v "* ]]; }   # exactly one of the words
 social_set_look() {
-  social_valid_in "${1:-}" dotmap flap alternate || { echo "Look: dotmap (the dot-matrix wall and a map), flap (the split-flap board and a map), or alternate (the two in turn)"; return 1; }
+  rule_ok SOCIAL_STYLE "${1:-}" || { echo "Look: dotmap (the dot-matrix wall and a map), flap (the split-flap board and a map), or alternate (the two in turn)"; return 1; }
   social_need_pil || return 1                           # install first: a look that cannot be drawn is not saved
   cfg_set SOCIAL_STYLE "$1"
   echo "Picture: $1. Try it:  sudo zenithboard social test"
@@ -363,7 +364,7 @@ social_set_colour() {
 }
 social_set_units() {     # 0.24.3: the posts in metric or imperial, or the wall's own units (empty); 0.55.0: aviation
   local u=${1:-}
-  social_valid_in "$u" metric imperial aviation wall || { echo "Units: metric (m, km/h, km), imperial (ft, knots, mi), aviation (ft, kt, NM), or wall (the wall's own, $(cfg_get UNITS metric))"; return 1; }
+  [ "$u" = wall ] || rule_ok SOCIAL_UNITS "$u" || { echo "Units: metric (m, km/h, km), imperial (ft, knots, mi), aviation (ft, kt, NM), or wall (the wall's own, $(cfg_get UNITS metric))"; return 1; }
   [ "$u" != wall ] || u=""
   cfg_set SOCIAL_UNITS "$u"
   echo "Post units: $(or_text "$u" "the wall's ($(cfg_get UNITS metric))")."

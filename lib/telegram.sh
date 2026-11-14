@@ -18,7 +18,7 @@ TELEGRAM_UNIT=zenithboard-telegram
 TELEGRAM_UNIT_DIR="${ZB_SYSTEMD_DIR:-/etc/systemd/system}"
 TELEGRAM_PY="$ZB_HOME/flightinfo/telegram.py"
 TELEGRAM_KINDS="crossing squawk"
-TELEGRAM_RULE_WORDS="military helicopter heavy"
+TELEGRAM_RULE_WORDS=$(rule_choices TELEGRAM_RULES)          # lib/rules.tsv, the one table (lot 0 after 1.0)
 
 telegram_state() { [ "$(cfg_get TELEGRAM 0)" = 1 ] && echo on || echo off; }
 telegram_secret_get() { [ -r "$TELEGRAM_SECRETS" ] || return 0; sed -n -E "s/^$1=\"?([^\"]*)\"?$/\1/p" "$TELEGRAM_SECRETS" | head -1; }

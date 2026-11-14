@@ -7,7 +7,8 @@
 #
 # Tab-separated: KEY, KIND, RULE, OFFERED (optional).
 #   RULE is what may be STORED in config.env (an import, a preset): enum = the values, space-separated; int and float =
-#   lowest and highest, both allowed; re = a pattern that bash and Python both read; number = any number ('-').
+#   lowest and highest, both allowed; re = a pattern that bash and Python both read; number = any number ('-');
+#   words = 'all', or some of the words, comma-separated, each once.
 #   OFFERED, when given, is the shorter list the command, the menus and the console offer (the radius: seven choices,
 #   while a tablet's preset may hold any radius up to 500).
 # tests/test_rules.py holds the shell and Python readers to the same answers.
@@ -27,8 +28,15 @@ UAT_SDR	re	^[A-Za-z0-9_-]{1,32}$
 WIFI_COUNTRY	re	^[A-Z]{2}$
 FLAGS	number	-	0 1
 PORT	number	-
-SOCIAL_RADIUS_KM	number	-
-SOCIAL_GAP_MIN	number	-
+# -- sharing: the Bluesky posts and the Telegram messages (the languages stay in lib/common.sh's ZB_LANG_CODES, held to
+#    the pages' and the posts' lists by tests/test_i18n.sh)
+SOCIAL_RADIUS_KM	int	1 200
+SOCIAL_GAP_MIN	int	0 1440
+SOCIAL_STYLE	enum	dotmap flap alternate
+SOCIAL_MAP	enum	normal night satellite terrain none rotate
+SOCIAL_THEME	enum	amber green red white turquoise rotate
+SOCIAL_RULES	words	military helicopter heavy rare farthest
+TELEGRAM_RULES	words	military helicopter heavy
 SHOW_PHOTOS	number	-
 SHOW_ROUTES	number	-
 AUTO_DATA_REFRESH	number	-

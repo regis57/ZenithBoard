@@ -13,7 +13,9 @@ import console_actions  # noqa: E402
 SAMPLES = ["", "0", "1", "2", "7", "08", "10", "15", "50", "60", "61", "500", "500.1", "0.05", "0.1", "-1", "-90", "90", "90.1", "-180", "180.5",
            "-500", "-501", "9000", "9001", "2.5", "1e3", "+5", " 5", "5 ", "metric", "imperial", "aviation", "Metric", "nautical", "amber",
            "turquoise", "blue", "dots", "flap", "readsb", "dump1090-fa", "FR", "fr", "FRA", "00000001", "stick_1-b", "a;b", "a b", "$(id)",
-           "x" * 33, "1234567", "-0", "0.0", "1.", ".5", "é"]
+           "x" * 33, "1234567", "-0", "0.0", "1.", ".5", "é",
+           "all", "military", "rare,military", "military,helicopter,heavy", "rare,rare", "rare,nope", "rare,", ",rare", "rare military", "ALL",
+           "dotmap", "alternate", "night", "rotate", "none", "200", "201", "1440", "1441"]
 
 
 def shell(fn):
@@ -46,6 +48,24 @@ class Rules(unittest.TestCase):
         self.assertTrue(ok("FLAGS", "2") and not off("FLAGS", "2") and off("FLAGS", "1"))
         self.assertFalse(ok("CYCLE_SECONDS", "5\n") or ok("RADIUS", "10\n") or ok("PORT", "8080\n") or ok("ADSB_SDR", "abc\n"))
 
+    def test_the_sharing_rules(self):
+        ok = rules.ok
+        self.assertTrue(ok("SOCIAL_RULES", "all") and ok("SOCIAL_RULES", "rare,military") and ok("TELEGRAM_RULES", "heavy"))
+        self.assertFalse(ok("SOCIAL_RULES", "rare,rare") or ok("SOCIAL_RULES", "rare,nope") or ok("TELEGRAM_RULES", "rare") or ok("SOCIAL_RULES", "rare, military"))
+        self.assertTrue(ok("SOCIAL_RADIUS_KM", "1") and ok("SOCIAL_RADIUS_KM", "200") and not ok("SOCIAL_RADIUS_KM", "0") and not ok("SOCIAL_RADIUS_KM", "201"))
+        self.assertTrue(ok("SOCIAL_GAP_MIN", "0") and ok("SOCIAL_GAP_MIN", "1440") and not ok("SOCIAL_GAP_MIN", "1441"))
+        self.assertTrue(ok("SOCIAL_THEME", "rotate") and not ok("SOCIAL_THEME", "blue") and ok("SOCIAL_MAP", "none") and ok("SOCIAL_STYLE", "alternate"))
+        A = console_actions.ACTIONS
+        self.assertEqual(A["social-look"][3][0][2], rules.choices("SOCIAL_STYLE"))
+        self.assertEqual(A["social-map"][3][0][2], rules.choices("SOCIAL_MAP"))
+        self.assertEqual(A["social-gap"][3][0][2], rules.bounds("SOCIAL_GAP_MIN"))
+        self.assertEqual(A["social-radius"][3][0][2], rules.bounds("SOCIAL_RADIUS_KM"))
+        self.assertEqual((console_actions.RULES, console_actions.TG_RULES), (rules.choices("SOCIAL_RULES"), rules.choices("TELEGRAM_RULES")))
+        # the console's own pattern for the rules takes what the table takes, on the values a page can send
+        import re
+        for v in ("all", "military", "rare,military", "heavy,helicopter,military", "rare,nope", "nope", ""):
+            self.assertEqual(bool(re.match(console_actions.RULES_RE, v)), ok("SOCIAL_RULES", v), v)
+
     def test_the_console_takes_its_choices_and_ranges_from_the_table(self):
         A = console_actions.ACTIONS
         self.assertIs(A["units"][3][0][2], console_actions.UNIT_SYSTEMS)
@@ -60,12 +80,13 @@ class Rules(unittest.TestCase):
         # and no copy of the lists is left written out in the console's file
         with open(os.path.join(ROOT, "flightinfo", "console_actions.py"), encoding="utf-8") as fh:
             src = fh.read()
-        for copy in ('"metric", "imperial"', '"amber", "green"', '"dots", "flap"', '("1", "2", "5"'):
+        for copy in ('"metric", "imperial"', '"amber", "green"', '"dots", "flap"', '("1", "2", "5"', '"dotmap", "flap"', '"normal", "night"',
+                     '"military", "helicopter"', '(0, 1440)', '(1, 200)'):
             self.assertNotIn(copy, src)
 
     def test_every_key_has_a_kind_the_readers_know(self):
         for k, (kind, rule, offered) in rules.table().items():
-            self.assertIn(kind, ("enum", "int", "float", "re", "number"), k)
+            self.assertIn(kind, ("enum", "int", "float", "re", "number", "words"), k)
             self.assertTrue(rule, k)
 
 
