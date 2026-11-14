@@ -24,26 +24,13 @@ settings_export() {   # settings_export [FILE]  -> the file written (stdout when
 # The review of 0.99.8: an imported value went on, unescaped, into the sed of the decoder's and ADSB Exchange's files
 # (ALT_M='0"; touch X; #|e;#' ran a command as root through a restore). Each value is now checked by what its key
 # holds; a key with no rule of its own takes no character a shell or sed gives a meaning to. Empty is always taken.
-SETTINGS_NUMERIC_KEYS=" PORT RADIUS SOCIAL_RADIUS_KM SOCIAL_GAP_MIN FLAGS SHOW_PHOTOS SHOW_ROUTES AUTO_DATA_REFRESH GAINLOG \
-PATCHES STATS CONSOLE CONSOLE_PHONE_SIGNIN UPDATE_VERIFY UAT978 SOCIAL TELEGRAM WIFI_HARDEN NETWATCH LOG_AUTOCLEAN \
-SOCIAL_PHOTOLINK SOCIAL_PLACES "
+# Lot 0 after 1.0: what each key holds is in lib/rules.tsv, the one table the command, the presets and the web
+# console read too (the import had its own list, and took a radius or an altitude the command refused).
 settings_value_ok() {   # settings_value_ok KEY VALUE -> 0 when VALUE is one KEY can take
   local k="$1" v="$2"
   case "$v" in *$'\n'*|*$'\r'*) return 1 ;; esac
   [ -n "$v" ] || return 0
-  case "$k" in
-    LAT) valid_lat "$v" ;;
-    LON) valid_lon "$v" ;;
-    ALT_M) valid_alt "$v" ;;
-    ADSB_SDR|UAT_SDR) valid_sdr "$v" ;;
-    CYCLE_SECONDS) valid_cycle "$v" ;;
-    UNITS|SOCIAL_UNITS|TELEGRAM_UNITS) valid_units "$v" ;;
-    THEME) valid_theme "$v" ;;
-    DISPLAY_MODE) [ "$v" = dots ] || [ "$v" = flap ] ;;
-    DECODER) [ "$v" = readsb ] || [ "$v" = dump1090-fa ] ;;
-    WIFI_COUNTRY) ! declare -F valid_country >/dev/null || valid_country "$v" ;;
-    *) if [[ $SETTINGS_NUMERIC_KEYS == *" $k "* ]]; then is_number "$v"; else valid_plain_value "$v"; fi ;;
-  esac
+  if rule_known "$k"; then rule_ok "$k" "$v"; else valid_plain_value "$v"; fi
 }
 
 # Import: only well-formed KEY=VALUE lines, only keys that are not secrets, no shell at all (the file is read,
@@ -87,13 +74,13 @@ preset_key_of() { printf 'PRESET_%s' "$(printf '%s' "$1" | tr '[:lower:]' '[:upp
 
 preset_valid_pair() {   # preset_valid_pair key=value -> 0 when it is one of the tablet's settings with a sane value
   local k=${1%%=*} v=${1#*=}
-  case "$k" in
-    units) valid_units "$v" ;;
-    radius) is_number "$v" && awk -v r="$v" 'BEGIN { exit !(r > 0 && r <= 500) }' ;;
-    cycle) valid_cycle "$v" ;;   # the review of 0.99.8: whole seconds, as the command and the console take it (2.5 went in)
-    theme) valid_theme "$v" ;;
-    mode) [ "$v" = dots ] || [ "$v" = flap ] ;;
-    flags) [ "$v" = 0 ] || [ "$v" = 1 ] ;;
+  case "$k" in       # the same rules as the settings themselves (lib/rules.tsv); a tablet may hold any radius, not only the seven offered
+    units) rule_ok UNITS "$v" ;;
+    radius) rule_ok RADIUS "$v" ;;
+    cycle) rule_ok CYCLE_SECONDS "$v" ;;   # the review of 0.99.8: whole seconds, as the command and the console take it (2.5 went in)
+    theme) rule_ok THEME "$v" ;;
+    mode) rule_ok DISPLAY_MODE "$v" ;;
+    flags) rule_offered FLAGS "$v" ;;
     *) return 1 ;;
   esac
 }
