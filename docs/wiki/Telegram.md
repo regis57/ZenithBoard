@@ -58,6 +58,29 @@ Since 1.1 both say where the aircraft is heading, in words (*heading south-east*
 
 **Aircraft never to post (1.1).** The list kept by `sudo zenithboard social ignore` ([Social sharing](Social-sharing)) holds for the crossing messages too: an aircraft on it by registration, ICAO address or callsign is not written about when it crosses. It never holds for a squawk: an emergency is sent whoever squawks.
 
+## The closest distance from the antenna (1.1, off by default)
+
+`sudo zenithboard telegram closest on` (menu *7 Options → 4 Telegram → 5*, or the console's *Closest distance from the antenna*) adds one line to each crossing's message: how close the aircraft came to the antenna, in the messages' units.
+
+```
+✈ EZY17QZ · easyJet
+Airbus A320 · G-EZWA 🇬🇧
+Manchester (MAN) → Verona (VRN)
+10 970 m · 834 km/h · level · heading south-east
+14:05 · above Trémery
+https://globe.adsbexchange.com/?icao=4ca7b1
+closest: 2.4 km
+```
+
+* **How.** The message goes out when the aircraft enters the sharing radius, as before. The closest point is only known once it has left, so the bot then **edits its own message** (Telegram's `editMessageText`) and the line appears. One message, one notification: an edit does not ring.
+* **When.** When the aircraft is out of the radius; two minutes after its last position if it is lost inside (low, behind a hill); after forty-five minutes if it holds there.
+* **How exact.** The decoder's positions are read every five seconds and the least distance is taken along the line flown between two reads, on the ground (not the slant distance). One decimal under ten, whole above.
+* **Why it is off by default.** It is the one line in the messages that says how far your antenna is from something: with a few of them, the antenna can be placed. The chat is yours, but in a group every member reads it. **The Bluesky posts, the pictures, the wall and the squawk messages never say it.**
+* **What is kept for it**, in `state.json`, until the edit is made (two hours at most): the message's id and text, the least distance so far, the aircraft's last position, and a mark of the chat, not its id. A message is only edited in the chat it was sent to; a restart in the middle of a crossing keeps the id and completes the message.
+* **When Telegram refuses the edit** (you deleted the message), it is said once in `zenithboard logs telegram` and dropped; the message stays as it was. With no internet the edit waits, half an hour at most.
+* **Your own crossing template** gets the line too, at its end.
+* `off` stops it at once: nothing more is edited, and what was being followed is forgotten.
+
 ## How a squawk is believed
 
 The service reads the decoder's `aircraft.json` every five seconds. A code is believed when it is heard on **two reads in a row** (one reply decoded wrongly once never sends a message), or at once when the aircraft's own emergency status says the same (readsb's `emergency`: `general`, `nordo`, `unlawful`). Once per flight and code: the same aircraft squawking 7700 for twenty minutes is one message; 7700 then 7600 is two (the radio failed after the emergency); the same airframe as another flight, or the same code more than an hour after it was last heard, is a new event.
@@ -95,7 +118,7 @@ What the message knows comes from the wall (airline, model, route, as for the po
 |---|---|
 | `/etc/zenithboard/telegram.env` | The token and the chat (its id and name). root:zenithboard, mode 0640. Never in `config.env`, a log, a backup, the console or a command line |
 | `/etc/zenithboard/telegram-crossing.txt`, `telegram-squawk.txt` | Your own messages, your words (a backup keeps them) |
-| `/var/lib/zenithboard/telegram/state.json` | The crossings and squawks already written about (an hour), the counts of seven days, the last refusal. Written when it has changed and before the service stops |
+| `/var/lib/zenithboard/telegram/state.json` | The crossings and squawks already written about (an hour), the counts of seven days, the last refusal; with the closest distance on, the crossings being followed (above). Written when it has changed and before the service stops |
 | `config.env` | `TELEGRAM`, `TELEGRAM_CROSSINGS`, `TELEGRAM_SQUAWKS`, `TELEGRAM_RULES`, `TELEGRAM_LANG`, `TELEGRAM_UNITS` ([Configuration reference](Configuration-reference)) |
 
 The service, `zenithboard-telegram`, runs as the wall's user in the same sandbox as the Bluesky service, text only (about 25 MB). It reaches `api.telegram.org` and the wall on the loopback, nothing else. A backup keeps the switch and your templates; restored on a new card, it asks for the token again (`telegram setup`).

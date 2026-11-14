@@ -167,5 +167,6 @@
  "ZenithBoard is connected to this chat. The aircraft crossing the sharing radius and the emergency squawks the antenna hears will be written here.": "ZenithBoard is verbonden met deze chat. De vliegtuigen die de straal voor berichten passeren en de noodcodes die de antenne opvangt, verschijnen hier.",
  "near {place}": "bij {place}",
  "{distance} from {place} ({country})": "op {distance} van {place} ({country})",
- "position not known": "positie onbekend"
+ "position not known": "positie onbekend",
+ "closest: {distance}": "dichtste nadering: {distance}"
 }

@@ -455,6 +455,8 @@
  "needs a bot": "bot nodig",
  "Aircraft crossing the sharing radius": "Passages binnen de straal voor berichten",
  "One message per crossing, as the Bluesky posts, inside the sharing radius ({n} km)": "Eén bericht per passage, net als bij de Bluesky-berichten, binnen de straal voor berichten ({n} km)",
+ "Closest distance from the antenna": "Kleinste afstand tot de antenne",
+ "Added to the crossing's message once the aircraft has left the radius (closest: 2.4 km). Everyone in the chat reads it; never in a Bluesky post or a picture.": "Toegevoegd aan het bericht van de passage zodra het vliegtuig de straal heeft verlaten (dichtste nadering: 2,4 km). Iedereen in de chat leest het; nooit in een Bluesky-post of op een afbeelding.",
  "Which crossings": "Welke passages",
  "Everything: every crossing": "Alles: elke passage",
  "Only the kinds lit; Everything writes every crossing": "Alleen de soorten die aanstaan; Alles meldt elke passage",

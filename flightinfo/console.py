@@ -95,7 +95,7 @@ SHOWN_KEYS = {
     "SOCIAL_MONTHLY": "0", "SOCIAL_MONTHLY_AT": "1 09:00", "SOCIAL_MONTHLY_PARTS": "1,2,3,4",
     "NETWATCH": "0", "WIFI_HARDEN": "0", "LOG_AUTOCLEAN": "0", "CONSOLE_PHONE_SIGNIN": "0", "CONSOLE_LANG": "",
     # 0.99.6: Telegram's settings (its token and chat are in telegram.env, never here)
-    "TELEGRAM": "0", "TELEGRAM_CROSSINGS": "1", "TELEGRAM_SQUAWKS": "1", "TELEGRAM_RULES": "all", "TELEGRAM_LANG": "", "TELEGRAM_UNITS": "",
+    "TELEGRAM": "0", "TELEGRAM_CROSSINGS": "1", "TELEGRAM_SQUAWKS": "1", "TELEGRAM_CLOSEST": "0", "TELEGRAM_RULES": "all", "TELEGRAM_LANG": "", "TELEGRAM_UNITS": "",
 }
 
 

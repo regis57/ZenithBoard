@@ -155,5 +155,6 @@
  "ZenithBoard is connected to this chat. The aircraft crossing the sharing radius and the emergency squawks the antenna hears will be written here.": "ZenithBoard 已連線到此聊天。飛越分享半徑的飛機，以及天線收到的緊急詢答機代碼，都會傳送到這裡。",
  "near {place}": "{place} 附近",
  "{distance} from {place} ({country})": "距 {place}（{country}）{distance}",
- "position not known": "位置不明"
+ "position not known": "位置不明",
+ "closest: {distance}": "最近距離：{distance}"
 }

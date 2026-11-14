@@ -167,5 +167,6 @@
  "ZenithBoard is connected to this chat. The aircraft crossing the sharing radius and the emergency squawks the antenna hears will be written here.": "ZenithBoard on yhdistetty tähän keskusteluun. Tänne kirjoitetaan koneet, jotka lentävät jakamisen säteen läpi, ja antennin kuulemat transponderin hätäkoodit.",
  "near {place}": "lähellä paikkakuntaa {place}",
  "{distance} from {place} ({country})": "{distance} päässä kaupungista {place} ({country})",
- "position not known": "sijainti tuntematon"
+ "position not known": "sijainti tuntematon",
+ "closest: {distance}": "lähimmillään: {distance}"
 }

@@ -457,6 +457,8 @@
  "needs a bot": "потрібен бот",
  "Aircraft crossing the sharing radius": "Літаки, що пролітають у радіусі публікацій",
  "One message per crossing, as the Bluesky posts, inside the sharing radius ({n} km)": "Одне повідомлення на кожен проліт, як і дописи в Bluesky, у межах радіуса публікацій ({n} км)",
+ "Closest distance from the antenna": "Найменша відстань до антени",
+ "Added to the crossing's message once the aircraft has left the radius (closest: 2.4 km). Everyone in the chat reads it; never in a Bluesky post or a picture.": "Додається до повідомлення про проліт, коли літак залишить радіус (найменша відстань: 2,4 км). Її бачать усі учасники чату; ніколи в дописі Bluesky чи на зображенні.",
  "Which crossings": "Які прольоти",
  "Everything: every crossing": "Усе: кожен проліт",
  "Only the kinds lit; Everything writes every crossing": "Лише виділені типи; «Усе» повідомляє про кожен проліт",

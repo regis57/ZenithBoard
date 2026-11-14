@@ -454,6 +454,8 @@
  "needs a bot": "需要機器人",
  "Aircraft crossing the sharing radius": "飛越分享半徑的飛機",
  "One message per crossing, as the Bluesky posts, inside the sharing radius ({n} km)": "與 Bluesky 貼文相同，在分享半徑（{n} km）內每次飛越傳送一則訊息",
+ "Closest distance from the antenna": "距天線的最近距離",
+ "Added to the crossing's message once the aircraft has left the radius (closest: 2.4 km). Everyone in the chat reads it; never in a Bluesky post or a picture.": "飛機離開半徑後加入過境訊息（最近距離：2.4 公里）。聊天中的所有人都看得到；絕不會出現在 Bluesky 貼文或圖片中。",
  "Which crossings": "哪些飛越",
  "Everything: every crossing": "全部：每次飛越",
  "Only the kinds lit; Everything writes every crossing": "僅限亮起的類型；「全部」會傳送每次飛越",

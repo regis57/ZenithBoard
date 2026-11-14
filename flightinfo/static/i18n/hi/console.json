@@ -458,6 +458,8 @@
  "needs a bot": "बॉट चाहिए",
  "Aircraft crossing the sharing radius": "साझा करने के दायरे से गुज़रने वाले विमान",
  "One message per crossing, as the Bluesky posts, inside the sharing radius ({n} km)": "हर गुज़रने वाले विमान पर एक संदेश, Bluesky पोस्ट की तरह, साझा करने के दायरे ({n} km) के भीतर",
+ "Closest distance from the antenna": "एंटीना से निकटतम दूरी",
+ "Added to the crossing's message once the aircraft has left the radius (closest: 2.4 km). Everyone in the chat reads it; never in a Bluesky post or a picture.": "विमान के दायरे से निकल जाने पर उड़ान-सूचना के संदेश में जोड़ी जाती है (निकटतम दूरी: 2.4 किमी)। चैट में सभी इसे पढ़ते हैं; Bluesky पोस्ट या चित्र में कभी नहीं।",
  "Which crossings": "कौन-से गुज़रने वाले विमान",
  "Everything: every crossing": "सब कुछ: हर गुज़रने वाला विमान",
  "Only the kinds lit; Everything writes every crossing": "केवल चालू किए गए प्रकार; \"सब कुछ\" हर गुज़रने वाले विमान पर संदेश लिखता है",

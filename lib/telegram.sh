@@ -142,14 +142,27 @@ telegram_choose_chat() {   # telegram_choose_chat [@BOTNAME]
 }
 
 # ---- one setting at a time (the console's controls run these)
-telegram_set_switch() {   # telegram_set_switch KEY WORDS on|off
+telegram_set_switch() {   # telegram_set_switch KEY WORDS on|off [DEFAULT]   (the default when the key is not set: 1)
   case "${3:-}" in
     on)  cfg_set "$1" 1 ;;
     off) cfg_set "$1" 0 ;;
-    "")  echo "$2: $( [ "$(cfg_get "$1" 1)" = 1 ] && echo on || echo off)"; return 0 ;;
+    "")  echo "$2: $( [ "$(cfg_get "$1" "${4:-1}")" = 1 ] && echo on || echo off)"; return 0 ;;
     *)   echo "Usage: zenithboard telegram ${1#TELEGRAM_} on|off" | tr '[:upper:]' '[:lower:]' >&2; return 1 ;;
   esac
   echo "$2: $3. The service takes it at its next look."
+}
+# 1.1 (asked by the owner, 1 November 2026): the closest the aircraft came to the antenna, added to its crossing
+# message once it has left the radius (the bot edits its own message). Off by default: it is the one thing in the
+# messages that says how far the antenna is, and in a group every member reads it. Never in a post or a picture.
+telegram_set_closest() {  # telegram_set_closest [on|off]
+  case "${1:-}" in
+    "") telegram_set_switch TELEGRAM_CLOSEST "Closest distance from the antenna" "" 0
+        echo "Change:  sudo zenithboard telegram closest on|off   (added to each crossing's message when the aircraft has left the radius; the Telegram messages only)" ;;
+    on) telegram_set_switch TELEGRAM_CLOSEST "Closest distance from the antenna" on
+        echo "Each crossing's message is completed with \"closest: 2.4 km\" once the aircraft has left the radius. Everyone in the chat reads how far from the antenna it passed; the Bluesky posts and the pictures never say it." ;;
+    off) telegram_set_switch TELEGRAM_CLOSEST "Closest distance from the antenna" off ;;
+    *) echo "Usage: zenithboard telegram closest on|off" >&2; return 1 ;;
+  esac
 }
 telegram_set_rules() {    # telegram_set_rules [all|LIST]
   local w seen=" " out=()
@@ -230,7 +243,8 @@ telegram_menu() {
       setup "2  The bot and the chat: set up or change" \
       try "3  Try the messages (sends nothing), or send a test" \
       status "4  Status" \
-      remove "5  Remove: token, chat and service (asks you to type remove)" \
+      closest "5  Closest distance from the antenna in each crossing's message: $( [ "$(cfg_get TELEGRAM_CLOSEST 0)" = 1 ] && echo ON || echo OFF )" \
+      remove "6  Remove: token, chat and service (asks you to type remove)" \
       back "Return to the previous menu") || return 0
     case "$c" in
       toggle) clear; if [ "$(telegram_state)" = on ]; then telegram_off; else telegram_on; fi; read -rp "Press Enter to continue..." _ ;;
@@ -240,6 +254,12 @@ telegram_menu() {
         else clear; telegram_py test; fi
         read -rp "Press Enter to continue..." _ ;;
       status) clear; telegram_status; read -rp "Press Enter to continue..." _ ;;
+      closest)
+        wt_yesno "Add the closest distance from the antenna to each crossing's message?\n\nThe message goes out when the aircraft enters the sharing radius, as today. Once it has left, the bot completes its own message with a line such as: closest: 2.4 km (in the messages' units). No second message, no second notification.\n\nIt is the one thing in the messages that says how far your antenna is: in a group, every member reads it. The Bluesky posts and the pictures never say it." 18
+        case $? in
+          0) wt_msg "$(telegram_set_closest on 2>&1)" 12 ;;
+          1) wt_msg "$(telegram_set_closest off 2>&1)" 8 ;;
+        esac ;;
       remove) clear; telegram_remove "" || true; read -rp "Press Enter to continue..." _ ;;
       *) return 0 ;;
     esac

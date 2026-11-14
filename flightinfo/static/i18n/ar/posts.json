@@ -215,5 +215,6 @@
  "ZenithBoard is connected to this chat. The aircraft crossing the sharing radius and the emergency squawks the antenna hears will be written here.": "ZenithBoard متصل بهذه المحادثة. ستُكتب هنا الطائرات التي تعبر نصف قطر المشاركة ورموز الطوارئ التي يلتقطها الهوائي.",
  "near {place}": "قرب {place}",
  "{distance} from {place} ({country})": "على بُعد {distance} من {place} ({country})",
- "position not known": "الموقع غير معروف"
+ "position not known": "الموقع غير معروف",
+ "closest: {distance}": "أقرب مسافة: {distance}"
 }

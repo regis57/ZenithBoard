@@ -459,6 +459,8 @@
  "needs a bot": "يتطلب بوتًا",
  "Aircraft crossing the sharing radius": "الطائرات العابرة لنصف قطر المشاركة",
  "One message per crossing, as the Bluesky posts, inside the sharing radius ({n} km)": "رسالة واحدة لكل عبور، مثل منشورات Bluesky، داخل نصف قطر المشاركة ({n} km)",
+ "Closest distance from the antenna": "أقرب مسافة من الهوائي",
+ "Added to the crossing's message once the aircraft has left the radius (closest: 2.4 km). Everyone in the chat reads it; never in a Bluesky post or a picture.": "تُضاف إلى رسالة العبور بعد خروج الطائرة من النطاق (أقرب مسافة: 2.4 كم). يقرؤها كل من في المحادثة؛ ولا تظهر أبدًا في منشور Bluesky أو في صورة.",
  "Which crossings": "أيّ الطائرات العابرة",
  "Everything: every crossing": "الكل: كل عبور",
  "Only the kinds lit; Everything writes every crossing": "الأنواع المضاءة فقط؛ «الكل» يرسل رسالة عن كل عبور",

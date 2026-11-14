@@ -1074,6 +1074,8 @@ window.ZBI18N.start({ part: "console" }, function () {
       t("No Telegram bot yet. Set it up over SSH, it asks for the bot's token from @BotFather and lets you choose the chat: sudo zenithboard telegram setup"), [
       row(t("Send the messages"), t("Text only, to your own chat or group; never public."), chat ? sw("telegram", on(c.TELEGRAM)) : h("span", { "class": "state", text: t("needs a bot") })),
       row(t("Aircraft crossing the sharing radius"), t("One message per crossing, as the Bluesky posts, inside the sharing radius ({n} km)", { n: c.SOCIAL_RADIUS_KM || "15" }), sw("telegram-crossings", on(c.TELEGRAM_CROSSINGS))),
+      // 1.1: the one line that says how far the antenna is; off unless the owner wants it, the chat being his
+      on(c.TELEGRAM_CROSSINGS) ? row(t("Closest distance from the antenna"), t("Added to the crossing's message once the aircraft has left the radius (closest: 2.4 km). Everyone in the chat reads it; never in a Bluesky post or a picture."), sw("telegram-closest", on(c.TELEGRAM_CLOSEST))) : null,
       on(c.TELEGRAM_CROSSINGS) ? row(t("Which crossings"), c.TELEGRAM_RULES === "all" || !c.TELEGRAM_RULES ? t("Everything: every crossing") : t("Only the kinds lit; Everything writes every crossing"), tgRulesChips(c.TELEGRAM_RULES)) : null,
       row(t("Emergency squawks"), t("7500, 7600, 7700 anywhere the antenna hears them, not only in the radius; once per flight, with where the aircraft is. Never posted to Bluesky."), sw("telegram-squawks", on(c.TELEGRAM_SQUAWKS))),
       row(t("Language of the messages"), null, select("telegram-lang", langs, c.TELEGRAM_LANG || "posts", langs.map(function (l) { return l === "posts" ? t("The posts' ({lang})", { lang: I.name(c.SOCIAL_LANG || "en") }) : I.name(l); }))),

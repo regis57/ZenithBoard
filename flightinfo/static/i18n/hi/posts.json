@@ -170,5 +170,6 @@
  "ZenithBoard is connected to this chat. The aircraft crossing the sharing radius and the emergency squawks the antenna hears will be written here.": "ZenithBoard इस चैट से जुड़ गया है। साझा करने के दायरे से गुज़रने वाले विमान और एंटीना द्वारा सुने गए आपातकालीन स्क्वॉक यहाँ लिखे जाएँगे।",
  "near {place}": "{place} के पास",
  "{distance} from {place} ({country})": "{place} ({country}) से {distance} दूर",
- "position not known": "जगह अज्ञात"
+ "position not known": "जगह अज्ञात",
+ "closest: {distance}": "निकटतम दूरी: {distance}"
 }

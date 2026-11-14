@@ -49,6 +49,7 @@ check "rules: rare needs history, refused"                    '! telegram_set_ru
 telegram_set_rules all >/dev/null
 check "rules: all"                                            '[ "$(cfg_get TELEGRAM_RULES)" = all ]'
 telegram_set_switch TELEGRAM_SQUAWKS "Emergency squawks" off >/dev/null
+check "closest distance: off by default, on says who reads it, off, a wrong word refused (1.1)" '[ "$(cfg_get TELEGRAM_CLOSEST 0)" = 0 ] && telegram_set_closest | grep -q "antenna: off" && telegram_set_closest on | grep -q "Everyone in the chat" && [ "$(cfg_get TELEGRAM_CLOSEST)" = 1 ] && telegram_set_closest | grep -q "antenna: on" && telegram_set_closest off >/dev/null && [ "$(cfg_get TELEGRAM_CLOSEST)" = 0 ] && ! telegram_set_closest maybe 2>/dev/null && rule_ok TELEGRAM_CLOSEST 1 && ! rule_offered TELEGRAM_CLOSEST 2'
 check "squawks off, then on"                                  '[ "$(cfg_get TELEGRAM_SQUAWKS)" = 0 ] && telegram_set_switch TELEGRAM_SQUAWKS x on >/dev/null && [ "$(cfg_get TELEGRAM_SQUAWKS)" = 1 ]'
 check "a switch takes on or off only"                         '! telegram_set_switch TELEGRAM_CROSSINGS x maybe 2>/dev/null'
 check "units: aviation, then the posts' again"                'telegram_set_units aviation >/dev/null && [ "$(cfg_get TELEGRAM_UNITS)" = aviation ] && telegram_set_units posts >/dev/null && [ -z "$(cfg_get TELEGRAM_UNITS "")" ]'

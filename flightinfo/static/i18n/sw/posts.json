@@ -167,5 +167,6 @@
  "ZenithBoard is connected to this chat. The aircraft crossing the sharing radius and the emergency squawks the antenna hears will be written here.": "ZenithBoard imeunganishwa na gumzo hili. Ndege zinazopita ndani ya nusukipenyo cha kushiriki na misimbo ya dharura ya transponda inayopokelewa na antena zitaandikwa hapa.",
  "near {place}": "karibu na {place}",
  "{distance} from {place} ({country})": "{distance} kutoka {place} ({country})",
- "position not known": "mahali hapajulikani"
+ "position not known": "mahali hapajulikani",
+ "closest: {distance}": "umbali wa karibu zaidi: {distance}"
 }

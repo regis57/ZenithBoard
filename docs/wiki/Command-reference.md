@@ -75,6 +75,7 @@ Every `zenithboard` command, grouped by what you are trying to do. `zenithboard`
 | `zenithboard telegram hello` | yes | Send the *connected* message to the chat |
 | `zenithboard telegram test [crossing\|squawk] [send]` | `send`: yes | Each message filled on an aircraft overhead now (or a sample), printed, sent nowhere; `send` sends them to the chat, each marked as a test |
 | `zenithboard telegram crossings on` · `off` | yes (to change) | The aircraft crossing the sharing radius (`social radius`), one message per crossing, as the Bluesky posts. On by default once Telegram is on |
+| `zenithboard telegram closest on` · `off` | yes (to change) | 1.1: add the closest distance from the antenna to each crossing's message, by editing it once the aircraft has left the radius (*closest: 2.4 km*, in the messages' units). Off by default: everyone in the chat reads it. Never in a post, a picture or a squawk message |
 | `zenithboard telegram squawks on` · `off` | yes (to change) | The emergency squawks 7500, 7600, 7700 anywhere the antenna hears them, once per flight and code, with where the aircraft is. On by default once Telegram is on. Never posted to Bluesky |
 | `zenithboard telegram rules [all\|LIST]` | yes (to change) | Which crossings: `all` (the default), or some of `military,helicopter,heavy` |
 | `zenithboard telegram lang [CODE\|posts]` | yes (to change) | The messages' language; `posts` (the default): the posts' own (`social lang`) |

@@ -456,6 +456,8 @@
  "needs a bot": "vajadzīgs bots",
  "Aircraft crossing the sharing radius": "Gaisa kuģi, kas šķērso kopīgošanas rādiusu",
  "One message per crossing, as the Bluesky posts, inside the sharing radius ({n} km)": "Viena ziņa par katru pārlidojumu, tāpat kā Bluesky ieraksti, kopīgošanas rādiusā ({n} km)",
+ "Closest distance from the antenna": "Tuvākais attālums līdz antenai",
+ "Added to the crossing's message once the aircraft has left the radius (closest: 2.4 km). Everyone in the chat reads it; never in a Bluesky post or a picture.": "Pievienots pārlidojuma ziņai, kad gaisa kuģis ir izgājis no rādiusa (tuvākais attālums: 2,4 km). To lasa visi tērzēšanas dalībnieki; nekad Bluesky ierakstā vai attēlā.",
  "Which crossings": "Kuri pārlidojumi",
  "Everything: every crossing": "Viss: katrs pārlidojums",
  "Only the kinds lit; Everything writes every crossing": "Tikai iezīmētie veidi; Viss sūta ziņu par katru pārlidojumu",

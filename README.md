@@ -588,7 +588,7 @@ Or menu *7 Options → 3 Bluesky*. The wizard tries the account before going on,
 Off by default (0.99.6). The Pi writes to **your own Telegram chat**, or a group of yours, a short text message:
 
 * for **each aircraft crossing the sharing radius** (the Bluesky posts' radius, one message per crossing; all of them, or only military aircraft, helicopters or heavies);
-* for **each emergency squawk** — 7500 (unlawful interference), 7600 (radio failure), 7700 (general emergency) — heard **anywhere in the antenna's range**, once per flight and code, with what it means and where the aircraft is (the town nearest it, never a distance from the antenna). **Never posted to Bluesky**: an emergency is not a fact to broadcast.
+* for **each emergency squawk** — 7500 (unlawful interference), 7600 (radio failure), 7700 (general emergency) — heard **anywhere in the antenna's range**, once per flight and code, with what it means and where the aircraft is (the town nearest it, never a distance from the antenna). Since 1.1 a crossing's message can also say how close the aircraft came to the antenna (`sudo zenithboard telegram closest on`, off by default; the Telegram messages only, [Telegram](https://github.com/regis57/ZenithBoard/wiki/Telegram)). **Never posted to Bluesky**: an emergency is not a fact to broadcast.
 
 ```
 🚨 Squawk 7700: General emergency

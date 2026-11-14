@@ -455,6 +455,8 @@
  "needs a bot": "inahitaji boti",
  "Aircraft crossing the sharing radius": "Ndege zinazopita ndani ya nusukipenyo cha kushiriki",
  "One message per crossing, as the Bluesky posts, inside the sharing radius ({n} km)": "Ujumbe mmoja kwa kila ndege inayopita, kama machapisho ya Bluesky, ndani ya nusukipenyo cha kushiriki ({n} km)",
+ "Closest distance from the antenna": "Umbali wa karibu zaidi kutoka kwenye antena",
+ "Added to the crossing's message once the aircraft has left the radius (closest: 2.4 km). Everyone in the chat reads it; never in a Bluesky post or a picture.": "Huongezwa kwenye ujumbe wa mpito ndege inapotoka nje ya eneo (umbali wa karibu zaidi: km 2.4). Kila mtu kwenye gumzo huusoma; kamwe si kwenye chapisho la Bluesky wala picha.",
  "Which crossings": "Ndege zipi zinazopita",
  "Everything: every crossing": "Kila kitu: kila ndege inayopita",
  "Only the kinds lit; Everything writes every crossing": "Aina zilizowashwa tu; Kila kitu hutuma ujumbe kwa kila ndege inayopita",
