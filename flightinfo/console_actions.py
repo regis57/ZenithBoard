@@ -29,11 +29,11 @@ PERIODS = ("daily", "weekly", "monthly")
 # 0.50.0: the words of the posts, as lib/social.sh checks them again (social_hashtags_clean, social_area_clean)
 HASHTAGS_RE = r"none|default|#?[A-Za-z0-9_]{1,40}( #?[A-Za-z0-9_]{1,40}){0,7}"
 AREA_RE = r"[^\W_][\w '\u2019.,-]{0,39}"
-RULES = ("military", "helicopter", "heavy", "rare", "farthest")
+RULES = rules.choices("SOCIAL_RULES")
 RULES_RE = r"^(all|(%s)(,(%s)){0,4})$" % ("|".join(RULES), "|".join(RULES))
 TEMPLATES_MAX = 1500             # 0.51.0: the owner's templates, all of them (a few lines of 260 characters at most each)
 # 0.99.6: Telegram, the messages to the owner's own chat: which crossings, the two kinds of message, one template each
-TG_RULES = ("military", "helicopter", "heavy")
+TG_RULES = rules.choices("TELEGRAM_RULES")
 TG_RULES_RE = r"^(all|(%s)(,(%s)){0,2})$" % ("|".join(TG_RULES), "|".join(TG_RULES))
 TG_KINDS = ("crossing", "squawk")
 TG_TEMPLATE_MAX = 1500
@@ -92,10 +92,10 @@ ACTIONS = {
     "social":       ("sharing", "Social sharing", ["social", "{value}"], [("value", "enum", ON_OFF)], "ask long"),
     "social-status": ("sharing", "Sharing status", ["social", "status"], [], "read"),
     "social-test":  ("sharing", "Try a post", ["social", "test"], [], "read long"),
-    "social-look":  ("sharing", "Picture", ["social", "look", "{value}"], [("value", "enum", ("dotmap", "flap", "alternate"))], "long"),
+    "social-look":  ("sharing", "Picture", ["social", "look", "{value}"], [("value", "enum", rules.choices("SOCIAL_STYLE"))], "long"),
     "social-colour": ("sharing", "Picture colour", ["social", "colour", "{value}"], [("value", "enum", THEMES + ("wall", "rotate"))], ""),
     "social-units": ("sharing", "Units of the posts", ["social", "units", "{value}"], [("value", "enum", UNIT_SYSTEMS + ("wall",))], ""),
-    "social-map":   ("sharing", "Map", ["social", "map", "{value}"], [("value", "enum", ("normal", "night", "satellite", "terrain", "none", "rotate"))], ""),
+    "social-map":   ("sharing", "Map", ["social", "map", "{value}"], [("value", "enum", rules.choices("SOCIAL_MAP"))], ""),
     "social-photolink": ("sharing", "Photo link", ["social", "photolink", "{value}"], [("value", "enum", ON_OFF)], ""),
     "social-sentence": ("sharing", "Words of a post", ["social", "sentence", "{value}"],
                      [("value", "re", r"^(random|(factual|story|board|spotter|lookup|custom)(,(factual|story|board|spotter|lookup|custom)){0,5})$")], ""),
@@ -106,10 +106,10 @@ ACTIONS = {
     # 0.53.3: a real button to delete them all (the owner), and one to put back the ones before the last change (.bak)
     "social-templates-delete": ("sharing", "Delete your templates", ["social", "template", "set", "--", "none"], [], "ask"),
     "social-templates-undo": ("sharing", "Put back your previous templates", ["social", "template", "undo"], [], "ask"),
-    "social-gap":   ("sharing", "Least time between posts", ["social", "gap", "{value}"], [("value", "int", (0, 1440))], ""),
+    "social-gap":   ("sharing", "Least time between posts", ["social", "gap", "{value}"], [("value", "int", rules.bounds("SOCIAL_GAP_MIN"))], ""),
     # 0.50.0: what `social words` asks, one answer at a time
     "social-area":  ("sharing", "Place name", ["social", "area", "{value}"], [("value", "text", (40, AREA_RE))], ""),
-    "social-radius": ("sharing", "Sharing radius", ["social", "radius", "{value}"], [("value", "int", (1, 200))], ""),
+    "social-radius": ("sharing", "Sharing radius", ["social", "radius", "{value}"], [("value", "int", rules.bounds("SOCIAL_RADIUS_KM"))], ""),
     "social-rules": ("sharing", "What is worth a post", ["social", "rules", "{value}"], [("value", "re", RULES_RE)], ""),
     "social-hashtags": ("sharing", "Hashtags", ["social", "hashtags", "{value*}"], [("value", "text", (340, HASHTAGS_RE))], ""),
     "social-places": ("sharing", "Town names on the maps", ["social", "places", "{value}"], [("value", "enum", ON_OFF)], "long"),

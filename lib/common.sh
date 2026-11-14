@@ -40,17 +40,24 @@ rule_ok() {   # rule_ok KEY VALUE -> 0 when VALUE may be stored for KEY (a key w
     float) [[ $v =~ ^-?[0-9]+([.][0-9]+)?$ ]] && awk -v v="$v" -v a="${arg% *}" -v b="${arg#* }" 'BEGIN { exit !(v + 0 >= a + 0 && v + 0 <= b + 0) }' ;;
     re) [[ $v =~ $arg ]] ;;
     number) [[ $v =~ ^-?[0-9]+([.][0-9]+)?$ ]] ;;
+    words) [ "$v" = all ] && return 0
+           [[ $v =~ ^[a-z]+(,[a-z]+)*$ ]] || return 1
+           local seen=" " w
+           for w in ${v//,/ }; do
+             case "$seen" in *" $w "*) return 1 ;; esac
+             case " $arg " in *" $w "*) seen+="$w " ;; *) return 1 ;; esac
+           done ;;
     *) return 1 ;;
   esac
 }
 rule_choices() {   # the values offered for KEY (the command, the menus, the console), space-separated; empty when it has no list
   local k=${1:-_}
   if [ -n "${ZB_RULE_OFFER[$k]:-}" ]; then printf '%s' "${ZB_RULE_OFFER[$k]}"
-  elif [ "${ZB_RULE_KIND[$k]:-}" = enum ]; then printf '%s' "${ZB_RULE_ARG[$k]}"; fi
+  elif [ "${ZB_RULE_KIND[$k]:-}" = enum ] || [ "${ZB_RULE_KIND[$k]:-}" = words ]; then printf '%s' "${ZB_RULE_ARG[$k]}"; fi
 }
 rule_offered() {   # rule_offered KEY VALUE -> 0 when VALUE is one the command and the console offer (else as rule_ok)
   local c x; c=$(rule_choices "${1:-_}")
-  [ -n "$c" ] || { rule_ok "$@"; return; }
+  [ -n "$c" ] && [ "${ZB_RULE_KIND[${1:-_}]:-}" != words ] || { rule_ok "$@"; return; }
   for x in $c; do [ "$x" = "${2:-}" ] && return 0; done; return 1
 }
 RADIUS_PRESETS=$(rule_choices RADIUS)

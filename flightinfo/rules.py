@@ -47,18 +47,23 @@ def ok(key, value):
         return bool(re.search(rule, v)) and "\n" not in v
     if kind == "number":
         return bool(_NUMBER.match(v))
+    if kind == "words":                       # all, or some of the words, comma-separated, each once
+        if v == "all":
+            return True
+        got = v.split(",")
+        return bool(re.match(r"[a-z]+(,[a-z]+)*\Z", v)) and len(set(got)) == len(got) and all(w in rule.split(" ") for w in got)
     return False
 
 
 def choices(key):
     """The values the command and the console offer for `key`: its shorter list when it has one, else an enum's values."""
     kind, rule, offered = table().get(key, ("", "", ""))
-    return tuple((offered or (rule if kind == "enum" else "")).split())
+    return tuple((offered or (rule if kind in ("enum", "words") else "")).split())
 
 
 def offered(key, value):
     c = choices(key)
-    return str(value) in c if c else ok(key, value)
+    return str(value) in c if c and table().get(key, ("",))[0] != "words" else ok(key, value)
 
 
 def bounds(key):
