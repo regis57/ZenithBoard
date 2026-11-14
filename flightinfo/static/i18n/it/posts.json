@@ -42,6 +42,7 @@
  "south-west": "sud-ovest",
  "west": "ovest",
  "north-west": "nord-ovest",
+ "heading {heading}": "rotta {heading}",
  "military aircraft": "aereo militare",
  "glider": "aliante",
  "balloon": "aerostato",

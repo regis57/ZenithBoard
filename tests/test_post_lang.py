@@ -260,7 +260,7 @@ class EveryLanguageTest(unittest.TestCase):
     def test_french_reads_french(self):
         c = dict(SOCIAL_AREA="Ennery", SOCIAL_HASHTAGS="#ADSB", SOCIAL_LANG="fr", UNITS="metric")
         self.assertTrue(social.post_text(RYR, c, None, shape="factual").startswith(
-            "Vol Ryanair #RYR5ZK · Boeing 737-800 · Amsterdam → Pisa · altitude 10\u202f570\u202fm · \u2193 sud · au-dessus d'Ennery"))
+            "Vol Ryanair #RYR5ZK · Boeing 737-800 · Amsterdam → Pisa · altitude 10\u202f570\u202fm · cap sud · au-dessus d'Ennery"))
         self.assertIn("Un Boeing 737-800 de Ryanair en route d'Amsterdam vers Pisa", social.post_text(RYR, c, None, shape="story"))
         L = post_lang.of(c)
         self.assertTrue(week.text(WEEK, c, social.area_words(c, L), "", social.fit_post).startswith(

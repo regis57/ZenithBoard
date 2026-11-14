@@ -864,7 +864,7 @@ HEADING_SHAPES = ("factual", "board")       # the two made of parts; the three s
 
 
 def post_text(p, c, why=None, credit=None, photo=None, shape=None):
-    """The post as it goes out. 1.1: with where the aircraft is heading ("↘ south-east") after the altitude, by
+    """The post as it goes out. 1.1: with where the aircraft is heading ("heading south-east") after the altitude, by
     default, **when everything else still fits**: the post with the heading must be the post without it plus the
     heading, to the letter. If its room would cost a hashtag, the photo's line, a part of the text or the board style
     itself, the heading is what is left out (asked for by the owner, 1 November 2026: "il faut que tout rentre")."""
@@ -985,9 +985,10 @@ WHY_WORDS = {"rare": N_("A rare visitor."), "military": N_("Military traffic."),
 LIST_WORDS = (N_("{a}, {b}"), N_("{a}; {b}"), N_("{sentence}."))   # post_lang's join and a sentence's full stop (0.51.0)
 COMPASS = (N_("north"), N_("north-east"), N_("east"), N_("south-east"), N_("south"), N_("south-west"), N_("west"),
            N_("north-west"))
-# 1.1: the same eight ways as arrows, north up as on the picture's map. The default texts say the heading with one
-# ("↘ south-east"): an arrow is read in every language, where "heading south-east" would have been one more sentence
-# to translate twenty-two times without a reviewer.
+# 1.1: the same eight ways as arrows, north up as on the picture's map, for the {arrow} tag of one's own templates.
+# The default texts say the heading in words, "heading south-east" (the owner, 14 November 2026: "je préfère cap";
+# the first draft said it with the arrow).
+HEADING = N_("heading {heading}")
 ARROWS = ("\u2191", "\u2197", "\u2192", "\u2198", "\u2193", "\u2199", "\u2190", "\u2196")
 
 
@@ -999,12 +1000,12 @@ def compass_index(track):
 
 
 def heading_bit(p, L):
-    """"↘ south-east": where the aircraft is heading, from its own track (never a direction from the antenna). Empty
+    """"heading south-east": where the aircraft is heading, from its own track (never a direction from the antenna). Empty
     when it sent no track, or on the ground (a track there is the way the nose points, or noise)."""
     i = compass_index(p.get("track"))
     if i is None or p.get("on_ground"):
         return ""
-    return ARROWS[i] + " " + L.t(COMPASS[i])
+    return L.t(HEADING, heading=L.t(COMPASS[i]))
 
 
 def custom_templates(c=None):

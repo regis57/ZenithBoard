@@ -42,6 +42,7 @@
  "south-west": "kusini magharibi",
  "west": "magharibi",
  "north-west": "kaskazini magharibi",
+ "heading {heading}": "mwelekeo {heading}",
  "military aircraft": "ndege ya kijeshi",
  "glider": "ndege isiyo na injini",
  "balloon": "puto",

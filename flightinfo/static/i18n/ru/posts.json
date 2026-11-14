@@ -42,6 +42,7 @@
  "south-west": "юго-запад",
  "west": "запад",
  "north-west": "северо-запад",
+ "heading {heading}": "курс на {heading}",
  "military aircraft": "военный борт",
  "glider": "планёр",
  "balloon": "аэростат",

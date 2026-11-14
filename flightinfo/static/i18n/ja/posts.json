@@ -42,6 +42,7 @@
  "south-west": "南西",
  "west": "西",
  "north-west": "北西",
+ "heading {heading}": "針路 {heading}",
  "military aircraft": "軍用機",
  "glider": "グライダー",
  "balloon": "気球",

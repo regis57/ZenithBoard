@@ -42,6 +42,7 @@
  "south-west": "남서쪽",
  "west": "서쪽",
  "north-west": "북서쪽",
+ "heading {heading}": "진행 방향 {heading}",
  "military aircraft": "군용기",
  "glider": "글라이더",
  "balloon": "기구",

@@ -36,7 +36,7 @@ The default crossing message:
 ✈ EZY17QZ · easyJet
 Airbus A320 · G-EZWA 🇬🇧
 Manchester (MAN) → Verona (VRN)
-10 970 m · 834 km/h · level · ↘ south-east
+10 970 m · 834 km/h · level · heading south-east
 14:05 · above Trémery
 https://globe.adsbexchange.com/?icao=4ca7b1
 ```
@@ -47,12 +47,12 @@ The default squawk message:
 🚨 Squawk 7700: General emergency
 EZY17QZ · easyJet · Airbus A320 · G-EZWA 🇬🇧
 Manchester (MAN) → Verona (VRN)
-3 660 m · 556 km/h · descending · ← west
+3 660 m · 556 km/h · descending · heading west
 near Kelsterbach
 14:05 · https://globe.adsbexchange.com/?icao=4ca7b1
 ```
 
-Since 1.1 both say where the aircraft is heading, an arrow (north up) and the word, from its own track; an aircraft that sends none has no heading. A part in `[brackets]` goes when a tag inside it is empty, and so does a line left empty: an aircraft with no known route has no route line. The crossing message says your place name (`{area}`, *above Trémery*), never a town near the antenna; `{near}` is there for a crossing too if you want it, knowing that inside the sharing radius it names a town near you.
+Since 1.1 both say where the aircraft is heading, in words (*heading south-east*, *cap sud-est*), from its own track; an aircraft that sends none has no heading. A part in `[brackets]` goes when a tag inside it is empty, and so does a line left empty: an aircraft with no known route has no route line. The crossing message says your place name (`{area}`, *above Trémery*), never a town near the antenna; `{near}` is there for a crossing too if you want it, knowing that inside the sharing radius it names a town near you.
 
 **Your own messages**: the console's *Your own Telegram messages* (one for the crossings, one for the squawks; lines kept; the tags a click away; tried on an aircraft overhead before it is saved), or `sudo zenithboard telegram template crossing set -- "TEXT"`. The one before is kept as `.bak` (`telegram template crossing undo`); `set none` gives the default back. A template that cannot be used (an unknown tag, a bracket left open) is refused when saved, and the default is used if one gets broken by hand.
 

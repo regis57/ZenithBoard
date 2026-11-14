@@ -42,6 +42,7 @@
  "south-west": "sud-ouest",
  "west": "ouest",
  "north-west": "nord-ouest",
+ "heading {heading}": "cap {heading}",
  "military aircraft": "avion militaire",
  "glider": "planeur",
  "balloon": "ballon",

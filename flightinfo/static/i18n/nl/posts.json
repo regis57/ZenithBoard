@@ -42,6 +42,7 @@
  "south-west": "zuidwest",
  "west": "west",
  "north-west": "noordwest",
+ "heading {heading}": "koers {heading}",
  "military aircraft": "militair vliegtuig",
  "glider": "zweefvliegtuig",
  "balloon": "ballon",
