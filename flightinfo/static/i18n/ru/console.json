@@ -466,6 +466,8 @@
  "Only the kinds lit; Everything writes every crossing": "Только выделенные типы; «Всё» сообщает о каждом пролёте",
  "Emergency squawks": "Аварийные коды транспондера",
  "7500, 7600, 7700 anywhere the antenna hears them, not only in the radius; once per flight, with where the aircraft is. Never posted to Bluesky.": "7500, 7600, 7700 везде, где их принимает антенна, а не только в радиусе; один раз за рейс, с указанием, где находится борт. Никогда не публикуются в Bluesky.",
+ "Receiver alert": "Предупреждение о приёмнике",
+ "A message when the receiver hears almost nothing for half an hour, falls by day under 40 % of the same hours a week earlier, or loses range for two days; and one when it is normal again. Needs the statistics.": "Сообщение, когда приёмник полчаса почти ничего не слышит, днём падает ниже 40 % тех же часов неделей ранее или два дня теряет дальность; и ещё одно, когда всё снова в норме. Нужна статистика.",
  "Language of the messages": "Язык сообщений",
  "The posts' ({lang})": "Как в публикациях ({lang})",
  "The posts'": "Как в публикациях",

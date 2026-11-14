@@ -466,6 +466,8 @@
  "Only the kinds lit; Everything writes every crossing": "Tik pažymėtos rūšys; Viskas rašo apie kiekvieną praskridimą",
  "Emergency squawks": "Avariniai atsakiklio kodai",
  "7500, 7600, 7700 anywhere the antenna hears them, not only in the radius; once per flight, with where the aircraft is. Never posted to Bluesky.": "7500, 7600, 7700 visur, kur juos priima antena, ne tik spindulyje; kartą per skrydį, nurodant, kur yra orlaivis. Į Bluesky niekada neskelbiama.",
+ "Receiver alert": "Imtuvo įspėjimas",
+ "A message when the receiver hears almost nothing for half an hour, falls by day under 40 % of the same hours a week earlier, or loses range for two days; and one when it is normal again. Needs the statistics.": "Žinutė, kai imtuvas pusvalandį beveik nieko negirdi, dieną nukrenta žemiau 40 % tų pačių valandų prieš savaitę arba dvi dienas praranda nuotolį; ir kita, kai viskas vėl normalu. Reikalinga statistika.",
  "Language of the messages": "Žinučių kalba",
  "The posts' ({lang})": "Kaip įrašuose ({lang})",
  "The posts'": "Kaip įrašuose",

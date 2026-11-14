@@ -192,5 +192,9 @@
  "near {place}": "netoli {place}",
  "{distance} from {place} ({country})": "{distance} nuo {place} ({country})",
  "position not known": "padėtis nežinoma",
- "closest: {distance}": "mažiausias atstumas: {distance}"
+ "closest: {distance}": "mažiausias atstumas: {distance}",
+ "Receiver alert: almost nothing heard for {minutes} minutes ({messages} messages in the last quarter hour). Check the antenna, its cable and the dongle.": "Imtuvo įspėjimas: jau {minutes} min. beveik nieko negirdėti ({messages} pranešimų per paskutinį ketvirtį valandos). Patikrinkite anteną, jos kabelį ir raktą (dongle).",
+ "Receiver alert: for two hours, {percent} % of the messages of the same hours a week ago. Check the antenna, its cable and the dongle.": "Imtuvo įspėjimas: jau dvi valandas {percent} % tų pačių valandų prieš savaitę pranešimų. Patikrinkite anteną, jos kabelį ir raktą (dongle).",
+ "Receiver alert: for two days the range has been {percent} % of its usual ({range} against {usual}). The antenna, its cable or the dongle may be weakening.": "Imtuvo įspėjimas: jau dvi dienas veikimo nuotolis siekia {percent} % įprasto ({range}, įprastai {usual}). Antena, jos kabelis arba raktas (dongle) galbūt silpsta.",
+ "The receiver hears normally again.": "Imtuvas vėl girdi normaliai."
 }

@@ -171,5 +171,9 @@
  "near {place}": "{place} के पास",
  "{distance} from {place} ({country})": "{place} ({country}) से {distance} दूर",
  "position not known": "जगह अज्ञात",
- "closest: {distance}": "निकटतम दूरी: {distance}"
+ "closest: {distance}": "निकटतम दूरी: {distance}",
+ "Receiver alert: almost nothing heard for {minutes} minutes ({messages} messages in the last quarter hour). Check the antenna, its cable and the dongle.": "रिसीवर चेतावनी: {minutes} मिनट से लगभग कुछ नहीं सुना गया (पिछले पंद्रह मिनट में {messages} संदेश)। एंटीना, उसकी केबल और डोंगल जाँचें।",
+ "Receiver alert: for two hours, {percent} % of the messages of the same hours a week ago. Check the antenna, its cable and the dongle.": "रिसीवर चेतावनी: दो घंटे से, एक सप्ताह पहले के उन्हीं घंटों के संदेशों का {percent} %। एंटीना, उसकी केबल और डोंगल जाँचें।",
+ "Receiver alert: for two days the range has been {percent} % of its usual ({range} against {usual}). The antenna, its cable or the dongle may be weakening.": "रिसीवर चेतावनी: दो दिन से रेंज सामान्य की {percent} % है ({range}, सामान्यतः {usual})। एंटीना, उसकी केबल या डोंगल कमज़ोर हो रहा हो सकता है।",
+ "The receiver hears normally again.": "रिसीवर फिर से सामान्य रूप से सुन रहा है।"
 }

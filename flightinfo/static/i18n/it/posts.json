@@ -180,5 +180,9 @@
  "near {place}": "vicino a {place}",
  "{distance} from {place} ({country})": "a {distance} da {place} ({country})",
  "position not known": "posizione sconosciuta",
- "closest: {distance}": "distanza minima: {distance}"
+ "closest: {distance}": "distanza minima: {distance}",
+ "Receiver alert: almost nothing heard for {minutes} minutes ({messages} messages in the last quarter hour). Check the antenna, its cable and the dongle.": "Avviso ricevitore: quasi nulla ricevuto da {minutes} minuti ({messages} messaggi nell'ultimo quarto d'ora). Controllare l'antenna, il cavo e il dongle.",
+ "Receiver alert: for two hours, {percent} % of the messages of the same hours a week ago. Check the antenna, its cable and the dongle.": "Avviso ricevitore: da due ore, {percent} % dei messaggi delle stesse ore di una settimana fa. Controllare l'antenna, il cavo e il dongle.",
+ "Receiver alert: for two days the range has been {percent} % of its usual ({range} against {usual}). The antenna, its cable or the dongle may be weakening.": "Avviso ricevitore: da due giorni la portata è al {percent} % del solito ({range} contro {usual}). L'antenna, il cavo o il dongle potrebbero indebolirsi.",
+ "The receiver hears normally again.": "Il ricevitore sente di nuovo normalmente."
 }

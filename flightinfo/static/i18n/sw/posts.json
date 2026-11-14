@@ -168,5 +168,9 @@
  "near {place}": "karibu na {place}",
  "{distance} from {place} ({country})": "{distance} kutoka {place} ({country})",
  "position not known": "mahali hapajulikani",
- "closest: {distance}": "umbali wa karibu zaidi: {distance}"
+ "closest: {distance}": "umbali wa karibu zaidi: {distance}",
+ "Receiver alert: almost nothing heard for {minutes} minutes ({messages} messages in the last quarter hour). Check the antenna, its cable and the dongle.": "Tahadhari ya kipokezi: karibu hakuna kilichosikika kwa dakika {minutes} (jumbe {messages} katika robo saa iliyopita). Kagua antena, kebo yake na dongle.",
+ "Receiver alert: for two hours, {percent} % of the messages of the same hours a week ago. Check the antenna, its cable and the dongle.": "Tahadhari ya kipokezi: kwa saa mbili, {percent} % ya jumbe za saa zilezile wiki iliyopita. Kagua antena, kebo yake na dongle.",
+ "Receiver alert: for two days the range has been {percent} % of its usual ({range} against {usual}). The antenna, its cable or the dongle may be weakening.": "Tahadhari ya kipokezi: kwa siku mbili masafa yamekuwa {percent} % ya kawaida ({range} dhidi ya {usual}). Huenda antena, kebo yake au dongle inadhoofika.",
+ "The receiver hears normally again.": "Kipokezi kinasikia kawaida tena."
 }

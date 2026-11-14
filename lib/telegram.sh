@@ -164,6 +164,22 @@ telegram_set_closest() {  # telegram_set_closest [on|off]
     *) echo "Usage: zenithboard telegram closest on|off" >&2; return 1 ;;
   esac
 }
+# 1.2 (asked by the owner, 26 October 2026): a message when the receiver stops hearing as it did. Three rules measured
+# on a real month of statistics (flightinfo/receiver_health.py): deaf, a sudden drop by day, a range that wears away.
+# Off by default. It reads the statistics' samples: without them there is nothing to judge by, and `on` says so.
+telegram_set_health() {   # telegram_set_health [on|off|check]
+  case "${1:-}" in
+    "") telegram_set_switch TELEGRAM_HEALTH "Receiver alert" "" 0
+        echo "Change:  sudo zenithboard telegram health on|off      What it would have said of the days kept:  zenithboard telegram health check" ;;
+    on) telegram_set_switch TELEGRAM_HEALTH "Receiver alert" on
+        echo "A message in the chat when the receiver hears almost nothing for half an hour, when by day it falls under 40 % of the same hours a week earlier for two hours, or when its range stays under 85 % of its usual for two days; and one when it is normal again."
+        [ "$(cfg_get STATS 0)" = 1 ] || echo "It reads the statistics, which are OFF: nothing will be said until they are on.  sudo zenithboard stats on"
+        [ "$(cfg_get TELEGRAM 0)" = 1 ] || echo "The Telegram messages themselves are off: sudo zenithboard telegram on" ;;
+    off) telegram_set_switch TELEGRAM_HEALTH "Receiver alert" off ;;
+    check) telegram_py health-check ;;
+    *) echo "Usage: zenithboard telegram health on|off|check" >&2; return 1 ;;
+  esac
+}
 telegram_set_rules() {    # telegram_set_rules [all|LIST]
   local w seen=" " out=()
   if [ -z "${1:-}" ]; then echo "Which crossings: $(cfg_get TELEGRAM_RULES all)   (all, or some of ${TELEGRAM_RULE_WORDS// /,})"; return 0; fi
@@ -244,7 +260,8 @@ telegram_menu() {
       try "3  Try the messages (sends nothing), or send a test" \
       status "4  Status" \
       closest "5  Closest distance from the antenna in each crossing's message: $( [ "$(cfg_get TELEGRAM_CLOSEST 0)" = 1 ] && echo ON || echo OFF )" \
-      remove "6  Remove: token, chat and service (asks you to type remove)" \
+      health "6  Receiver alert (deaf, sudden drop, range): $( [ "$(cfg_get TELEGRAM_HEALTH 0)" = 1 ] && echo ON || echo OFF )" \
+      remove "7  Remove: token, chat and service (asks you to type remove)" \
       back "Return to the previous menu") || return 0
     case "$c" in
       toggle) clear; if [ "$(telegram_state)" = on ]; then telegram_off; else telegram_on; fi; read -rp "Press Enter to continue..." _ ;;
@@ -259,6 +276,12 @@ telegram_menu() {
         case $? in
           0) wt_msg "$(telegram_set_closest on 2>&1)" 12 ;;
           1) wt_msg "$(telegram_set_closest off 2>&1)" 8 ;;
+        esac ;;
+      health)
+        wt_yesno "Be told in the chat when the receiver stops hearing as it did?\n\nThree rules, measured on a real month of this project's statistics:\n - almost nothing heard for half an hour, at any hour;\n - by day, two hours under 40 % of the same hours a week earlier;\n - the range under 85 % of its usual for two days.\nOne message when a rule starts, one when all is normal again.\n\nIt reads the statistics (7 Options, 1 Statistics): they must be on." 18
+        case $? in
+          0) wt_msg "$(telegram_set_health on 2>&1)" 14 ;;
+          1) wt_msg "$(telegram_set_health off 2>&1)" 8 ;;
         esac ;;
       remove) clear; telegram_remove "" || true; read -rp "Press Enter to continue..." _ ;;
       *) return 0 ;;

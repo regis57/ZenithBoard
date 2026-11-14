@@ -463,6 +463,8 @@
  "Only the kinds lit; Everything writes every crossing": "点灯している種類のみ。「すべて」は通過するすべてを送信",
  "Emergency squawks": "緊急スコーク",
  "7500, 7600, 7700 anywhere the antenna hears them, not only in the radius; once per flight, with where the aircraft is. Never posted to Bluesky.": "7500, 7600, 7700 を、半径内に限らずアンテナが受信したすべての場所で通知します。1便につき1回、航空機の位置を添えて送ります。Blueskyには投稿しません。",
+ "Receiver alert": "受信機の警告",
+ "A message when the receiver hears almost nothing for half an hour, falls by day under 40 % of the same hours a week earlier, or loses range for two days; and one when it is normal again. Needs the statistics.": "受信機が30分間ほとんど何も受信しないとき、日中に1週間前の同じ時間帯の40 %を下回ったとき、または2日間受信距離が落ちたときにメッセージを送り、正常に戻ったときにもう1通送ります。統計が必要です。",
  "Language of the messages": "メッセージの言語",
  "The posts' ({lang})": "投稿と同じ（{lang}）",
  "The posts'": "投稿と同じ",

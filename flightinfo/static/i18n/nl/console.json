@@ -464,6 +464,8 @@
  "Only the kinds lit; Everything writes every crossing": "Alleen de soorten die aanstaan; Alles meldt elke passage",
  "Emergency squawks": "Noodcodes van de transponder",
  "7500, 7600, 7700 anywhere the antenna hears them, not only in the radius; once per flight, with where the aircraft is. Never posted to Bluesky.": "7500, 7600, 7700 overal waar de antenne ze opvangt, niet alleen binnen de straal; één keer per vlucht, met waar het vliegtuig is. Nooit op Bluesky geplaatst.",
+ "Receiver alert": "Ontvangerwaarschuwing",
+ "A message when the receiver hears almost nothing for half an hour, falls by day under 40 % of the same hours a week earlier, or loses range for two days; and one when it is normal again. Needs the statistics.": "Een bericht wanneer de ontvanger een half uur bijna niets hoort, overdag onder 40 % van dezelfde uren een week eerder zakt, of twee dagen lang bereik verliest; en een wanneer alles weer normaal is. Vereist de statistieken.",
  "Language of the messages": "Taal van de berichten",
  "The posts' ({lang})": "Die van Bluesky ({lang})",
  "The posts'": "Die van Bluesky",

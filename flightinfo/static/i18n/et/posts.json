@@ -168,5 +168,9 @@
  "near {place}": "{place} lähedal",
  "{distance} from {place} ({country})": "{distance} linnast {place} ({country})",
  "position not known": "asukoht teadmata",
- "closest: {distance}": "lähim kaugus: {distance}"
+ "closest: {distance}": "lähim kaugus: {distance}",
+ "Receiver alert: almost nothing heard for {minutes} minutes ({messages} messages in the last quarter hour). Check the antenna, its cable and the dongle.": "Vastuvõtja hoiatus: {minutes} minutit pole peaaegu midagi kuulda olnud ({messages} sõnumit viimase veerandtunni jooksul). Kontrollige antenni, selle kaablit ja donglit.",
+ "Receiver alert: for two hours, {percent} % of the messages of the same hours a week ago. Check the antenna, its cable and the dongle.": "Vastuvõtja hoiatus: kaks tundi järjest {percent} % nädalataguste samade tundide sõnumitest. Kontrollige antenni, selle kaablit ja donglit.",
+ "Receiver alert: for two days the range has been {percent} % of its usual ({range} against {usual}). The antenna, its cable or the dongle may be weakening.": "Vastuvõtja hoiatus: kaks päeva on leviulatus olnud {percent} % tavapärasest ({range}, tavaliselt {usual}). Antenn, selle kaabel või dongel võib nõrgeneda.",
+ "The receiver hears normally again.": "Vastuvõtja kuuleb jälle normaalselt."
 }

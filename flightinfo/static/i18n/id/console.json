@@ -463,6 +463,8 @@
  "Only the kinds lit; Everything writes every crossing": "Hanya jenis yang menyala; Semuanya mengirim pesan untuk setiap pesawat yang melintas",
  "Emergency squawks": "Kode transponder darurat",
  "7500, 7600, 7700 anywhere the antenna hears them, not only in the radius; once per flight, with where the aircraft is. Never posted to Bluesky.": "7500, 7600, 7700 di mana pun antena menangkapnya, tidak hanya di dalam radius; sekali per penerbangan, beserta lokasi pesawat. Tidak pernah diposting ke Bluesky.",
+ "Receiver alert": "Peringatan penerima",
+ "A message when the receiver hears almost nothing for half an hour, falls by day under 40 % of the same hours a week earlier, or loses range for two days; and one when it is normal again. Needs the statistics.": "Pesan ketika penerima hampir tidak mendengar apa pun selama setengah jam, turun pada siang hari di bawah 40 % dari jam yang sama seminggu sebelumnya, atau kehilangan jangkauan selama dua hari; dan satu lagi ketika semuanya normal kembali. Memerlukan statistik.",
  "Language of the messages": "Bahasa pesan",
  "The posts' ({lang})": "Sama dengan postingan ({lang})",
  "The posts'": "Sama dengan postingan",

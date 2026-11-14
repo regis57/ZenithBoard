@@ -464,6 +464,8 @@
  "Only the kinds lit; Everything writes every crossing": "Aina zilizowashwa tu; Kila kitu hutuma ujumbe kwa kila ndege inayopita",
  "Emergency squawks": "Misimbo ya dharura ya transponda",
  "7500, 7600, 7700 anywhere the antenna hears them, not only in the radius; once per flight, with where the aircraft is. Never posted to Bluesky.": "7500, 7600, 7700 popote antena inapoipokea, si ndani ya nusukipenyo pekee; mara moja kwa kila safari ya ndege, pamoja na mahali ndege ilipo. Haichapishwi kamwe kwenye Bluesky.",
+ "Receiver alert": "Tahadhari ya kipokezi",
+ "A message when the receiver hears almost nothing for half an hour, falls by day under 40 % of the same hours a week earlier, or loses range for two days; and one when it is normal again. Needs the statistics.": "Ujumbe pale kipokezi kinaposikia karibu chochote kwa nusu saa, kinaposhuka mchana chini ya 40 % ya saa zilezile wiki iliyotangulia, au kinapopoteza masafa kwa siku mbili; na mwingine kila kitu kinaporudi kawaida. Kinahitaji takwimu.",
  "Language of the messages": "Lugha ya ujumbe",
  "The posts' ({lang})": "Kama machapisho ({lang})",
  "The posts'": "Kama machapisho",

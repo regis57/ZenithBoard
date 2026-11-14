@@ -216,5 +216,9 @@
  "near {place}": "قرب {place}",
  "{distance} from {place} ({country})": "على بُعد {distance} من {place} ({country})",
  "position not known": "الموقع غير معروف",
- "closest: {distance}": "أقرب مسافة: {distance}"
+ "closest: {distance}": "أقرب مسافة: {distance}",
+ "Receiver alert: almost nothing heard for {minutes} minutes ({messages} messages in the last quarter hour). Check the antenna, its cable and the dongle.": "تنبيه المستقبِل: لم يُسمع شيء تقريبًا منذ {minutes} دقيقة ({messages} رسالة في ربع الساعة الأخير). تحقّق من الهوائي وكابله والدونغل.",
+ "Receiver alert: for two hours, {percent} % of the messages of the same hours a week ago. Check the antenna, its cable and the dongle.": "تنبيه المستقبِل: منذ ساعتين، {percent} % من رسائل الساعات نفسها قبل أسبوع. تحقّق من الهوائي وكابله والدونغل.",
+ "Receiver alert: for two days the range has been {percent} % of its usual ({range} against {usual}). The antenna, its cable or the dongle may be weakening.": "تنبيه المستقبِل: منذ يومين والمدى عند {percent} % من المعتاد ({range} مقابل {usual}). ربما يضعف الهوائي أو كابله أو الدونغل.",
+ "The receiver hears normally again.": "عاد المستقبِل يسمع بشكل طبيعي."
 }

@@ -467,6 +467,8 @@
  "Only the kinds lit; Everything writes every crossing": "केवल चालू किए गए प्रकार; \"सब कुछ\" हर गुज़रने वाले विमान पर संदेश लिखता है",
  "Emergency squawks": "आपातकालीन स्क्वॉक",
  "7500, 7600, 7700 anywhere the antenna hears them, not only in the radius; once per flight, with where the aircraft is. Never posted to Bluesky.": "7500, 7600, 7700, एंटीना इन्हें जहाँ भी सुने, सिर्फ़ दायरे में नहीं; हर उड़ान में एक बार, विमान कहाँ है इसके साथ। Bluesky पर कभी पोस्ट नहीं होते।",
+ "Receiver alert": "रिसीवर चेतावनी",
+ "A message when the receiver hears almost nothing for half an hour, falls by day under 40 % of the same hours a week earlier, or loses range for two days; and one when it is normal again. Needs the statistics.": "एक संदेश जब रिसीवर आधे घंटे तक लगभग कुछ नहीं सुनता, दिन में एक सप्ताह पहले के उन्हीं घंटों के 40 % से नीचे गिर जाता है, या दो दिन तक रेंज खोता है; और एक संदेश जब सब फिर सामान्य हो जाए। आँकड़े चालू होने चाहिए।",
  "Language of the messages": "संदेशों की भाषा",
  "The posts' ({lang})": "पोस्ट जैसी ({lang})",
  "The posts'": "पोस्ट जैसी",

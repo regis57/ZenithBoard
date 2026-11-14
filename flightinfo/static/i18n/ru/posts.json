@@ -192,5 +192,9 @@
  "near {place}": "около {place}",
  "{distance} from {place} ({country})": "в {distance} от {place} ({country})",
  "position not known": "местоположение неизвестно",
- "closest: {distance}": "минимальное расстояние: {distance}"
+ "closest: {distance}": "минимальное расстояние: {distance}",
+ "Receiver alert: almost nothing heard for {minutes} minutes ({messages} messages in the last quarter hour). Check the antenna, its cable and the dongle.": "Предупреждение о приёмнике: уже {minutes} минут почти ничего не слышно ({messages} сообщений за последние четверть часа). Проверьте антенну, её кабель и донгл.",
+ "Receiver alert: for two hours, {percent} % of the messages of the same hours a week ago. Check the antenna, its cable and the dongle.": "Предупреждение о приёмнике: уже два часа {percent} % сообщений тех же часов неделю назад. Проверьте антенну, её кабель и донгл.",
+ "Receiver alert: for two days the range has been {percent} % of its usual ({range} against {usual}). The antenna, its cable or the dongle may be weakening.": "Предупреждение о приёмнике: уже два дня дальность составляет {percent} % от обычной ({range} против {usual}). Возможно, слабеет антенна, её кабель или донгл.",
+ "The receiver hears normally again.": "Приёмник снова слышит нормально."
 }

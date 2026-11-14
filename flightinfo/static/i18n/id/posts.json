@@ -156,5 +156,9 @@
  "near {place}": "dekat {place}",
  "{distance} from {place} ({country})": "{distance} dari {place} ({country})",
  "position not known": "posisi tidak diketahui",
- "closest: {distance}": "jarak terdekat: {distance}"
+ "closest: {distance}": "jarak terdekat: {distance}",
+ "Receiver alert: almost nothing heard for {minutes} minutes ({messages} messages in the last quarter hour). Check the antenna, its cable and the dongle.": "Peringatan penerima: hampir tidak ada yang terdengar selama {minutes} menit ({messages} pesan dalam seperempat jam terakhir). Periksa antena, kabelnya, dan dongle.",
+ "Receiver alert: for two hours, {percent} % of the messages of the same hours a week ago. Check the antenna, its cable and the dongle.": "Peringatan penerima: selama dua jam, {percent} % dari pesan pada jam yang sama seminggu lalu. Periksa antena, kabelnya, dan dongle.",
+ "Receiver alert: for two days the range has been {percent} % of its usual ({range} against {usual}). The antenna, its cable or the dongle may be weakening.": "Peringatan penerima: selama dua hari jangkauan hanya {percent} % dari biasanya ({range} dibanding {usual}). Antena, kabelnya, atau dongle mungkin melemah.",
+ "The receiver hears normally again.": "Penerima kembali mendengar dengan normal."
 }

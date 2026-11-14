@@ -141,6 +141,7 @@ ZenithBoard $ZB_VERSION - ADSB Flight Info
   zenithboard telegram crossings on|off the aircraft crossing the sharing radius, one message per crossing (default: on)
   zenithboard telegram squawks on|off   the emergency squawks 7500 7600 7700 anywhere in range, once per flight (default: on)
   zenithboard telegram closest on|off   add the closest distance from the antenna to each crossing's message, at the exit (default: off)
+  zenithboard telegram health on|off|check   a message when the receiver stops hearing as it did (deaf, sudden drop, range); check: what it would have said (default: off)
   zenithboard telegram rules [all|LIST] which crossings: all, or some of military,helicopter,heavy
   zenithboard telegram lang [CODE|posts]   the messages' language; posts: the posts' own (the default)
   zenithboard telegram units [metric|imperial|aviation|posts]   the messages' units; posts: the posts' own (the default)
@@ -449,12 +450,13 @@ case "${1:-}" in
       crossings) [ -z "${3:-}" ] || root_or_die; telegram_set_switch TELEGRAM_CROSSINGS "Crossings of the sharing radius" "${3:-}" ;;
       squawks)   [ -z "${3:-}" ] || root_or_die; telegram_set_switch TELEGRAM_SQUAWKS "Emergency squawks" "${3:-}" ;;
       closest) [ -z "${3:-}" ] || root_or_die; telegram_set_closest "${3:-}" ;;
+      health) case "${3:-}" in ""|check) ;; *) root_or_die ;; esac; telegram_set_health "${3:-}" ;;
       rules)  [ -z "${3:-}" ] || root_or_die; telegram_set_rules "${3:-}" ;;
       lang)   [ -z "${3:-}" ] || root_or_die; telegram_set_lang "${3:-}" ;;
       units)  [ -z "${3:-}" ] || root_or_die; telegram_set_units "${3:-}" ;;
       template) case "${4:-show}" in show|default|tags|test) ;; *) root_or_die ;; esac; telegram_template "${@:3}" ;;
       remove) root_or_die; telegram_remove "${3:-}" ;;
-      *) die "Usage: zenithboard telegram setup|chat|on|off|status|check|hello|test [crossing|squawk] [send]|crossings on|off|squawks on|off|closest on|off|rules LIST|lang CODE|units NAME|template crossing|squawk ...|remove" ;;
+      *) die "Usage: zenithboard telegram setup|chat|on|off|status|check|hello|test [crossing|squawk] [send]|crossings on|off|squawks on|off|closest on|off|health on|off|check|rules LIST|lang CODE|units NAME|template crossing|squawk ...|remove" ;;
     esac ;;
   patches)
     case "${2:-status}" in

@@ -43,6 +43,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import server  # noqa: E402  (config, aircraft.json, places, user agent)
 import post_lang  # noqa: E402  (the posts' language and their template language)
 import units as units_table  # noqa: E402  (the one table of units, lot 0 after 1.0)
+import receiver_health  # noqa: E402  (1.2: is the receiver still hearing as it did?)
 import saved_state  # noqa: E402  (the state kept on the card, written when it has changed; lot 0 after 1.0)
 import social  # noqa: E402  (the crossing rule, the wall's answers, the template tags)
 
@@ -61,6 +62,7 @@ DEFAULTS = {
     "TELEGRAM_RULES": "all",          # all, or some of military,helicopter,heavy: which crossings are written
     "TELEGRAM_LANG": "",              # empty: the posts' language (SOCIAL_LANG), English until that is set
     "TELEGRAM_UNITS": "",             # empty: the posts' units, else the wall's
+    "TELEGRAM_HEALTH": "0",           # 1.2: a message when the receiver stops hearing as it did (three measured rules)
     "TELEGRAM_CLOSEST": "0",          # 1.1: the closest the aircraft came to the antenna, added to its crossing message
 }
 RULES = ("military", "helicopter", "heavy")   # rare and farthest need the Bluesky service's thirty days of history
@@ -74,7 +76,7 @@ CONFIRM_S = server.SQUAWK_CONFIRM_S   # a code is believed once seen on two read
                                   # emergency status saying the same: one bad decode of a reply never sends a message
 SEND_EVERY_S = 3.1                # Telegram: about 20 messages a minute into one group, one a second into a private chat
 SENDS_PER_LOOK = 3
-KEEP_S = {"squawk": 3600, "crossing": 600, "test": 600, "edit": 1800}   # a message that cannot go out is dropped after this long
+KEEP_S = {"squawk": 3600, "crossing": 600, "test": 600, "edit": 1800, "health": 6 * 3600}   # a message that cannot go out is dropped after this long
 PAUSE_ON_FAIL_S = 600             # a refused token or chat: tried again ten minutes later, not at every look
 PAUSE_OFFLINE_S = 60
 MAX_TEXT = 4096                   # Telegram's longest message
@@ -461,7 +463,7 @@ class Outbox(object):
 
     def add(self, kind, text, what, now, hex=None, edit=None):
         self.items.append({"kind": kind, "text": text, "what": what, "made": now, "hex": hex, "edit": edit})
-        self.items.sort(key=lambda m: (m["kind"] != "squawk", m["made"]))    # an emergency goes first
+        self.items.sort(key=lambda m: (m["kind"] != "squawk", m["kind"] != "health", m["made"]))    # an emergency goes first, then the receiver
 
     def note(self, key, line, now, every=600):
         """A line for the journal, at most once per `every` seconds for the same kind of trouble."""
@@ -496,7 +498,8 @@ class Outbox(object):
                 return self.refused(exc, sec, state, now)
             self.items.pop(0)
             n += 1
-            count(state, m["kind"], now)
+            if m["kind"] != "health":              # the day's counts are of crossings and squawks
+                count(state, m["kind"], now)
             state["last"] = {"t": now, "kind": m["kind"], "what": m["what"]}
             follow = (state.get("closest") or {}).get(m.get("hex")) if m.get("hex") else None
             if isinstance(follow, dict):           # 1.1: the message's id, kept with the crossing to complete it at the exit
@@ -556,6 +559,82 @@ class Outbox(object):
         return 0
 
 
+# --------------------------------------------------------------------------- the receiver's health (1.2)
+# Asked by the owner on 26 October 2026: to be told when the antenna, its cable or the dongle goes weak, before the
+# receiver has been quiet for days. The rules and where their figures come from are in receiver_health.py. Said here,
+# in the owner's own chat, once when a rule starts and once when all is normal again; off by default
+# (TELEGRAM_HEALTH), and it needs the statistics (their quarter-hour samples are what the rules read).
+HEALTH_DEAF = N_("Receiver alert: almost nothing heard for {minutes} minutes ({messages} messages in the last quarter hour). Check the antenna, its cable and the dongle.")
+HEALTH_DROP = N_("Receiver alert: for two hours, {percent} % of the messages of the same hours a week ago. Check the antenna, its cable and the dongle.")
+HEALTH_RANGE = N_("Receiver alert: for two days the range has been {percent} % of its usual ({range} against {usual}). The antenna, its cable or the dongle may be weakening.")
+HEALTH_OK = N_("The receiver hears normally again.")
+HEALTH_TEXT = {"deaf": HEALTH_DEAF, "drop": HEALTH_DROP, "range": HEALTH_RANGE, "ok": HEALTH_OK}
+STATS_FILE = os.path.join(server.STATS_DIR, "stats.csv")
+
+
+def health_text(rule, finding, c):
+    """One alert's words, in the messages' language and units."""
+    v = view(c)
+    L = post_lang.of(v)
+    f = dict(finding or {})
+    values = {"minutes": L.num(f.get("minutes", 30)), "messages": L.num(f.get("messages", 0)), "percent": L.num(f.get("percent", 0))}
+    if "range_km" in f:
+        values["range"] = distance_words(f["range_km"], L, social.units_of(v))
+        values["usual"] = distance_words(f.get("usual_km", 0), L, social.units_of(v))
+    return "\u26A0 " + L.t(HEALTH_TEXT[rule], **values)
+
+
+def health_look(c, state, outbox, now, path=None):
+    """When the statistics have a new sample: the rules, and a message for one that starts or for the end of all."""
+    path = path or STATS_FILE
+    if not server.cfg_bool(c, "TELEGRAM_HEALTH", "0"):
+        state.pop("health", None)                  # switched off: what was being followed is forgotten
+        return
+    try:
+        stamp = os.stat(path).st_mtime
+    except OSError:
+        return                                     # no statistics (off, or not yet a sample): nothing to read
+    h = state.setdefault("health", {"active": {}, "stamp": 0})
+    if not isinstance(h.get("active"), dict):
+        h["active"] = {}
+    if stamp == h.get("stamp"):
+        return
+    first = not h.get("stamp")
+    h["stamp"] = stamp
+    found = receiver_health.evaluate(receiver_health.read_rows(path), datetime.datetime.fromtimestamp(now), c)
+    started, ended = receiver_health.step(h["active"], found)
+    for rule in started:
+        print("telegram: receiver alert (%s): %s" % (rule, json.dumps(found[rule], sort_keys=True)), flush=True)
+        outbox.add("health", health_text(rule, found[rule], c), "the receiver (%s)" % rule, now)
+    if ended and not first:
+        print("telegram: the receiver hears normally again", flush=True)
+        outbox.add("health", health_text("ok", {}, c), "the receiver (normal again)", now)
+
+
+def cmd_health_check():
+    """`telegram health check`: the three rules replayed over the statistics kept, and what they say now. Sends nothing."""
+    c = cfg()
+    rows = receiver_health.read_rows(STATS_FILE)
+    lim = receiver_health.limits(c)
+    print("Receiver alert: %s" % ("ON" if server.cfg_bool(c, "TELEGRAM_HEALTH", "0") else "off (sudo zenithboard telegram health on)"))
+    print("  deaf:   two quarter hours in a row under %d messages, at any hour" % lim["deaf"])
+    print("  drop:   between %02d:00 and %02d:00, two hours in a row under %d %% of the same hours a week earlier" % (
+        receiver_health.DAY_FROM, receiver_health.DAY_TO, lim["drop"]))
+    print("  range:  the day's median range under %d %% of the fourteen days before, two days in a row" % lim["range"])
+    if not rows:
+        print("No statistics to read (%s): the alert needs them. Turn them on: sudo zenithboard stats on" % STATS_FILE)
+        return 1
+    print("Statistics read: %d samples, %s to %s." % (len(rows), rows[0][0].strftime("%Y-%m-%d %H:%M"), rows[-1][0].strftime("%Y-%m-%d %H:%M")))
+    events = receiver_health.replay(rows, c)
+    if not events:
+        print("Over those days: no alert would have been sent.")
+    for when, rule, finding in events:
+        print("  %s  %s" % (when.strftime("%Y-%m-%d %H:%M"), health_text(rule, finding, c)))
+    now = receiver_health.evaluate(rows, datetime.datetime.now(), c)
+    print("Now: %s" % (", ".join(sorted(now)) if now else "nothing to report"))
+    return 0
+
+
 # --------------------------------------------------------------------------- the service
 def one_look(c, state, aircraft, squawks, pending_since, outbox, now, ask=True):
     """Detect what is new and queue its message. The squawks at every read, the crossings when it is time to ask the wall."""
@@ -612,6 +691,8 @@ def cmd_run():
             sec = outbox.follow_move(secrets() or sec)
         try:
             one_look(c, state, aircraft, squawks, pending_since, outbox, now, ask)
+            if ask:
+                health_look(c, state, outbox, now)
         except Exception as exc:                    # a message that cannot be made must not stop the service
             print("telegram: could not make a message: %s" % exc, flush=True)
         if outbox.items:
@@ -760,6 +841,10 @@ def cmd_status():
     print("  Crossings: %s, the sharing radius (%s km), %s" % ("on" if server.cfg_bool(c, "TELEGRAM_CROSSINGS", "1") else "off",
                                                               c.get("SOCIAL_RADIUS_KM"), "every crossing" if "all" in rules_of(c) else ", ".join(sorted(rules_of(c)))))
     print("  Emergency squawks: %s, anywhere the antenna hears them (7500, 7600, 7700)" % ("on" if server.cfg_bool(c, "TELEGRAM_SQUAWKS", "1") else "off"))
+    health = (s.get("health") or {}).get("active") or {}
+    print("  Receiver alert (deaf, sudden drop, range): %s%s" % (
+        "on" if server.cfg_bool(c, "TELEGRAM_HEALTH", "0") else "off (sudo zenithboard telegram health on)",
+        (", ALERT NOW: " + ", ".join(sorted(health))) if health else ""))
     print("  Closest distance from the antenna, added to each crossing's message: %s" % (
         "on" if server.cfg_bool(c, "TELEGRAM_CLOSEST", "0") else "off (sudo zenithboard telegram closest on)"))
     print("  Language: %s   Units: %s" % (lang_of(c), social.units_of(view(c))))
@@ -796,6 +881,8 @@ def main(argv):
         return cmd_chats()
     if cmd == "hello":
         return cmd_hello()
+    if cmd == "health-check":
+        return cmd_health_check()
     if cmd == "test":
         kinds = [k for k in rest if k in TEMPLATE_FILES] or ["crossing", "squawk"]
         return cmd_test(kinds, "send" in rest)

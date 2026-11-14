@@ -81,6 +81,24 @@ closest: 2.4 km
 * **Your own crossing template** gets the line too, at its end.
 * `off` stops it at once: nothing more is edited, and what was being followed is forgotten.
 
+## The receiver alert (1.2, off by default)
+
+`sudo zenithboard telegram health on` (menu *7 Options → 4 Telegram → 6*, or the console's *Receiver alert*) has the chat told when the receiver stops hearing as it did: an antenna unplugged, a cable cut, a dongle that dies or goes weak. One message when a rule starts, one when all is normal again (*The receiver hears normally again.*). It reads the [statistics](Statistics)' quarter-hour samples, so the statistics must be on.
+
+| Rule | It starts when | In the month it was measured on |
+|---|---|---|
+| **deaf** | two quarter hours in a row have under 2 000 messages, at any hour | once: 8 November 2026, 02:45 to 04:00 (12, 374, 878 and 1 709 messages; the quietest quarter hour of every other night was 4 320) |
+| **drop** | between 07:00 and 22:00, two hours in a row are under 40 % of the same hours one week earlier | never (the lowest hour by day was 55 %, once) |
+| **range** | the day's median of the farthest aircraft is under 85 % of the median of the fourteen days before, two days in a row | never (the days went from 94 % to 102 %) |
+
+**Where the figures come from.** The owner's own statistics, 16 October to 14 November 2026, 2 877 samples: measured, not guessed. `zenithboard telegram health check` replays the rules over the days your Pi has kept and prints what the alert would have said; it sends nothing.
+
+**Why not simply the message rate against last week**, which was the first idea. In that month the messages fell by 36 %, from 65 million a day to 41, while the messages per aircraft in view by day did not move (10 400 to 12 100 a quarter hour): fewer aircraft in the sky (2 745 distinct aircraft a day, then about 2 200; the owner's reading: fewer flights, with the price of kerosene), the same receiver. And by night the ratio of an hour to the same hour a week before went down to 0.11 with nothing wrong. An alert on the raw rate would have cried wolf for a month.
+
+**What it cannot promise.** One month, one receiver, and no hardware failure in it: the rules gave no false alert on those days, and that they catch a weakening dongle is still to be shown the day one weakens. The three thresholds are settings (`HEALTH_DEAF_MESSAGES`, `HEALTH_DROP_PERCENT`, `HEALTH_RANGE_PERCENT`, [Configuration reference](Configuration-reference)).
+
+A rule that flickers, under the limit, over it for a quarter hour, under it again, is one alert: it is over once four samples in a row no longer show it.
+
 ## How a squawk is believed
 
 The service reads the decoder's `aircraft.json` every five seconds. A code is believed when it is heard on **two reads in a row** (one reply decoded wrongly once never sends a message), or at once when the aircraft's own emergency status says the same (readsb's `emergency`: `general`, `nordo`, `unlawful`). Once per flight and code: the same aircraft squawking 7700 for twenty minutes is one message; 7700 then 7600 is two (the radio failed after the emergency); the same airframe as another flight, or the same code more than an hour after it was last heard, is a new event.
