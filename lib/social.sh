@@ -386,7 +386,6 @@ social_set_photolink() {
 }
 # 0.33.0: a summary of the week, posted by the service on Sundays from 19:00: aircraft, messages, the busiest day and
 # hour, the airlines and type most seen, the posts made. From the statistics' files: never a distance or a direction.
-social_set_weekly() { social_summary weekly "${1:-}"; }   # 0.33.0's command, kept
 
 # 0.38.0: three summaries, each on or off, at its own day and time on the Pi's clock, with the posts picked for it:
 #   1 the period (aircraft, messages, busiest times, airlines and models), 2 cargo airlines and business jets,

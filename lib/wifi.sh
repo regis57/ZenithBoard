@@ -172,7 +172,6 @@ wifi_connect() {   # wifi_connect SSID PSK [hidden] [keymgmt]
 }
 
 # ------------------------------------------------------------------ status, wired priority, SSH safety
-wifi_default_route_dev() { ip -o route show default 2>/dev/null | awk '{for (i=1;i<NF;i++) if ($i=="dev") {print $(i+1); exit}}'; }
 # True when the SSH session we are in goes through Wi-Fi (changing Wi-Fi would cut it).
 wifi_session_on_wifi() {
   [ -n "${SSH_CONNECTION:-}" ] || return 1
