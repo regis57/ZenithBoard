@@ -5,6 +5,8 @@
 // handful of lines, every one a round number, starting at 0 and reaching close to the top.
 const assert = require("assert"), fs = require("fs"), path = require("path");
 const src = fs.readFileSync(path.join(__dirname, "..", "flightinfo", "static", "stats.js"), "utf8");
+// lot 0 after 1.0: stats.js takes its units from the pages' one table, loaded before it by stats.html; here as a global
+global.Units = require(path.join(__dirname, "..", "flightinfo", "static", "units.js"));
 const at = src.indexOf("function ticks(");
 assert.ok(at > 0, "ticks() not found in stats.js");
 let depth = 0, end = -1;

@@ -41,6 +41,7 @@ import urllib.request
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import server  # noqa: E402  (config, aircraft.json, places, user agent)
 import post_lang  # noqa: E402  (the posts' language and their template language)
+import units as units_table  # noqa: E402  (the one table of units, lot 0 after 1.0)
 import social  # noqa: E402  (the crossing rule, the wall's answers, the template tags)
 
 N_ = post_lang.N_
@@ -138,8 +139,8 @@ def lang_of(c):
 def view(c):
     """The settings as the posts' code reads them, with the messages' own language and units in their place."""
     v = dict(c, SOCIAL_LANG=lang_of(c))
-    u = str(c.get("TELEGRAM_UNITS") or "").strip().lower()
-    if u in ("metric", "imperial", "aviation"):
+    u = units_table.system(c.get("TELEGRAM_UNITS"), None)
+    if u:
         v["SOCIAL_UNITS"] = u
     return v
 
@@ -179,10 +180,8 @@ def template_of(kind, L):
 
 # --------------------------------------------------------------------------- the words
 def distance_words(km, L, units):
-    if units == "aviation":
-        return L.num(int(round(km / 1.852))) + post_lang.NBSP + "NM"
-    if units == "imperial":
-        return L.num(int(round(km / 1.609344))) + post_lang.NBSP + "mi"
+    if units in ("aviation", "imperial"):        # NM and mi after the figure, the same in every language
+        return L.num(int(round(units_table.distance(km, units)))) + post_lang.NBSP + units_table.distance_label(units)
     return L.unit(int(round(km)), "kilometer")
 
 

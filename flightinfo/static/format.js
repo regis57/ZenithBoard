@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Pure formatting helpers (units, compass, text lines). No DOM -> unit-testable with node.
 (function (root) {
-  var KM_PER_MI = 1.609344, KMH_PER_KT = 1.852, KM_PER_NM = 1.852, M_PER_FT = 0.3048;
+  // the factors and the systems: units.js, the pages' one table (lot 0 after 1.0); required here under Node (the tests,
+  // the posts' picture), loaded before this file by the wall's page
+  var U = (typeof module !== "undefined" && module.exports) ? require("./units.js") : root.Units;
+  var KM_PER_MI = U.KM_PER_MI;
   var PTS = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
 
   function compass(deg) {
@@ -9,8 +12,8 @@
     return PTS[Math.round((((deg % 360) + 360) % 360) / 22.5) % 16];
   }
   // 0.55.0: aviation, as pilots and controllers count: nautical miles, knots, feet
-  function radiusToKm(value, units) { return units === "imperial" ? value * KM_PER_MI : units === "aviation" ? value * KM_PER_NM : value; }
-  function distUnit(units) { return units === "imperial" ? "MI" : units === "aviation" ? "NM" : "KM"; }
+  function radiusToKm(value, units) { return U.toKm(value, units); }
+  function distUnit(units) { return U.distanceLabel(units).toUpperCase(); }
 
   function pad(s, n) { s = String(s); return s.length >= n ? s.slice(0, n) : s + new Array(n - s.length + 1).join(" "); }
   function spread(left, right, width) {   // left text, right-aligned text, total width
@@ -20,12 +23,12 @@
   }
 
   function convert(p, units) {
-    var feet = units === "imperial" || units === "aviation";        // knots and feet in both
+    var feet = U.feetAndKnots(units);        // knots and feet in both
     return {
-      dist: units === "imperial" ? p.distance_km / KM_PER_MI : units === "aviation" ? p.distance_km / KM_PER_NM : p.distance_km,
+      dist: U.distance(p.distance_km, units),
       distUnit: distUnit(units),
-      speed: p.gs_kt == null ? null : (feet ? p.gs_kt : p.gs_kt * KMH_PER_KT), speedUnit: feet ? "KT" : "KMH",
-      alt: p.alt_ft == null ? null : (feet ? p.alt_ft : p.alt_ft * M_PER_FT), altUnit: feet ? "FT" : "M"
+      speed: p.gs_kt == null ? null : (feet ? p.gs_kt : U.kmh(p.gs_kt)), speedUnit: feet ? "KT" : "KMH",
+      alt: p.alt_ft == null ? null : (feet ? p.alt_ft : U.metres(p.alt_ft)), altUnit: feet ? "FT" : "M"
     };
   }
 
