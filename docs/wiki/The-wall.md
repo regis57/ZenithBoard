@@ -85,20 +85,21 @@ At the foot of the gear panel sits one grey line: the version the wall is runnin
 
 ## The emergency squawk banner (1.2, off by default)
 
-![The banner on the dots: EMERGENCY SQUAWK, 7700, GENERAL EMERGENCY, the callsign](https://raw.githubusercontent.com/regis57/ZenithBoard/main/docs/images/wall-squawk-dots.png)
+![The banner on the dots: 7700 EMERGENCY on the first row, the aircraft's own rows, its silhouette and photo, where it is on the last row](https://raw.githubusercontent.com/regis57/ZenithBoard/main/docs/images/wall-squawk-dots.png)
 
-When an aircraft squawks **7500** (unlawful interference), **7600** (radio failure) or **7700** (general emergency) **anywhere in the antenna's range**, not only inside the wall's radius, the wall leaves what it was showing and says so for **thirty seconds**: the code, what it means, and the callsign (the aircraft's address when it sends none). Then it is the wall again.
+When an aircraft squawks **7500** (unlawful interference), **7600** (radio failure) or **7700** (general emergency) **anywhere in the antenna's range**, not only inside the wall's radius, the wall leaves what it was showing and says so for **thirty seconds**, with **which aircraft and where** (the owner, on seeing the first form, 14 November 2026: *what plane and where, with the picture as usual*). It is the aircraft's own screen: the code on the first row (*7700 EMERGENCY*, *7600 NO RADIO*, *7500 UNLAWFUL*), then its callsign, registration, airline, model, altitude and route, its silhouette and its photo as for any aircraft, and on the last row **where it is**: *NEAR KELSTERBACH* (the town of 5 000 inhabitants or more nearest the aircraft, within 15 km), else *37 KM FROM FRANKFURT AM MAIN* (the nearest city of 100 000 or more, in the tablet's units). A place near the aircraft, never the antenna's, and never how far it is from you. Then it is the wall again. An aircraft the Pi cannot describe (it sends no position) gets a plain banner: *EMERGENCY SQUAWK*, the code, its meaning, the callsign.
 
 | | |
 |---|---|
 | For every screen | `sudo zenithboard squawk-banner on` (or `off`), or menu *2 The wall → 2 What it shows → 4* |
 | For this tablet only | the gear, **Emergency squawks**, or `?squawk=1` in the address (`?squawk=0` to keep it off on one screen) |
-| To see it now | add `?squawk_test=7700` (or `7500`, `7600`) to the wall's address: the banner once, with the callsign TEST123, the setting on or off |
+| To see it now | add `?squawk_test=7700` (or `7500`, `7600`) to the wall's address: the banner once, on the aircraft overhead at that moment, its last row saying *THIS IS A TEST* (the plain banner with TEST123 when the sky is empty), the setting on or off |
 
 * **Once per aircraft and code in an hour**: a code heard for forty minutes is one banner, not eighty. Another aircraft, or another code, is another banner once the first has had its thirty seconds.
 * **A code is believed** the way the [Telegram messages](Telegram) have believed it since 0.99.6: heard on two reads at least four seconds apart, or at once when the aircraft's own emergency status says the same. One reply decoded wrongly once shows nothing.
-* **Nothing is published.** The banner is on your own wall, in your own room; an emergency is not a fact to broadcast. The wall is told the code, the callsign and the address, never where the aircraft is.
-* On the split-flap board the same words turn on the flaps, the meaning on two rows:
+* **Nothing is published.** The banner is on your own wall, in your own room; an emergency is not a fact to broadcast. The wall is told the aircraft as it is told any other, and the name of a town or city near it, never its position.
+* The speed row and the flags give way to the code and the place: a row each.
+* On the split-flap board the same rows turn on the flaps:
 
 ![The banner on the split-flap board](https://raw.githubusercontent.com/regis57/ZenithBoard/main/docs/images/wall-squawk-flap.png)
 

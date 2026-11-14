@@ -231,6 +231,35 @@ const PLANES = { planes: [], total: 3, server_id: "s1" };
     await w.run(6000);
     assert.strictEqual(w.drawn().indexOf("EMERGENCY SQUAWK"), -1, "an answer that is not one of the three codes shows nothing");
 
+    // the owner on the first banner: "what plane and where, with the picture as usual". When the Pi describes the
+    // aircraft, the banner is its own screen: the code on the first row, where it is on the last
+    const JET = { hex: "4b17d0", flight: "PJZ600", registration: "HB-JAM", airline: "Premium Jet", type: "GL5T", type_name: "BOMBARDIER Global 5000",
+                  shape: "bizjet", alt_ft: 41000, gs_kt: 497, distance_km: 180, bearing: 40, route: { from: { city: "Geneva", iata: "GVA" }, to: { city: "London", iata: "LTN" } } };
+    const told = (where, plane) => Object.assign({}, PLANES, { squawks: [{ hex: "4b17d0", flight: "PJZ600", code: "7700", plane: plane === undefined ? JET : plane, where }] });
+    w = wall({ answer: answer({ squawk_banner: true }, () => told({ near: "Kelsterbach" })) });
+    await w.run(6000);
+    for (const part of ["7700 EMERGENCY", "PJZ600", "HB-JAM", "PREMIUM JET", "GLOBAL 5000", "12500 M", "GENEVA", "LONDON", "NEAR KELSTERBACH"])
+      assert.ok(w.drawn().indexOf(part) >= 0, "the aircraft's own screen must say " + part + " (" + w.drawn().slice(0, 300) + ")");
+    assert.strictEqual(w.drawn().indexOf("EMERGENCY SQUAWK"), -1, "not the bare banner when the aircraft is known");
+    assert.strictEqual(w.drawn().indexOf("180"), -1, "nor how far it is from the antenna");
+    w = wall({ search: "?units=aviation", answer: answer({ squawk_banner: true }, () => told({ city: "Frankfurt am Main", km: 37 })) });
+    await w.run(6000);
+    assert.ok(w.drawn().indexOf("20 NM FROM FRANKFURT AM MAIN") >= 0, "a city and how far the aircraft is from it, in the tablet's units (" + w.drawn().slice(-120) + ")");
+    w = wall({ search: "?mode=flap", answer: answer({ squawk_banner: true }, () => told({ city: "Frankfurt am Main", km: 37 })) });
+    await w.run(6000);
+    const own = w.flapRows.find((r) => /7700 EMERGENCY/.test(r));
+    assert.ok(own && /PJZ600/.test(own) && /HB-JAM/.test(own) && /37 KM FROM FRANK/.test(own), "flap: the same rows (" + own + ")");
+    own.split("|").forEach((r) => assert.ok(r.length <= 16, "flap: '" + r + "' is wider than the board"));
+    w = wall({ answer: answer({ squawk_banner: true }, () => told(null, null)) });
+    await w.run(6000);
+    assert.ok(w.drawn().indexOf("EMERGENCY SQUAWK") >= 0 && w.drawn().indexOf("PJZ600") >= 0, "an aircraft the Pi cannot describe keeps the bare banner");
+    w = wall({ search: "?squawk_test=7600", answer: answer({}, () => Object.assign({}, PLANES, { planes: [JET] })) });
+    await w.run(6000);
+    assert.ok(w.drawn().indexOf("7600 NO RADIO") >= 0 && w.drawn().indexOf("THIS IS A TEST") >= 0 && w.drawn().indexOf("HB-JAM") >= 0,
+              "?squawk_test= with an aircraft overhead shows the screen a real one would get, said to be a test");
+    const firstRow = JSON.parse(read("app.js").match(/var SQUAWK_ROW = (\{[^;]+\});/)[1]);
+    for (const code of ["7500", "7600", "7700"]) assert.ok(firstRow[code].length <= 14 && firstRow[code].indexOf(code) === 0, code + ": its row must fit the fourteen letters of a row");
+
     const words = JSON.parse(read("app.js").match(/var SQUAWK_WORDS = (\{[^;]+\});/)[1].replace(/(\d{4})/g, "$1"));
     for (const code of ["7500", "7600", "7700"]) {
       assert.ok(words[code].join(" ").length <= 21, code + ": its meaning must fit one row of the dots");
