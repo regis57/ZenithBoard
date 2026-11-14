@@ -80,6 +80,13 @@ wall_photos_set() {   # wall_photos_set 1|0
   if [ "$1" = 1 ]; then echo "Aircraft photos are ON. The wall reloads by itself within a few seconds."
   else echo "Aircraft photos are OFF: the animated sky scene is shown instead."; fi
 }
+# 1.1: the airline of a callsign that has no route (business and charter flights, an airline's second certificate):
+# its three letters are asked of adsbdb.com, once, and the name kept in memory. Off by default.
+wall_airlines_set() {   # wall_airlines_set 1|0
+  cfg_set AIRLINE_LOOKUP "$1"; restart_flightinfo
+  if [ "$1" = 1 ]; then echo "Airline names by callsign are ON: the three letters of a callsign without a known airline are looked up on adsbdb.com. The wall reloads by itself."
+  else echo "Airline names by callsign are OFF: no three-letter code is sent to the internet for a name."; fi
+}
 wall_routes_set() {   # wall_routes_set 1|0
   cfg_set SHOW_ROUTES "$1"; restart_flightinfo
   if [ "$1" = 1 ]; then echo "Flight routes are ON (origin and destination, looked up by callsign). The wall reloads by itself."

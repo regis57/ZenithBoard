@@ -246,11 +246,12 @@ menu_yesno_apply() {
 wall_data_menu() {
   local c
   while true; do
-    c=$(wt_menu "Photos, routes and aircraft names\n\nPhotos: $(cfg_get SHOW_PHOTOS 1)    Routes: $(cfg_get SHOW_ROUTES 1)    Monthly names refresh: $(cfg_get AUTO_DATA_REFRESH 1)    Offline database: $(cfg_get LOCAL_DB 0)   (1 = on)" \
+    c=$(wt_menu "Photos, routes and aircraft names\n\nPhotos: $(cfg_get SHOW_PHOTOS 1)    Routes: $(cfg_get SHOW_ROUTES 1)    Airline names by callsign: $(cfg_get AIRLINE_LOOKUP 0)    Monthly names refresh: $(cfg_get AUTO_DATA_REFRESH 1)    Offline database: $(cfg_get LOCAL_DB 0)   (1 = on)" \
       photos "1  Photos (Planespotters, internet)" \
       routes "2  Routes: where each flight comes from and goes" \
       data "3  Monthly refresh of the model names" \
       localdb "4  Offline registrations (the map's database)" \
+      airlines "5  Airline names for callsigns without a route" \
       back "Return to the previous menu") || return 0
     case "$c" in
       # the audit of 22-23 October 2026: Esc (whiptail's 255) was taken for No and switched the feature off; now
@@ -258,6 +259,7 @@ wall_data_menu() {
       # functions, which restart the wall so that the tablets reload, as `photos on|off` and `routes on|off` do
       photos) menu_yesno_apply wall_photos_set "Show aircraft photos (Planespotters) on the wall? Needs internet on the Pi." 8 ;;
       routes) menu_yesno_apply wall_routes_set "Show where each flight comes from and goes to?\n\nThe callsign (for example DLH4YK) is looked up on the free adsbdb.com database. When your decoder does not know an aircraft, its address is also used to find the model name. Needs internet on the Pi." 13 ;;
+      airlines) menu_yesno_apply wall_airlines_set "Name the airline of a callsign that has no route?\n\nBusiness jets, charters and some airlines' second companies fly with a callsign (for example JFA12K) whose route nobody publishes, so the wall shows no airline for them. With this on, the three letters (JFA) are looked up once on the free adsbdb.com database and the name is kept.\n\nThe database can hold an old name for a few of them. Needs internet on the Pi." 18 ;;
       data)
         menu_yesno_set AUTO_DATA_REFRESH "Refresh the aircraft model list automatically once a month?\n\n(Downloads a free list of aircraft names from GitHub. Needs internet on the Pi; the wall works without it.)" 12 && data_refresh_apply ;;
       localdb)

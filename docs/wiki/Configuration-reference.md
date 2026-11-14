@@ -18,6 +18,7 @@ Read the whole file with `zenithboard config`.
 | `SHOW_PHOTOS` | `1` | `zenithboard photos on\|off` | Aircraft photos from Planespotters. Needs internet on the Pi |
 | `FLAGS` | `1` | the gear on the tablet, or this line | The two flags on the dot-matrix wall: where the aircraft is registered, and where it was built. With them on, the airline and model rows hold twelve characters instead of fourteen |
 | `SHOW_ROUTES` | `1` | `zenithboard routes on\|off` | Where the flight comes from and goes to. Needs internet |
+| `AIRLINE_LOOKUP` | `0` | `zenithboard config-set AIRLINE_LOOKUP 1\|0`, or the menu | 1.1: the airline of a callsign that has no route, its three letters asked of adsbdb.com. Needs internet |
 | `LOCAL_DB` | `0` | `zenithboard data localdb on\|off` | Registrations and models from tar1090's aircraft database on this Pi, before adsbdb and hexdb (0.26.0). Offline |
 | `LOCAL_DB_DIR` | `/usr/local/share/tar1090/git-db/db` | `zenithboard config-set LOCAL_DB_DIR PATH` | Where that database is |
 | `PORT` | `8080` | `zenithboard config-set PORT 8090` | The wall's port. Needs a restart of the service |

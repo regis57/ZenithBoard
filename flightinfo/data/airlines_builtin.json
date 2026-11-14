@@ -254,6 +254,11 @@
 "name": "ITA Airways",
 "cc": "IT"
 },
+"JAF": {
+"iata": "TB",
+"name": "TUI fly Belgium",
+"cc": "BE"
+},
 "JAL": {
 "iata": "JL",
 "name": "Japan Airlines",
@@ -328,6 +333,11 @@
 "iata": "PC",
 "name": "Pegasus",
 "cc": "TR"
+},
+"PTN": {
+"iata": null,
+"name": "Platoon Aviation",
+"cc": "DE"
 },
 "QFA": {
 "iata": "QF",

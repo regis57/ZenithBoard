@@ -209,6 +209,7 @@ cmd_status() {
     echo "Wall:     http://$(local_ip):$(cfg_get PORT 8080)/"
     echo "Aircraft photos (Planespotters): $( [ "$(cfg_get SHOW_PHOTOS 1)" = 1 ] && echo "ON" || echo "OFF (turn on: sudo zenithboard photos on)" )"
     echo "Flight routes (adsbdb.com):      $( [ "$(cfg_get SHOW_ROUTES 1)" = 1 ] && echo "ON" || echo "OFF (turn on: sudo zenithboard routes on)" )"
+    echo "Airline names by callsign:       $( [ "$(cfg_get AIRLINE_LOOKUP 0)" = 1 ] && echo "ON (adsbdb.com)" || echo "OFF (turn on: sudo zenithboard config-set AIRLINE_LOOKUP 1)" )"
     data_refresh_status
     localdb_status
   fi

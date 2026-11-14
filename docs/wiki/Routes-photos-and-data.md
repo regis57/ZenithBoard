@@ -17,6 +17,19 @@ The wall knows four things the radio does not tell it: which airline a callsign 
 
 adsbdb's answer for a callsign names the airline as well as the airports (`"airline": {"name": "easyJet", "icao": "EZY", ...}`). Since 0.17.0 the wall keeps that name for the callsign's three-letter prefix, so the next `EZY` flight is labelled `EASYJET` even though easyJet is not in the built-in list. Three rules keep it honest: the built-in list wins when it knows the prefix (its names are the short ones a sign needs); the names live in memory only, since the wall server writes nowhere, and are learned again after a restart from the first route lookup; and with routes switched off nothing is learned, because nothing is asked. Corporate suffixes such as `Inc.` or `AG` are dropped before display, and the dot font drops accents as it does for airports.
 
+## Airline names for callsigns without a route (1.1, off by default)
+
+The route answer names the airline of a flight it knows. Business jets, charters and some airlines' second companies fly with a callsign whose route nobody publishes, so their rows had no airline: the owner's `zenithboard stats gaps` of 14 November 2026 listed forty such three-letter prefixes over twenty-eight days, `JFA` on 31 aircraft, `VJT` on 19, `WMT` on 17.
+
+`sudo zenithboard config-set AIRLINE_LOOKUP 1` (menu *2 The wall → 4 Photos, routes, aircraft names → 5*; `0` turns it off; `zenithboard status` says which) makes the wall ask adsbdb's airline endpoint for the three letters alone: `api.adsbdb.com/v0/airline/JFA` answers *Jetfly Aviation*.
+
+* **One question per three letters**, at most one every 1.5 seconds, through `ThrottledLookup` like every other lookup. A name is kept thirty days, a designator adsbdb does not know is asked again after seven. In memory only: the wall server writes nowhere, so a restart asks again, a few dozen questions over the following hours.
+* **What leaves the Pi:** the three letters of the callsign, nothing else. With the setting off, nothing.
+* **Only an airline's callsign** (three letters, then a digit) is asked. A registration flown as a callsign (`GABCD`) also starts with three letters, and would be named after a stranger.
+* **Only the name is taken.** The country adsbdb gives is the designator's, not always the operator's (it says Canada for `VJT`, VistaJet's Maltese certificate), so the flag stays the one of the aircraft's registration.
+* **The built-in list wins, then the route answer, then this.** adsbdb's names are kept by volunteers and some are old: of sixteen of the owner's prefixes read on 14 November 2026, fourteen were right (`KLC` KLM Cityhopper, `GAC` GlobeAir, `LXA` Luxaviation, `FJO` Flexjet Operations Malta, `RUK` Ryanair UK…) and two were not: `JAF` came back as *Jetairfly*, TUI fly Belgium's former name, and `PTN` as a Brazilian airline, where the aircraft over Moselle are Platoon Aviation's. Both are now in the built-in list under their right names, with or without the setting. A name you find wrong is worth an issue: it goes into that list.
+* **An answer that is not one name** (two companies under the same letters, a name of more than sixty characters, an answer about other letters) names nothing.
+
 ## Nothing blocks the display
 
 Every outside lookup goes through `ThrottledLookup`, and the rule is absolute: **the display loop never waits for the network.** A lookup that is not answered yet returns nothing, the wall draws the row without it, and the answer appears on a later pass. At most one request leaves every 1.5 seconds, however many aircraft are overhead.
