@@ -42,6 +42,7 @@
  "south-west": "Südwesten",
  "west": "Westen",
  "north-west": "Nordwesten",
+ "heading {heading}": "Kurs {heading}",
  "military aircraft": "Militärflugzeug",
  "glider": "Segelflugzeug",
  "balloon": "Ballon",

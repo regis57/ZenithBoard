@@ -42,6 +42,7 @@
  "south-west": "الجنوب الغربي",
  "west": "الغرب",
  "north-west": "الشمال الغربي",
+ "heading {heading}": "الاتجاه: {heading}",
  "military aircraft": "طائرة عسكرية",
  "glider": "طائرة شراعية",
  "balloon": "منطاد",

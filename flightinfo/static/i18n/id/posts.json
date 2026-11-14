@@ -42,6 +42,7 @@
  "south-west": "barat daya",
  "west": "barat",
  "north-west": "barat laut",
+ "heading {heading}": "arah {heading}",
  "military aircraft": "pesawat militer",
  "glider": "pesawat layang",
  "balloon": "balon udara",

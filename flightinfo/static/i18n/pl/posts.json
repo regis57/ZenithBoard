@@ -42,6 +42,7 @@
  "south-west": "południowy zachód",
  "west": "zachód",
  "north-west": "północny zachód",
+ "heading {heading}": "kurs: {heading}",
  "military aircraft": "wojskowy statek powietrzny",
  "glider": "szybowiec",
  "balloon": "balon",

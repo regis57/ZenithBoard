@@ -90,8 +90,9 @@ HELLO = N_("ZenithBoard is connected to this chat. The aircraft crossing the sha
 NEAR_TOWN = N_("near {place}")
 NEAR_CITY = N_("{distance} from {place} ({country})")
 NO_POSITION = N_("position not known")
-# 1.1: the heading by default, an arrow and the word ("↘ south-east"), after the climb
-BODY = "[{flight}][ · {airline}][ · {type}][ · {registration}][ {flag}]\n[{from} → {to}]\n[{altitude}][ · {speed}][ · {climb}][ · {arrow} {heading}]"
+# 1.1: the heading by default, in words ("heading south-east"), after the climb: {heading_words} below is replaced
+# by the catalogue's phrase in the messages' language
+BODY = "[{flight}][ · {airline}][ · {type}][ · {registration}][ {flag}]\n[{from} → {to}]\n[{altitude}][ · {speed}][ · {climb}]{heading_words}"
 TAGS = tuple(social.TEMPLATE_TAGS) + ("near", "meaning", "hex")
 TAG_HELP = social.TAG_HELP + (("near", "where the aircraft is: the town nearest it, or a city and how far (never from the antenna)"),
                               ("meaning", "what the emergency squawk means (7500, 7600, 7700), in the messages' language"),
@@ -100,10 +101,11 @@ TAG_HELP = social.TAG_HELP + (("near", "where the aircraft is: the town nearest 
 
 def default_template(kind, L):
     """The message's template in that language, before any tag is filled."""
+    heading = "[ · " + raw(L, social.HEADING) + "]"
     if kind == "squawk":
-        return "\U0001F6A8 " + raw(L, SQUAWK_HEAD) + "\n" + BODY + "\n[{near}]\n{time}[ · {tracker}]"
+        return "\U0001F6A8 " + raw(L, SQUAWK_HEAD) + "\n" + BODY.replace("{heading_words}", heading) + "\n[{near}]\n{time}[ · {tracker}]"
     return "✈ [{flight}][ · {airline}]\n[{why}]\n[{type}][ · {registration}][ {flag}]\n[{from} → {to}]\n" \
-           "[{altitude}][ · {speed}][ · {climb}][ · {arrow} {heading}]\n{time}[ · {area}]\n[{tracker}]"
+           "[{altitude}][ · {speed}][ · {climb}]" + heading + "\n{time}[ · {area}]\n[{tracker}]"
 
 
 def raw(L, key):

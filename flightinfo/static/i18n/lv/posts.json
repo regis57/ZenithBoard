@@ -42,6 +42,7 @@
  "south-west": "dienvidrietumi",
  "west": "rietumi",
  "north-west": "ziemeļrietumi",
+ "heading {heading}": "kurss: {heading}",
  "military aircraft": "militārs gaisa kuģis",
  "glider": "planieris",
  "balloon": "gaisa balons",

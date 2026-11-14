@@ -42,6 +42,7 @@
  "south-west": "suroeste",
  "west": "oeste",
  "north-west": "noroeste",
+ "heading {heading}": "rumbo {heading}",
  "military aircraft": "avión militar",
  "glider": "planeador",
  "balloon": "globo",

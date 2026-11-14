@@ -42,6 +42,7 @@
  "south-west": "lounas",
  "west": "länsi",
  "north-west": "luode",
+ "heading {heading}": "suunta {heading}",
  "military aircraft": "sotilaskone",
  "glider": "purjelentokone",
  "balloon": "kuumailmapallo",

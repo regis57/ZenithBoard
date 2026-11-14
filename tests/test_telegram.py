@@ -167,17 +167,18 @@ class WordsTest(Base):
         self.assertIn("https://globe.adsbexchange.com/?icao=4ca7b1", text)
 
     def test_the_heading_is_in_both_default_messages_and_goes_when_there_is_no_track(self):
-        # 1.1 (asked by the owner, 1 November 2026): an arrow and the word, after the altitude, the speed and the climb
+        # 1.1 (asked by the owner, 1 November 2026; "cap", 14 November): in words, after the altitude, the speed and the climb
         for kind, code in (("crossing", None), ("squawk", "7700")):
             text = telegram.fill(kind, dict(EZY, track=135, alt_ft=30000), CFG, ac=ac(), code=code)
-            line = [x for x in text.splitlines() if "\u2198" in x]
+            line = [x for x in text.splitlines() if "heading" in x]
             self.assertEqual(len(line), 1, text)
-            self.assertTrue(line[0].endswith(" \u00b7 \u2198 south-east"), line[0])
+            self.assertTrue(line[0].endswith(" \u00b7 heading south-east"), line[0])
             bare = telegram.fill(kind, dict(EZY, track=None, alt_ft=30000), CFG, ac=ac(), code=code)
-            self.assertNotRegex(bare, "[\u2191\u2193\u2196-\u2199]")
+            self.assertNotIn("heading", bare)
+            self.assertNotIn("{", bare)
             self.assertFalse(any(x.rstrip().endswith("\u00b7") for x in bare.splitlines()), bare)
         fr = telegram.fill("crossing", dict(EZY, track=200, alt_ft=30000), dict(CFG, TELEGRAM_LANG="fr"))
-        self.assertIn("\u2193 sud", fr)
+        self.assertIn(" \u00b7 cap sud", fr)
 
     def test_squawk_default_says_the_code_its_meaning_and_where(self):
         text = telegram.fill("squawk", EZY, CFG, ac=ac(), code="7700")

@@ -42,6 +42,7 @@
  "south-west": "pietvakariai",
  "west": "vakarai",
  "north-west": "šiaurės vakarai",
+ "heading {heading}": "kursas: {heading}",
  "military aircraft": "karinis orlaivis",
  "glider": "sklandytuvas",
  "balloon": "oro balionas",

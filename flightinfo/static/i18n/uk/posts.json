@@ -42,6 +42,7 @@
  "south-west": "південний захід",
  "west": "захід",
  "north-west": "північний захід",
+ "heading {heading}": "курс на {heading}",
  "military aircraft": "військовий літак",
  "glider": "планер",
  "balloon": "аеростат",

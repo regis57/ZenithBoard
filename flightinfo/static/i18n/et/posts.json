@@ -42,6 +42,7 @@
  "south-west": "edel",
  "west": "lääs",
  "north-west": "loe",
+ "heading {heading}": "suund {heading}",
  "military aircraft": "sõjaväe õhusõiduk",
  "glider": "purilennuk",
  "balloon": "õhupall",

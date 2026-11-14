@@ -101,13 +101,13 @@ zenithboard logs social
 
 | Shape | The post |
 |---|---|
-| `factual` (default) | Flight Ryanair #RYR5ZK · Boeing 737-800 · Brussels → Pisa · altitude 10 570 m · ↓ south · above Trémery |
+| `factual` (default) | Flight Ryanair #RYR5ZK · Boeing 737-800 · Brussels → Pisa · altitude 10 570 m · heading south · above Trémery |
 | `story` | A Ryanair Boeing 737-800 bound for Pisa from Brussels has just crossed the sky above Trémery, 10 570 m up. #RYR5ZK |
-| `board` | ✈ #RYR5ZK · EI-ENK / Brussels → Pisa / Boeing 737-800 · 10 570 m · 720 km/h · ↓ south / Above Trémery at 20:37 (four lines) |
+| `board` | ✈ #RYR5ZK · EI-ENK / Brussels → Pisa / Boeing 737-800 · 10 570 m · 720 km/h · heading south / Above Trémery at 20:37 (four lines) |
 | `spotter` | EI-ENK, a Ryanair Boeing 737-800, flying Brussels → Pisa as #RYR5ZK: 10 570 m above Trémery at 720 km/h. |
 | `lookup` | Look up, Trémery! Ryanair #RYR5ZK is passing 10.6 km overhead on its way from Brussels to Pisa. |
 
-**Where it is heading, by default (1.1).** The `factual` and `board` shapes say it after the altitude: an arrow, north up as on the picture's map, and the word in the posts' language (*↓ south*, *↘ sud-est*). It comes from the aircraft's own track, never from where the antenna is, and an aircraft that sends no track has none. **Everything else comes first**: the heading is written only when the post with it is, to the letter, the post without it plus the heading. If its room would cost a hashtag, the photo's line, a word of the text or the board shape itself, it is the heading that is left out. The three sentences (`story`, `spotter`, `lookup`) are left as they were written, and so are your own templates, where `{arrow}` and `{heading}` put it wherever you like.
+**Where it is heading, by default (1.1).** The `factual` and `board` shapes say it after the altitude: in words, in the posts' language (*heading south*, *cap sud-est*, *Kurs Südosten*; the owner chose the word over a first draft's arrow, 14 November 2026). It comes from the aircraft's own track, never from where the antenna is, and an aircraft that sends no track has none. **Everything else comes first**: the heading is written only when the post with it is, to the letter, the post without it plus the heading. If its room would cost a hashtag, the photo's line, a word of the text or the board shape itself, it is the heading that is left out. The three sentences (`story`, `spotter`, `lookup`) are left as they were written, and so are your own templates, where `{arrow}` and `{heading}` put it wherever you like.
 
 Several shapes, comma-separated (`story,spotter,lookup`), or `random`: one is drawn at each post. The reason the post was made comes first when the words do not already say it: `Rare visitor:`, `Heavy overhead:`, `Military traffic:`, `Helicopter:`. A range record keeps the factual words, which say "range record for 30 days" and where it was seen from rather than "overhead". A shape that lacks what it needs (an aircraft with neither airline nor type) or would pass 220 characters gives the factual text, which can be cut cleanly at Bluesky's 300. No shape ever says the distance or the direction from the receiver: with the area, they would place it. The hashtags, the map's credit and the photo link follow as before.
 
@@ -123,7 +123,7 @@ are written that way too: *pukul 13.50* in Indonesian and *klo 13.50* in Finnish
 *ft* and *kt*, as in aviation. Each post also tells Bluesky its language, for its language filters. On RYR5ZK,
 Brussels to Pisa, above Ennery, in French:
 
-> Vol Ryanair #RYR5ZK · Boeing 737-800 · Brussels → Pisa · altitude 10 570 m · ↓ sud · au-dessus d'Ennery
+> Vol Ryanair #RYR5ZK · Boeing 737-800 · Brussels → Pisa · altitude 10 570 m · cap sud · au-dessus d'Ennery
 >
 > Un Boeing 737-800 de Ryanair en route de Brussels vers Pisa vient de traverser le ciel au-dessus d'Ennery, à 10 570 m d'altitude. #RYR5ZK
 >
@@ -421,9 +421,9 @@ Several rules can match; the best candidate is the one matching the most, and kn
 
 | Case | Text |
 |---|---|
-| Airline flight, route known | `Flight Etihad #ETD11K · Airbus A380-800 · Paris → Abu Dhabi · altitude 8 500 m · ↘ south-east · above Trémery` |
-| Airline flight, route unknown | `Flight British Airways #BAW123 · Airbus A380-800 · altitude 11 900 m · ↖ north-west · above Trémery` |
-| Callsign, no airline known | `Flight #BGA113J · Airbus A330-743 Beluga XL · F-GXLH · altitude 9 750 m · ← west · above Trémery` |
+| Airline flight, route known | `Flight Etihad #ETD11K · Airbus A380-800 · Paris → Abu Dhabi · altitude 8 500 m · heading south-east · above Trémery` |
+| Airline flight, route unknown | `Flight British Airways #BAW123 · Airbus A380-800 · altitude 11 900 m · heading north-west · above Trémery` |
+| Callsign, no airline known | `Flight #BGA113J · Airbus A330-743 Beluga XL · F-GXLH · altitude 9 750 m · heading west · above Trémery` |
 | Registration only | `Aircraft D-EABC · Cessna 172 · altitude 910 m · above Trémery` |
 | Helicopter | `Helicopter D-HABC · Airbus Helicopters H145 · altitude 460 m · above Trémery` |
 | Military | `Military flight #RCH123 · Boeing KC-135R Stratotanker · altitude 7 620 m · above Trémery` |

@@ -42,6 +42,7 @@
  "south-west": "दक्षिण-पश्चिम",
  "west": "पश्चिम",
  "north-west": "उत्तर-पश्चिम",
+ "heading {heading}": "दिशा {heading}",
  "military aircraft": "सैन्य विमान",
  "glider": "ग्लाइडर",
  "balloon": "गुब्बारा",
