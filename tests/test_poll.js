@@ -223,7 +223,9 @@ const PLANES = { planes: [], total: 3, server_id: "s1" };
 
     w = wall({ search: "?squawk_test=7500", answer: answer({}, () => PLANES) });
     await w.run(6000);
-    assert.ok(w.drawn().indexOf("UNLAWFUL INTERFERENCE") >= 0 && w.drawn().indexOf("TEST123") >= 0, "?squawk_test= shows it once, the setting off");
+    assert.ok(w.drawn().indexOf("7500 UNLAWFUL") >= 0 && w.drawn().indexOf("TEST123") >= 0 && w.drawn().indexOf("F-TEST") >= 0 && w.drawn().indexOf("THIS IS A TEST") >= 0,
+              "?squawk_test= with an empty sky shows the aircraft's own screen on an invented aircraft, the setting off (1.2.1)");
+    assert.strictEqual(w.drawn().indexOf("EMERGENCY SQUAWK"), -1, "not the plain banner: the owner came to see which aircraft and where");
     w = wall({ search: "?squawk_test=1234", answer: answer({ squawk_banner: true }, () => PLANES) });
     await w.run(6000);
     assert.strictEqual(w.drawn().indexOf("EMERGENCY SQUAWK"), -1, "only the three emergency codes");

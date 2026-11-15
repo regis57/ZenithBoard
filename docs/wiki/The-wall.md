@@ -93,7 +93,7 @@ When an aircraft squawks **7500** (unlawful interference), **7600** (radio failu
 |---|---|
 | For every screen | `sudo zenithboard squawk-banner on` (or `off`), or menu *2 The wall → 2 What it shows → 4* |
 | For this tablet only | the gear, **Emergency squawks**, or `?squawk=1` in the address (`?squawk=0` to keep it off on one screen) |
-| To see it now | add `?squawk_test=7700` (or `7500`, `7600`) to the wall's address: the banner once, on the aircraft overhead at that moment, its last row saying *THIS IS A TEST* (the plain banner with TEST123 when the sky is empty), the setting on or off |
+| To see it now | add `?squawk_test=7700` (or `7500`, `7600`) to the wall's address: the banner once, on the aircraft overhead at that moment, its last row saying *THIS IS A TEST* (an invented aircraft, TEST123, when the sky is empty: 1.2.1), the setting on or off |
 
 * **Once per aircraft and code in an hour**: a code heard for forty minutes is one banner, not eighty. Another aircraft, or another code, is another banner once the first has had its thirty seconds.
 * **A code is believed** the way the [Telegram messages](Telegram) have believed it since 0.99.6: heard on two reads at least four seconds apart, or at once when the aircraft's own emergency status says the same. One reply decoded wrongly once shows nothing.

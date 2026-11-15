@@ -546,8 +546,11 @@
       var before = alarm, heard = d.squawks || [];
       var trying = !!testSquawk;
       if (trying) {       // the aircraft overhead right now stands in, so the test shows the screen a real one would get
-        var stand = planes[0] || null;
-        heard = [{ hex: stand ? stand.hex : "000000", flight: stand ? stand.flight : "TEST123", code: testSquawk, plane: stand, where: { text: "THIS IS A TEST" } }].concat(heard);
+        // 1.2.1: with an empty sky (the owner, 15 November 2026, 01:30) the test fell back to the plain banner, and
+        // what he had come to see, which aircraft and where, was not shown: an invented aircraft stands in then
+        var stand = planes[0] || { hex: "000000", flight: "TEST123", registration: "F-TEST", type: "A320", type_name: "AIRBUS A320", airline: "Test airline",
+                                   shape: "narrow", alt_ft: 35000, gs_kt: 450, route: { from: { city: "Paris", iata: "CDG" }, to: { city: "Rome", iata: "FCO" } } };
+        heard = [{ hex: stand.hex, flight: stand.flight, code: testSquawk, plane: stand, where: { text: "THIS IS A TEST" } }].concat(heard);
         testSquawk = null;
       }
       noteSquawks(heard, performance.now(), trying);   // the page's own clock: a tablet whose date jumps keeps its thirty seconds

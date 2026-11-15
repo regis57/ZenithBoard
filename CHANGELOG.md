@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.1 — 15 November 2026
+
+- **`?squawk_test=` shows the banner's real form under an empty sky too.** The test borrowed the aircraft overhead; with none inside the wall's radius (the owner, at 01:30) it fell back to the plain banner, *EMERGENCY SQUAWK / 7700 / TEST123*, and the form 1.2.0 was made for, which aircraft and where with its picture, was not shown. It now invents an aircraft then (TEST123, *Test airline*, Paris to Rome), its last row still saying *THIS IS A TEST*.
+- **On the reference Pi after 1.2.0**: `telegram health check` reads the Pi's thirty days and says the one alert of 8 November, in French, as the replay of the owner's file had; MLAT is with FlightAware, one client counted.
+
 ## 1.2.0 — 15 November 2026
 
 Lot 2 of the Roadmap, the wall and the receiver: the emergency squawk banner, the choice of the network that does MLAT, the receiver alert. **Every new setting is off or at its former value by default** (`SQUAWK_BANNER=0`, `MLAT_NETWORK=adsbx`, `TELEGRAM_HEALTH=0`): a Pi that touches nothing changes nothing. Published at the owner's word (*enchaîne 1.2.0*). **What the reference Pi has shown**: the first form of the banner on the real wall, and MLAT moved to FlightAware and back. **What it has not**: the banner's second form (which aircraft and where), FlightAware's MLAT column after a day, AirNav Radar's MLAT switch, and the receiver alert on a real failure. Update: `cd ~/ZenithBoard && sudo zenithboard update`.
