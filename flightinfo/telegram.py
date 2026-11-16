@@ -678,8 +678,7 @@ def cmd_run():
     last_ask = 0
     # systemd stops the service with SIGTERM: what this pass already sent is written down first, so a restart
     # never sends it again (0.99.16; through the shared helper since lot 0)
-    saved().on_stop(lambda: state, lambda s: s.update(queue=len(outbox.items)),
-                    save=lambda s: save_state(s))
+    saved().on_stop(lambda: state, lambda s: s.update(queue=len(outbox.items)), save=save_state)
     while True:
         now = time.time()
         c = cfg()

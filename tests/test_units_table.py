@@ -7,7 +7,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "flightinfo"))
 import units  # noqa: E402
 
-T = json.load(open(os.path.join(HERE, "units_table.json"), encoding="utf-8"))
+with open(os.path.join(HERE, "units_table.json"), encoding="utf-8") as _fh:
+    T = json.load(_fh)
 
 
 class UnitsTable(unittest.TestCase):
@@ -43,10 +44,11 @@ class UnitsTable(unittest.TestCase):
             for name in sorted(os.listdir(root)):
                 if not name.endswith(".py") or name == "units.py":
                     continue
-                for n, line in enumerate(open(os.path.join(root, name), encoding="utf-8"), 1):
-                    code = line.split("#", 1)[0]
-                    if factor.search(code):
-                        found.append("%s:%d %s" % (name, n, line.strip()[:80]))
+                with open(os.path.join(root, name), encoding="utf-8") as fh:
+                    for n, line in enumerate(fh, 1):
+                        code = line.split("#", 1)[0]
+                        if factor.search(code):
+                            found.append("%s:%d %s" % (name, n, line.strip()[:80]))
         self.assertEqual(found, [], "a unit factor outside flightinfo/units.py")
 
 

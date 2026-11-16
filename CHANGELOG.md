@@ -1,5 +1,9 @@
 # Changelog
 
+## Not released yet
+
+- **Eight CodeQL findings closed, no change of behaviour.** A number that is not a number is now tested with `math.isfinite` (the receiver alert's reading of `stats.csv`, the heading of a post) rather than by comparing it with itself; two files opened by the units table's test are closed after reading; a second `import json` in a Telegram test is gone; the two services pass `save_state` itself to the stop handler rather than a lambda around it.
+
 ## 1.2.1 — 15 November 2026
 
 - **`?squawk_test=` shows the banner's real form under an empty sky too.** The test borrowed the aircraft overhead; with none inside the wall's radius (the owner, at 01:30) it fell back to the plain banner, *EMERGENCY SQUAWK / 7700 / TEST123*, and the form 1.2.0 was made for, which aircraft and where with its picture, was not shown. It now invents an aircraft then (TEST123, *Test airline*, Paris to Rome), its last row still saying *THIS IS A TEST*.
