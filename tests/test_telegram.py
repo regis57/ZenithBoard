@@ -335,7 +335,6 @@ class ClosestTest(Base):
         self.assertEqual([t.split("\n")[-1] for t in edits], ["closest: 3.0\u00a0km"])
 
     def test_the_id_is_kept_through_a_restart(self):
-        import json
         st, box, sent, edits, now = self.fly(path=[(-14.0 + i * 1.15, 2.4) for i in range(10)])
         self.assertEqual((len(sent), edits), (1, []))
         kept = json.loads(json.dumps(telegram.prune(st, now)))                      # what state.json holds, read back

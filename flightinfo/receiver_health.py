@@ -19,6 +19,7 @@ A row stamped HH:MM measures the quarter hour that ends then (lib/stats.sh). No 
 before it has happened once: the thresholds are settings.
 """
 import datetime
+import math
 import statistics
 
 DEAF_MESSAGES = 2000         # under this in a quarter hour, twice running: the receiver hears almost nothing
@@ -45,7 +46,7 @@ def read_rows(path):
                     msgs, far = float(parts[1]), float(parts[2])
                 except ValueError:
                     continue
-                if msgs != msgs or far != far or msgs < 0 or msgs in (float("inf"),) or far in (float("inf"),):
+                if not math.isfinite(msgs) or not math.isfinite(far) or msgs < 0:
                     continue
                 out.append((when, msgs, far))
     except OSError:

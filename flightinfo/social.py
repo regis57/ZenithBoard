@@ -40,6 +40,7 @@ map (dotmap, flap), imported when one of them is chosen.
 import datetime
 import gzip
 import json
+import math
 import os
 import random
 import re
@@ -1023,7 +1024,7 @@ ARROWS = ("\u2191", "\u2197", "\u2192", "\u2198", "\u2193", "\u2199", "\u2190", 
 
 def compass_index(track):
     """0 (north) to 7 (north-west) for a track in degrees, or None when the aircraft sent none."""
-    if isinstance(track, bool) or not isinstance(track, (int, float)) or track != track or track in (float("inf"), float("-inf")):
+    if isinstance(track, bool) or not isinstance(track, (int, float)) or not math.isfinite(track):
         return None
     return int((float(track) % 360 + 22.5) // 45) % 8
 
@@ -1744,7 +1745,7 @@ def cmd_run():
         state.get("since"), "" if warmed(state, time.time()) else
         " (rare and farthest wait for %d days of it)" % WARMUP_DAYS), flush=True)
     # stopped by systemd (an update, a restart): what was posted is on the card before the service leaves
-    saved().on_stop(lambda: state, save=lambda s: save_state(s))
+    saved().on_stop(lambda: state, save=save_state)
     while True:
         now = time.time()
         c = cfg()
