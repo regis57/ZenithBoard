@@ -345,10 +345,8 @@ def crossing_candidates(c, planes, state, pending_since, now):
             continue
         if p.get("on_ground") or not (p.get("flight") or social.known(p)) or social.already_posted(state, p):
             continue
-        if p.get("pending"):                       # the wall is still asking for its route or model: wait a little
-            since = pending_since.setdefault(p.get("hex"), now)
-            if now - since < SETTLE_S:
-                continue
+        if social.still_settling(pending_since, p, now):   # the wall is still asking for its route or model: wait a little
+            continue
         score, why = social.interest(p, rules, {}, now)
         if score > 0:
             out.append((p, why))
@@ -661,8 +659,6 @@ def one_look(c, state, aircraft, squawks, pending_since, outbox, now, ask=True):
                 state.setdefault("closest", {})[h] = {"t0": now, "seen": now, "what": what,
                                                      "km": float(km) if isinstance(km, (int, float)) and not isinstance(km, bool) else None}
             outbox.add("crossing", fill("crossing", p, c, why, now), what, now, hex=h if follow else None)
-        if len(pending_since) > 2000:
-            pending_since.clear()
 
 
 def cmd_run():

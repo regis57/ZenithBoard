@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.2 — 19 November 2026
+
+- **An aircraft back over the antenna waits for its route again.** The Bluesky and Telegram services wait up to two minutes for a route or a model still being looked up. That wait was timed per airframe from the first time it was ever seen waiting, and never reset: an aircraft seen once, on an earlier flight, went out at once the next time. In the owner's log of 17 to 19 November, six posts of thirty without a route were this (ABR4VA, TJD801, BAW709, SWR5MP, RYR3WB, TAY8SL: *still on its way, 1 lookups queued*); SWR5MP would have had London → Zurich from hexdb. The wait is now kept per airframe and callsign, and starts again after five minutes without being seen waiting.
+- **What the rest of the log says, checked against both databases on the 19th**: thirteen callsigns neither adsbdb nor hexdb knows (business jets, charters, air taxis), five that are not airline callsigns, six whose two answers are other flights (UAL3907 Hong Kong → Guam and Brussels → Newark, WMT6X Mykonos → Rome, AIA252F Paris → Paris…). Those stay without a route: nothing better can be said of them.
+
 ## Not released yet
 
 - **Eight CodeQL findings closed, no change of behaviour.** A number that is not a number is now tested with `math.isfinite` (the receiver alert's reading of `stats.csv`, the heading of a post) rather than by comparing it with itself; two files opened by the units table's test are closed after reading; a second `import json` in a Telegram test is gone; the two services pass `save_state` itself to the stop handler rather than a lambda around it.

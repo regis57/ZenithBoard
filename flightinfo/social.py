@@ -71,6 +71,7 @@ NODE = os.environ.get("ZENITHBOARD_NODE", "node")
 TRACE_SECONDS = 15 * 60          # how much track is kept per aircraft
 TRACE_MIN_POINTS = 6             # a post needs at least this much track (30 s at 5 s a sample)
 SETTLE_S = 120                   # an aircraft whose route or model the wall is still looking up waits up to this long
+SETTLE_FORGET_S = 300            # 1.2.2: not seen waiting for this long, the next wait is a new one
 READ_EVERY_S = 5
 ASK_EVERY_S = 15
 RULES_ALL = ("rare", "military", "helicopter", "heavy", "farthest", "all")   # "all" was "any" until 0.19.1
@@ -429,7 +430,7 @@ def note_range(state, km, now):
 class Tracks(object):
     def __init__(self):
         self.by_hex = {}                           # hex -> list of [lat, lon, alt_ft, t]
-        self.pending_since = {}                    # hex -> when the wall was first seen still looking it up
+        self.pending_since = {}                    # "hex:callsign" -> [first, last] seen still looking it up (1.2.2)
         self.inside = {}                           # hex -> [first, last] time seen inside the sharing radius, worth a post
 
     def note_inside(self, planes, now):
@@ -607,12 +608,8 @@ def choose(planes, tracks, rules, state, now, settle=True):
         # seen asking) rather than post a board with empty rows (0.19.5); past that, it goes with what is known.
         # Counted from that moment, not from the track: the track starts far out, the lookups only when the aircraft
         # comes inside the sharing radius, which is when it becomes a candidate
-        if settle and p.get("pending"):
-            if len(tracks.pending_since) > 2000:
-                tracks.pending_since.clear()
-            since = tracks.pending_since.setdefault(p.get("hex"), now)
-            if now - since < SETTLE_S:
-                continue
+        if settle and still_settling(tracks.pending_since, p, now):
+            continue
         score, why = interest(p, rules, state, now)
         if score <= 0:
             continue
@@ -623,6 +620,27 @@ def choose(planes, tracks, rules, state, now, settle=True):
         if best is None or score > best[0] or (score == best[0] and first and (not best_first or first < best_first)):
             best, best_first = (score, why, p), first
     return best
+
+
+def still_settling(pending_since, p, now):
+    """True while the wall is still looking up this aircraft's route or model and SETTLE_S has not run out.
+
+    1.2.2 (the owner's log, 17 to 19 November 2026): the clock was kept per airframe and never reset, so an aircraft
+    seen waiting once, on an earlier flight hours or days before, did not wait at all the next time. Six posts of
+    thirty without a route went out "still on its way" with one lookup in the queue: ABR4VA (posted on the 18th,
+    again on the 19th), TJD801 (10:11, again at 17:27), BAW709, SWR5MP (hexdb had London -> Zurich, a few seconds
+    away), RYR3WB, TAY8SL. The clock is now kept per airframe and callsign, and starts again when the aircraft has not
+    been seen waiting for SETTLE_FORGET_S: another passage."""
+    if not p.get("pending"):
+        return False
+    key = "%s:%s" % (str(p.get("hex") or "").lower(), str(p.get("flight") or "").strip().upper())
+    if len(pending_since) > 2000:
+        pending_since.clear()
+    seen = pending_since.get(key)
+    if not isinstance(seen, list) or now - seen[1] > SETTLE_FORGET_S:
+        seen = pending_since[key] = [now, now]
+    seen[1] = now
+    return now - seen[0] < SETTLE_S
 
 
 # --------------------------------------------------------------------------- the words
