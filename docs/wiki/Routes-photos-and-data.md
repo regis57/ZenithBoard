@@ -36,6 +36,17 @@ The route answer names the airline of a flight it knows. Business jets, charters
   A name you find wrong, or one you know for those six, is worth an issue: it goes into the built-in list.
 * **An answer that is not one name** (two companies under the same letters, a name of more than sixty characters, an answer about other letters) names nothing.
 
+## Why a post can still have no route
+
+From the owner's log of 17 to 19 November 2026, thirty posts without a route (each post says why in `zenithboard logs social`):
+
+| How many | Why | What can be done |
+|---|---|---|
+| 13 | neither adsbdb nor hexdb knows the callsign: business jets, charters, air taxis (NetJets, Global Jet, Jetfly…) | nothing: nobody publishes these routes |
+| 6 | both answers are another flight under the same callsign (UAL3907: Hong Kong → Guam and Brussels → Newark, over the Moselle heading south) | nothing: they are rightly refused rather than shown wrong |
+| 5 | not an airline callsign (a registration such as 3AMSR, or none) | nothing: routes are looked up for airline callsigns |
+| 6 | the answer was still on its way | **fixed in 1.2.2**: an aircraft back over the antenna did not wait for it, the two-minute wait being timed from its first passage ever |
+
 ## Nothing blocks the display
 
 Every outside lookup goes through `ThrottledLookup`, and the rule is absolute: **the display loop never waits for the network.** A lookup that is not answered yet returns nothing, the wall draws the row without it, and the answer appears on a later pass. At most one request leaves every 1.5 seconds, however many aircraft are overhead.

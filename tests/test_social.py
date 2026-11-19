@@ -1486,6 +1486,42 @@ class ServiceLoopTest(unittest.TestCase):
         self.assertTrue(all(b - a >= social.RETRY_AFTER_FAIL_S for a, b in zip(tries, tries[1:])))
 
 
+class SettleClockTest(unittest.TestCase):
+    """1.2.2, the owner's log of 17 to 19 November 2026: six posts in thirty went out with their route "still on its way",
+    one lookup in the queue, because the waiting clock of an airframe seen waiting once was never reset."""
+
+    def test_a_second_passage_of_the_same_airframe_waits_again(self):
+        waits, p = {}, {"hex": "4b1a2c", "flight": "SWR5MP", "pending": ["route"]}
+        self.assertTrue(social.still_settling(waits, p, 1000.0))
+        self.assertTrue(social.still_settling(waits, p, 1000.0 + social.SETTLE_S - 1))
+        self.assertFalse(social.still_settling(waits, p, 1000.0 + social.SETTLE_S + 1), "past the wait: what is known")
+        later = 1000.0 + 6 * 3600                     # the same aircraft back six hours later, its route looked up again
+        self.assertTrue(social.still_settling(waits, p, later), "it waits again: before 1.2.2 it went out at once")
+        self.assertFalse(social.still_settling(waits, p, later + social.SETTLE_S + 1))
+
+    def test_a_new_callsign_on_the_same_airframe_is_a_new_wait(self):
+        waits = {}
+        social.still_settling(waits, {"hex": "4ca7b1", "flight": "TJD801", "pending": ["route"]}, 1000.0)
+        self.assertTrue(social.still_settling(waits, {"hex": "4ca7b1", "flight": "TJD802", "pending": ["route"]}, 1000.0 + social.SETTLE_S + 5))
+
+    def test_a_long_wait_seen_all_along_still_ends(self):
+        waits, p = {}, {"hex": "4b1a2c", "flight": "SWR5MP", "pending": ["route"]}
+        for t in range(0, 600, 15):                   # seen waiting at every look: the wait is not started again
+            ok = social.still_settling(waits, p, 1000.0 + t)
+        self.assertFalse(ok)
+
+    def test_nothing_on_its_way_nothing_to_wait_for(self):
+        waits = {}
+        self.assertFalse(social.still_settling(waits, {"hex": "4b1a2c", "flight": "SWR5MP"}, 1000.0))
+        self.assertEqual(waits, {})
+
+    def test_the_telegram_service_waits_by_the_same_clock(self):
+        with open(os.path.join(HERE, "..", "flightinfo", "telegram.py"), encoding="utf-8") as fh:
+            src = fh.read()
+        self.assertIn("social.still_settling(pending_since, p, now)", src)
+        self.assertNotIn("pending_since.setdefault", src)
+
+
 class NeverPostTest(unittest.TestCase):
     """1.1 (asked by the owner, 1 November 2026): the regulars left out of the posts by registration, ICAO address or
     callsign. They stay on the wall and in the counts; an emergency squawk is Telegram's business and is always sent."""
